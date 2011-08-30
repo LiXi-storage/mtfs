@@ -1,0 +1,7 @@
+MODULES := hrfs_swgfs
+hrfs_swgfs-objs := swgfs_support.o
+
+EXTRA_DIST := $(hrfs_swgfs-objs:.o=.c)
+EXTRA_DIST += swgfs_support.h
+EXTRA_DIST += swgfs_patches
+@INCLUDE_RULES@

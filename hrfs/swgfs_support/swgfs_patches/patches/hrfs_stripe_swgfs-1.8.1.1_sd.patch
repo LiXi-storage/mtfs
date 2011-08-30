@@ -1,0 +1,73 @@
+Index: swgfs-1.8.1.1/swgfs/llite/file.c
+===================================================================
+--- swgfs-1.8.1.1.orig/swgfs/llite/file.c
++++ swgfs-1.8.1.1/swgfs/llite/file.c
+@@ -5495,3 +5495,68 @@ int ll_hrfs_idata_finit(struct inode *in
+ }
+ EXPORT_SYMBOL(ll_hrfs_idata_finit);
+ #endif /* LIXI_20110331 */
++
++
++#ifndef LIXI_20110518
++#define MAX_LOV_UUID_COUNT      1000
++/*
++ * Function: int swgfs_getstripe(struct dentry *dentry, struct lov_user_md **lumpp)
++ * Purpose : get a dentry's stripe
++ * Params  : dentry - denry to getstripe, must be a regular file or directory's denry
++ *         : lumpp - pointer to save stripe data
++ * Returns : length of the memory malloced
++ */
++int swgfs_getstripe(struct dentry *dentry, struct lov_user_md **lumpp)
++{
++        struct inode *inode = dentry->d_inode;
++        struct lov_mds_md *lmm = NULL;
++        struct ptlrpc_request *request = NULL;
++        int rc = 0, lmmsize = 0;
++        int lumlen = lov_mds_md_size(MAX_LOV_UUID_COUNT, LOV_MAGIC_V3);
++
++        LASSERT(inode);
++        LASSERT(lumpp);
++
++        if (S_ISREG(inode->i_mode)) {
++                rc = ll_lov_getstripe_ea_info(dentry->d_parent->d_inode,
++                                dentry->d_name.name, &lmm,
++                                &lmmsize, &request);
++        } else if (S_ISDIR(inode->i_mode)) {
++                rc = ll_dir_getstripe(inode, &lmm, &lmmsize, &request);
++        } else {
++                GOTO(out, rc = -ENODATA);
++        }
++
++        if (rc < 0) {
++                GOTO(finish_request, rc);
++        }
++
++        if (lumlen < lmmsize) {
++                CERROR("server bug: replied size %d > %d for %s\n",
++                        lmmsize, lumlen, dentry->d_name.name);
++                GOTO(finish_request, rc = -ERANGE);
++        }
++
++        OBD_ALLOC(*lumpp, lumlen);
++        if (*lumpp == NULL) {
++                GOTO(finish_request, rc = -ENOMEM);
++        }
++        memcpy(*lumpp, lmm, lmmsize);
++
++        rc = lumlen;
++finish_request:
++        ptlrpc_req_finished(request);
++out:
++        return rc;
++}
++EXPORT_SYMBOL(swgfs_getstripe);
++
++void swgfs_getstripe_finished(struct lov_user_md *lump, int lumlen)
++{
++        LASSERT(lump);
++        LASSERT(lumlen > 0);
++
++        OBD_FREE(lump, lumlen);
++}
++EXPORT_SYMBOL(swgfs_getstripe_finished);
++#endif /* LIXI_20110518 */

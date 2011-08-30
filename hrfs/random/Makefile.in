@@ -1,0 +1,6 @@
+MODULES := random
+random-objs := main.o
+
+EXTRA_DIST := $(random-objs:.o=.c)
+
+@INCLUDE_RULES@

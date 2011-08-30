@@ -1,0 +1,6 @@
+MODULES := hrfs_ext4
+hrfs_ext4-objs := ext4_support.o
+
+EXTRA_DIST := $(hrfs_ext4-objs:.o=.c)
+EXTRA_DIST += ext4_support.h
+@INCLUDE_RULES@

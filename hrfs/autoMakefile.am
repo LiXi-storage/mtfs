@@ -1,0 +1,60 @@
+#
+# Copyright (C) 2011 Li Xi <pkuelelixi@163.com>
+#
+
+AUTOMAKE_OPTIONS = foreign
+
+# Also update hrfs/autoconf/hrfs-core.m4 AC_CONFIG_FILES
+ALWAYS_SUBDIRS := autoconf hrfs include libuser scripts tests utils random
+
+SWGFS_SUPPORT_SUBDIRS := swgfs_support
+EXT2_SUPPORT_SUBDIRS := ext2_support
+EXT3_SUPPORT_SUBDIRS := ext3_support
+EXT4_SUPPORT_SUBDIRS := ext4_support
+TMPFS_SUPPORT_SUBDIRS := tmpfs_support
+MANAGE_SUBDIRS := manage
+
+SUBDIRS := $(ALWAYS_SUBDIRS)
+
+if SWGFS_SUPPORT
+SUBDIRS += $(SWGFS_SUPPORT_SUBDIRS)
+endif
+
+if EXT2_SUPPORT
+SUBDIRS += $(EXT2_SUPPORT_SUBDIRS)
+endif
+
+if EXT3_SUPPORT
+SUBDIRS += $(EXT3_SUPPORT_SUBDIRS)
+endif
+
+if EXT4_SUPPORT
+SUBDIRS += $(EXT4_SUPPORT_SUBDIRS)
+endif
+
+if TMPFS_SUPPORT
+SUBDIRS += $(TMPFS_SUPPORT_SUBDIRS)
+endif
+
+if MANAGE
+SUBDIRS += $(MANAGE_SUBDIRS)
+endif
+
+DIST_SUBDIRS := $(ALWAYS_SUBDIRS) $(SWGFS_SUPPORT_SUBDIRS)
+DIST_SUBDIRS += $(EXT2_SUPPORT_SUBDIRS) $(EXT3_SUPPORT_SUBDIRS) $(EXT4_SUPPORT_SUBDIRS)
+DIST_SUBDIRS += $(TMPFS_SUPPORT_SUBDIRS) $(MANAGE_SUBDIRS)
+
+EXTRA_DIST = 
+
+sources: hrfs_build_version
+
+all-recursive: hrfs_build_version
+
+BUILD_VER_H=$(top_builddir)/hrfs/include/hrfs_build_version.h
+
+hrfs_build_version:
+	perl $(top_builddir)/hrfs/scripts/version_tag.pl $(top_srcdir) $(top_builddir) > tmpver
+	echo "#define HRFS_RELEASE @RELEASE@" >> tmpver
+	cmp -s $(BUILD_VER_H) tmpver > tmpdiff 2> /dev/null &&          \
+		$(RM) tmpver tmpdiff ||                                 \
+		mv -f tmpver $(BUILD_VER_H)

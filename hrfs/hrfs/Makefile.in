@@ -1,0 +1,28 @@
+#
+# Copyright (C) 2011 Li Xi <pkuelelixi@163.com>
+#
+
+MODULES := hrfs
+hrfs-objs   := dentry.o \
+	file.o \
+	mmap.o \
+	inode.o \
+	main.o \
+	super.o \
+	rule_tree.o \
+	queue.o \
+	parse_option.o \
+	support.o \
+	junction.o \
+	stack.o \
+	proc.o \
+	hide.o \
+	device.o \
+	ioctl.o
+
+EXTRA_DIST := $(hrfs-objs:.o=.c)
+EXTRA_DIST += dentry_internal.h device_internal.h file_internal.h hide_internal.h hrfs_internal.h
+EXTRA_DIST += inode_internal.h junction_internal.h main_internal.h mmap_internal.h
+EXTRA_DIST += proc_internal.h super_internal.h support_internal.h
+
+@INCLUDE_RULES@

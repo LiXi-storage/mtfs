@@ -1,0 +1,17 @@
+#
+# Copyright (C) 2011 Li Xi <pkuelelixi@163.com>
+#
+
+SUBDIRS := 
+if LIBHRFS
+noinst_LIBRARIES = libhrfs.a
+libhrfs_a_SOURCES = rule_tree.c queue.c parse_option.c
+libhrfs_a_CPPFLAGS = $(LLCPPFLAGS)
+libhrfs_a_CFLAGS = $(LLCFLAGS)
+endif
+
+if MODULES
+modulefs_DATA = hrfs$(KMODEXT)
+endif
+
+MOSTLYCLEANFILES := @MOSTLYCLEANFILES@

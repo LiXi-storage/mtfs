@@ -1,0 +1,9 @@
+#
+# Copyright (C) 2011 Li Xi <pkuelelixi@163.com>
+#
+
+if MODULES
+modulefs_DATA = hrfs_ext3$(KMODEXT)
+endif
+
+MOSTLYCLEANFILES := @MOSTLYCLEANFILES@

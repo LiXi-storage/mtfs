@@ -1,0 +1,11 @@
+#
+# Copyright (C) 2011 Li Xi <pkuelelixi@163.com>
+#
+
+subdir-m += hrfs random
+@SWGFS_SUPPORT_TRUE@subdir-m += swgfs_support
+@EXT2_SUPPORT_TRUE@subdir-m += ext2_support
+@EXT3_SUPPORT_TRUE@subdir-m += ext3_support
+@EXT4_SUPPORT_TRUE@subdir-m += ext4_support
+@TMPFS_SUPPORT_TRUE@subdir-m += tmpfs_support
+@INCLUDE_RULES@
