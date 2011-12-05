@@ -32,16 +32,37 @@ out:
 	return ret;
 }
 
+static int hrfs_d_revalidate_branch(struct dentry *dentry, struct nameidata *nd, hrfs_bindex_t bindex)
+{
+	int ret = 0;
+	struct dentry *hidden_dentry = hrfs_d2branch(dentry, bindex);
+	HENTRY();
+
+	hidden_dentry = hrfs_d2branch(dentry, bindex);
+	if (likely(hidden_dentry)) {
+		ret = hidden_dentry->d_op->d_revalidate(hidden_dentry, NULL);
+		if (ret <= 0) {
+			HDEBUG("branch[%d] of dentry [%*s] is invalid, ret = %d\n",
+			       bindex, dentry->d_name.len, dentry->d_name.name, ret);
+		}
+	} else {
+		HDEBUG("branch[%d] of dentry [%*s] is NULL\n",
+		       bindex, dentry->d_name.len, dentry->d_name.name);
+		ret = -ENOENT;
+	}
+
+	HRETURN(ret);	
+}
+
 int hrfs_d_revalidate(struct dentry *dentry, struct nameidata *nd)
 {
 	int ret = 0;
 	hrfs_bindex_t bindex = 0;
 	hrfs_bindex_t bnum = 0;
-	struct dentry *hidden_dentry = NULL;
 	HENTRY();
 
+	HDEBUG("d_revalidate [%*s]\n", dentry->d_name.len, dentry->d_name.name);
 	HASSERT(hrfs_d2info(dentry));
-	HDEBUG("d_entry: %p, name=\"%s\"\n", dentry, dentry->d_name.name);
 
 	/* 
 	 * The revalidation must occur for all the common files across branches
@@ -49,20 +70,14 @@ int hrfs_d_revalidate(struct dentry *dentry, struct nameidata *nd)
 	bnum = hrfs_d2bnum(dentry);
 
 	for (bindex = 0; bindex < bnum; bindex++) {
-		hidden_dentry = hrfs_d2branch(dentry, bindex);
-		if (hidden_dentry) {
-			HASSERT(hidden_dentry->d_op);
-			HASSERT(hidden_dentry->d_op->d_revalidate);
-			ret = hidden_dentry->d_op->d_revalidate(hidden_dentry, NULL);
-			if (ret <= 0) {
-				goto d_drop;
+		ret = hrfs_d_revalidate_branch(dentry, NULL, bindex);
+		if (ret <= 0) {
+			if (hrfs_is_primary_bindex(bindex)) {
+				goto out_d_drop;
 			}
-		} else {
-			HDEBUG("branch[%d] of dentry [%*s] is NULL\n",
-			       bindex, dentry->d_name.len, dentry->d_name.name);
 		}
 	}
-	
+
 	/* Primary barnch is valid for sure */
 	ret = 1;
 
@@ -113,7 +128,7 @@ int hrfs_d_revalidate(struct dentry *dentry, struct nameidata *nd)
 		}
 	}
 	goto out;
-d_drop:
+out_d_drop:
 	HASSERT(ret <= 0);
 	if (ret == 0 && !d_mountpoint(dentry)) {
 		/* Do not d_drop though dentry is invalid, since it is mountpoint. */
@@ -131,6 +146,7 @@ void hrfs_d_release(struct dentry *dentry)
 	hrfs_bindex_t bnum = 0;
 	HENTRY();
 
+	HDEBUG("d_release [%*s]\n", dentry->d_name.len, dentry->d_name.name);
 	HASSERT(d_unhashed(dentry));
 
 	/* This could be a negative dentry */

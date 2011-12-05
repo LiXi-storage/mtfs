@@ -324,7 +324,9 @@ struct dentry *hrfs_lookup_branch(struct dentry *dentry, hrfs_bindex_t bindex)
 		hidden_dentry = lookup_one_len(dentry->d_name.name, hidden_dir_dentry, dentry->d_name.len);
 		mutex_unlock(&hidden_dir_dentry->d_inode->i_mutex);
 	} else {
-		HDEBUG("dir_dentry of branch[%d] is %s\n", bindex, hidden_dir_dentry == NULL ? "NULL" : "negative");
+		HDEBUG("branch[%d] of dir_dentry [%*s] is %s\n",
+		       bindex, dentry->d_parent->d_name.len, dentry->d_parent->d_name.name,
+		       hidden_dir_dentry == NULL ? "NULL" : "negative");
 		hidden_dentry = ERR_PTR(-ENOENT); /* which errno? */
 	}
 
@@ -422,6 +424,7 @@ struct dentry *hrfs_lookup(struct inode *dir, struct dentry *dentry, struct name
 	int rc = 0;
 	HENTRY();
 
+	HDEBUG("lookup [%*s]\n", dentry->d_name.len, dentry->d_name.name);
 	HASSERT(inode_is_locked(dir));
 	HASSERT(!IS_ROOT(dentry));
 
@@ -550,10 +553,9 @@ int hrfs_create(struct inode *dir, struct dentry *dentry, int mode, struct namei
 	int undo_ret = 0;
 	HENTRY();
 
+	HDEBUG("create [%*s]\n", dentry->d_name.len, dentry->d_name.name);
 	HASSERT(inode_is_locked(dir));
 	HASSERT(dentry->d_inode == NULL);
-
-	HDEBUG("creating name: %s\n", dentry->d_name.name);
 
 	bnum = hrfs_d2bnum(dentry);
 	for (bindex = 0; bindex < bnum; bindex++) {
@@ -668,6 +670,9 @@ int hrfs_link(struct dentry *old_dentry, struct inode *dir, struct dentry *new_d
 	int undo_ret = 0;
 	HENTRY();
 
+	HDEBUG("link [%*s] to [%*s]\n",
+	       old_dentry->d_name.len, old_dentry->d_name.name,
+	       new_dentry->d_name.len, new_dentry->d_name.name);
 	HASSERT(old_dentry->d_inode);
 	HASSERT(inode_is_locked(old_dentry->d_inode));
 	HASSERT(!S_ISDIR(old_dentry->d_inode->i_mode));
@@ -796,6 +801,7 @@ int hrfs_unlink(struct inode *dir, struct dentry *dentry)
 	int undo_ret = 0;
 	HENTRY();
 
+	HDEBUG("unlink [%*s]\n", dentry->d_name.len, dentry->d_name.name);
 	HASSERT(inode_is_locked(dir));
 	HASSERT(inode);
 	HASSERT(inode_is_locked(inode));
@@ -927,6 +933,7 @@ int hrfs_rmdir(struct inode *dir, struct dentry *dentry)
 	struct inode *hidden_dir = NULL;
 	HENTRY();
 
+	HDEBUG("rmdir [%*s]\n", dentry->d_name.len, dentry->d_name.name);
 	HASSERT(inode_is_locked(dir));
 	HASSERT(dentry->d_inode);
 	HASSERT(inode_is_locked(dentry->d_inode));
@@ -1028,7 +1035,8 @@ int hrfs_symlink(struct inode *dir, struct dentry *dentry, const char *symname)
 	int undo_ret = 0;
 	struct inode *hidden_dir = NULL;
 	HENTRY();
-	
+
+	HDEBUG("symlink [%*s] to [%s]\n", dentry->d_name.len, dentry->d_name.name, symname);
 	HASSERT(inode_is_locked(dir));
 	HASSERT(dentry->d_inode == NULL);
 
@@ -1129,6 +1137,7 @@ int hrfs_mkdir(struct inode *dir, struct dentry *dentry, int mode)
 	int undo_ret = 0;
 	HENTRY();
 
+	HDEBUG("mkdir [%*s]\n", dentry->d_name.len, dentry->d_name.name);
 	HASSERT(inode_is_locked(dir));
 	HASSERT(dentry->d_inode == NULL);
 
@@ -1226,6 +1235,7 @@ int hrfs_mknod(struct inode *dir, struct dentry *dentry, int mode, dev_t dev)
 	hrfs_bindex_t bindex = 0;
 	HENTRY();
 
+	HDEBUG("mknod [%*s]\n", dentry->d_name.len, dentry->d_name.name);
 	HASSERT(inode_is_locked(dir));
 
 	bnum = hrfs_d2bnum(dentry) = hrfs_i2bnum(dir);
@@ -1357,6 +1367,9 @@ int hrfs_rename(struct inode *old_dir, struct dentry *old_dentry, struct inode *
 	struct inode *old_inode = old_dentry->d_inode;
 	HENTRY();
 
+	HDEBUG("rename [%*s] to [%*s]\n",
+	       old_dentry->d_name.len, old_dentry->d_name.name,
+	       new_dentry->d_name.len, new_dentry->d_name.name);
 	HASSERT(inode_is_locked(old_dir));
 	HASSERT(inode_is_locked(new_dir));
 	HASSERT(old_inode);
@@ -1415,6 +1428,7 @@ int hrfs_readlink(struct dentry *dentry, char __user *buf, int bufsiz)
 	struct dentry *hidden_dentry = NULL;
 	HENTRY();
 
+	HDEBUG("readlink [%*s]\n", dentry->d_name.len, dentry->d_name.name);
 	hidden_dentry = hrfs_d_choose_branch(dentry, HRFS_ATTR_VALID);
 	HASSERT(hidden_dentry);
 	HASSERT(hidden_dentry->d_inode);
@@ -1440,6 +1454,7 @@ void *hrfs_follow_link(struct dentry *dentry, struct nameidata *nd)
 	mm_segment_t old_fs;
 	HENTRY();
 
+	HDEBUG("follow_link [%*s]\n", dentry->d_name.len, dentry->d_name.name);
 	HRFS_ALLOC(buf, len);
 	if (unlikely(buf == NULL)) {
 		ret = -ENOMEM;
@@ -1471,6 +1486,7 @@ void hrfs_put_link(struct dentry *dentry, struct nameidata *nd, void *ptr)
 	char *buf = nd_get_link(nd);
 	HENTRY();
 
+	HDEBUG("put_link [%*s]\n", dentry->d_name.len, dentry->d_name.name);
 	HASSERT(buf);
 	/* Free the char* */
 	HRFS_FREE(buf, len);
@@ -1529,6 +1545,7 @@ int hrfs_setattr(struct dentry *dentry, struct iattr *ia)
 	hrfs_bindex_t bindex = 0;
 	HENTRY();
 
+	HDEBUG("setattr [%*s]\n", dentry->d_name.len, dentry->d_name.name);
 	HASSERT(inode);
 	HASSERT(inode_is_locked(inode));	
 
@@ -1566,6 +1583,7 @@ int hrfs_getattr(struct vfsmount *mnt, struct dentry *dentry, struct kstat *stat
 	struct vfsmount *hidden_mnt = NULL;
 	HENTRY();
 
+	HDEBUG("getattr [%*s]\n", dentry->d_name.len, dentry->d_name.name);
 	HASSERT(bindex >=0 && bindex < hrfs_i2bnum(inode));
 	hidden_dentry = hrfs_d2branch(dentry, bindex);
 	HASSERT(hidden_dentry);
@@ -1590,6 +1608,7 @@ ssize_t hrfs_getxattr(struct dentry *dentry, const char *name, void *value, size
 	ssize_t err = -EOPNOTSUPP; 
 	HENTRY();
 
+	HDEBUG("getxattr [%*s]\n", dentry->d_name.len, dentry->d_name.name);
 	HASSERT(dentry->d_inode);
 	hidden_dentry = hrfs_d_choose_branch(dentry, HRFS_ATTR_VALID);
 	HASSERT(hidden_dentry);
@@ -1630,7 +1649,8 @@ int hrfs_setxattr(struct dentry *dentry, const char *name, const void *value, si
 	int ret = 0;
 	hrfs_bindex_t bindex = 0;
 	HENTRY();
-	
+
+	HDEBUG("setxattr [%*s]\n", dentry->d_name.len, dentry->d_name.name);
 	for (bindex = 0; bindex < hrfs_d2bnum(dentry); bindex++) {
 		ret = hrfs_setxattr_branch(dentry, name, value, size, flags, bindex);
 		if (ret) {
@@ -1680,6 +1700,7 @@ int hrfs_removexattr(struct dentry *dentry, const char *name)
 	hrfs_bindex_t bindex = 0;
 	HENTRY();
 
+	HDEBUG("removexattr [%*s]\n", dentry->d_name.len, dentry->d_name.name);
 	HASSERT(dentry->d_inode);
 
 	for (bindex = 0; bindex < hrfs_d2bnum(dentry); bindex++) {
@@ -1708,6 +1729,7 @@ ssize_t hrfs_listxattr(struct dentry *dentry, char *list, size_t size)
 	ssize_t err = -EOPNOTSUPP; 
 	HENTRY();
 
+	HDEBUG("listxattr [%*s]\n", dentry->d_name.len, dentry->d_name.name);
 	hidden_dentry = hrfs_d_choose_branch(dentry, HRFS_ATTR_VALID);
 	HASSERT(hidden_dentry);
 
