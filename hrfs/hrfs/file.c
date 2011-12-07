@@ -548,6 +548,8 @@ ssize_t hrfs_file_read(struct file *file, char __user *buf, size_t len,
 }
 EXPORT_SYMBOL(hrfs_file_read);
 
+
+
 ssize_t hrfs_file_write(struct file *file, const char __user *buf, size_t len, loff_t *ppos)
 {
 	struct iovec local_iov = { .iov_base = (void __user *)buf,
@@ -555,6 +557,130 @@ ssize_t hrfs_file_write(struct file *file, const char __user *buf, size_t len, l
 	return hrfs_file_writev(file, &local_iov, 1, ppos);	
 }
 EXPORT_SYMBOL(hrfs_file_write);
+
+static ssize_t hrfs_file_write_nonwritev_branch(struct file *file, const char __user *buf, size_t len,
+                                                loff_t *ppos, hrfs_bindex_t bindex)
+{
+	ssize_t ret = 0;
+	struct file *hidden_file = hrfs_f2branch(file, bindex);
+	struct inode *inode = NULL;
+	struct inode *hidden_inode = NULL;
+	HENTRY();
+
+	if (hidden_file) {
+		HASSERT(hidden_file->f_op);
+		HASSERT(hidden_file->f_op->write);
+		ret = hidden_file->f_op->write(hidden_file, buf, len, ppos);
+		if (ret > 0) {
+			/*
+			 * Swgfs update inode size whenever read/write.
+			 * TODO: Do not update unless file growes bigger.
+			 */
+			inode = file->f_dentry->d_inode;
+			HASSERT(inode);
+			hidden_inode = hrfs_i2branch(inode, bindex);
+			HASSERT(hidden_inode);
+			fsstack_copy_inode_size(inode, hidden_inode);
+		}
+	} else {
+		HERROR("branch[%d] of file [%*s] is NULL\n",
+		       bindex, file->f_dentry->d_name.len, file->f_dentry->d_name.name);
+		ret = -ENOENT;
+	}
+
+	HRETURN(ret);
+}
+
+ssize_t hrfs_file_write_nonwritev(struct file *file, const char __user *buf, size_t len, loff_t *ppos)
+{
+	ssize_t ret = 0;
+	ssize_t success_ret = 0;
+	hrfs_bindex_t bindex = 0;
+	loff_t tmp_pos = 0;
+	loff_t success_pos = 0;
+	HENTRY();
+	
+	
+	HASSERT(hrfs_f2info(file));
+	for (bindex = 0; bindex < hrfs_f2bnum(file); bindex++) {
+		tmp_pos = *ppos;
+		ret = hrfs_file_write_nonwritev_branch(file, buf, len, &tmp_pos, bindex);
+		HDEBUG("writed branch[%d] of file [%*s] at pos = %llu, ret = %ld\n",
+		       bindex, file->f_dentry->d_name.len, file->f_dentry->d_name.name,
+		       *ppos, ret);
+		/* TODO: set data flags */
+		if (ret >= 0) {
+			success_pos = tmp_pos;
+			success_ret = ret;
+		}
+	}
+
+	if (success_ret >= 0) {
+		ret = success_ret;
+		*ppos = success_pos;
+	}
+
+	HRETURN(ret);
+}
+EXPORT_SYMBOL(hrfs_file_write_nonwritev);
+
+static ssize_t hrfs_file_read_nonreadv_branch(struct file *file, char __user *buf, size_t len,
+                                              loff_t *ppos, hrfs_bindex_t bindex)
+{
+	ssize_t ret = 0;
+	struct file *hidden_file = hrfs_f2branch(file, bindex);
+	struct inode *inode = NULL;
+	struct inode *hidden_inode = NULL;
+	HENTRY();
+
+	if (hidden_file) {
+		HASSERT(hidden_file->f_op);
+		HASSERT(hidden_file->f_op->read);
+		ret = hidden_file->f_op->read(hidden_file, buf, len, ppos);
+		if (ret > 0) {
+			/*
+			 * Swgfs update inode size whenever read/write.
+			 * TODO: Do not update unless file growes bigger.
+			 */
+			inode = file->f_dentry->d_inode;
+			HASSERT(inode);
+			hidden_inode = hrfs_i2branch(inode, bindex);
+			HASSERT(hidden_inode);
+			fsstack_copy_inode_size(inode, hidden_inode);
+		}
+	} else {
+		HERROR("branch[%d] of file [%*s] is NULL\n",
+		       bindex, file->f_dentry->d_name.len, file->f_dentry->d_name.name);
+		ret = -ENOENT;
+	}
+
+	HRETURN(ret);
+}
+
+ssize_t hrfs_file_read_nonreadv(struct file *file, char __user *buf, size_t len,
+                                loff_t *ppos)
+{
+	ssize_t ret = 0;
+	hrfs_bindex_t bindex = 0;
+	loff_t tmp_pos = 0;
+	HENTRY();
+
+	HASSERT(hrfs_f2info(file));
+	for (bindex = 0; bindex < hrfs_f2bnum(file); bindex++) {
+		tmp_pos = *ppos;
+		ret = hrfs_file_read_nonreadv_branch(file, buf, len, &tmp_pos, bindex);
+		HDEBUG("readed branch[%d] of file [%*s] at pos = %llu, ret = %ld\n",
+		       bindex, file->f_dentry->d_name.len, file->f_dentry->d_name.name,
+		       *ppos, ret);
+		if (ret >= 0) { 
+			*ppos = tmp_pos;
+			break;
+		}
+	}
+
+	HRETURN(ret);
+}
+EXPORT_SYMBOL(hrfs_file_read_nonreadv);
 
 ssize_t
 hrfs_file_aio_read(struct kiocb *iocb, char __user *buf, size_t count, loff_t pos)

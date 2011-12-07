@@ -175,6 +175,8 @@ MODULES_FALSE = @MODULES_FALSE@
 MODULES_TRUE = @MODULES_TRUE@
 MODULE_TARGET = @MODULE_TARGET@
 MOSTLYCLEANFILES = @MOSTLYCLEANFILES@
+NFS_SUPPORT_FALSE = @NFS_SUPPORT_FALSE@
+NFS_SUPPORT_TRUE = @NFS_SUPPORT_TRUE@
 OBJEXT = @OBJEXT@
 PACKAGE = @PACKAGE@
 PACKAGE_BUGREPORT = @PACKAGE_BUGREPORT@
@@ -441,7 +443,7 @@ distclean-tags:
 distdir: $(DISTFILES)
 	$(am__remove_distdir)
 	mkdir $(distdir)
-	$(mkdir_p) $(distdir)/. $(distdir)/build $(distdir)/build/autoconf $(distdir)/hrfs $(distdir)/hrfs/autoconf $(distdir)/hrfs/ext2_support $(distdir)/hrfs/ext3_support $(distdir)/hrfs/ext4_support $(distdir)/hrfs/hrfs $(distdir)/hrfs/random $(distdir)/hrfs/swgfs_support $(distdir)/hrfs/tmpfs_support $(distdir)/libcfs $(distdir)/libcfs/autoconf $(distdir)/libcfs/libcfs
+	$(mkdir_p) $(distdir)/. $(distdir)/build $(distdir)/build/autoconf $(distdir)/hrfs $(distdir)/hrfs/autoconf $(distdir)/hrfs/ext2_support $(distdir)/hrfs/ext3_support $(distdir)/hrfs/ext4_support $(distdir)/hrfs/hrfs $(distdir)/hrfs/nfs_support $(distdir)/hrfs/random $(distdir)/hrfs/swgfs_support $(distdir)/hrfs/tmpfs_support $(distdir)/libcfs $(distdir)/libcfs/autoconf $(distdir)/libcfs/libcfs
 	@srcdirstrip=`echo "$(srcdir)" | sed 's|.|.|g'`; \
 	topsrcdirstrip=`echo "$(top_srcdir)" | sed 's|.|.|g'`; \
 	list='$(DISTFILES)'; for file in $$list; do \

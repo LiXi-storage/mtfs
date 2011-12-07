@@ -312,7 +312,7 @@ ac_includes_default="\
 # include <unistd.h>
 #endif"
 
-ac_subst_vars='SHELL PATH_SEPARATOR PACKAGE_NAME PACKAGE_TARNAME PACKAGE_VERSION PACKAGE_STRING PACKAGE_BUGREPORT exec_prefix prefix program_transform_name bindir sbindir libexecdir datadir sysconfdir sharedstatedir localstatedir libdir includedir oldincludedir infodir mandir build_alias host_alias target_alias DEFS ECHO_C ECHO_N ECHO_T LIBS AC_HRFS_MAJOR AC_HRFS_MINOR AC_HRFS_PATCH AC_HRFS_FIX AC_HRFS_VERSION_STRING AC_HRFS_VER_ALLOWED_OFFSET AC_HRFS_LIB_VER_OFFSET_WARN AC_HRFS_CLI_VER_OFFSET_WARN AC_HRFS_CLIENT_URN AC_HRFS_MDS_URN AC_HRFS_MGS_URN AC_HRFS_OSS_URN build build_cpu build_vendor build_os host host_cpu host_vendor host_os target target_cpu target_vendor target_os INSTALL_PROGRAM INSTALL_SCRIPT INSTALL_DATA CYGPATH_W PACKAGE VERSION ACLOCAL AUTOCONF AUTOMAKE AUTOHEADER MAKEINFO install_sh STRIP ac_ct_STRIP INSTALL_STRIP_PROGRAM mkdir_p AWK SET_MAKE am__leading_dot AMTAR am__tar am__untar CC CFLAGS LDFLAGS CPPFLAGS ac_ct_CC EXEEXT OBJEXT DEPDIR am__include am__quote AMDEP_TRUE AMDEP_FALSE AMDEPBACKSLASH CCDEPMODE am__fastdepCC_TRUE am__fastdepCC_FALSE lb_target_os LIBCFS_SUBDIR LIBCFS_INCLUDE_DIR INCLUDE_RULES docdir HRFS rootsbindir RANLIB ac_ct_RANLIB CPP EGREP LLCPPFLAGS LLCFLAGS EXTRA_KCFLAGS ENABLE_DOC ENABLE_INIT_SCRIPTS LINUX LINUX_OBJ LINUX_CONFIG ARCH_UM UML_CFLAGS MODULE_TARGET linux25 KMODEXT LINUXRELEASE moduledir modulefsdir modulenetdir RELEASE SYMVERFILE EXTRA_KLDFLAGS EXTRA_KLIBS kextdir plistdir macosdir LIBEFENCE PTHREAD_LIBS ENABLE_LIBPTHREAD SWGFS LIBREADLINE LIBLUA MODULES_TRUE MODULES_FALSE UTILS_TRUE UTILS_FALSE TESTS_TRUE TESTS_FALSE DOC_TRUE DOC_FALSE INIT_SCRIPTS_TRUE INIT_SCRIPTS_FALSE LINUX_TRUE LINUX_FALSE DARWIN_TRUE DARWIN_FALSE CRAY_XT3_TRUE CRAY_XT3_FALSE SUNOS_TRUE SUNOS_FALSE LINUX25_TRUE LINUX25_FALSE LIBHRFS_TRUE LIBHRFS_FALSE LIBHRFS_TESTS_TRUE LIBHRFS_TESTS_FALSE SWGFS_SUPPORT_TRUE SWGFS_SUPPORT_FALSE EXT2_SUPPORT_TRUE EXT2_SUPPORT_FALSE EXT3_SUPPORT_TRUE EXT3_SUPPORT_FALSE EXT4_SUPPORT_TRUE EXT4_SUPPORT_FALSE TMPFS_SUPPORT_TRUE TMPFS_SUPPORT_FALSE MANAGE_TRUE MANAGE_FALSE MANAGE_TESTS_TRUE MANAGE_TESTS_FALSE ac_configure_args MOSTLYCLEANFILES LIBOBJS LTLIBOBJS'
+ac_subst_vars='SHELL PATH_SEPARATOR PACKAGE_NAME PACKAGE_TARNAME PACKAGE_VERSION PACKAGE_STRING PACKAGE_BUGREPORT exec_prefix prefix program_transform_name bindir sbindir libexecdir datadir sysconfdir sharedstatedir localstatedir libdir includedir oldincludedir infodir mandir build_alias host_alias target_alias DEFS ECHO_C ECHO_N ECHO_T LIBS AC_HRFS_MAJOR AC_HRFS_MINOR AC_HRFS_PATCH AC_HRFS_FIX AC_HRFS_VERSION_STRING AC_HRFS_VER_ALLOWED_OFFSET AC_HRFS_LIB_VER_OFFSET_WARN AC_HRFS_CLI_VER_OFFSET_WARN AC_HRFS_CLIENT_URN AC_HRFS_MDS_URN AC_HRFS_MGS_URN AC_HRFS_OSS_URN build build_cpu build_vendor build_os host host_cpu host_vendor host_os target target_cpu target_vendor target_os INSTALL_PROGRAM INSTALL_SCRIPT INSTALL_DATA CYGPATH_W PACKAGE VERSION ACLOCAL AUTOCONF AUTOMAKE AUTOHEADER MAKEINFO install_sh STRIP ac_ct_STRIP INSTALL_STRIP_PROGRAM mkdir_p AWK SET_MAKE am__leading_dot AMTAR am__tar am__untar CC CFLAGS LDFLAGS CPPFLAGS ac_ct_CC EXEEXT OBJEXT DEPDIR am__include am__quote AMDEP_TRUE AMDEP_FALSE AMDEPBACKSLASH CCDEPMODE am__fastdepCC_TRUE am__fastdepCC_FALSE lb_target_os LIBCFS_SUBDIR LIBCFS_INCLUDE_DIR INCLUDE_RULES docdir HRFS rootsbindir RANLIB ac_ct_RANLIB CPP EGREP LLCPPFLAGS LLCFLAGS EXTRA_KCFLAGS ENABLE_DOC ENABLE_INIT_SCRIPTS LINUX LINUX_OBJ LINUX_CONFIG ARCH_UM UML_CFLAGS MODULE_TARGET linux25 KMODEXT LINUXRELEASE moduledir modulefsdir modulenetdir RELEASE SYMVERFILE EXTRA_KLDFLAGS EXTRA_KLIBS kextdir plistdir macosdir LIBEFENCE PTHREAD_LIBS ENABLE_LIBPTHREAD SWGFS LIBREADLINE LIBLUA MODULES_TRUE MODULES_FALSE UTILS_TRUE UTILS_FALSE TESTS_TRUE TESTS_FALSE DOC_TRUE DOC_FALSE INIT_SCRIPTS_TRUE INIT_SCRIPTS_FALSE LINUX_TRUE LINUX_FALSE DARWIN_TRUE DARWIN_FALSE CRAY_XT3_TRUE CRAY_XT3_FALSE SUNOS_TRUE SUNOS_FALSE LINUX25_TRUE LINUX25_FALSE LIBHRFS_TRUE LIBHRFS_FALSE LIBHRFS_TESTS_TRUE LIBHRFS_TESTS_FALSE SWGFS_SUPPORT_TRUE SWGFS_SUPPORT_FALSE EXT2_SUPPORT_TRUE EXT2_SUPPORT_FALSE EXT3_SUPPORT_TRUE EXT3_SUPPORT_FALSE EXT4_SUPPORT_TRUE EXT4_SUPPORT_FALSE NFS_SUPPORT_TRUE NFS_SUPPORT_FALSE TMPFS_SUPPORT_TRUE TMPFS_SUPPORT_FALSE MANAGE_TRUE MANAGE_FALSE MANAGE_TESTS_TRUE MANAGE_TESTS_FALSE ac_configure_args MOSTLYCLEANFILES LIBOBJS LTLIBOBJS'
 ac_subst_files=''
 
 # Initialize some variables set by options.
@@ -864,6 +864,7 @@ Optional Features:
   --disable-ext2-support  disable ext2 backend support
   --disable-ext3-support  disable ext3 backend support
   --disable-ext4-support  disable ext4 backend support
+  --disable-nfs-support   disable nfs backend support
   --disable-tmpfs-support disable tmpfs backend support
   --disable-manage        disable manage support
   --enable-manage-tests   enable manage tests, if --disable-tests is used
@@ -4248,6 +4249,17 @@ else
 fi;
 echo "$as_me:$LINENO: result: $enable_ext4_support" >&5
 echo "${ECHO_T}$enable_ext4_support" >&6
+echo "$as_me:$LINENO: checking whether to build nfs backend support" >&5
+echo $ECHO_N "checking whether to build nfs backend support... $ECHO_C" >&6
+# Check whether --enable-nfs-support or --disable-nfs-support was given.
+if test "${enable_nfs_support+set}" = set; then
+  enableval="$enable_nfs_support"
+
+else
+  enable_nfs_support='yes'
+fi;
+echo "$as_me:$LINENO: result: $enable_nfs_support" >&5
+echo "${ECHO_T}$enable_nfs_support" >&6
 echo "$as_me:$LINENO: checking whether to build tmpfs backend support" >&5
 echo $ECHO_N "checking whether to build tmpfs backend support... $ECHO_C" >&6
 # Check whether --enable-tmpfs-support or --disable-tmpfs-support was given.
@@ -9361,6 +9373,16 @@ fi
 
 
 
+if test x$enable_nfs_support = xyes; then
+  NFS_SUPPORT_TRUE=
+  NFS_SUPPORT_FALSE='#'
+else
+  NFS_SUPPORT_TRUE='#'
+  NFS_SUPPORT_FALSE=
+fi
+
+
+
 if test x$enable_tmpfs_support = xyes; then
   TMPFS_SUPPORT_TRUE=
   TMPFS_SUPPORT_FALSE='#'
@@ -9406,7 +9428,7 @@ EXTRA_KCFLAGS="-include $PWD/config.h $EXTRA_KCFLAGS"
 
 
 
-                                                                                                                                                                                                                                                                              ac_config_files="$ac_config_files hrfs/Makefile hrfs/autoMakefile hrfs/autoconf/Makefile hrfs/include/Makefile hrfs/random/Makefile hrfs/random/autoMakefile hrfs/hrfs/Makefile hrfs/hrfs/autoMakefile hrfs/libuser/Makefile hrfs/libuser/tests/Makefile hrfs/manage/Makefile hrfs/scripts/Makefile hrfs/tests/Makefile hrfs/tests/pjd_fstest/Makefile hrfs/tests/src/Makefile hrfs/utils/libcoreutils/Makefile hrfs/utils/Makefile hrfs/ext2_support/Makefile hrfs/ext2_support/autoMakefile hrfs/ext3_support/Makefile hrfs/ext3_support/autoMakefile hrfs/ext4_support/Makefile hrfs/ext4_support/autoMakefile hrfs/swgfs_support/Makefile hrfs/swgfs_support/autoMakefile hrfs/tmpfs_support/Makefile hrfs/tmpfs_support/autoMakefile"
+                                                                                                                                                                                                                                                                                                  ac_config_files="$ac_config_files hrfs/Makefile hrfs/autoMakefile hrfs/autoconf/Makefile hrfs/include/Makefile hrfs/random/Makefile hrfs/random/autoMakefile hrfs/hrfs/Makefile hrfs/hrfs/autoMakefile hrfs/libuser/Makefile hrfs/libuser/tests/Makefile hrfs/manage/Makefile hrfs/scripts/Makefile hrfs/tests/Makefile hrfs/tests/pjd_fstest/Makefile hrfs/tests/src/Makefile hrfs/utils/libcoreutils/Makefile hrfs/utils/Makefile hrfs/ext2_support/Makefile hrfs/ext2_support/autoMakefile hrfs/ext3_support/Makefile hrfs/ext3_support/autoMakefile hrfs/ext4_support/Makefile hrfs/ext4_support/autoMakefile hrfs/nfs_support/Makefile hrfs/nfs_support/autoMakefile hrfs/swgfs_support/Makefile hrfs/swgfs_support/autoMakefile hrfs/tmpfs_support/Makefile hrfs/tmpfs_support/autoMakefile"
 
 
 
@@ -9629,6 +9651,13 @@ if test -z "${EXT4_SUPPORT_TRUE}" && test -z "${EXT4_SUPPORT_FALSE}"; then
   { { echo "$as_me:$LINENO: error: conditional \"EXT4_SUPPORT\" was never defined.
 Usually this means the macro was only invoked conditionally." >&5
 echo "$as_me: error: conditional \"EXT4_SUPPORT\" was never defined.
+Usually this means the macro was only invoked conditionally." >&2;}
+   { (exit 1); exit 1; }; }
+fi
+if test -z "${NFS_SUPPORT_TRUE}" && test -z "${NFS_SUPPORT_FALSE}"; then
+  { { echo "$as_me:$LINENO: error: conditional \"NFS_SUPPORT\" was never defined.
+Usually this means the macro was only invoked conditionally." >&5
+echo "$as_me: error: conditional \"NFS_SUPPORT\" was never defined.
 Usually this means the macro was only invoked conditionally." >&2;}
    { (exit 1); exit 1; }; }
 fi
@@ -10134,6 +10163,8 @@ do
   "hrfs/ext3_support/autoMakefile" ) CONFIG_FILES="$CONFIG_FILES hrfs/ext3_support/autoMakefile" ;;
   "hrfs/ext4_support/Makefile" ) CONFIG_FILES="$CONFIG_FILES hrfs/ext4_support/Makefile" ;;
   "hrfs/ext4_support/autoMakefile" ) CONFIG_FILES="$CONFIG_FILES hrfs/ext4_support/autoMakefile" ;;
+  "hrfs/nfs_support/Makefile" ) CONFIG_FILES="$CONFIG_FILES hrfs/nfs_support/Makefile" ;;
+  "hrfs/nfs_support/autoMakefile" ) CONFIG_FILES="$CONFIG_FILES hrfs/nfs_support/autoMakefile" ;;
   "hrfs/swgfs_support/Makefile" ) CONFIG_FILES="$CONFIG_FILES hrfs/swgfs_support/Makefile" ;;
   "hrfs/swgfs_support/autoMakefile" ) CONFIG_FILES="$CONFIG_FILES hrfs/swgfs_support/autoMakefile" ;;
   "hrfs/tmpfs_support/Makefile" ) CONFIG_FILES="$CONFIG_FILES hrfs/tmpfs_support/Makefile" ;;
@@ -10360,6 +10391,8 @@ s,@EXT3_SUPPORT_TRUE@,$EXT3_SUPPORT_TRUE,;t t
 s,@EXT3_SUPPORT_FALSE@,$EXT3_SUPPORT_FALSE,;t t
 s,@EXT4_SUPPORT_TRUE@,$EXT4_SUPPORT_TRUE,;t t
 s,@EXT4_SUPPORT_FALSE@,$EXT4_SUPPORT_FALSE,;t t
+s,@NFS_SUPPORT_TRUE@,$NFS_SUPPORT_TRUE,;t t
+s,@NFS_SUPPORT_FALSE@,$NFS_SUPPORT_FALSE,;t t
 s,@TMPFS_SUPPORT_TRUE@,$TMPFS_SUPPORT_TRUE,;t t
 s,@TMPFS_SUPPORT_FALSE@,$TMPFS_SUPPORT_FALSE,;t t
 s,@MANAGE_TRUE@,$MANAGE_TRUE,;t t

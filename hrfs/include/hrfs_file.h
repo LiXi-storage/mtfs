@@ -21,11 +21,15 @@ extern int hrfs_fasync(int fd, struct file *file, int flag);
 extern int hrfs_lock(struct file *file, int cmd, struct file_lock *fl);
 extern int hrfs_flock(struct file *file, int cmd, struct file_lock *fl);
 extern ssize_t hrfs_file_readv(struct file *file, const struct iovec *iov,
-                                      unsigned long nr_segs, loff_t *ppos);
+                               unsigned long nr_segs, loff_t *ppos);
 extern ssize_t hrfs_file_writev(struct file *file, const struct iovec *iov,
-                                       unsigned long nr_segs, loff_t *ppos);
+                                unsigned long nr_segs, loff_t *ppos);
+extern ssize_t hrfs_file_write_nonwritev(struct file *file, const char __user *buf,
+                                         size_t len, loff_t *ppos);
+extern ssize_t hrfs_file_read_nonreadv(struct file *file, char __user *buf, size_t len,
+                                       loff_t *ppos);
 extern ssize_t hrfs_file_read(struct file *file, char __user *buf, size_t len,
-                             loff_t *ppos);
+                              loff_t *ppos);
 extern ssize_t hrfs_file_write(struct file *file, const char __user *buf, size_t len, loff_t *ppos);
 extern ssize_t hrfs_file_aio_read(struct kiocb *iocb, char __user *buf, size_t count, loff_t pos);
 extern ssize_t hrfs_file_aio_write(struct kiocb *iocb, const char __user *buf,
@@ -39,7 +43,7 @@ extern struct file_operations hrfs_main_fops;
 extern struct file_operations hrfs_dir_fops;
 
 /*
- * Be careful!!
+ * Be careful!
  * Keep the same with struct hrfs_file_branch defined in llite/file.c
  * If change this, change there too.
  * Alright, it is urgly.

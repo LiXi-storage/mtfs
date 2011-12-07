@@ -8,8 +8,6 @@
 #include <hrfs_file.h>
 #include <linux/ext2_fs.h>
 
-#define EXT2_SUPER_MAGIC 0xEF53
-
 static inline int ext2_to_inode_flags(int flags)
 {
 	return (flags & EXT2_RESERVED_FL) ?

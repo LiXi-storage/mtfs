@@ -6,6 +6,8 @@
 #include <hrfs_super.h>
 #include <hrfs_dentry.h>
 #include <hrfs_inode.h>
+#include <hrfs_file.h>
+#include <linux/magic.h>
 #include <hrfs_junction.h>
 #include "ext2_support.h"
 

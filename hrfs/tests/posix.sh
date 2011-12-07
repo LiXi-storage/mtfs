@@ -7,7 +7,19 @@ BUG_242="32 32a 32b 32s 37"
 BUG_304="212 54c"
 LOWERFS_BUG_305="34b 34c"
 EXCEPT_SLOW="24v 51a 51b 51c"
-ALWAYS_EXCEPT=${ALWAYS_EXCEPT:-"$LOWERFS_BUG_251 $BUG_242 $BUG_290 $BUG_304 $LOWERFS_BUG_305 $POSIX_EXCEPT"}
+
+export CONFIGS=${CONFIGS:-local}
+. $TESTS_DIR/cfg/$CONFIGS.sh
+if [ "$LOWERFS_STRICT_TIMESTAMP" = "no" ]; then
+	LOWERFS_BUG_326="36a 36c 36d 39c"
+fi
+
+if [ "$LOWERFS_SUPPORT_CHATTR" = "no" ]; then
+	LOWERFS_BUG_327="52a"
+fi
+
+ALWAYS_EXCEPT=${ALWAYS_EXCEPT:-"$LOWERFS_BUG_251 $BUG_242 $BUG_290 $BUG_304
+                                $LOWERFS_BUG_305 $LOWERFS_BUG_326 $LOWERFS_BUG_327 $POSIX_EXCEPT"}
 
 TESTS_DIR=${TESTS_DIR:-$(cd $(dirname $0); echo $PWD)}
 . $TESTS_DIR/test-framework.sh
@@ -771,8 +783,12 @@ test_31c() {
 run_test 31c "open-unlink file with multiple links ============="
 
 test_31d() {
-	$OPENDIRUNLINK $DIR/d31d $DIR/d31d || error
-	$CHECKSTAT -a $DIR/d31d || error
+	if [ "$LOWERFS_DIR_UNREACHEABLE_WHEN_REMOVED_THOUGH_OPENED" = "yes" ]; then
+		echo "skiped"
+	else
+		$OPENDIRUNLINK $DIR/d31d $DIR/d31d || error
+		$CHECKSTAT -a $DIR/d31d || error
+	fi
 }
 run_test 31d "remove of open directory ========================="
 
@@ -1839,7 +1855,7 @@ test_52a() {
 
 	rm -fr $DIR/d52a || error "cleanup rm failed"
 }
-[ "$LOWERFS_SUPPORT_CHATTR" = "yes" ] && run_test 52a "append-only flag test (should return errors) ====="
+run_test 52a "append-only flag test (should return errors) ====="
 
 test_52b() {
 	[ -f $DIR/d52b/foo ] && chattr -i $DIR/d52b/foo
