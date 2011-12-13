@@ -234,4 +234,17 @@ static inline int hrfs_get_nlinks(struct inode *inode)
 	return sum_nlinks;
 }
 
+static inline const char *hrfs_mode2type(umode_t mode)
+{
+	switch (mode & S_IFMT) {
+	case S_IFLNK:  return "softlink"; break;
+	case S_IFREG:  return "regular file"; break;
+	case S_IFDIR:  return "directory"; break;
+	case S_IFCHR:  return "char file"; break;
+	case S_IFBLK:  return "block file"; break;
+	case S_IFIFO:  return "fifo file"; break;
+	case S_IFSOCK: return "socket file"; break;
+	default:       return "unkown type file"; break;
+	}
+}
 #endif /* __HRFS_INODE_H__ */

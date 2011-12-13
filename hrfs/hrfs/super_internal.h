@@ -23,7 +23,6 @@ typedef struct hrfs_sb_info {
 	struct vfsmount **si_mnt_branch; /* mnt_array */
 	hrfs_bindex_t branch_number; /* branch number */
 	int level; /* raid level */
-	int is_lower_nfs;
 	struct hrfs_device *device;
 } hrfs_s_info_t;
 

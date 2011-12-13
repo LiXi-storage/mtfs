@@ -56,6 +56,99 @@ int hrfs_init_super(struct super_block *sb, struct hrfs_device *device, struct d
 	return ret;
 }
 
+struct dentry *hrfs_create_dchild(struct dentry *dparent, const char *name, umode_t mode, dev_t rdev)
+{
+	int ret = 0;
+	struct dentry *dchild = NULL;
+	HENTRY();
+
+	HASSERT(dparent);
+	HASSERT(name);
+	mutex_lock(&dparent->d_inode->i_mutex);
+
+	dchild = lookup_one_len(name, dparent, strlen(name));
+	if (IS_ERR(dchild)) {
+		HERROR("lookup [%s] under [%*s] failed, ret = %d\n",
+		       name, dparent->d_name.len, dparent->d_name.name, ret);
+		ret = PTR_ERR(dchild);
+		goto out;
+	}
+
+	if (dchild->d_inode) {
+		if ((dchild->d_inode->i_mode & S_IFMT) == (mode & S_IFMT)) {
+			HDEBUG("[%*s/%s] already existed\n",
+			       dparent->d_name.len, dparent->d_name.name, name);
+			if ((dchild->d_inode->i_mode & S_IALLUGO) != (mode & S_IALLUGO)) {
+				HDEBUG("permission mode of [%*s/%s] is 0%04o which should be 0%04o for security\n",
+				       dparent->d_name.len, dparent->d_name.name, name, dchild->d_inode->i_mode & S_IALLUGO, S_IRWXU);
+			}
+			goto out;
+		} else {
+			HDEBUG("[%*s/%s] already existed, and is a %s, not a %s\n",
+			       dparent->d_name.len, dparent->d_name.name, name, hrfs_mode2type(dchild->d_inode->i_mode), hrfs_mode2type(mode));
+			ret = -EEXIST;
+			goto out_put;
+		}
+	}
+
+	switch (mode & S_IFMT) {
+	case S_IFREG:
+		ret = vfs_create(dparent->d_inode, dchild, mode, NULL);
+		break;
+	case S_IFDIR:
+		ret = vfs_mkdir(dparent->d_inode, dchild, mode);
+		break;
+	case S_IFCHR:
+	case S_IFBLK:
+	case S_IFIFO:
+	case S_IFSOCK:
+		ret = vfs_mknod(dparent->d_inode, dchild, mode, rdev);
+		break;
+	default:
+		HDEBUG("bad file type 0%o\n", mode & S_IFMT);
+		ret = -EINVAL;
+	}
+	if (ret) {
+		goto out_put;
+	}
+	goto out;
+out_put:
+	dput(dchild);
+out:
+	mutex_unlock(&dparent->d_inode->i_mutex);
+	if (ret) {
+		dchild = ERR_PTR(ret);
+	}
+	HRETURN(dchild);
+}
+
+int hrfs_init_recover(struct dentry *d_root)
+{
+	int ret = 0;
+	struct dentry *hidden_child = NULL;
+	struct dentry *hidden_parent = NULL;
+	hrfs_bindex_t bindex = 0;
+	const char *name = ".hrfs";
+	HENTRY();
+
+	HASSERT(d_root);
+	for (bindex = 0; bindex < hrfs_d2bnum(d_root); bindex++) {
+		hidden_parent = hrfs_d2branch(d_root, bindex);
+		HASSERT(hidden_parent);
+		hidden_child = hrfs_create_dchild(hidden_parent, name, S_IFDIR | S_IRWXU, 0);
+		if (IS_ERR(hidden_child)) {
+			ret = PTR_ERR(hidden_child);
+			HERROR("create branch[%d] of [%*s/%s] failed\n",
+			       bindex, hidden_parent->d_name.len, hidden_parent->d_name.name, name);
+			goto out;
+		}
+		dput(hidden_child);
+	}
+
+out:
+	HRETURN(ret);
+}
+
 int hrfs_read_super(struct super_block *sb, void *input, int silent)
 {
 	int ret = 0;
@@ -118,12 +211,13 @@ int hrfs_read_super(struct super_block *sb, void *input, int silent)
 		//hrfs_d2bvalid(d_root, branch_index) = 1;
 		hrfs_s2mntbranch(sb, bindex) = nd.mnt;
 		hrfs_s2branch(sb, bindex) = nd.dentry->d_sb;
-
-		if (!strncmp(nd.dentry->d_sb->s_type->name, "nfs", 3)) { /* TODO: change to get_supported_fs_type */
-			hrfs_s2info(sb)->is_lower_nfs = 1;
-		}
 	}
 	bindex --;
+
+	ret = hrfs_init_recover(d_root);
+	if (unlikely(ret)) {
+		goto out_put;
+	}
 
 	sb->s_root = d_root;
 
@@ -137,11 +231,11 @@ int hrfs_read_super(struct super_block *sb, void *input, int silent)
 	HASSERT(hrfs_s2bnum(sb) == bnum);
 	HASSERT(hrfs_d2bnum(d_root) == bnum);
 
+	HDEBUG("d_count = %d\n", atomic_read(&d_root->d_count));
 	ret = hrfs_init_super(sb, device, d_root);
 	if (unlikely(ret)) {
 		goto out_free_dev;
 	}
-
 	goto out_option_finit;
 out_free_dev:
 	hrfs_freedev(hrfs_s2dev(sb));
@@ -198,12 +292,12 @@ static void hrfs_inode_info_init_once(void *vptr)
 	inode_init_once(&hi->vfs_inode);
 }
 
-typedef struct hrfs_cache_info {
+struct hrfs_cache_info {
 	struct kmem_cache **cache;
 	const char *name;
 	size_t size;
 	void (*ctor)(void *obj); /* For linux-2.6.30 upper */
-} hrfs_cache_info_t;
+};
 
 struct kmem_cache *hrfs_file_info_cache;
 struct kmem_cache *hrfs_dentry_info_cache;
@@ -211,7 +305,7 @@ struct kmem_cache *hrfs_inode_info_cache;
 struct kmem_cache *hrfs_sb_info_cache;
 struct kmem_cache *hrfs_device_cache;
 
-static hrfs_cache_info_t hrfs_cache_infos[] = {
+static struct hrfs_cache_info hrfs_cache_infos[] = {
 	{
 		.cache = &hrfs_file_info_cache,
 		.name = "hrfs_file_cache",

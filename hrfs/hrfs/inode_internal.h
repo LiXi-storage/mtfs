@@ -17,7 +17,7 @@ int hrfs_inode_dump(struct inode *inode);
 static inline hrfs_i_info_t *hrfs_ii_alloc(void)
 {
 	hrfs_i_info_t *i_info = NULL;
-	
+
 	HRFS_SLAB_ALLOC_PTR(i_info, hrfs_inode_info_cache);	
 	return i_info;
 }
@@ -46,7 +46,7 @@ out:
 	return ret;
 }
 
-static inline int hrfs_i_branch_free(hrfs_i_info_t *i_info)
+static inline int hrfs_ii_branch_free(hrfs_i_info_t *i_info)
 {
 	int ret = 0;
 	

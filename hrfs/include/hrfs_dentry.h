@@ -28,5 +28,4 @@ typedef struct hrfs_dentry_info {
 
 extern int hrfs_d_revalidate(struct dentry *dentry, struct nameidata *nd);
 extern void hrfs_d_release(struct dentry *dentry);
-
 #endif /* __HRFS_DENTRY_H__ */

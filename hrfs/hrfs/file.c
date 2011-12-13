@@ -183,13 +183,6 @@ int hrfs_release(struct inode *inode, struct file *file)
 	hrfs_bindex_t bnum = 0;
 	HENTRY();
 
-	/*finish pending writes*/
-	if (hrfs_s2info(file->f_dentry->d_sb)->is_lower_nfs) {
-		if (file->f_mode & FMODE_WRITE) {
-			filemap_fdatawrite(file->f_mapping);
-		}
-	}
-	
 	/* #BUG(posix:80): empty symlink */
 	if (hrfs_f2info(file) == NULL) {
 		HERROR("file [%*s] has no private data\n",

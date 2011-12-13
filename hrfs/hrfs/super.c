@@ -10,7 +10,7 @@ struct inode *hrfs_alloc_inode(struct super_block *sb)
 	struct inode *inode = NULL;
 	HENTRY();
 
-	HRFS_ALLOC(inode_info, sizeof(*inode_info));
+	inode_info = hrfs_ii_alloc();
 	if (unlikely(!inode_info)) {
 		goto out;
 	}
@@ -37,9 +37,9 @@ void hrfs_destroy_inode(struct inode *inode)
 	 * called hrfs_struct inodeest and failed to alloc memory
 	 */
 	if (inode_info->barray != NULL) {
-		hrfs_i_branch_free(inode_info);
+		hrfs_ii_branch_free(inode_info);
 	}
-	HRFS_FREE(inode_info, sizeof(*inode_info));
+	hrfs_ii_free(inode_info);
 	_HRETURN();
 }
 EXPORT_SYMBOL(hrfs_destroy_inode);
