@@ -87,10 +87,10 @@ static inline int global_write_trylock(void)
 	return down_write_trylock(&global_rwsem);
 }
 
-#include "file_internal.h"
+#include "super_internal.h"
 #include "inode_internal.h"
 #include "dentry_internal.h"
-#include "super_internal.h"
+#include "file_internal.h"
 #include "mmap_internal.h"
 #include "support_internal.h"
 #include "proc_internal.h"

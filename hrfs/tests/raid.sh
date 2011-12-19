@@ -10,22 +10,41 @@ TESTS_DIR=${TESTS_DIR:-$(cd $(dirname $0); echo $PWD)}
 init_test_env
 
 echo "==== $0: started ===="
+BRANCH_PRIMARY="$HRFS_DIR1/test"
+BRANCH_SECONDARY="$HRFS_DIR2/test"
 
-#
-#TESTS_0: read and write
-#Because of cache, writting on hidden_fs will not affect upper_fs, unless upper_fs restarted
-#NEVER let this happen, because unexpected things always happen!
-#
 test_0a() 
 {
-	echo "...............rm $DIR/$tfile -f"
-	rm $DIR/$tfile -f
-	echo "...............touch $HRFS_DIR1/$tfile"
-	touch $HRFS_DIR1/$tfile
-	echo "...............ls $DIR/"
-	ls $DIR/ 
+	rm $DIR/$tfile -f 2>&1 > /dev/null
+	touch $DIR/$tfile || error "create failed"
+	rm $BRANCH_PRIMARY/$tfile -f || error "rm primary branch failed"
+
+	if [ "$LOWERFS_DIR_INVALID_WHEN_REMOVED" = "no" ]; then
+		cleanup_and_setup
+	fi
+
+	$CHECKSTAT -t file $DIR/$tfile && error "still exist 1"
+	ls $DIR/$tfile > /dev/null && error "still exist 2"
+	ls $DIR | grep -q $tfile && error "still exist 3"
+	mkdir $DIR/$tfile || error "recreate failed"
 }
-run_test 0a "lookup a file with an invalid branch should not panic"
+run_test 0a "remove primary branch"
+
+test_0b() 
+{
+	rm $DIR/$tfile -f 2>&1 > /dev/null
+	touch $DIR/$tfile || error "create failed"
+	rm $BRANCH_SECONDARY/$tfile -f || error "rm secondary branch failed"
+
+	if [ "$LOWERFS_DIR_INVALID_WHEN_REMOVED" = "no" ]; then
+		cleanup_and_setup
+	fi
+
+	$CHECKSTAT -t file $DIR/$tfile || error "not exist 1"
+	ls $DIR/$tfile > /dev/null || error "not exist 2"
+	ls $DIR | grep -q $tfile || error "not exist 3"  || true
+}
+run_test 0b "remove secondary branch"
 
 cleanup_all
 echo "=== $0: completed ==="

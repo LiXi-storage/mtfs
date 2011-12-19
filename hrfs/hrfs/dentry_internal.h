@@ -6,6 +6,7 @@
 #define __HRFS_DENTRY_INTERNAL_H__
 #include <hrfs_dentry.h>
 #include "inode_internal.h"
+#include "super_internal.h"
 extern struct dentry_operations hrfs_dops;
 
 int hrfs_dentry_dump(struct dentry *dentry);
@@ -187,4 +188,13 @@ static inline struct dentry *hrfs_d_choose_branch(struct dentry *dentry, __u64 v
 	return hidden_dentry;
 }
 
+static inline struct dentry *hrfs_d_root_branch(struct dentry *dentry, hrfs_bindex_t bindex)
+{
+	return hrfs_d2branch(dentry->d_sb->s_root, bindex);
+}
+
+static inline struct dentry *hrfs_d_recover_branch(struct dentry *dentry, hrfs_bindex_t bindex)
+{
+	return hrfs_s2brecover(dentry->d_sb, bindex);
+}
 #endif /* __HRFS_DENTRY_INTERNAL_H__ */

@@ -118,9 +118,9 @@ static inline hrfs_bindex_t hrfs_i_choose_bindex(struct inode *inode, __u64 vali
 
 	hrfs_i_read_lock(inode);
 	for (bindex = 0; bindex < hrfs_i2bnum(inode); bindex++) {
-		HDEBUG("hrfs_i2binvalid[%d] = %llx\n", bindex, hrfs_i2binvalid(inode, bindex));
 		if ((hrfs_i2branch(inode, bindex) != NULL)
 			&& ((hrfs_i2binvalid(inode, bindex) & valid_flags) == 0)) {
+			HDEBUG("branch[%d] chosen, binvalid = %llx\n", bindex, hrfs_i2binvalid(inode, bindex));
 			ret = bindex;
 			break;
 		}

@@ -7,7 +7,7 @@
 #include <raid.h>
 #include <hrfs_common.h>
 #include <hrfs_support.h>
-#include "super_internal.h"
+#include "hrfs_internal.h"
 
 struct lowerfs_operations *lowerfs_get_ops(const char *type);
 void lowerfs_put_ops(struct lowerfs_operations *fs_ops);

@@ -81,35 +81,36 @@ struct inode_operations hrfs_nfs_main_iops =
 };
 
 struct dentry_operations hrfs_nfs_dops = {
-	d_release:     hrfs_d_release,
+	d_revalidate:   hrfs_d_revalidate,
+	d_release:      hrfs_d_release,
 };
 
 struct file_operations hrfs_nfs_dir_fops =
 {
-	llseek:   hrfs_file_llseek,
-	read:     generic_read_dir,
-	readdir:  hrfs_readdir,
-	ioctl:    hrfs_ioctl,
-	open:     hrfs_open,
-	release:  hrfs_release,
+	llseek:         hrfs_file_llseek,
+	read:           generic_read_dir,
+	readdir:        hrfs_readdir,
+	ioctl:          hrfs_ioctl,
+	open:           hrfs_open,
+	release:        hrfs_release,
 	/* TODO: fsync, do we really need open? */
 };
 
 struct file_operations hrfs_nfs_main_fops =
 {
-	llseek:     hrfs_file_llseek,
-	read:       hrfs_file_read_nonreadv,
-	aio_read:   hrfs_file_aio_read,
-	write:      hrfs_file_write_nonwritev,
-	aio_write:  hrfs_file_aio_write,
-	sendfile:   hrfs_file_sendfile, 
-	readdir:    hrfs_readdir,
-	poll:       hrfs_poll,
-	ioctl:      hrfs_ioctl,
-	mmap:       hrfs_file_mmap,
-	open:       hrfs_open,
-	release:    hrfs_release,
-	fsync:      hrfs_fsync,
+	llseek:         hrfs_file_llseek,
+	read:           hrfs_file_read_nonreadv,
+	aio_read:       hrfs_file_aio_read,
+	write:          hrfs_file_write_nonwritev,
+	aio_write:      hrfs_file_aio_write,
+	sendfile:       hrfs_file_sendfile, 
+	readdir:        hrfs_readdir,
+	poll:           hrfs_poll,
+	ioctl:          hrfs_ioctl,
+	mmap:           hrfs_file_mmap,
+	open:           hrfs_open,
+	release:        hrfs_release,
+	fsync:          hrfs_fsync,
 	/* TODO: splice_read, splice_write */
 };
 

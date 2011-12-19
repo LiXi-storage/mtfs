@@ -407,7 +407,7 @@ cleanup_all_check()
 
 cleanup_and_setup()
 {
-	cleanup_all
+	cleanup_all_check
 	setup_all
 	return
 }

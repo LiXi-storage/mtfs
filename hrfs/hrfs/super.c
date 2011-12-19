@@ -46,14 +46,13 @@ EXPORT_SYMBOL(hrfs_destroy_inode);
 
 void hrfs_put_super(struct super_block *sb)
 {
-	hrfs_bindex_t global_bindex = 0;
-	hrfs_bindex_t bnum = 0;
+	hrfs_bindex_t bindex = 0;
 	HENTRY();
 
 	if (hrfs_s2info(sb)) {
-		bnum = hrfs_s2bnum(sb);
-		for (global_bindex = 0; global_bindex < bnum; global_bindex++) {
-			mntput(hrfs_s2mntbranch(sb, global_bindex));
+		for (bindex = 0; bindex < hrfs_s2bnum(sb); bindex++) {
+			mntput(hrfs_s2mntbranch(sb, bindex));
+			dput(hrfs_s2brecover(sb, bindex));
 		}
 		HASSERT(hrfs_s2dev(sb));
 		hrfs_freedev(hrfs_s2dev(sb));

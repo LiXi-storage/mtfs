@@ -56,72 +56,6 @@ int hrfs_init_super(struct super_block *sb, struct hrfs_device *device, struct d
 	return ret;
 }
 
-struct dentry *hrfs_create_dchild(struct dentry *dparent, const char *name, umode_t mode, dev_t rdev)
-{
-	int ret = 0;
-	struct dentry *dchild = NULL;
-	HENTRY();
-
-	HASSERT(dparent);
-	HASSERT(name);
-	mutex_lock(&dparent->d_inode->i_mutex);
-
-	dchild = lookup_one_len(name, dparent, strlen(name));
-	if (IS_ERR(dchild)) {
-		HERROR("lookup [%s] under [%*s] failed, ret = %d\n",
-		       name, dparent->d_name.len, dparent->d_name.name, ret);
-		ret = PTR_ERR(dchild);
-		goto out;
-	}
-
-	if (dchild->d_inode) {
-		if ((dchild->d_inode->i_mode & S_IFMT) == (mode & S_IFMT)) {
-			HDEBUG("[%*s/%s] already existed\n",
-			       dparent->d_name.len, dparent->d_name.name, name);
-			if ((dchild->d_inode->i_mode & S_IALLUGO) != (mode & S_IALLUGO)) {
-				HDEBUG("permission mode of [%*s/%s] is 0%04o which should be 0%04o for security\n",
-				       dparent->d_name.len, dparent->d_name.name, name, dchild->d_inode->i_mode & S_IALLUGO, S_IRWXU);
-			}
-			goto out;
-		} else {
-			HDEBUG("[%*s/%s] already existed, and is a %s, not a %s\n",
-			       dparent->d_name.len, dparent->d_name.name, name, hrfs_mode2type(dchild->d_inode->i_mode), hrfs_mode2type(mode));
-			ret = -EEXIST;
-			goto out_put;
-		}
-	}
-
-	switch (mode & S_IFMT) {
-	case S_IFREG:
-		ret = vfs_create(dparent->d_inode, dchild, mode, NULL);
-		break;
-	case S_IFDIR:
-		ret = vfs_mkdir(dparent->d_inode, dchild, mode);
-		break;
-	case S_IFCHR:
-	case S_IFBLK:
-	case S_IFIFO:
-	case S_IFSOCK:
-		ret = vfs_mknod(dparent->d_inode, dchild, mode, rdev);
-		break;
-	default:
-		HDEBUG("bad file type 0%o\n", mode & S_IFMT);
-		ret = -EINVAL;
-	}
-	if (ret) {
-		goto out_put;
-	}
-	goto out;
-out_put:
-	dput(dchild);
-out:
-	mutex_unlock(&dparent->d_inode->i_mutex);
-	if (ret) {
-		dchild = ERR_PTR(ret);
-	}
-	HRETURN(dchild);
-}
-
 int hrfs_init_recover(struct dentry *d_root)
 {
 	int ret = 0;
@@ -140,11 +74,17 @@ int hrfs_init_recover(struct dentry *d_root)
 			ret = PTR_ERR(hidden_child);
 			HERROR("create branch[%d] of [%*s/%s] failed\n",
 			       bindex, hidden_parent->d_name.len, hidden_parent->d_name.name, name);
-			goto out;
+			bindex--;
+			goto out_put_recover;
 		}
-		dput(hidden_child);
+		hrfs_s2brecover(d_root->d_sb, bindex) = hidden_child;
 	}
-
+	goto out;
+out_put_recover:
+	for (; bindex >= 0; bindex--) {
+		HASSERT(hrfs_s2brecover(d_root->d_sb, bindex));
+		dput(hrfs_s2brecover(d_root->d_sb, bindex));
+	}
 out:
 	HRETURN(ret);
 }
@@ -168,7 +108,7 @@ int hrfs_read_super(struct super_block *sb, void *input, int silent)
 
 	bnum = mount_option.bnum;
 	HASSERT(bnum > 0);
-	
+
 	d_root = d_alloc(NULL, &name);
 	if (unlikely(d_root == NULL)) {
 		ret = -ENOMEM;
@@ -214,12 +154,13 @@ int hrfs_read_super(struct super_block *sb, void *input, int silent)
 	}
 	bindex --;
 
+	sb->s_root = d_root;
+	d_root->d_sb = sb;
+
 	ret = hrfs_init_recover(d_root);
 	if (unlikely(ret)) {
 		goto out_put;
 	}
-
-	sb->s_root = d_root;
 
 	device = hrfs_newdev(sb, &mount_option);
 	HASSERT(device);
