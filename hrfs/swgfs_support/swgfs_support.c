@@ -7,6 +7,7 @@
 #include <hrfs_dentry.h>
 #include <hrfs_inode.h>
 #include <hrfs_mmap.h>
+#include <hrfs_flag.h>
 #include <hrfs_junction.h>
 #include "swgfs_support.h"
 
@@ -295,13 +296,18 @@ out:
 static int hrfs_swgfs_getflags(struct inode *inode, struct file *file, unsigned long arg)
 {
 	int ret = 0;
-	hrfs_bindex_t bindex = hrfs_i_choose_bindex(inode, HRFS_ATTR_VALID);
+	hrfs_bindex_t bindex = -1;
 	struct file *hidden_file = NULL;
 	struct inode *hidden_inode = NULL;
 	int flags = 0;
 	mm_segment_t old_fs;
 	HENTRY();
 
+	ret = hrfs_i_choose_bindex(inode, HRFS_ATTR_VALID, &bindex);
+	if (ret <= 0) {
+		HERROR("choose bindex failed, ret = %d\n", ret);
+		goto out;
+	}
 	HASSERT(bindex >=0 && bindex < hrfs_i2bnum(inode));
 	hidden_file = hrfs_f2branch(file, bindex);
 	hidden_inode = hrfs_i2branch(inode, bindex);

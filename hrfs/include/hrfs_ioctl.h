@@ -6,6 +6,7 @@
 #define __HRFS_IOCTL_H__
 #include <hrfs_types.h>
 #include <hrfs_common.h>
+#include <hrfs_flag.h>
 /*
  * DEFINITIONS FOR USER AND KERNEL CODE:
  * (Note: ioctl numbers 1--9 are reserved for fistgen, the rest
@@ -25,20 +26,20 @@
 #define HRFS_IOCTL_RULE_DEL         _IOW(0x15, 6, HRFS_IOCTL_DATA_TYPE)
 #define HRFS_IOCTL_RULE_LIST        _IOW(0x15, 7, HRFS_IOCTL_DATA_TYPE)
 
-typedef struct hrfs_branch_state {
+typedef struct hrfs_branch_flag {
 	__u32 flag;
 	__u32 flag1;
-} hrfs_branch_state_t;
+} hrfs_branch_flag_t;
 
-typedef struct hrfs_user_state {
+typedef struct hrfs_user_flag {
 	int state_size;
 	hrfs_bindex_t bnum; /* must be bigger than hrfs_bindex_t */
-	hrfs_branch_state_t state[0]; /* per-brach data */
-} hrfs_user_state_t;
+	hrfs_branch_flag_t state[0]; /* per-brach data */
+} hrfs_user_flag_t;
 
-static inline int hrfs_user_state_size(hrfs_bindex_t bnum)
+static inline int hrfs_user_flag_size(hrfs_bindex_t bnum)
 {
-	return sizeof(struct hrfs_user_state) + bnum * sizeof(struct hrfs_branch_state);
+	return sizeof(struct hrfs_user_flag) + bnum * sizeof(struct hrfs_branch_flag);
 }
 
 #endif /* __HRFS_IOCTL_H__ */

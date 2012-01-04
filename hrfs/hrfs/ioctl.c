@@ -87,20 +87,20 @@ out:
 }
 #endif
 
-static int hrfs_user_get_state(struct inode *inode, hrfs_user_state_t __user *user_state, hrfs_bindex_t max_bnum)
+static int hrfs_user_get_state(struct inode *inode, struct hrfs_user_flag __user *user_state, hrfs_bindex_t max_bnum)
 {
 	hrfs_bindex_t bnum = hrfs_i2bnum(inode);
 	hrfs_bindex_t bindex = 0;
 	__u32 branch_flag = 0;
 	int ret = 0;
-	hrfs_user_state_t *state = NULL;
+	struct hrfs_user_flag *state = NULL;
 	int state_size = 0;
 	struct inode *hidden_inode = NULL;
 	struct lowerfs_operations *lowerfs_ops = NULL;
 
 	HASSERT(bnum <= max_bnum);
 
-	state_size = hrfs_user_state_size(bnum);
+	state_size = hrfs_user_flag_size(bnum);
 	HRFS_ALLOC(state, state_size);
 	if (state == NULL) {
 		ret = -ENOMEM;
@@ -128,17 +128,17 @@ out:
 	return ret;	
 }
 
-static int hrfs_user_set_state(struct inode *inode, hrfs_user_state_t __user *user_state)
+static int hrfs_user_set_state(struct inode *inode, struct hrfs_user_flag __user *user_state)
 {
 	hrfs_bindex_t bnum = hrfs_i2bnum(inode);
 	hrfs_bindex_t bindex = 0;
 	int ret = 0;
-	hrfs_user_state_t *state = NULL;
+	struct hrfs_user_flag *state = NULL;
 	int state_size = 0;
 	struct inode *hidden_inode = NULL;
 	struct lowerfs_operations *lowerfs_ops = NULL;
 	
-	state_size = hrfs_user_state_size(bnum);
+	state_size = hrfs_user_flag_size(bnum);
 	HRFS_ALLOC(state, state_size);
 	if (state == NULL) {
 		ret = -ENOMEM;
@@ -192,11 +192,11 @@ int hrfs_ioctl(struct inode *inode, struct file *file, unsigned int cmd, unsigne
 
 	switch (cmd) {
 	case HRFS_IOCTL_GET_FLAG:
-		err = hrfs_user_get_state(inode, (hrfs_user_state_t __user *)arg, HRFS_BRANCH_MAX);
+		err = hrfs_user_get_state(inode, (struct hrfs_user_flag __user *)arg, HRFS_BRANCH_MAX);
 		break;
 	case HRFS_IOCTL_SET_FLAG:
 		HERROR("HRFS_IOCTL_SET_FLAG in\n");
-		err = hrfs_user_set_state(inode, (hrfs_user_state_t __user *)arg);
+		err = hrfs_user_set_state(inode, (struct hrfs_user_flag __user *)arg);
 		break;
 	case HRFS_IOCTL_GET_DEBUG_LEVEL:
 		//val = fist_get_debug_value();

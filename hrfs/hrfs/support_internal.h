@@ -7,6 +7,7 @@
 #include <raid.h>
 #include <hrfs_common.h>
 #include <hrfs_support.h>
+#include <hrfs_flag.h>
 #include "hrfs_internal.h"
 
 struct lowerfs_operations *lowerfs_get_ops(const char *type);
@@ -27,6 +28,32 @@ static inline int lowerfs_inode_get_flag(struct lowerfs_operations *fs_ops, stru
 	if (fs_ops->lowerfs_inode_get_flag) {
 		ret = fs_ops->lowerfs_inode_get_flag(inode, hrfs_flag);
 	}
+	return ret;
+}
+
+/*
+ * Change to a atomic operation.
+ * Send a command, let sever make it atomic.
+ */
+static inline int lowerfs_inode_invalidate_data(struct lowerfs_operations *fs_ops, struct inode *inode)
+{
+	int ret = 0;
+	__u32 hrfs_flag = 0;
+
+	if (fs_ops->lowerfs_inode_get_flag == NULL ||
+	    fs_ops->lowerfs_inode_set_flag == NULL) {
+		ret = -EOPNOTSUPP;
+		goto out;
+	}
+
+	ret = fs_ops->lowerfs_inode_get_flag(inode, &hrfs_flag);
+	if (ret) {
+		goto out;
+	}
+	hrfs_flag |= HRFS_FLAG_DATABAD | HRFS_FLAG_SETED;
+
+	ret = fs_ops->lowerfs_inode_set_flag(inode, hrfs_flag);
+out:
 	return ret;
 }
 

@@ -126,18 +126,24 @@ int hrfs_inherit_raid_type(struct dentry *dentry, raid_type_t *raid_type)
 	struct inode *i_parent = NULL;
 	struct inode *hidden_i_parent = NULL;
 	struct lowerfs_operations *lowerfs_ops = NULL;
-	hrfs_bindex_t bindex = 0;
+	hrfs_bindex_t bindex = -1;
 	HENTRY();
 
 	HASSERT(dentry->d_parent);
 	i_parent = dentry->d_parent->d_inode;
 	HASSERT(i_parent);
-	bindex = hrfs_i_choose_bindex(i_parent, HRFS_ATTR_VALID);
+	ret = hrfs_i_choose_bindex(i_parent, HRFS_ATTR_VALID, &bindex);
+	if (ret <= 0) {
+		HERROR("choose bindex failed, ret = %d\n", ret);
+		goto out;
+	}
+
 	hidden_i_parent = hrfs_i2branch(i_parent, bindex);
 	lowerfs_ops = hrfs_i2bops(i_parent, bindex);
 	ret = lowerfs_inode_get_raid_type(lowerfs_ops, hidden_i_parent, raid_type);
 
 	HDEBUG("parent raid_type = %d\n", *raid_type);
+out:
 	return ret;
 }
 
@@ -1805,17 +1811,15 @@ int hrfs_permission(struct inode *inode, int mask, struct nameidata *nd)
 	int ret = 0;
 	HENTRY();
 
-	hidden_inode = hrfs_i_choose_branch(inode, HRFS_INODE_VALID);
-	HASSERT(hidden_inode);
-
-#ifndef LIXI_20111027
-	ret = permission(hidden_inode, mask, NULL);
-#else
-	if (hidden_inode->i_op && hidden_inode->i_op->permission) {
-		ret = hidden_inode->i_op->permission(hidden_inode, mask, nd);
+	hidden_inode = hrfs_i_choose_branch(inode, HRFS_BRANCH_VALID);
+	if (IS_ERR(hidden_inode)) {
+		HERROR("choose branch failed, ret = %d\n", ret);
+		ret = PTR_ERR(hidden_inode);
+		goto out;
 	}
-#endif
 
+	ret = permission(hidden_inode, mask, NULL);
+out:
 	HRETURN(ret);
 }
 EXPORT_SYMBOL(hrfs_permission);
@@ -1866,8 +1870,12 @@ int hrfs_setattr(struct dentry *dentry, struct iattr *ia)
 	/* primary is ok for sure */
 	ret = 0;
 
-	hidden_inode = hrfs_i_choose_branch(inode, HRFS_ATTR_VALID);
-	HASSERT(hidden_inode);
+	hidden_inode = hrfs_i_choose_branch(inode, HRFS_BRANCH_VALID);
+	if (IS_ERR(hidden_inode)) {
+		ret = PTR_ERR(hidden_inode);
+		HERROR("choose branch failed, ret = %d\n", ret);
+		goto out;
+	}
 	fsstack_copy_attr_all(inode, hidden_inode, hrfs_get_nlinks);
 
 	if (ia->ia_valid & ATTR_SIZE) {
@@ -1883,12 +1891,19 @@ int hrfs_getattr(struct vfsmount *mnt, struct dentry *dentry, struct kstat *stat
 {
 	int ret = 0;
 	struct inode *inode = dentry->d_inode;
-	hrfs_bindex_t bindex = hrfs_i_choose_bindex(inode, HRFS_ATTR_VALID);
+	hrfs_bindex_t bindex = -1;
 	struct dentry *hidden_dentry = NULL;
 	struct vfsmount *hidden_mnt = NULL;
 	HENTRY();
 
 	HDEBUG("getattr [%*s]\n", dentry->d_name.len, dentry->d_name.name);
+
+	ret = hrfs_i_choose_bindex(inode, HRFS_BRANCH_VALID, &bindex);
+	if (ret <= 0) {
+		HERROR("choose bindex failed, ret = %d\n", ret);
+		goto out;
+	}
+
 	HASSERT(bindex >=0 && bindex < hrfs_i2bnum(inode));
 	hidden_dentry = hrfs_d2branch(dentry, bindex);
 	HASSERT(hidden_dentry);
@@ -1903,6 +1918,7 @@ int hrfs_getattr(struct vfsmount *mnt, struct dentry *dentry, struct kstat *stat
 	dput(hidden_dentry);
 	fsstack_copy_attr_all(inode, hidden_dentry->d_inode, hrfs_get_nlinks);
 
+out:
 	HRETURN(ret);
 }
 EXPORT_SYMBOL(hrfs_getattr);
@@ -1910,21 +1926,24 @@ EXPORT_SYMBOL(hrfs_getattr);
 ssize_t hrfs_getxattr(struct dentry *dentry, const char *name, void *value, size_t size) 
 {
 	struct dentry *hidden_dentry = NULL;
-	ssize_t err = -EOPNOTSUPP; 
+	ssize_t ret = -EOPNOTSUPP; 
 	HENTRY();
 
 	HDEBUG("getxattr [%*s]\n", dentry->d_name.len, dentry->d_name.name);
 	HASSERT(dentry->d_inode);
 	hidden_dentry = hrfs_d_choose_branch(dentry, HRFS_ATTR_VALID);
-	HASSERT(hidden_dentry);
+	if (IS_ERR(hidden_dentry)) {
+		ret = PTR_ERR(hidden_dentry);
+		goto out;
+	}
 
 	HASSERT(hidden_dentry->d_inode);
 	HASSERT(hidden_dentry->d_inode->i_op);
-	if (hidden_dentry->d_inode->i_op->getxattr) {
-		err = hidden_dentry->d_inode->i_op->getxattr(hidden_dentry, name, value, size);
-	}
+	HASSERT(hidden_dentry->d_inode->i_op->getxattr);
+	ret = hidden_dentry->d_inode->i_op->getxattr(hidden_dentry, name, value, size);
 
-	HRETURN(err);
+out:
+	HRETURN(ret);
 }
 EXPORT_SYMBOL(hrfs_getxattr);
 

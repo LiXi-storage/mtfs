@@ -71,5 +71,4 @@ static inline loff_t calculate_inode_size(struct inode *inode, int bindex, loff_
 
 	return low_ia_size;
 }
-
 #endif /* __HRFS_INODE_INTERNAL_H__ */

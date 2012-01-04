@@ -150,44 +150,6 @@ static inline int hrfs_d_is_positive(struct dentry *dentry)
 	return positive_bnum > 0;
 }
 
-static inline hrfs_bindex_t hrfs_d_choose_bindex(struct dentry *dentry, __u64 valid_flags)
-{
-	hrfs_bindex_t bindex = -1;
-
-	HASSERT(dentry);
-	HASSERT(hrfs_valid_flags_is_valid(valid_flags));
-	
-	if (valid_flags == HRFS_DENTRY_VALID) {
-		for (bindex = 0; bindex < hrfs_d2bnum(dentry); bindex++) {
-			if ((hrfs_d2binvalid(dentry, bindex) & HRFS_DENTRY_VALID) == 0) {
-				HASSERT(hrfs_d2branch(dentry, bindex));
-				goto out;
-			}
-		}
-		bindex = -1;
-	} else if (dentry->d_inode) {
-		bindex = hrfs_i_choose_bindex(dentry->d_inode, valid_flags);
-	}
-
-out:	
-	return bindex;
-}
-
-static inline struct dentry *hrfs_d_choose_branch(struct dentry *dentry, __u64 valid_flags)
-{
-	hrfs_bindex_t bindex = hrfs_d_choose_bindex(dentry, valid_flags);
-	struct dentry *hidden_dentry = NULL;
-
-	if (bindex >=0 && bindex < hrfs_d2bnum(dentry)) {
-		hidden_dentry = hrfs_d2branch(dentry, bindex);
-	}
-
-	if (hidden_dentry == NULL) {
-		HDEBUG("failed to choose a valid branch, valid_flags = %llu\n", valid_flags);
-	}
-	return hidden_dentry;
-}
-
 static inline struct dentry *hrfs_d_root_branch(struct dentry *dentry, hrfs_bindex_t bindex)
 {
 	return hrfs_d2branch(dentry->d_sb->s_root, bindex);

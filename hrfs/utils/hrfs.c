@@ -45,7 +45,8 @@ static int hrfs_ignore_errors(int argc, char **argv)
 
 static int hrfs_example(int argc, char **argv);
 static int hrfs_getstate(int argc, char **argv);
-static int hrfs_setstate(int argc, char **argv);
+static int hrfs_setbranch(int argc, char **argv);
+static int hrfs_setraid(int argc, char **argv);
 static int hrfs_repair(int argc, char **argv);
 static int hrfs_diff(int argc, char **argv);
 static int hrfs_log(int argc, char **argv);
@@ -75,9 +76,14 @@ command_t hrfs_cmdlist[] = {
 	"To list the state info for a given file or directory.\n"
 	"usage: getstate [--quiet | -q] [--verbose | -v]\n"
 	"                <dir|file> ...\n"},
-	{"setstate", hrfs_setstate, 0,
-	"To list the state info for a given file or directory.\n"
-	"usage: setstate [--quiet | -q] [--verbose | -v]\n"
+	{"setbranch", hrfs_setbranch, 0,
+	"To set the state info for a branch of a given file or directory.\n"
+	"usage: setbranch [--quiet | -q] [--verbose | -v]\n"
+	"                [--branch | -b bindex] [--state | -s]"
+	"                <dir|file> ...\n"},
+	{"setraid", hrfs_setraid, 0,
+	"To set a raid level for a given file or directory.\n"
+	"usage: setraid [--quiet | -q] [--verbose | -v]\n"
 	"                [--raid | -r raid_type] <dir|file> ...\n"},
 
 	/* control commands */
@@ -164,7 +170,7 @@ out:
 	return rc;
 }
 
-static int hrfs_setstate(int argc, char **argv)
+static int hrfs_setraid(int argc, char **argv)
 {
 	struct option long_opts[] = {
 		{"quiet", no_argument, 0, 'q'},
@@ -211,21 +217,155 @@ static int hrfs_setstate(int argc, char **argv)
 	}
 
 	/* Get the raid pattern */
-	if (raid_type_arg != NULL) {
-		raid_type = strtoul(raid_type_arg, &end, 0);
-		if (*end != '\0' || (!raid_type_is_valid(raid_type))) {
-			fprintf(stderr, "error: %s: bad raid pattern '%s'\n",
-   			        argv[0], raid_type_arg);
+	if (raid_type_arg == NULL) {
+		rc = CMD_HELP;
+		goto out;
+	}
+	
+	raid_type = strtoul(raid_type_arg, &end, 0);
+	if (*end != '\0' || (!raid_type_is_valid(raid_type))) {
+		fprintf(stderr, "error: %s: bad raid pattern '%s'\n",
+  	        argv[0], raid_type_arg);
+		rc = CMD_HELP;
+		goto out;
+	}
+
+	do {
+		rc = hrfs_api_setraid(argv[optind], raid_type, &param);
+		//hrfs_api_getstate(argv[optind], &param);
+	} while (++optind < argc && !rc);
+
+
+	if (rc) {
+		fprintf(stderr, "error: %s failed for %s, ret = %d.\n",
+		        argv[0], argv[optind - 1], rc);
+	}
+out:
+	return rc;
+}
+
+/*
+ * setbranch -b bindex -d 1 -x 1 -a 1 /path/to/hrfs/
+*/
+static int hrfs_setbranch(int argc, char **argv)
+{
+	struct option long_opts[] = {
+		{"quiet", no_argument, 0, 'q'},
+		{"verbose", no_argument, 0, 'v'},
+		{"branch", no_argument, 0, 'b'},
+		{"data", no_argument, 0, 'd'},
+		{"attr", no_argument, 0, 'a'},
+		{"xattr", no_argument, 0, 'x'},
+		{0, 0, 0, 0}
+	};
+	char short_opts[] = "qvb:d:a:x:";
+	int c = 0;
+	int rc = 0;
+	hrfs_param_t param = { 0 };
+	char *end = NULL;
+	char *branch_arg = NULL;
+	char *data_arg = NULL;
+	char *attr_arg = NULL;
+	char *xattr_arg = NULL;
+	struct hrfs_branch_valid valid = {HRFS_BSTATE_UNSETTED, HRFS_BSTATE_UNSETTED, HRFS_BSTATE_UNSETTED};
+	int is_valid = HRFS_BSTATE_UNSETTED;
+	hrfs_bindex_t bindex = 0;
+
+	optind = 0;
+	while ((c = getopt_long(argc, argv, short_opts, long_opts, NULL)) != -1) {
+		switch (c) {
+		case 'q':
+ 			param.quiet++;
+			param.verbose = 0;
+			break;
+		case 'v':
+			param.verbose++;
+			param.quiet = 0;
+			break;
+		case 'b':
+			branch_arg = optarg;
+			break;
+		case 'd':
+			data_arg = optarg;
+			break;
+		case 'a':
+			attr_arg = optarg;
+			break;
+		case 'x':
+			xattr_arg = optarg;
+			break;
+		case '?':
+			rc = CMD_HELP;
+			goto out;
+		default:
+			fprintf(stderr, "error: %s: option '%s' unrecognized\n",
+			        argv[0], argv[optind - 1]);
 			rc = CMD_HELP;
 			goto out;
 		}
 	}
+	
+	if (optind >= argc) {
+		rc = CMD_HELP;
+		goto out;
+	}
+
+	if (branch_arg == NULL) {
+		rc = CMD_HELP;
+		goto out;
+	}
+
+	if (branch_arg != NULL) {
+		bindex = strtoul(branch_arg, &end, 0);
+		if (bindex < 0 ||
+		    *end != '\0') {
+			fprintf(stderr, "error: %s: bad branch index '%s'\n",
+			        argv[0], branch_arg);
+			        rc = CMD_HELP;
+			        goto out;
+		}
+		valid.data_valid = is_valid;
+	}
+
+	if (data_arg != NULL) {
+		is_valid = strtoul(data_arg, &end, 0);
+		if ((is_valid != 0 && is_valid != 1) ||
+		    *end != '\0') {
+			fprintf(stderr, "error: %s: bad data valid flag '%s'\n",
+			        argv[0], data_arg);
+			        rc = CMD_HELP;
+			        goto out;
+		}
+		valid.data_valid = is_valid;
+	}
+
+	if (attr_arg != NULL) {
+		is_valid = strtoul(attr_arg, &end, 0);
+		if ((is_valid != 0 && is_valid != 1) ||
+		    *end != '\0') {
+			fprintf(stderr, "error: %s: bad attr valid flag '%s'\n",
+			        argv[0], attr_arg);
+			        rc = CMD_HELP;
+			        goto out;
+		}
+		valid.attr_valid = is_valid;
+	}
+
+	if (xattr_arg != NULL) {
+		is_valid = strtoul(xattr_arg, &end, 0);
+		if ((is_valid != 0 && is_valid != 1) ||
+		    *end != '\0') {
+			fprintf(stderr, "error: %s: bad xattr valid flag '%s'\n",
+			        argv[0], xattr_arg);
+			        rc = CMD_HELP;
+			        goto out;
+		}
+		valid.xattr_valid = is_valid;
+	}
 
 	do {
-		rc = hrfs_api_setstate(argv[optind], raid_type, &param);
-		//hrfs_api_getstate(argv[optind], &param);
+		rc = hrfs_api_setbranch(argv[optind], bindex, &valid, &param);
 	} while (++optind < argc && !rc);
-
 
 	if (rc) {
 		fprintf(stderr, "error: %s failed for %s, ret = %d.\n",
