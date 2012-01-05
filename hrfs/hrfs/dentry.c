@@ -71,13 +71,13 @@ int hrfs_d_revalidate(struct dentry *dentry, struct nameidata *nd)
 	bnum = hrfs_d2bnum(dentry);
 
 	for (bindex = 0; bindex < bnum; bindex++) {
-#ifdef LIXI_20111215
+#ifndef LIXI_20111215
 		if (hrfs_d2branch(dentry, bindex) == NULL) {
 			continue;
 		}
 #endif
 		ret = hrfs_d_revalidate_branch(dentry, NULL, bindex);
-#ifdef LIXI_20111215
+#ifndef LIXI_20111215
 		if (ret <= 0) {
 			goto out_d_drop;
 		}

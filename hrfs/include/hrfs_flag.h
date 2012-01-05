@@ -71,19 +71,6 @@ out:
 	return valid;
 }
 
-struct hrfs_operation_binfo {
-	hrfs_bindex_t bindex;     /* Global bindex */
-	int is_suceessful;        /* Whether this branch is suceessful */
-};
-
-struct hrfs_operation_list {
-	hrfs_bindex_t bnum;                     /* Branch number */
-	hrfs_bindex_t latest_bnum;              /* Number of latest branches */
-	struct hrfs_operation_binfo *op_binfo; /* Global bindex */
-	int is_suceessful;                      /* Some branches succeeded */
-	int have_fault;                         /* Some branches failed */
-};
-
 #if defined (__linux__) && defined(__KERNEL__)
 #include <hrfs_inode.h>
 #include <hrfs_dentry.h>
@@ -161,6 +148,101 @@ static inline struct dentry *hrfs_d_choose_branch(struct dentry *dentry, __u64 v
 	hidden_dentry = hrfs_d2branch(dentry, bindex);
 out:
 	return hidden_dentry;
+}
+
+struct hrfs_operation_binfo {
+	hrfs_bindex_t bindex;     /* Global bindex */
+	int is_suceessful;        /* Whether this branch succeeded */
+	int ret;                  /* Operation status returned */
+};
+
+struct hrfs_operation_list {
+	hrfs_bindex_t bnum;                     /* Branch number */
+	hrfs_bindex_t latest_bnum;              /* Number of latest branches */
+	struct hrfs_operation_binfo *op_binfo;  /* Global bindex */
+	hrfs_bindex_t success_bnum;             /* Some branches succeeded */
+	hrfs_bindex_t fault_bnum;               /* Some branches failed */
+};
+
+#include <memory.h>
+static inline struct hrfs_operation_list *hrfs_oplist_alloc(hrfs_bindex_t bnum)
+{
+	struct hrfs_operation_list *list = NULL;
+
+	HRFS_ALLOC_PTR(list);
+	if (unlikely(list == NULL)) {
+		goto out;
+	}
+	
+	list->bnum = bnum;
+	HRFS_ALLOC(list->op_binfo, sizeof(*list->op_binfo) * bnum);
+	if (unlikely(list->op_binfo == NULL)) {
+		goto out_free_list;
+	}
+	goto out;
+out_free_list:
+	HRFS_FREE_PTR(list);
+out:
+	return list;
+}
+
+static inline void hrfs_oplist_free(struct hrfs_operation_list *list)
+{
+	HRFS_FREE(list->op_binfo, sizeof(*list->op_binfo) * list->bnum);
+	HRFS_FREE_PTR(list);
+}
+
+static inline struct hrfs_operation_list *hrfs_oplist_build(struct inode *inode)
+{
+	struct hrfs_operation_list *list = NULL;
+	hrfs_bindex_t bindex = 0;
+	hrfs_bindex_t bnum = hrfs_i2bnum(inode);
+	hrfs_bindex_t blast = bnum - 1;
+	hrfs_bindex_t bfirst = 0;
+	int is_valid = 1;
+	struct hrfs_operation_binfo *binfo = NULL;
+
+	list = hrfs_oplist_alloc(bnum);
+	if (unlikely(list == NULL)) {
+		goto out;
+	}
+
+	/* NOT a good implementation, change me */
+	for (bindex = 0; bindex < bnum; bindex++) {
+		is_valid = hrfs_branch_is_valid(inode, bindex, HRFS_DATA_VALID);
+		if (is_valid) {
+			binfo = &(list->op_binfo[bfirst]);
+			bfirst++;
+		} else {
+			binfo = &(list->op_binfo[blast]);
+			blast--;
+		}
+		binfo->bindex = bindex;
+	}
+	list->latest_bnum = bfirst;
+out:
+	return list;
+}
+
+static inline int hrfs_oplist_check(struct hrfs_operation_list *list)
+{
+	hrfs_bindex_t bindex = 0;
+	int ret = 0;
+
+	for (bindex = 0; bindex < list->bnum; bindex++) {
+		if (list->op_binfo[bindex].is_suceessful) {
+			list->success_bnum++;
+		} else {
+			list->fault_bnum++;
+		}
+	}
+	return ret;
+}
+
+/* Choose a operation status returned */
+static inline int hrfs_oplist_status(struct hrfs_operation_list *list)
+{
+	return list->op_binfo[0].ret;
 }
 #endif /* defined (__linux__) && defined(__KERNEL__) */
 #endif /* __HRFS_FLAG_H__ */

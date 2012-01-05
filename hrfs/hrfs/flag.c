@@ -23,44 +23,6 @@ int hrfs_flag_invalidate_attr(struct inode *inode, hrfs_bindex_t bindex)
 	return 0;
 }
 
-struct hrfs_operation_list *hrfs_operation_alloc(hrfs_bindex_t bnum)
-{
-	struct hrfs_operation_list *list = NULL;
-
-	HRFS_ALLOC_PTR(list);
-	if (unlikely(list == NULL)) {
-		goto out;
-	}
-	
-	HRFS_ALLOC(list->op_binfo, sizeof(*list->op_binfo) * bnum);
-	if (unlikely(list->op_binfo == NULL)) {
-		goto out_free_list;
-	}
-	goto out;
-out_free_list:
-	HRFS_FREE_PTR(list);
-out:
-	return list;
-}
-
-struct hrfs_operation_list *hrfs_operation_build_list(struct inode *inode)
-{
-	struct hrfs_operation_list *list = NULL;
-	hrfs_bindex_t bindex = 0;
-	hrfs_bindex_t bnum = hrfs_i2bnum(inode);
-
-	list = hrfs_operation_alloc(bnum);
-	if (unlikely(list == NULL)) {
-		goto out;
-	}
-
-	for (bindex = 0; bindex < bnum; bindex++) {
-
-	}
-out:
-	return list;
-}
-
 int hrfs_get_branch_flag(struct inode *inode, hrfs_bindex_t bindex, __u32 *hrfs_flag)
 {
 	struct inode *hidden_inode = hrfs_i2branch(inode, bindex);

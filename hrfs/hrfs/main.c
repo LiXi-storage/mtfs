@@ -89,6 +89,16 @@ out:
 	HRETURN(ret);
 }
 
+void hrfs_finit_recover(struct dentry *d_root)
+{
+	hrfs_bindex_t bindex = 0;
+	HASSERT(d_root);
+	for (bindex = 0; bindex < hrfs_d2bnum(d_root); bindex++) {
+		HASSERT(hrfs_s2brecover(d_root->d_sb, bindex));
+		dput(hrfs_s2brecover(d_root->d_sb, bindex));
+	}
+}
+
 int hrfs_read_super(struct super_block *sb, void *input, int silent)
 {
 	int ret = 0;
@@ -166,7 +176,7 @@ int hrfs_read_super(struct super_block *sb, void *input, int silent)
 	HASSERT(device);
 	if (IS_ERR(device)) {
 		ret = PTR_ERR(device);
-		goto out_put;
+		goto out_finit_recover;
 	}
 
 	HASSERT(hrfs_s2bnum(sb) == bnum);
@@ -180,6 +190,8 @@ int hrfs_read_super(struct super_block *sb, void *input, int silent)
 	goto out_option_finit;
 out_free_dev:
 	hrfs_freedev(hrfs_s2dev(sb));
+out_finit_recover:
+	hrfs_finit_recover(d_root);
 out_put:
 	for(; bindex >=0; bindex--) {
 		HASSERT(hrfs_d2branch(d_root, bindex));

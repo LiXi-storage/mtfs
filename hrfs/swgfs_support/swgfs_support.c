@@ -76,7 +76,6 @@ struct file_operations hrfs_swgfs_dir_fops =
 	ioctl:    hrfs_ioctl,
 	open:     hrfs_open,
 	release:  hrfs_release,
-	flush:    hrfs_flush,
 };
 
 extern struct vm_operations_struct *ll_hrfs_get_vm_ops(void);

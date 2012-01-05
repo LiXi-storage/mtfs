@@ -346,7 +346,11 @@ int hrfs_lookup_backend(struct inode *dir, struct dentry *dentry, int interpose_
 	struct inode *hidden_dir = NULL;
 	hrfs_bindex_t bindex = 0;
 	hrfs_bindex_t bnum = 0;
+#ifndef LIXI_20120104
+	int i_valid = 0;
+#else
 	int i_primary_valid = 0;
+#endif
 	struct hrfs_operations *operations = NULL;
 	HENTRY();
 
@@ -375,23 +379,36 @@ int hrfs_lookup_backend(struct inode *dir, struct dentry *dentry, int interpose_
 		hidden_dentry = hrfs_lookup_branch(dentry, bindex);
 
 		if (IS_ERR(hidden_dentry)) {
+#ifndef LIXI_20120104
+			HDEBUG("lookup branch[%d] of dentry [%*s] returned error (%d)\n",
+			       bindex, dentry->d_name.len, dentry->d_name.name, ret);
+#else
 			if (hrfs_is_primary_bindex(bindex)) {
 				ret = PTR_ERR(hidden_dentry);
 				HDEBUG("primary branch[%d] of dentry [%*s] return error (%d)\n",
 				       bindex, dentry->d_name.len, dentry->d_name.name, ret);
 				goto out_d_drop;
 			}
+#endif
 		} else {
 			hrfs_d2branch(dentry, bindex) = hidden_dentry;		
 			if (hidden_dentry->d_inode) {
+#ifndef LIXI_20120104
+				i_valid = 1;
+#else
 				if (hrfs_is_primary_bindex(bindex)) {
 					i_primary_valid = 1;
 				}
+#endif
 			}
 		}
 	}
 
+#ifndef LIXI_20120104
+	if (i_valid) {
+#else
 	if (i_primary_valid) {
+#endif
 		hidden_dir = hrfs_i_choose_branch(dir, HRFS_ATTR_VALID);
 		HASSERT(hidden_dir);
 		fsstack_copy_attr_atime(dir, hidden_dir);
@@ -416,7 +433,10 @@ out_free:
 			dput(hidden_dentry);
 		}
 	}
+#ifndef LIXI_20120104
+#else
 out_d_drop:
+#endif	
 	hrfs_d_free(dentry);
 	d_drop(dentry);
 out:
@@ -1846,6 +1866,63 @@ static int hrfs_setattr_branch(struct dentry *dentry, struct iattr *ia, hrfs_bin
 	HRETURN(ret);
 }
 
+#ifndef LIXI_20120104
+int hrfs_setattr(struct dentry *dentry, struct iattr *ia)
+{
+	int ret = 0;
+	struct inode *inode = dentry->d_inode;
+	struct inode *hidden_inode = NULL;
+	hrfs_bindex_t bindex = 0;
+	hrfs_bindex_t i = 0;
+	struct hrfs_operation_list *list = NULL;
+	HENTRY();
+
+	HDEBUG("setattr [%*s]\n", dentry->d_name.len, dentry->d_name.name);
+	HASSERT(inode);
+	HASSERT(inode_is_locked(inode));	
+
+	list = hrfs_oplist_build(inode);
+	if (unlikely(list == NULL)) {
+		HERROR("failed to build operation list\n");
+		ret = -ENOMEM;
+		goto out;
+	}
+
+	for (i = 0; i < hrfs_d2bnum(dentry); i++) {
+		bindex = list->op_binfo[i].bindex;
+		ret = hrfs_setattr_branch(dentry, ia, bindex);
+		list->op_binfo[i].ret = ret;
+		list->op_binfo[i].is_suceessful = (ret == 0 ? 1 : 0);
+		if (i == list->latest_bnum - 1) {
+			hrfs_oplist_check(list);
+			HDEBUG("i=%d, list->latest_bnum-1 = %d, list->success_bnum=%d\n", i, list->latest_bnum - 1, list->success_bnum);
+			if (list->success_bnum <= 0) {
+				HDEBUG("operation failed for all branches\n");
+				ret = hrfs_oplist_status(list);
+				goto out_free_oplist;
+			}
+		}
+	}
+	ret = 0;
+
+	hidden_inode = hrfs_i_choose_branch(inode, HRFS_BRANCH_VALID);
+	if (IS_ERR(hidden_inode)) {
+		ret = PTR_ERR(hidden_inode);
+		HERROR("choose branch failed, ret = %d\n", ret);
+		goto out_free_oplist;
+	}
+	fsstack_copy_attr_all(inode, hidden_inode, hrfs_get_nlinks);
+
+	if (ia->ia_valid & ATTR_SIZE) {
+		hrfs_update_inode_size(inode);
+	}
+
+out_free_oplist:
+	hrfs_oplist_free(list);
+out:
+	HRETURN(ret);	
+}
+#else
 int hrfs_setattr(struct dentry *dentry, struct iattr *ia)
 {
 	int ret = 0;
@@ -1885,6 +1962,7 @@ int hrfs_setattr(struct dentry *dentry, struct iattr *ia)
 out:
 	HRETURN(ret);	
 }
+#endif
 EXPORT_SYMBOL(hrfs_setattr);
 
 int hrfs_getattr(struct vfsmount *mnt, struct dentry *dentry, struct kstat *stat)
