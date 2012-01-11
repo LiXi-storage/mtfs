@@ -79,7 +79,8 @@ command_t hrfs_cmdlist[] = {
 	{"setbranch", hrfs_setbranch, 0,
 	"To set the state info for a branch of a given file or directory.\n"
 	"usage: setbranch [--quiet | -q] [--verbose | -v]\n"
-	"                [--branch | -b bindex] [--state | -s]"
+	"                [--branch | -b bindex] [--data | -d flag]"
+	"                [--attr | -a flag] [--xattr | -x flag]"
 	"                <dir|file> ...\n"},
 	{"setraid", hrfs_setraid, 0,
 	"To set a raid level for a given file or directory.\n"

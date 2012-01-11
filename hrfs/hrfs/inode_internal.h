@@ -13,7 +13,7 @@ extern struct inode_operations hrfs_symlink_iops;
 
 int hrfs_interpose(struct dentry *dentry, struct super_block *sb, int flag);
 int hrfs_inode_dump(struct inode *inode);
-struct dentry *hrfs_create_dchild(struct dentry *dparent, const char *name, umode_t mode, dev_t rdev);
+struct dentry *hrfs_lookup_branch(struct dentry *dentry, hrfs_bindex_t bindex);
 
 static inline hrfs_i_info_t *hrfs_ii_alloc(void)
 {

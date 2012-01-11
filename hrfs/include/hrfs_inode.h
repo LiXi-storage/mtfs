@@ -7,6 +7,7 @@
 #include <debug.h>
 #include <linux/fs.h>
 #include <linux/namei.h>
+#include <hrfs_common.h>
 
 typedef struct hrfs_inode_branch {
 	struct inode *binode;

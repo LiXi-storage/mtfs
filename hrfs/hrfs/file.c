@@ -31,23 +31,68 @@ out:
 	return ret;
 }
 
-int hrfs_readdir(struct file *file, void *dirent, filldir_t filldir)
+int hrfs_readdir_branch(struct file *file, void *dirent, filldir_t filldir, hrfs_bindex_t bindex)
 {
-	int ret = -ENOTDIR;
-	struct file *hidden_file = NULL;
+	int ret = 0;
+	struct file *hidden_file = hrfs_f2branch(file, bindex);
 	HENTRY();
 
-	hidden_file = hrfs_f2branch(file, hrfs_get_primary_bindex());
-	hidden_file->f_pos = file->f_pos;
-	ret = vfs_readdir(hidden_file, filldir, dirent);
-	file->f_pos = hidden_file->f_pos;
-
-	if (ret < 0) {
-		goto out;
+	if (hidden_file) {
+		hidden_file->f_pos = file->f_pos;
+		ret = vfs_readdir(hidden_file, filldir, dirent);
+		file->f_pos = hidden_file->f_pos;
 	} else {
-		fsstack_copy_attr_atime(file->f_dentry->d_inode, hidden_file->f_dentry->d_inode);
+		HDEBUG("branch[%d] of file [%*s] is %s\n",
+		       bindex, file->f_dentry->d_name.len, file->f_dentry->d_name.name,
+		       "NULL");
+		ret = -ENOENT;
 	}
 
+	HRETURN(ret);
+}
+
+int hrfs_readdir(struct file *file, void *dirent, filldir_t filldir)
+{
+	int ret = 0;
+	struct file *hidden_file = NULL;
+	struct hrfs_operation_list *list = NULL;
+	hrfs_bindex_t bindex = 0;
+	hrfs_bindex_t i = 0;
+	HENTRY();
+
+	HDEBUG("readdir [%*s]\n", file->f_dentry->d_name.len, file->f_dentry->d_name.name);
+
+	list = hrfs_oplist_build(file->f_dentry->d_inode);
+	if (unlikely(list == NULL)) {
+		HERROR("failed to build operation list\n");
+		ret = -ENOMEM;
+		goto out;
+	}
+
+	if (list->latest_bnum == 0) {
+		HERROR("dir [%*s] has no valid branch, try to read broken branches\n",
+		       file->f_dentry->d_name.len, file->f_dentry->d_name.name);
+	}
+
+	for (i = 0; i < hrfs_f2bnum(file); i++) {
+		bindex = list->op_binfo[i].bindex;
+		ret = hrfs_readdir_branch(file, dirent, filldir, bindex);
+		if (ret == 0) {
+			break;
+		}
+
+		if (list->latest_bnum > 0 && i == list->latest_bnum - 1) {
+			HERROR("dir [%*s] has no readable valid branch, try to read broken branches\n",
+			       file->f_dentry->d_name.len, file->f_dentry->d_name.name);
+		}
+	}
+
+	if (ret == 0) {
+		hidden_file = hrfs_f2branch(file, bindex);
+		fsstack_copy_attr_atime(file->f_dentry->d_inode, hidden_file->f_dentry->d_inode);
+	}
+//out_free_oplist:
+	hrfs_oplist_free(list);
 out:
 	HRETURN(ret);
 }

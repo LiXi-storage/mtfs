@@ -69,7 +69,7 @@ int hrfs_init_recover(struct dentry *d_root)
 	for (bindex = 0; bindex < hrfs_d2bnum(d_root); bindex++) {
 		hidden_parent = hrfs_d2branch(d_root, bindex);
 		HASSERT(hidden_parent);
-		hidden_child = hrfs_create_dchild(hidden_parent, name, S_IFDIR | S_IRWXU, 0);
+		hidden_child = hrfs_dchild_create(hidden_parent, name, S_IFDIR | S_IRWXU, 0);
 		if (IS_ERR(hidden_child)) {
 			ret = PTR_ERR(hidden_child);
 			HERROR("create branch[%d] of [%*s/%s] failed\n",

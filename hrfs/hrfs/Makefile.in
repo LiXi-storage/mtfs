@@ -19,7 +19,8 @@ hrfs-objs   := dentry.o \
 	hide.o \
 	device.o \
 	ioctl.o \
-	flag.o
+	flag.o \
+	selfheal.o
 
 EXTRA_DIST := $(hrfs-objs:.o=.c)
 EXTRA_DIST += dentry_internal.h device_internal.h file_internal.h hide_internal.h hrfs_internal.h

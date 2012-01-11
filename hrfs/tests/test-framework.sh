@@ -578,6 +578,9 @@ init_test_env()
 
 	export MOUNT_HRFS=${MOUNT_HRFS:-$UTILS_DIR/mount.hrfs}
 	check_command $MOUNT_HRFS
+	
+	export UTIL_HRFS=${UTIL_HRFS:-$UTILS_DIR/hrfs}
+	check_command $UTIL_HRFS
 
 	cleanup_and_setup
 

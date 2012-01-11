@@ -150,18 +150,30 @@ out:
 	return hidden_dentry;
 }
 
+typedef union hrfs_operation_result {
+	int ret;
+	void *ptr;
+	ssize_t size;
+} hrfs_operation_result_t;
+
 struct hrfs_operation_binfo {
 	hrfs_bindex_t bindex;     /* Global bindex */
 	int is_suceessful;        /* Whether this branch succeeded */
-	int ret;                  /* Operation status returned */
+	hrfs_operation_result_t result;
+	int valid;
 };
 
 struct hrfs_operation_list {
 	hrfs_bindex_t bnum;                     /* Branch number */
 	hrfs_bindex_t latest_bnum;              /* Number of latest branches */
 	struct hrfs_operation_binfo *op_binfo;  /* Global bindex */
-	hrfs_bindex_t success_bnum;             /* Some branches succeeded */
-	hrfs_bindex_t fault_bnum;               /* Some branches failed */
+	hrfs_bindex_t valid_bnum;               /* Number of valid branches */
+	hrfs_bindex_t success_bnum;             /* Number of branches succeeded */
+	hrfs_bindex_t success_latest_bnum;      /* Number of latest branches succeeded */
+	hrfs_bindex_t success_nonlatest_bnum;   /* Number of nonlatest branches succeeded */
+	hrfs_bindex_t fault_bnum;               /* Number of branches failed */
+	hrfs_bindex_t fault_latest_bnum;        /* Number of latest branches failed */
+	hrfs_bindex_t fault_nonlatest_bnum;     /* Number of nonlatest branches failed */
 };
 
 #include <memory.h>
@@ -224,25 +236,70 @@ out:
 	return list;
 }
 
+static inline void hrfs_oplist_dump(struct hrfs_operation_list *list)
+{
+	hrfs_bindex_t bindex = 0;
+
+	HPRINT("oplist bnum = %d\n", list->bnum);
+	for (bindex = 0; bindex < list->bnum; bindex++) {
+		HPRINT("branch[%d]: %d\n", bindex, list->op_binfo[bindex].bindex);
+	}
+}
+
 static inline int hrfs_oplist_check(struct hrfs_operation_list *list)
 {
 	hrfs_bindex_t bindex = 0;
 	int ret = 0;
 
+	list->valid_bnum = 0;
+	list->success_bnum = 0;
+	list->success_latest_bnum = 0;
+	list->success_nonlatest_bnum = 0;
+	list->fault_bnum = 0;
+	list->fault_latest_bnum = 0;
+	list->fault_nonlatest_bnum = 0;
 	for (bindex = 0; bindex < list->bnum; bindex++) {
+		if (!list->op_binfo[bindex].valid) {
+			continue;
+		}
+
+		list->valid_bnum++;
 		if (list->op_binfo[bindex].is_suceessful) {
 			list->success_bnum++;
+			if (bindex < list->latest_bnum) {
+				list->success_latest_bnum++;
+			} else {
+				list->success_nonlatest_bnum++;
+			}
 		} else {
 			list->fault_bnum++;
+			if (bindex < list->latest_bnum) {
+				list->fault_latest_bnum++;
+			} else {
+				list->fault_nonlatest_bnum++;
+			}
 		}
 	}
+	HASSERT(list->fault_latest_bnum + list->fault_nonlatest_bnum == list->fault_bnum);
+	HASSERT(list->success_latest_bnum + list->success_nonlatest_bnum == list->success_bnum);
+	HASSERT(list->success_bnum + list->fault_bnum == list->valid_bnum);
+	HASSERT(list->valid_bnum <= list->bnum);
 	return ret;
 }
 
-/* Choose a operation status returned */
-static inline int hrfs_oplist_status(struct hrfs_operation_list *list)
+static inline int hrfs_oplist_setbranch(struct hrfs_operation_list *list, hrfs_bindex_t bindex, int is_successful, hrfs_operation_result_t result)
 {
-	return list->op_binfo[0].ret;
+	HASSERT(bindex >= 0 && bindex < list->bnum);
+	list->op_binfo[bindex].valid = 1;
+	list->op_binfo[bindex].is_suceessful = is_successful;
+	list->op_binfo[bindex].result = result;
+	return 0;
+}
+
+/* Choose a operation status returned */
+static inline hrfs_operation_result_t hrfs_oplist_result(struct hrfs_operation_list *list)
+{
+	return list->op_binfo[0].result;
 }
 #endif /* defined (__linux__) && defined(__KERNEL__) */
 #endif /* __HRFS_FLAG_H__ */
