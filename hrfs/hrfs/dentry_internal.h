@@ -7,6 +7,7 @@
 #include <hrfs_dentry.h>
 #include "inode_internal.h"
 #include "super_internal.h"
+#include "main_internal.h"
 extern struct dentry_operations hrfs_dops;
 
 int hrfs_dentry_dump(struct dentry *dentry);

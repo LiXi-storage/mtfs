@@ -160,6 +160,169 @@ static int _hrfs_register_device(struct hrfs_device *device)
 	return ret;
 }
 
+int hrfs_device_proc_read_name(char *page, char **start, off_t off, int count,
+                              int *eof, void *data)
+{
+	int ret = 0;
+	struct hrfs_device *device = (struct hrfs_device *)data;
+	char *ptr = page;
+
+	*eof = 1;
+	ret = snprintf(ptr, count, "%s\n", device->device_name);
+	ptr += ret;
+	return ret;
+}
+
+int hrfs_device_proc_read_bnum(char *page, char **start, off_t off, int count,
+                              int *eof, void *data)
+{
+	int ret = 0;
+	struct hrfs_device *device = (struct hrfs_device *)data;
+	char *ptr = page;
+
+	*eof = 1;
+	ret = snprintf(ptr, count, "%d\n", device->bnum);
+	ptr += ret;
+	return ret;
+}
+
+struct hrfs_proc_vars hrfs_proc_vars_device[] = {
+	{ "device_name", hrfs_device_proc_read_name, NULL, NULL },
+	{ "bnum", hrfs_device_proc_read_bnum, NULL, NULL },
+	{ 0 }
+};
+
+#define HRFS_ERRNO_INACTIVE "inactive"
+int hrfs_device_branch_proc_read_errno(char *page, char **start, off_t off, int count,
+                                       int *eof, void *data)
+{
+	int ret = 0;
+	struct hrfs_device_branch *dev_branch = (struct hrfs_device_branch *)data;
+	char *ptr = page;
+
+	*eof = 1;
+	if (dev_branch->debug.active) {
+		ret = snprintf(ptr, count, "%d\n", dev_branch->debug.errno);
+	} else {
+		ret = snprintf(ptr, count, HRFS_ERRNO_INACTIVE"\n");
+	}
+	ptr += ret;
+	return ret;
+}
+
+
+static int hrfs_device_branch_proc_write_errno(struct file *file, const char *buffer,
+                                               unsigned long count, void *data)
+{
+	int ret = 0;
+	char kern_buf[20];
+	char *end = NULL;
+	char *pbuf = NULL;
+	int sign = 1;
+	int var = 0;
+	struct hrfs_device_branch *dev_branch = (struct hrfs_device_branch *)data;
+	HENTRY();
+
+	if (count > (sizeof(kern_buf) - 1)) {
+		ret = -EINVAL;
+		goto out;
+	}
+
+	if (copy_from_user(kern_buf, buffer, count)) {
+		ret = -EINVAL;
+		goto out;
+	}
+	kern_buf[count] = '\0';
+
+	if (strncmp(HRFS_ERRNO_INACTIVE, kern_buf, strlen(HRFS_ERRNO_INACTIVE)) == 0) {
+		dev_branch->debug.active = 0;
+		goto out;
+	}
+
+	pbuf = kern_buf;
+	if (*pbuf == '-') {
+		sign = -1;
+		pbuf++;
+	}
+	var = (int)simple_strtoul(pbuf, &end, 10) * sign;
+	if (pbuf == end) {
+		ret = -EINVAL;
+		goto out;
+	}
+
+	if (var >= 0) {
+		ret = -EINVAL;
+		goto out;
+	}
+
+	dev_branch->debug.active = 1;
+	dev_branch->debug.errno = var;
+out:
+	if (ret) {
+		HRETURN(ret);
+	}
+	HRETURN(count);
+}
+struct hrfs_proc_vars hrfs_proc_vars_device_branch[] = {
+	{ "errno", hrfs_device_branch_proc_read_errno, hrfs_device_branch_proc_write_errno, NULL },
+	{ 0 }
+};
+
+int hrfs_device_proc_register(struct hrfs_device *device)
+{
+	int ret = 0;
+	unsigned int hash_num = 0;
+	char name[PATH_MAX];
+	hrfs_bindex_t bindex = 0;
+	struct hrfs_device_branch *dev_branch = NULL;
+
+	hash_num = full_name_hash(device->device_name, device->name_length);
+	sprintf(name, "%x", hash_num);
+	device->proc_entry = hrfs_proc_register(name, hrfs_proc_device,
+                                          hrfs_proc_vars_device, device);
+	if (unlikely(device->proc_entry == NULL)) {
+		HERROR("failed to register proc for device %s\n",
+		       device->device_name);
+		ret = -ENOMEM;
+		goto out;
+	}
+
+	for (bindex = 0; bindex < hrfs_dev2bnum(device); bindex++) {
+		sprintf(name, "branch%d", bindex);
+		dev_branch = hrfs_dev2branch(device, bindex);
+		dev_branch->proc_entry = hrfs_proc_register(name, device->proc_entry,
+                                                hrfs_proc_vars_device_branch, dev_branch);
+		if (unlikely(dev_branch->proc_entry == NULL)) {
+			HERROR("failed to register proc for %s of device %s\n",
+			       name, device->device_name);
+			bindex--;
+			ret = -ENOMEM;
+			goto out_unregister;
+		}
+	}
+	goto out;
+out_unregister:
+	for (; bindex >= 0; bindex--) {
+		dev_branch = hrfs_dev2branch(device, bindex);
+		hrfs_proc_remove(&dev_branch->proc_entry);
+	}
+	hrfs_proc_remove(&device->proc_entry);
+out:
+	return ret;
+}
+
+
+void hrfs_device_proc_unregister(struct hrfs_device *device)
+{
+	hrfs_bindex_t bindex = 0;
+
+	HASSERT(device->proc_entry);
+	for (bindex = 0; bindex < hrfs_dev2bnum(device); bindex++) {
+		hrfs_proc_remove(&hrfs_dev2bproc(device, bindex));
+	}
+	hrfs_proc_remove(&device->proc_entry);
+}
+
 static int hrfs_register_device(struct hrfs_device *device)
 {
 	int ret = 0;
@@ -167,6 +330,7 @@ static int hrfs_register_device(struct hrfs_device *device)
 	spin_lock(&hrfs_device_lock);
 	ret = _hrfs_register_device(device);
 	spin_unlock(&hrfs_device_lock);
+
 	return ret;
 }
 
@@ -254,7 +418,13 @@ struct hrfs_device *hrfs_newdev(struct super_block *sb, mount_option_t *mount_op
 		goto out_put_junction;
 	}
 
+	ret = hrfs_device_proc_register(newdev);
+	if (ret) {
+		goto out_unregister_device;
+	}
 	goto out;
+out_unregister_device:
+	hrfs_unregister_device(newdev);
 out_put_junction:
 	junction_put(newdev->junction);
 out_put_module:
@@ -283,6 +453,7 @@ void hrfs_freedev(struct hrfs_device *device)
 	hrfs_bindex_t bnum = hrfs_dev2bnum(device);
 	hrfs_bindex_t bindex = 0;
 
+	hrfs_device_proc_unregister(device);
 	hrfs_unregister_device(device);
 	for (bindex = 0; bindex < bnum; bindex++) {
 		lowerfs_ops = hrfs_dev2bops(device, bindex);
@@ -300,15 +471,30 @@ int hrfs_proc_read_devices(char *page, char **start, off_t off,
 	struct list_head *p = NULL;
 	struct hrfs_device *found = NULL;
 	char *ptr = page;
+	unsigned int hash_num = 0;
+	char hash_name[9];
 
 	*eof = 1;
 
 	spin_lock(&hrfs_device_lock);
 	list_for_each(p, &hrfs_devs) {
 		found = list_entry(p, typeof(*found), device_list);
-		ret += snprintf(ptr, count, "%s\n", found->device_name);
+		hash_num = full_name_hash(found->device_name, found->name_length);
+		sprintf(hash_name, "%x", hash_num);
+		ret += snprintf(ptr, count, "%s %s\n", found->device_name, hash_name);
 		ptr += ret;
 	}
 	spin_unlock(&hrfs_device_lock);
 	return ret;
+}
+
+int hrfs_device_branch_errno(struct hrfs_device *device, hrfs_bindex_t bindex)
+{
+	struct hrfs_device_branch *dev_branch = hrfs_dev2branch(device, bindex);
+
+	if (dev_branch->debug.active) {
+		HASSERT(dev_branch->debug.errno < 0);
+		return dev_branch->debug.errno;
+	}
+	return 0;
 }

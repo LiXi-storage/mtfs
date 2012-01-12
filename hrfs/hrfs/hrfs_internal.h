@@ -45,12 +45,6 @@
 #include <debug.h>
 #include <raid.h>
 
-extern struct kmem_cache *hrfs_file_info_cache;
-extern struct kmem_cache *hrfs_dentry_info_cache;
-extern struct kmem_cache *hrfs_inode_info_cache;
-extern struct kmem_cache *hrfs_sb_info_cache;
-extern struct kmem_cache *hrfs_device_cache;
-
 extern struct rw_semaphore global_rwsem;
 static inline void global_read_lock(void)
 {

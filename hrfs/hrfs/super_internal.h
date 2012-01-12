@@ -6,7 +6,9 @@
 #define __HRFS_SUPER_INTERNAL_H__
 #include <memory.h>
 #include <debug.h>
-#include "hrfs_internal.h"
+#include <hrfs_super.h>
+//#include "hrfs_internal.h"
+#include "main_internal.h"
 extern struct super_operations hrfs_sops;
 
 #define s_type(sb) ((sb)->s_type->name)

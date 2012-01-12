@@ -97,7 +97,8 @@ static inline int lowerfs_idata_finit(struct lowerfs_operations *fs_ops, struct 
 }
 
 #include "device_internal.h"
-static inline struct lowerfs_operations *hrfs_sb2bops(struct super_block *sb, hrfs_bindex_t bindex)
+#include "super_internal.h"
+static inline struct lowerfs_operations *hrfs_s2bops(struct super_block *sb, hrfs_bindex_t bindex)
 {
 	struct hrfs_device *device = hrfs_s2dev(sb);
 	struct lowerfs_operations *lowerfs_ops = hrfs_dev2bops(device, bindex);
@@ -107,16 +108,16 @@ static inline struct lowerfs_operations *hrfs_sb2bops(struct super_block *sb, hr
 static inline struct lowerfs_operations *hrfs_i2bops(struct inode *inode, hrfs_bindex_t bindex)
 {
 	struct super_block *sb = inode->i_sb;
-	return hrfs_sb2bops(sb, bindex);
+	return hrfs_s2bops(sb, bindex);
 }
 
 static inline struct lowerfs_operations *hrfs_d2bops(struct dentry *dentry, hrfs_bindex_t bindex)
 {
 	struct super_block *sb = dentry->d_sb;
-	return hrfs_sb2bops(sb, bindex);
+	return hrfs_s2bops(sb, bindex);
 }
 
-static inline struct hrfs_operations *hrfs_sb2ops(struct super_block *sb)
+static inline struct hrfs_operations *hrfs_s2ops(struct super_block *sb)
 {
 	struct hrfs_device *device = hrfs_s2dev(sb);
 	struct hrfs_operations *ops = hrfs_dev2ops(device);
@@ -126,12 +127,12 @@ static inline struct hrfs_operations *hrfs_sb2ops(struct super_block *sb)
 static inline struct hrfs_operations *hrfs_i2ops(struct inode *inode)
 {
 	struct super_block *sb = inode->i_sb;
-	return hrfs_sb2ops(sb);
+	return hrfs_s2ops(sb);
 }
 
 static inline struct hrfs_operations *hrfs_d2ops(struct dentry *dentry)
 {
 	struct super_block *sb = dentry->d_sb;
-	return hrfs_sb2ops(sb);
+	return hrfs_s2ops(sb);
 }
 #endif /* __HRFS_SUPPORT_INTERNAL_H__ */

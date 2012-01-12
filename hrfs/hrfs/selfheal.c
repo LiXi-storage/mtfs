@@ -179,6 +179,7 @@ struct dentry *hrfs_dchild_add_ino(struct dentry *dparent, const char *name)
 
 	HRFS_ALLOC(name_new, PATH_MAX);
 	if (unlikely(name_new == NULL)) {
+		ret = -ENOMEM;
 		goto out;
 	}
 

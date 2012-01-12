@@ -184,18 +184,6 @@ struct proc_dir_entry *hrfs_proc_search(struct proc_dir_entry *head,
 	return NULL;
 }
 
-struct hrfs_proc_vars {
-        const char   *name;
-        read_proc_t *read_fptr;
-        write_proc_t *write_fptr;
-        void *data;
-        struct file_operations *fops;
-        /**
-         * /proc file mode.
-         */
-        mode_t proc_mode;
-};
-
 int hrfs_proc_add_vars(struct proc_dir_entry *root, struct hrfs_proc_vars *list,
                        void *data)
 {
@@ -350,25 +338,42 @@ struct proc_dir_entry *hrfs_proc_register(const char *name,
 
 /* Root for /proc/fs/hrfs */
 struct proc_dir_entry *hrfs_proc_root = NULL;
-struct hrfs_proc_vars hrfs_proc_base[] = {
-        { "devices", hrfs_proc_read_devices, NULL, NULL },
-        { 0 }
+struct proc_dir_entry *hrfs_proc_device = NULL;
+
+struct hrfs_proc_vars hrfs_proc_vars_base[] = {
+	{ "device_list", hrfs_proc_read_devices, NULL, NULL },
+	{ 0 }
 };
+
+#define HRFS_PROC_DEVICE_NAME "devices"
 
 int hrfs_insert_proc(void)
 {
+	int ret = 0;
+	HENTRY();
+
 #ifdef CONFIG_SYSCTL
 	if (hrfs_table_header == NULL) {
 		hrfs_table_header = register_sysctl_table(hrfs_top_table, 0);
 	}
 #endif
 	hrfs_proc_root = hrfs_proc_register("fs/hrfs", NULL,
-                                        hrfs_proc_base, NULL);
-	if (hrfs_proc_root == NULL) {
-		HERROR("error registering /proc/fs/hrfs\n");
-		return(-ENOMEM);
+                                        hrfs_proc_vars_base, NULL);
+	if (unlikely(hrfs_proc_root == NULL)) {
+		HERROR("failed to register /proc/fs/hrfs\n");
+		ret = -ENOMEM;
+		goto out;
 	}
-	return 0;
+
+	hrfs_proc_device = hrfs_proc_register(HRFS_PROC_DEVICE_NAME, hrfs_proc_root,
+                                        NULL, NULL);
+	if (unlikely(hrfs_proc_device == NULL)) {
+		HERROR("failed to register /proc/fs/hrfs"HRFS_PROC_DEVICE_NAME"\n");
+		ret = -ENOMEM;
+		goto out;
+	}
+out:
+	HRETURN(ret);
 }
 
 void hrfs_remove_proc(void)
@@ -383,4 +388,7 @@ void hrfs_remove_proc(void)
 	if (hrfs_proc_root) {
 		hrfs_proc_remove(&hrfs_proc_root);
 	}
+	if (hrfs_proc_device) {
+		hrfs_proc_remove(&hrfs_proc_device);
+	}		
 }

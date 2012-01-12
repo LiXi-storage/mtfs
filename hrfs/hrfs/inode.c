@@ -324,7 +324,15 @@ struct dentry *hrfs_lookup_branch(struct dentry *dentry, hrfs_bindex_t bindex)
 {
 	struct dentry *hidden_dentry = NULL;
 	struct dentry *hidden_dir_dentry = hrfs_d2branch(dentry->d_parent, bindex);
+	int ret = 0;
 	HENTRY();
+
+	ret = hrfs_device_branch_errno(hrfs_d2dev(dentry), bindex);
+	if (ret) {
+		HDEBUG("branch[%d] is abandoned\n", bindex);
+		hidden_dentry = ERR_PTR(ret); 
+		goto out; 
+	}
 
 	if (hidden_dir_dentry && hidden_dir_dentry->d_inode) {
 		mutex_lock(&hidden_dir_dentry->d_inode->i_mutex);
@@ -337,6 +345,7 @@ struct dentry *hrfs_lookup_branch(struct dentry *dentry, hrfs_bindex_t bindex)
 		hidden_dentry = ERR_PTR(-ENOENT); /* which errno? */
 	}
 
+out:
 	HRETURN(hidden_dentry);
 }
 
@@ -533,6 +542,12 @@ int hrfs_create_branch(struct dentry *dentry, int mode, hrfs_bindex_t bindex)
 	struct dentry *hidden_dir_dentry = NULL;
 	HENTRY();
 
+	ret = hrfs_device_branch_errno(hrfs_d2dev(dentry), bindex);
+	if (ret) {
+		HDEBUG("branch[%d] is abandoned\n", bindex);
+		goto out; 
+	}
+
 	if (hidden_dentry && hidden_dentry->d_parent) {
 		hidden_dir_dentry = lock_parent(hidden_dentry);
 		ret = vfs_create(hidden_dir_dentry->d_inode, hidden_dentry, mode, NULL);
@@ -552,6 +567,7 @@ int hrfs_create_branch(struct dentry *dentry, int mode, hrfs_bindex_t bindex)
 		ret = -ENOENT; /* which errno? */
 	}
 
+out:
 	HRETURN(ret);	
 }
 

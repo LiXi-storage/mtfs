@@ -44,8 +44,6 @@ void usage(FILE *out)
 	        "\t-n|--nomtab: do not update /etc/mtab after mount\n"
 	        "\t-v|--verbose: print verbose config settings\n"
 	        "\t<mntopt>: one or more comma separated of:\n"
-	        "\t\t(no)flock,(no)user_xattr,(no)acl\n"
-	        "\t\tretry=<num>: number of times mount is retried by client\n"
 	);
 }
 

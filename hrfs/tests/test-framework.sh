@@ -332,6 +332,32 @@ leak_detect_state_pop()
 	DETECT_LEAK="$FORMER_DETECT_LEAK"
 }
 
+abandon_branch()
+{
+	local DEV="$1"
+	local BRANCH="$2"
+
+	local HASH_NAME=$(cat /proc/fs/hrfs/device_list | grep -w $DEV | awk '{print $2}')
+	if [ $HASH_NAME = "" ]; then
+		echo "failed to abandon branch[$BRANCH] of $dev: not found"
+		return
+	fi
+
+	local PROC_ERRNO="/proc/fs/hrfs/devices/"$HASH_NAME"/branch"$BRANCH"/errno"
+	echo "abandon $PROC_ERRNO"
+	echo -1 > $PROC_ERRNO
+}
+
+abandon_branches()
+{
+	if [ "$ABANDON_BRANCH" != "-1" ]; then
+		abandon_branch $HRFS_DEV $ABANDON_BRANCH
+		if [ "$DOING_MUTLTI" = "yes" ]; then
+			abandon_branch $HRFS2_DEV $ABANDON_BRANCH
+		fi
+	fi
+}
+
 setup_all()
 {
 	if [ "$MOUNT_LOWERFS" = "yes" ]; then
@@ -361,6 +387,7 @@ setup_all()
 		fi
 	fi
 
+	abandon_branches
 	return
 }
 
@@ -481,6 +508,7 @@ init_test_env()
 	export TESTS_DIR=${TESTS_DIR:-$(cd $(dirname $0); echo $PWD)}
 	export TMP=${TMP:-/tmp}
 	export DIR=${DIR:-$HRFS_MNT1/test}
+	export ABANDON_BRANCH=${ABANDON_BRANCH:-"-1"}
 
 	if [ "$DOING_MUTLTI" = "yes" ]; then
 		export DIR1=${DIR1:-$HRFS_MNT1/$DIR_SUB}
