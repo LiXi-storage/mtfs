@@ -17,26 +17,28 @@ struct hrfs_branch_debug {
 };
 
 struct hrfs_device_branch {
-	int length;
-	char *path;
-	struct lowerfs_operations *ops;
-	struct hrfs_branch_debug debug; /* For branch debug */
-	struct proc_dir_entry *proc_entry;
+	char *path;                          /* Path for each branch */
+	int path_length;                     /* Length of the path for each branch */
+	struct lowerfs_operations *ops;      /* Lowerfs operation for each branch*/
+	struct hrfs_branch_debug debug;      /* Debug option for each branch */
+	struct proc_dir_entry *proc_entry;   /* Proc entry for each branch */
 };
+
 struct hrfs_device {
-	struct list_head device_list;
-	char *device_name;
-	int name_length;
-	struct super_block *sb;
-	struct hrfs_junction *junction;
-	struct proc_dir_entry *proc_entry;
-	hrfs_bindex_t bnum;
-	struct hrfs_device_branch *branch;
+	struct list_head device_list;        /* Managed in the device list */
+	char *device_name;                   /* Name of the device */
+	int name_length;                     /* Length of the device name */
+	struct super_block *sb;              /* Super block this device belong to */
+	struct hrfs_junction *junction;      /* Junction to lowerfs */
+	struct proc_dir_entry *proc_entry;   /* Proc entry for this device */
+	int no_abort;                        /* Do not abort when no latest branch success */
+	hrfs_bindex_t bnum;                  /* Branch number */
+	struct hrfs_device_branch *branch;   /* Info for each branch */
 };
 
 #define hrfs_dev2bops(device, bindex) (device->branch[bindex].ops)
 #define hrfs_dev2bpath(device, bindex) (device->branch[bindex].path)
-#define hrfs_dev2blength(device, bindex) (device->branch[bindex].length)
+#define hrfs_dev2blength(device, bindex) (device->branch[bindex].path_length)
 #define hrfs_dev2bproc(device, bindex) (device->branch[bindex].proc_entry)
 #define hrfs_dev2branch(device, bindex) (&device->branch[bindex])
 #define hrfs_dev2bnum(device) (device->bnum)

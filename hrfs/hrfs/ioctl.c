@@ -112,7 +112,10 @@ static int hrfs_user_get_state(struct inode *inode, struct hrfs_user_flag __user
 	for(bindex = 0; bindex < bnum; bindex++) {
 		hidden_inode = hrfs_i2branch(inode, bindex);
 		lowerfs_ops = hrfs_i2bops(inode, bindex);
-		HASSERT(hidden_inode);
+		if (hidden_inode == NULL) {
+			(state->state[bindex]).flag = 0xffff;
+			continue;
+		}
 		ret = lowerfs_inode_get_flag(lowerfs_ops, hidden_inode, &branch_flag);
 		if (ret) {
 			goto free_state;

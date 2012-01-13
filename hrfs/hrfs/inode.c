@@ -338,11 +338,18 @@ struct dentry *hrfs_lookup_branch(struct dentry *dentry, hrfs_bindex_t bindex)
 		mutex_lock(&hidden_dir_dentry->d_inode->i_mutex);
 		hidden_dentry = lookup_one_len(dentry->d_name.name, hidden_dir_dentry, dentry->d_name.len);
 		mutex_unlock(&hidden_dir_dentry->d_inode->i_mutex);
+		if (IS_ERR(hidden_dentry)) {
+			HDEBUG("lookup branch[%d] of dentry [%*s], ret = %ld\n", 
+			       bindex, dentry->d_name.len, dentry->d_name.name,
+			       PTR_ERR(hidden_dentry));
+		} else {
+			hrfs_d2branch(dentry, bindex) = hidden_dentry;
+		}
 	} else {
 		HDEBUG("branch[%d] of dir_dentry [%*s] is %s\n",
 		       bindex, dentry->d_parent->d_name.len, dentry->d_parent->d_name.name,
 		       hidden_dir_dentry == NULL ? "NULL" : "negative");
-		hidden_dentry = ERR_PTR(-ENOENT); /* which errno? */
+		hidden_dentry = ERR_PTR(-ENOENT);
 	}
 
 out:
@@ -370,6 +377,15 @@ int hrfs_lookup_backend(struct inode *dir, struct dentry *dentry, int interpose_
 		goto out;
 	}
 
+	if (list->latest_bnum == 0) {
+		HERROR("dir [%*s] has no valid branch, please check it\n",
+		       dentry->d_parent->d_name.len, dentry->d_parent->d_name.name);
+		if (!(hrfs_i2dev(dir)->no_abort)) {
+			ret = -EIO;
+			goto out_free_oplist;
+		}
+	}
+
 	if (hrfs_d_is_alloced(dentry)) {
 		hrfs_d_free(dentry);
 	}
@@ -390,18 +406,10 @@ int hrfs_lookup_backend(struct inode *dir, struct dentry *dentry, int interpose_
 		HDEBUG();
 	}
 
-	if (list->latest_bnum == 0) {
-		HERROR("dir [%*s] has no valid branch, please check it\n",
-		       dentry->d_parent->d_name.len, dentry->d_parent->d_name.name);
-	}
-
 	bnum = hrfs_d2bnum(dentry);
 	for (i = 0; i < bnum; i++) {
 		bindex = list->op_binfo[i].bindex;
 		hidden_dentry = hrfs_lookup_branch(dentry, bindex);
-		if (!IS_ERR(hidden_dentry)) {
-			hrfs_d2branch(dentry, bindex) = hidden_dentry;
-		}
 		result.ptr = (void *)hidden_dentry;
 		if ((!IS_ERR(hidden_dentry)) && hidden_dentry->d_inode) {
 			hrfs_oplist_setbranch(list, i, 1, result);
@@ -559,73 +567,73 @@ int hrfs_create_branch(struct dentry *dentry, int mode, hrfs_bindex_t bindex)
 			ret = -EIO; /* which errno? */
 		}
 	} else {
-		struct dentry *tmp_dentry = hidden_dentry == NULL ?  dentry : dentry->d_parent;
-
-		HASSERT(tmp_dentry);
-		HDEBUG("branch[%d] of dentry [%*s] is NULL\n", bindex,
-		       tmp_dentry->d_name.len, tmp_dentry->d_name.name);
-		ret = -ENOENT; /* which errno? */
+		if (hidden_dentry == NULL) {
+			HDEBUG("branch[%d] of dentry [%*s/%*s] is NULL\n", bindex,
+			       dentry->d_parent->d_name.len, dentry->d_parent->d_name.name,
+			       dentry->d_name.len, dentry->d_name.name);
+		} else {
+			HDEBUG("parent's branch[%d] of dentry [%*s/%*s] is NULL\n", bindex,
+			       dentry->d_parent->d_name.len, dentry->d_parent->d_name.name,
+			       dentry->d_name.len, dentry->d_name.name);
+		}
+		ret = -ENOENT;
 	}
 
 out:
 	HRETURN(ret);	
 }
 
-int hrfs_undo_create_branch(struct dentry *dentry, hrfs_bindex_t bindex)
-{
-	int ret = 0;
-	struct dentry *hidden_dentry = hrfs_d2branch(dentry, bindex);
-	struct dentry *hidden_dir_dentry = NULL;
-	
-	report_undo();
-	
-	HASSERT(hidden_dentry);
-	HASSERT(hidden_dentry->d_inode);
-
-	hidden_dir_dentry = lock_parent(hidden_dentry);
-
-	/* Avoid destroying the hidden inode if the file is in use */
-	dget(hidden_dentry);
-	ret = vfs_unlink(hidden_dir_dentry->d_inode, hidden_dentry);
-	dput(hidden_dentry);
-	
-	/* Since all OP are OK, we kill the hidden dentry. */
-	if (!ret) {
-		d_delete(hidden_dentry);
-	}
-	
-	unlock_dir(hidden_dir_dentry);
-
-	return ret;
-}
-
 int hrfs_create(struct inode *dir, struct dentry *dentry, int mode, struct nameidata *nd)
 {
 	int ret = 0;
-	struct dentry *hidden_dentry = NULL;
-	hrfs_bindex_t bnum = 0;
-	hrfs_bindex_t bindex= 0;
-	int undo_ret = 0;
+	struct inode *hidden_dir = NULL;
+	hrfs_bindex_t bindex = 0;
+	hrfs_bindex_t i = 0;
+	struct hrfs_operation_list *list = NULL;
+	hrfs_operation_result_t result = {0};
 	HENTRY();
 
 	HDEBUG("create [%*s]\n", dentry->d_name.len, dentry->d_name.name);
 	HASSERT(inode_is_locked(dir));
 	HASSERT(dentry->d_inode == NULL);
 
-	bnum = hrfs_d2bnum(dentry);
-	for (bindex = 0; bindex < bnum; bindex++) {
+	list = hrfs_oplist_build(dir);
+	if (unlikely(list == NULL)) {
+		HERROR("failed to build operation list\n");
+		ret = -ENOMEM;
+		goto out;
+	}
+
+	if (list->latest_bnum == 0) {
+		HERROR("dir [%*s] has no valid branch, please check it\n",
+		       dentry->d_parent->d_name.len, dentry->d_parent->d_name.name);
+		if (!(hrfs_i2dev(dir)->no_abort)) {
+			ret = -EIO;
+			goto out_free_oplist;
+		}
+	}
+
+	for (i = 0; i < hrfs_i2bnum(dir); i++) {
+		bindex = list->op_binfo[i].bindex;
 		ret = hrfs_create_branch(dentry, mode, bindex);
-		if (ret) {
-			if (hrfs_is_primary_bindex(bindex)) {
-				bindex --;
-				goto error;
+		result.ret = ret;
+		hrfs_oplist_setbranch(list, i, (ret == 0 ? 1 : 0), result);
+		if (i == list->latest_bnum - 1) {
+			hrfs_oplist_check(list);
+			if (list->success_latest_bnum <= 0) {
+				HDEBUG("operation failed for all latest branches\n");
+				if (!(hrfs_i2dev(dir)->no_abort)) {
+					ret = -EIO;
+					goto out_free_oplist;
+				}
 			}
 		}
 	}
 
 	ret = hrfs_interpose(dentry, dir->i_sb, INTERPOSE_DEFAULT);
 	if (ret) {
-		goto error;
+		HERROR("create failed when interposing, ret = %d\n", ret);
+		goto out_free_oplist;
 	}
 
 	 /* Handle open intent */
@@ -634,23 +642,25 @@ int hrfs_create(struct inode *dir, struct dentry *dentry, int mode, struct namei
 		filp = lookup_instantiate_filp(nd, dentry, NULL);
 		if (IS_ERR(filp)) {
 			ret = PTR_ERR(filp);
+			HERROR("open failed, ret = %d\n", ret);
+			goto out_free_oplist;
 		}
 	}
-	
-	/* Update parent dir */
-	hidden_dentry = hrfs_d_choose_branch(dentry, HRFS_ATTR_VALID);
-	HASSERT(hidden_dentry);
-	fsstack_copy_attr_times(dir, hidden_dentry->d_parent->d_inode);
-	fsstack_copy_inode_size(dir, hidden_dentry->d_parent->d_inode);
 
-	goto out;
-error:
-	for (; bindex >= 0; bindex--) {
-		undo_ret = hrfs_undo_create_branch(dentry, bindex);
-		if (undo_ret) {
-			report_undo_error();
-		}
+	/* Update parent dir */
+	hidden_dir = hrfs_i_choose_branch(dir, HRFS_ATTR_VALID);
+	if (IS_ERR(hidden_dir)) {
+		ret = PTR_ERR(hidden_dir);
+		HERROR("choose branch failed, ret = %d\n", ret);
+		goto out_free_oplist;
 	}
+
+	fsstack_copy_attr_times(dir, hidden_dir);
+	fsstack_copy_inode_size(dir, hidden_dir);
+
+	goto out_free_oplist;
+out_free_oplist:
+	hrfs_oplist_free(list);
 out:
 	HRETURN(ret);
 }
@@ -664,6 +674,12 @@ int hrfs_link_branch(struct dentry *old_dentry, struct dentry *new_dentry, hrfs_
 	int ret = 0;
 	HENTRY();
 
+	ret = hrfs_device_branch_errno(hrfs_d2dev(old_dentry), bindex);
+	if (ret) {
+		HDEBUG("branch[%d] is abandoned\n", bindex); 
+		goto out; 
+	}
+
 	if (hidden_old_dentry && hidden_new_dentry) {
 		dget(hidden_old_dentry);
 
@@ -673,56 +689,32 @@ int hrfs_link_branch(struct dentry *old_dentry, struct dentry *new_dentry, hrfs_
 
 		dput(hidden_old_dentry);
 	} else {
-		struct dentry *tmp_dentry = hidden_old_dentry == NULL ?  old_dentry : new_dentry;
-
-		HASSERT(tmp_dentry);
-		HDEBUG("branch[%d] of dentry [%*s] is NULL\n", bindex,
-		       tmp_dentry->d_name.len, tmp_dentry->d_name.name);
-		ret = -ENOENT; /* which errno? */
+		if (hidden_old_dentry == NULL) {
+			HDEBUG("branch[%d] of dentry [%*s/%*s] is NULL\n", bindex,
+			       old_dentry->d_parent->d_name.len, old_dentry->d_parent->d_name.name,
+			       old_dentry->d_name.len, old_dentry->d_name.name);
+		}
+	
+		if (hidden_new_dentry == NULL){
+			HDEBUG("branch[%d] of dentry [%*s/%*s] is NULL\n", bindex,
+			       new_dentry->d_parent->d_name.len, new_dentry->d_parent->d_name.name,
+			       new_dentry->d_name.len, new_dentry->d_name.name);
+		}
+		ret = -ENOENT;
 	}
 
+out:
 	HRETURN(ret);
-}
-
-static int hrfs_undo_link_branch(struct dentry *new_dentry, hrfs_bindex_t bindex)
-{
-	struct dentry *hidden_new_dentry = hrfs_lookup_branch(new_dentry, bindex);
-	struct dentry *hidden_new_dir_dentry = NULL;
-	int ret = 0;
-	
-	report_undo();
-	if (IS_ERR(hidden_new_dentry)) {
-		ret = PTR_ERR(hidden_new_dentry);
-		return ret;
-	}
-	
-	HASSERT(hidden_new_dentry);
-	HASSERT(hidden_new_dentry->d_inode);
-	
-	hidden_new_dir_dentry = lock_parent(hidden_new_dentry);
-	HASSERT(hidden_new_dir_dentry);
-	HASSERT(hidden_new_dir_dentry->d_inode);
-	
-	/* avoid destroying the hidden inode if the file is in use */
-	dget(hidden_new_dentry);
-	ret = vfs_unlink(hidden_new_dir_dentry->d_inode, hidden_new_dentry);
-	dput(hidden_new_dentry);
-	unlock_dir(hidden_new_dir_dentry);
-	
-	if (!ret) {
-		/* since it was OK, we kill the hidden dentry. */
-		d_delete(hidden_new_dentry);
-	}
-	return ret;
 }
 
 int hrfs_link(struct dentry *old_dentry, struct inode *dir, struct dentry *new_dentry)
 {
 	int ret = 0;
-	struct inode *hidden_new_dir = NULL;
-	hrfs_bindex_t bnum =0;
+	struct inode *hidden_dir = NULL;
 	hrfs_bindex_t bindex = 0;
-	int undo_ret = 0;
+	hrfs_bindex_t i = 0;
+	struct hrfs_operation_list *list = NULL;
+	hrfs_operation_result_t result = {0};
 	HENTRY();
 
 	HDEBUG("link [%*s] to [%*s]\n",
@@ -733,39 +725,81 @@ int hrfs_link(struct dentry *old_dentry, struct inode *dir, struct dentry *new_d
 	HASSERT(!S_ISDIR(old_dentry->d_inode->i_mode));
 	HASSERT(inode_is_locked(dir));
 
-	bnum = hrfs_d2bnum(new_dentry);
-	for (bindex = 0; bindex < bnum; bindex++) {
+	list = hrfs_oplist_build(dir);
+	if (unlikely(list == NULL)) {
+		HERROR("failed to build operation list\n");
+		ret = -ENOMEM;
+		goto out;
+	}
+
+	if (list->latest_bnum == 0) {
+		HERROR("directory [%*s] has no valid branch, please check it\n",
+		       new_dentry->d_parent->d_name.len, new_dentry->d_parent->d_name.name);
+		if (!(hrfs_i2dev(dir)->no_abort)) {
+			ret = -EIO;
+			goto out_free_oplist;
+		}
+	}
+
+	for (i = 0; i < hrfs_i2bnum(dir); i++) {
+		bindex = list->op_binfo[i].bindex;
 		ret = hrfs_link_branch(old_dentry, new_dentry, bindex);
-		if (ret) {
-			if (hrfs_is_primary_bindex(bindex)) {
-				bindex --;
-				goto error;
+		result.ret = ret;
+		hrfs_oplist_setbranch(list, i, (ret == 0 ? 1 : 0), result);
+		if (i == list->latest_bnum - 1) {
+			hrfs_oplist_check(list);
+			if (list->success_latest_bnum <= 0) {
+				HDEBUG("operation failed for all latest %d branches\n", list->latest_bnum);
+				if (!(hrfs_i2dev(dir)->no_abort)) {
+					result = hrfs_oplist_result(list);
+					ret = result.ret;
+					goto out_free_oplist;
+				}
 			}
 		}
+	}
+
+	hrfs_oplist_check(list);
+	if (list->success_bnum <= 0) {
+		result = hrfs_oplist_result(list);
+		ret = result.ret;
+		goto out_free_oplist;
+	}
+
+	ret = hrfs_oplist_update(dir, list);
+	if (ret) {
+		HERROR("failed to update inode\n");
+		HBUG();
+	}
+	ret = 0;
+
+	for (i = 0; i < hrfs_i2bnum(dir); i++) {
+		bindex = list->op_binfo[i].bindex;
 		dput(hrfs_d2branch(new_dentry, bindex));
 	}
 
 	ret = hrfs_lookup_backend(dir, new_dentry, INTERPOSE_DEFAULT);
 	if (ret) {
-		goto out;
+		HERROR("link failed when lookup, ret = %d\n", ret);
+		goto out_free_oplist;
 	}
 
-	hidden_new_dir = hrfs_i_choose_branch(dir, HRFS_ATTR_VALID);
-	HASSERT(hidden_new_dir);
-	fsstack_copy_attr_times(dir, hidden_new_dir);
-	fsstack_copy_inode_size(dir, hidden_new_dir);
-	
+	/* Update parent dir */
+	hidden_dir = hrfs_i_choose_branch(dir, HRFS_ATTR_VALID);
+	if (IS_ERR(hidden_dir)) {
+		ret = PTR_ERR(hidden_dir);
+		HERROR("choose branch failed, ret = %d\n", ret);
+		goto out_free_oplist;
+	}
+
+	fsstack_copy_attr_times(dir, hidden_dir);
+	fsstack_copy_inode_size(dir, hidden_dir);
+
 	old_dentry->d_inode->i_nlink = hrfs_get_nlinks(old_dentry->d_inode);
 
-	goto out;
-
-error:
-	for (; bindex >= 0; bindex--) {
-		undo_ret = hrfs_undo_link_branch(new_dentry, bindex);
-		if (undo_ret) {
-			report_undo_error();
-		}
-	}
+	goto out_free_oplist;
+out_free_oplist:
+	hrfs_oplist_free(list);
 out:
 	if (!new_dentry->d_inode) {
 		d_drop(new_dentry);
@@ -793,6 +827,12 @@ static int hrfs_unlink_branch(struct dentry *dentry, hrfs_bindex_t bindex)
 	int ret = 0;
 	struct lowerfs_operations *lowerfs_ops = hrfs_d2bops(dentry, bindex);
 	HENTRY();
+
+	ret = hrfs_device_branch_errno(hrfs_d2dev(dentry), bindex);
+	if (ret) {
+		HDEBUG("branch[%d] is abandoned\n", bindex); 
+		goto out; 
+	}
 	
 	if (hidden_dentry && hidden_dentry->d_parent && hidden_dentry->d_inode) {
 		hidden_dentry = dget(hidden_dentry);
@@ -823,9 +863,10 @@ static int hrfs_unlink_branch(struct dentry *dentry, hrfs_bindex_t bindex)
 			       dentry->d_parent->d_name.len, dentry->d_parent->d_name.name,
 			       dentry->d_name.len, dentry->d_name.name);
 		}
-		ret = -ENOENT; /* which errno? */
+		ret = -ENOENT;
 	}
 
+out:
 	HRETURN(ret);
 }
 
@@ -848,7 +889,7 @@ int hrfs_unlink(struct inode *dir, struct dentry *dentry)
 
 	dget(dentry);
 
-	list = hrfs_oplist_build(dentry->d_inode);
+	list = hrfs_oplist_build(dir);
 	if (unlikely(list == NULL)) {
 		HERROR("failed to build operation list\n");
 		ret = -ENOMEM;
@@ -857,10 +898,14 @@ int hrfs_unlink(struct inode *dir, struct dentry *dentry)
 
 	if (list->latest_bnum == 0) {
 		HERROR("dir [%*s] has no valid branch, please check it\n",
-		       dentry->d_name.len, dentry->d_name.name);
+		       dentry->d_parent->d_name.len, dentry->d_parent->d_name.name);
+		if (!(hrfs_i2dev(inode)->no_abort)) {
+			ret = -EIO;
+			goto out_free_oplist;
+		}
 	}
 
-	for (i = 0; i < hrfs_d2bnum(dentry); i++) {
+	for (i = 0; i < hrfs_i2bnum(dir); i++) {
 		bindex = list->op_binfo[i].bindex;
 		ret = hrfs_unlink_branch(dentry, bindex);
 		result.ret = ret;
@@ -868,14 +913,29 @@ int hrfs_unlink(struct inode *dir, struct dentry *dentry)
 		if (i == list->latest_bnum - 1) {
 			hrfs_oplist_check(list);
 			if (list->success_latest_bnum <= 0) {
-				HDEBUG("operation failed for all branches\n");
-				//goto out_free_oplist;
-				break;
+				HDEBUG("operation failed for all latest %d branches\n", list->latest_bnum);
+				if (!(hrfs_i2dev(dir)->no_abort)) {
+					result = hrfs_oplist_result(list);
+					ret = result.ret;
+					goto out_free_oplist;
+				}
 			}
 		}
 	}
-	result = hrfs_oplist_result(list);
-	ret = result.ret;
+
+	hrfs_oplist_check(list);
+	if (list->success_bnum <= 0) {
+		result = hrfs_oplist_result(list);
+		ret = result.ret;
+		goto out_free_oplist;
+	}
+
+	ret = hrfs_oplist_update(dir, list);
+	if (ret) {
+		HERROR("failed to update inode\n");
+		HBUG();
+	}
+	ret = 0;
 
 	hidden_dir = hrfs_i_choose_branch(dir, HRFS_ATTR_VALID);
 	if (IS_ERR(hidden_dir)) {
@@ -920,6 +980,12 @@ static int hrfs_rmdir_branch(struct dentry *dentry, hrfs_bindex_t bindex)
 	struct lowerfs_operations *lowerfs_ops = hrfs_d2bops(dentry, bindex);
 	HENTRY();
 
+	ret = hrfs_device_branch_errno(hrfs_d2dev(dentry), bindex);
+	if (ret) {
+		HDEBUG("branch[%d] is abandoned\n", bindex); 
+		goto out; 
+	}
+
 	if (hidden_dentry && hidden_dentry->d_parent && hidden_dentry->d_inode) {
 		dget(hidden_dentry);
 		hidden_dir_dentry = lock_parent(hidden_dentry);
@@ -954,38 +1020,21 @@ static int hrfs_rmdir_branch(struct dentry *dentry, hrfs_bindex_t bindex)
 			       dentry->d_parent->d_name.len, dentry->d_parent->d_name.name,
 			       dentry->d_name.len, dentry->d_name.name);
 		}
-		ret = -ENOENT; /* which errno? */
+		ret = -ENOENT;
 	}
 
+out:
 	HRETURN(ret);
-}
-
-static int hrfs_undo_rmdir_branch(struct dentry *dentry, hrfs_bindex_t bindex)
-{
-	struct dentry *hidden_dentry = hrfs_d2branch(dentry, bindex);
-	struct dentry *hidden_dir_dentry = NULL;
-	int ret = 0;
-	int mode = dentry->d_inode->i_mode;
-
-	report_undo();
-	HASSERT(hidden_dentry);
-	hidden_dir_dentry = lock_parent(hidden_dentry);
-	HASSERT(hidden_dir_dentry);
-	HASSERT(hidden_dir_dentry->d_inode);
-
-	ret = vfs_mkdir(hidden_dir_dentry->d_inode, hidden_dentry, mode);
-	unlock_dir(hidden_dir_dentry);
-	
-	return ret;	
 }
 
 int hrfs_rmdir(struct inode *dir, struct dentry *dentry)
 {	
-	hrfs_bindex_t bnum = 0;
 	hrfs_bindex_t bindex = 0; 
 	int ret = 0;
-	int undo_ret = 0;
 	struct inode *hidden_dir = NULL;
+	hrfs_bindex_t i = 0;
+	struct hrfs_operation_list *list = NULL;
+	hrfs_operation_result_t result = {0};
 	HENTRY();
 
 	HDEBUG("rmdir [%*s]\n", dentry->d_name.len, dentry->d_name.name);
@@ -994,34 +1043,59 @@ int hrfs_rmdir(struct inode *dir, struct dentry *dentry)
 	HASSERT(inode_is_locked(dentry->d_inode));
 
 	dget(dentry);
-	bnum = hrfs_d2bnum(dentry);
-	for (bindex = 0; bindex < bnum; bindex++) {
+
+	list = hrfs_oplist_build(dir);
+	if (unlikely(list == NULL)) {
+		HERROR("failed to build operation list\n");
+		ret = -ENOMEM;
+		goto out;
+	}
+
+	if (list->latest_bnum == 0) {
+		HERROR("dir [%*s] has no valid branch, please check it\n",
+		       dentry->d_parent->d_name.len, dentry->d_parent->d_name.name);
+		if (!(hrfs_i2dev(dir)->no_abort)) {
+			ret = -EIO;
+			goto out_free_oplist;
+		}
+	}
+
+	for (i = 0; i < hrfs_i2bnum(dir); i++) {
+		bindex = list->op_binfo[i].bindex;
 		ret = hrfs_rmdir_branch(dentry, bindex);
-		if (ret) {
-			if (hrfs_is_primary_bindex(bindex)) {
-				bindex --;
-				goto error;
+		result.ret = ret;
+		hrfs_oplist_setbranch(list, i, (ret == 0 ? 1 : 0), result);
+		if (i == list->latest_bnum - 1) {
+			hrfs_oplist_check(list);
+			if (list->success_latest_bnum <= 0) {
+				HDEBUG("operation failed for all latest %d branches\n", list->latest_bnum);
+				if (!(hrfs_i2dev(dir)->no_abort)) {
+					result = hrfs_oplist_result(list);
+					ret = result.ret;
+					goto out_free_oplist;
+				}
 			}
 		}
 	}
 	ret = 0;
 
 	hidden_dir = hrfs_i_choose_branch(dir, HRFS_ATTR_VALID);
-	HASSERT(hidden_dir);
-	fsstack_copy_attr_times(dir, hidden_dir);
-	fsstack_copy_inode_size(dir, hidden_dir);
-	dentry->d_inode->i_nlink = hrfs_get_nlinks(dentry->d_inode);
-	d_drop(dentry);
-
-	goto out;
-error:
-	for (; bindex >= 0; bindex--) {
-		undo_ret = hrfs_undo_rmdir_branch(dentry, bindex);
-		if (undo_ret) {
-			report_undo_error();
-		}
+	if (IS_ERR(hidden_dir)) {
+		ret = PTR_ERR(hidden_dir);
+		HERROR("choose branch failed, ret = %d\n", ret);
+		goto out_free_oplist;
 	}
 
+	fsstack_copy_attr_times(dir, hidden_dir);
+	fsstack_copy_inode_size(dir, hidden_dir);
+
+	dentry->d_inode->i_nlink = hrfs_get_nlinks(dentry->d_inode);
+
+	d_drop(dentry);
+
+	goto out_free_oplist;
+out_free_oplist:
+	hrfs_oplist_free(list);
 out:
 	dput(dentry);
 	HRETURN(ret);
@@ -1035,7 +1109,13 @@ static int hrfs_symlink_branch(struct dentry *dentry, hrfs_bindex_t bindex, cons
 	int ret = 0;
 	umode_t	mode = S_IALLUGO;
 	HENTRY();
-	
+
+	ret = hrfs_device_branch_errno(hrfs_d2dev(dentry), bindex);
+	if (ret) {
+		HDEBUG("branch[%d] is abandoned\n", bindex); 
+		goto out; 
+	}
+
 	if (hidden_dentry && hidden_dentry->d_parent) {
 		hidden_dir_dentry = lock_parent(hidden_dentry);
 		ret = vfs_symlink(hidden_dir_dentry->d_inode, hidden_dentry, symname, mode);
@@ -1047,14 +1127,19 @@ static int hrfs_symlink_branch(struct dentry *dentry, hrfs_bindex_t bindex, cons
 			ret = -EIO; /* which errno? */
 		}
 	} else {
-		struct dentry *tmp_dentry = hidden_dentry == NULL ?  dentry : dentry->d_parent;
-
-		HASSERT(tmp_dentry);
-		HDEBUG("branch[%d] of dentry [%*s] is NULL\n", bindex,
-		       tmp_dentry->d_name.len, tmp_dentry->d_name.name);
-		ret = -ENOENT; /* which errno? */
+		if (hidden_dentry == NULL) {
+			HDEBUG("branch[%d] of dentry [%*s/%*s] is NULL\n", bindex,
+			       dentry->d_parent->d_name.len, dentry->d_parent->d_name.name,
+			       dentry->d_name.len, dentry->d_name.name);
+		} else if (hidden_dentry->d_parent == NULL){
+			HDEBUG("parent's branch[%d] of dentry [%*s/%*s] is NULL\n", bindex,
+			       dentry->d_parent->d_name.len, dentry->d_parent->d_name.name,
+			       dentry->d_name.len, dentry->d_name.name);
+		}
+		ret = -ENOENT;
 	}
 
+out:
 	HRETURN(ret);
 }
 
@@ -1138,108 +1223,129 @@ static int hrfs_mkdir_branch(struct dentry *dentry, int mode, hrfs_bindex_t bind
 	struct dentry *hidden_dir_dentry = NULL;
 	HENTRY();
 
+	ret = hrfs_device_branch_errno(hrfs_d2dev(dentry), bindex);
+	if (ret) {
+		HDEBUG("branch[%d] is abandoned\n", bindex); 
+		goto out; 
+	}
+
 	if (hidden_dentry && hidden_dentry->d_parent) {
-#if 0
-		if (hidden_dentry->d_inode) {
-			HDEBUG("try to repair\n");
-			hidden_dentry = hrfs_cleanup_branch(dentry, bindex);
-			if (IS_ERR(hidden_dentry)) {
-				ret = PTR_ERR(hidden_dentry);
-				HERROR("repair failed\n");
-				goto out;
-			}
-		}
-#endif
 		hidden_dir_dentry = lock_parent(hidden_dentry);
 		ret = vfs_mkdir(hidden_dir_dentry->d_inode, hidden_dentry, mode);
 		unlock_dir(hidden_dir_dentry);
+		if (ret) {
+			HDEBUG("failed to mkdir branch[%d] of dentry [%*s/%*s], ret = %d\n", 
+			       bindex, dentry->d_parent->d_name.len, dentry->d_parent->d_name.name,
+			       dentry->d_name.len, dentry->d_name.name, ret);
+		}
 		if (!ret && hidden_dentry->d_inode == NULL) {
-			HBUG();
 			HDEBUG("branch[%d] of dentry [%*s] is negative\n", bindex,
 			       hidden_dentry->d_name.len, hidden_dentry->d_name.name);
-			ret = -EIO; /* which errno? */
+			HBUG();
 		}
 	} else {
-		struct dentry *tmp_dentry = hidden_dentry == NULL ?  dentry : dentry->d_parent;
-
-		HASSERT(tmp_dentry);
-		HDEBUG("branch[%d] of dentry [%*s] is NULL\n", bindex,
-		       tmp_dentry->d_name.len, tmp_dentry->d_name.name);
-		ret = -ENOENT; /* which errno? */
+		if (hidden_dentry == NULL) {
+			HDEBUG("branch[%d] of dentry [%*s/%*s] is NULL\n", bindex,
+			       dentry->d_parent->d_name.len, dentry->d_parent->d_name.name,
+			       dentry->d_name.len, dentry->d_name.name);
+		} else {
+			HDEBUG("parent's branch[%d] of dentry [%*s/%*s] is NULL\n", bindex,
+			       dentry->d_parent->d_name.len, dentry->d_parent->d_name.name,
+			       dentry->d_name.len, dentry->d_name.name);
+		}
+		ret = -ENOENT;
 	}
 
-#if 0
 out:
-#endif
 	HRETURN(ret);
-}
-
-static int hrfs_undo_mkdir_branch(struct dentry *dentry, hrfs_bindex_t bindex)
-{
-	int ret = 0;
-	struct dentry *hidden_dentry = NULL;
-	struct dentry *hidden_dir_dentry = NULL;
-
-	report_undo();
-	hidden_dentry = dget(hrfs_d2branch(dentry, bindex));
-	HASSERT(hidden_dentry);
-	hidden_dir_dentry = lock_parent(hidden_dentry);
-	HASSERT(hidden_dir_dentry);
-	HASSERT(hidden_dir_dentry->d_inode);
-
-	ret = vfs_rmdir(hidden_dir_dentry->d_inode, hidden_dentry);
-	unlock_dir(hidden_dir_dentry);
-	dput(hidden_dentry);
-	if (!ret) {
-		/* Since it was OK, we kill the hidden dentry */
-		d_delete(hidden_dentry);
-	}
-	return ret;
 }
 
 int hrfs_mkdir(struct inode *dir, struct dentry *dentry, int mode)
 {
 	int ret = 0;
 	struct inode *hidden_dir = NULL;
-	hrfs_bindex_t bnum = 0;
-	hrfs_bindex_t bindex= 0;
-	int undo_ret = 0;
+	hrfs_bindex_t bindex = 0;
+	hrfs_bindex_t i = 0;
+	struct hrfs_operation_list *list = NULL;
+	hrfs_operation_result_t result = {0};
 	HENTRY();
 
 	HDEBUG("mkdir [%*s]\n", dentry->d_name.len, dentry->d_name.name);
 	HASSERT(inode_is_locked(dir));
 	HASSERT(dentry->d_inode == NULL);
 
-	bnum = hrfs_d2bnum(dentry) = hrfs_i2bnum(dir);
-	for (bindex = 0; bindex < bnum; bindex++) {
+	list = hrfs_oplist_build(dir);
+	if (unlikely(list == NULL)) {
+		HERROR("failed to build operation list\n");
+		ret = -ENOMEM;
+		goto out;
+	}
+
+	if (list->latest_bnum == 0) {
+		HERROR("dir [%*s] has no valid branch, please check it\n",
+		       dentry->d_parent->d_name.len, dentry->d_parent->d_name.name);
+		if (!(hrfs_i2dev(dir)->no_abort)) {
+			ret = -EIO;
+			goto out_free_oplist;
+		}
+	}
+
+	HASSERT(hrfs_i2bnum(dir) == hrfs_d2bnum(dentry) );
+	for (i = 0; i < hrfs_i2bnum(dir); i++) {
+		bindex = list->op_binfo[i].bindex;
 		ret = hrfs_mkdir_branch(dentry, mode, bindex);
-		if (ret) {
-			if (hrfs_is_primary_bindex(bindex)) {
-				bindex --;
-				goto error;
+		result.ret = ret;
+		hrfs_oplist_setbranch(list, i, (ret == 0 ? 1 : 0), result);
+		if (i == list->latest_bnum - 1) {
+			hrfs_oplist_check(list);
+			if (list->success_latest_bnum <= 0) {
+				HDEBUG("operation failed for all latest %d branches\n", list->latest_bnum);
+				if (!(hrfs_i2dev(dir)->no_abort)) {
+					result = hrfs_oplist_result(list);
+					ret = result.ret;
+					goto out_free_oplist;
+				}
 			}
 		}
 	}
 
+	hrfs_oplist_check(list);
+	if (list->success_bnum <= 0) {
+		result = hrfs_oplist_result(list);
+		ret = result.ret;
+		goto out_free_oplist;
+	}
+
+	ret = hrfs_oplist_update(dir, list);
+	if (ret) {
+		HERROR("failed to update inode\n");
+		HBUG();
+	}
+	ret = 0;
+
 	ret = hrfs_interpose(dentry, dir->i_sb, INTERPOSE_DEFAULT);
 	if (ret) {
-		goto error;
+		HERROR("mkdir failed when interposing, ret = %d\n", ret);
+		goto out_free_oplist;
 	}
 
 	hidden_dir = hrfs_i_choose_branch(dir, HRFS_ATTR_VALID);
-	HASSERT(hidden_dir);
+	if (IS_ERR(hidden_dir)) {
+		ret = PTR_ERR(hidden_dir);
+		HERROR("choose branch failed, ret = %d\n", ret);
+		goto out_free_oplist;
+	}
+
 	fsstack_copy_attr_times(dir, hidden_dir);
 	fsstack_copy_inode_size(dir, hidden_dir);
 
-	goto out;
-error:
-	for (; bindex >= 0; bindex--) {
-		undo_ret = hrfs_undo_mkdir_branch(dentry, bindex);
-		if (undo_ret) {
-			report_undo_error();
-		}
-	}
+	goto out_free_oplist;
+out_free_oplist:
+	hrfs_oplist_free(list);
 out:
+	if (!dentry->d_inode) {
+		d_drop(dentry);
+	}
 	HRETURN(ret);
 }
 EXPORT_SYMBOL(hrfs_mkdir);
@@ -1251,10 +1357,21 @@ static int hrfs_mknod_branch(struct dentry *dentry, int mode, dev_t dev, hrfs_bi
 	struct dentry *hidden_dir_dentry = NULL;
 	HENTRY();
 
+	ret = hrfs_device_branch_errno(hrfs_d2dev(dentry), bindex);
+	if (ret) {
+		HDEBUG("branch[%d] is abandoned\n", bindex); 
+		goto out; 
+	}
+
 	if (hidden_dentry && hidden_dentry->d_parent) {
 		hidden_dir_dentry = lock_parent(hidden_dentry);
 		ret = vfs_mknod(hidden_dir_dentry->d_inode, hidden_dentry, mode, dev);
 		unlock_dir(hidden_dir_dentry);
+		if (ret) {
+			HDEBUG("failed to mknod branch[%d] of dentry [%*s/%*s], ret = %d\n", 
+			       bindex, dentry->d_parent->d_name.len, dentry->d_parent->d_name.name,
+			       dentry->d_name.len, dentry->d_name.name, ret);
+		}
 		if (!ret && hidden_dentry->d_inode == NULL) {
 			HBUG();
 			HDEBUG("branch[%d] of dentry [%*s] is negative\n", bindex,
@@ -1262,86 +1379,108 @@ static int hrfs_mknod_branch(struct dentry *dentry, int mode, dev_t dev, hrfs_bi
 			ret = -EIO; /* which errno? */
 		}
 	} else {
-		struct dentry *tmp_dentry = hidden_dentry == NULL ?  dentry : dentry->d_parent;
-
-		HASSERT(tmp_dentry);
-		HDEBUG("branch[%d] of dentry [%*s] is NULL\n", bindex,
-		       tmp_dentry->d_name.len, tmp_dentry->d_name.name);
-		ret = -ENOENT; /* which errno? */
+		if (hidden_dentry == NULL) {
+			HDEBUG("branch[%d] of dentry [%*s/%*s] is NULL\n", bindex,
+			       dentry->d_parent->d_name.len, dentry->d_parent->d_name.name,
+			       dentry->d_name.len, dentry->d_name.name);
+		} else {
+			HDEBUG("parent's branch[%d] of dentry [%*s/%*s] is NULL\n", bindex,
+			       dentry->d_parent->d_name.len, dentry->d_parent->d_name.name,
+			       dentry->d_name.len, dentry->d_name.name);
+		}
+		ret = -ENOENT;
 	}
 
+out:
 	HRETURN(ret);
-}
-
-static int hrfs_undo_mknod_branch(struct dentry *dentry, hrfs_bindex_t bindex)
-{
-	int ret = 0;
-	struct dentry *hidden_dentry = NULL;
-	struct dentry *hidden_dir_dentry = NULL;
-
-	report_undo();
-	hidden_dentry = dget(hrfs_d2branch(dentry, bindex));
-	HASSERT(hidden_dentry);
-	hidden_dir_dentry = lock_parent(hidden_dentry);
-	HASSERT(hidden_dir_dentry);
-	HASSERT(hidden_dir_dentry->d_inode);
-	ret = vfs_unlink(hidden_dir_dentry->d_inode, hidden_dentry);
-	unlock_dir(hidden_dir_dentry);
-	dput(hidden_dentry);
-	if (!ret) {
-		/* Since it was OK, we kill the hidden dentry */
-		d_delete(hidden_dentry);
-	}
-	return ret;
 }
 
 int hrfs_mknod(struct inode *dir, struct dentry *dentry, int mode, dev_t dev)
 {
 	int ret = 0;
-	int undo_ret = 0;
 	struct inode *hidden_dir = NULL;
-	hrfs_bindex_t bnum = 0;
-	hrfs_bindex_t bindex = 0;
+	hrfs_bindex_t bindex= 0;
+	hrfs_bindex_t i= 0;
+	struct hrfs_operation_list *list = NULL;
+	hrfs_operation_result_t result = {0};
 	HENTRY();
 
-	HDEBUG("mknod [%*s]\n", dentry->d_name.len, dentry->d_name.name);
+	HDEBUG("mkdir [%*s]\n", dentry->d_name.len, dentry->d_name.name);
 	HASSERT(inode_is_locked(dir));
+	HASSERT(dentry->d_inode == NULL);
 
-	bnum = hrfs_d2bnum(dentry) = hrfs_i2bnum(dir);
-	for (bindex = 0; bindex < bnum; bindex++) {
+	list = hrfs_oplist_build(dir);
+	if (unlikely(list == NULL)) {
+		HERROR("failed to build operation list\n");
+		ret = -ENOMEM;
+		goto out;
+	}
+
+	if (list->latest_bnum == 0) {
+		HERROR("dir [%*s] has no valid branch, please check it\n",
+		       dentry->d_parent->d_name.len, dentry->d_parent->d_name.name);
+		if (!(hrfs_i2dev(dir)->no_abort)) {
+			ret = -EIO;
+			goto out_free_oplist;
+		}
+	}
+
+	HASSERT(hrfs_i2bnum(dir) == hrfs_d2bnum(dentry) );
+	for (i = 0; i < hrfs_i2bnum(dir); i++) {
+		bindex = list->op_binfo[i].bindex;
 		ret = hrfs_mknod_branch(dentry, mode, dev, bindex);
-		if (ret) {
-			if (hrfs_is_primary_bindex(bindex)) {
-				bindex --;
-				goto error;
+		result.ret = ret;
+		hrfs_oplist_setbranch(list, i, (ret == 0 ? 1 : 0), result);
+		if (i == list->latest_bnum - 1) {
+			hrfs_oplist_check(list);
+			if (list->success_latest_bnum <= 0) {
+				HDEBUG("operation failed for all latest branches\n");
+				if (!(hrfs_i2dev(dir)->no_abort)) {
+					result = hrfs_oplist_result(list);
+					ret = result.ret;
+					goto out_free_oplist;
+				}
 			}
 		}
 	}
 
+	hrfs_oplist_check(list);
+	if (list->success_bnum <= 0) {
+		result = hrfs_oplist_result(list);
+		ret = result.ret;
+		goto out_free_oplist;
+	}
+
+	ret = hrfs_oplist_update(dir, list);
+	if (ret) {
+		HERROR("failed to update inode\n");
+		HBUG();
+	}
+	ret = 0;
+
 	ret = hrfs_interpose(dentry, dir->i_sb, INTERPOSE_DEFAULT);
 	if (ret) {
-		goto error;
+		HERROR("mkdir failed when interposing, ret = %d\n", ret);
+		goto out_free_oplist;
 	}
 
 	hidden_dir = hrfs_i_choose_branch(dir, HRFS_ATTR_VALID);
-	HASSERT(hidden_dir);
+	if (IS_ERR(hidden_dir)) {
+		ret = PTR_ERR(hidden_dir);
+		HERROR("choose branch failed, ret = %d\n", ret);
+		goto out_free_oplist;
+	}
+
 	fsstack_copy_attr_times(dir, hidden_dir);
 	fsstack_copy_inode_size(dir, hidden_dir);
 
-	goto end;
-error:
-	for (; bindex >= 0; bindex--) {
-		undo_ret = hrfs_undo_mknod_branch(dentry, bindex);
-		if (undo_ret) {
-			report_undo_error();
-		}
-	}
-
-end:
+	goto out_free_oplist;
+out_free_oplist:
+	hrfs_oplist_free(list);
+out:
 	if (!dentry->d_inode) {
 		d_drop(dentry);
 	}
-
 	HRETURN(ret);
 }
 EXPORT_SYMBOL(hrfs_mknod);
@@ -1354,6 +1493,12 @@ static int hrfs_rename_branch(struct dentry *old_dentry, struct dentry *new_dent
 	struct dentry *hidden_new_dir_dentry = NULL;
 	int ret = 0;
 	HENTRY();
+
+	ret = hrfs_device_branch_errno(hrfs_d2dev(old_dentry), bindex);
+	if (ret) {
+		HDEBUG("branch[%d] is abandoned\n", bindex); 
+		goto out; 
+	}
 
 	if (hidden_old_dentry && hidden_new_dentry && hidden_old_dentry->d_inode) {
 		dget(hidden_old_dentry);
@@ -1392,48 +1537,20 @@ static int hrfs_rename_branch(struct dentry *old_dentry, struct dentry *new_dent
 		ret = -ENOENT; /* which errno? */
 	}
 
+out:
 	HRETURN(ret);
-}
-
-static int hrfs_undo_rename_branch(struct dentry *old_dentry, struct dentry *new_dentry, hrfs_bindex_t bindex)
-{
-	struct dentry *hidden_new_dentry = hrfs_d2branch(old_dentry, bindex);
-	struct dentry *hidden_old_dentry = NULL;
-	struct dentry *hidden_old_dir_dentry = NULL;
-	struct dentry *hidden_new_dir_dentry = NULL;
-	int ret = 0;
-
-	report_undo();
-	mutex_lock(&hidden_new_dentry->d_parent->d_inode->i_mutex);
-	hidden_old_dentry = lookup_one_len(old_dentry->d_name.name, hidden_new_dentry->d_parent, old_dentry->d_name.len);
-	mutex_unlock(&hidden_new_dentry->d_parent->d_inode->i_mutex);
-		
-	dget(hidden_new_dentry);
-		
-	hidden_old_dir_dentry = get_parent(hidden_old_dentry);
-	hidden_new_dir_dentry = get_parent(hidden_new_dentry);
-
-	lock_rename(hidden_new_dir_dentry, hidden_old_dir_dentry);
-	ret = vfs_rename(hidden_old_dir_dentry->d_inode, hidden_new_dentry,
-	                 hidden_new_dir_dentry->d_inode, hidden_old_dentry);
-	unlock_rename(hidden_new_dir_dentry, hidden_old_dir_dentry);
-
-	dput(hidden_new_dir_dentry);
-	dput(hidden_old_dir_dentry);
-	
-	dput(hidden_new_dentry);
-	dput(hidden_old_dentry);
-	return ret;
 }
 
 int hrfs_rename(struct inode *old_dir, struct dentry *old_dentry, struct inode *new_dir, struct dentry *new_dentry)
 {
 	int ret = 0;
-	hrfs_bindex_t bnum = 0;
 	hrfs_bindex_t bindex = 0;
 	struct inode *hidden_new_dir = NULL;
 	struct inode *hidden_old_dir = NULL;
 	struct inode *old_inode = old_dentry->d_inode;
+	hrfs_bindex_t i = 0;
+	struct hrfs_operation_list *list = NULL;
+	hrfs_operation_result_t result = {0};
 	HENTRY();
 
 	HDEBUG("rename [%*s] to [%*s]\n",
@@ -1448,45 +1565,89 @@ int hrfs_rename(struct inode *old_dir, struct dentry *old_dentry, struct inode *
 
 	HDEBUG("old_dentry = %p, old_name = \"%s\", new_dentry = %p, new_name = \"%s\"\n", 
 	       old_dentry, old_dentry->d_name.name, new_dentry, new_dentry->d_name.name);
-	
-	bnum = hrfs_d2bnum(old_dentry);
-	for (bindex = 0; bindex < bnum; bindex++) {
+
+	/* TODO: build according to new_dir */
+	list = hrfs_oplist_build(old_dir);
+	if (unlikely(list == NULL)) {
+		HERROR("failed to build operation list\n");
+		ret = -ENOMEM;
+		goto out;
+	}
+
+	if (list->latest_bnum == 0) {
+		HERROR("dir [%*s] has no valid branch, please check it\n",
+		       old_dentry->d_parent->d_name.len, old_dentry->d_parent->d_name.name);
+		if (!(hrfs_i2dev(old_dir)->no_abort)) {
+			ret = -EIO;
+			goto out_free_oplist;
+		}
+	}
+
+	for (i = 0; i < hrfs_i2bnum(old_dir); i++) {
+		bindex = list->op_binfo[i].bindex;
 		ret = hrfs_rename_branch(old_dentry, new_dentry, bindex);
-		if (ret) {
-			if (hrfs_is_primary_bindex(bindex)) {
-				bindex --;
-				goto error;
+		result.ret = ret;
+		hrfs_oplist_setbranch(list, i, (ret == 0 ? 1 : 0), result);
+		if (i == list->latest_bnum - 1) {
+			hrfs_oplist_check(list);
+			if (list->success_latest_bnum <= 0) {
+				HDEBUG("rename failed for all latest %d branches\n", list->latest_bnum);
+				if (!(hrfs_i2dev(old_dir)->no_abort)) {
+					result = hrfs_oplist_result(list);
+					ret = result.ret;
+					goto out_free_oplist;
+				}
 			}
 		}
 	}
 
+	hrfs_oplist_check(list);
+	if (list->success_bnum <= 0) {
+		result = hrfs_oplist_result(list);
+		ret = result.ret;
+		goto out_free_oplist;
+	}
+
+	ret = hrfs_oplist_update(old_dir, list);
+	if (ret) {
+		HERROR("failed to update old inode\n");
+		HBUG();
+	}
+
+	if (new_dir != old_dir) {
+		ret = hrfs_oplist_update(new_dir, list);
+		if (ret) {
+			HERROR("failed to update new inode\n");
+			HBUG();
+		}
+	}
 	ret = 0;
 
+	/* Update parent dir */
 	hidden_new_dir = hrfs_i_choose_branch(new_dir, HRFS_ATTR_VALID);
-	HASSERT(hidden_new_dir);
+	if (IS_ERR(hidden_new_dir)) {
+		ret = PTR_ERR(hidden_new_dir);
+		HERROR("choose branch failed, ret = %d\n", ret);
+		//goto out_free_oplist;
+	}
 	fsstack_copy_attr_all(new_dir, hidden_new_dir, hrfs_get_nlinks);
-	
+
 	if (new_dir != old_dir) {
 		hidden_old_dir = hrfs_i_choose_branch(old_dir, HRFS_ATTR_VALID);
-		HASSERT(hidden_old_dir);
-		fsstack_copy_attr_all(old_dir, hidden_old_dir, hrfs_get_nlinks);
+		if (IS_ERR(hidden_old_dir)) {
+			ret = PTR_ERR(hidden_old_dir);
+			HERROR("choose branch failed, ret = %d\n", ret);
+			//goto out_free_oplist;
+		}
+		fsstack_copy_attr_all(new_dir, hidden_old_dir, hrfs_get_nlinks);
 	}
 
 	/* This flag is seted: FS_RENAME_DOES_D_MOVE */
 	d_move(old_dentry, new_dentry);
-	goto out;
-error:
-	/* TODO: d_rop? */
-	d_drop(new_dentry);
-	for (; bindex >= 0; bindex--) {
-		HASSERT(hrfs_i2branch(old_inode, bindex));
-		if (hrfs_i2branch(old_inode, bindex) == NULL) {
-			continue;
-		}
-		ret = hrfs_undo_rename_branch(old_dentry, new_dentry, bindex);
-	}
+	goto out_free_oplist;
+out_free_oplist:
+	hrfs_oplist_free(list);
 out:
-
 	HRETURN(ret);
 }
 EXPORT_SYMBOL(hrfs_rename);
@@ -1571,8 +1732,8 @@ int hrfs_permission(struct inode *inode, int mask, struct nameidata *nd)
 
 	hidden_inode = hrfs_i_choose_branch(inode, HRFS_BRANCH_VALID);
 	if (IS_ERR(hidden_inode)) {
-		HERROR("choose branch failed, ret = %d\n", ret);
 		ret = PTR_ERR(hidden_inode);
+		HERROR("choose branch failed, ret = %d\n", ret);
 		goto out;
 	}
 

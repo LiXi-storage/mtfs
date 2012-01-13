@@ -75,6 +75,7 @@ out:
 #include <hrfs_inode.h>
 #include <hrfs_dentry.h>
 extern int hrfs_branch_is_valid(struct inode *inode, hrfs_bindex_t bindex, __u32 valid_flags);
+int hrfs_i_invalid_branch(struct inode *inode, hrfs_bindex_t bindex, __u32 valid_flags);
 
 /*
  * 1: valid
@@ -165,6 +166,7 @@ struct hrfs_operation_binfo {
 
 struct hrfs_operation_list {
 	hrfs_bindex_t bnum;                     /* Branch number */
+	hrfs_bindex_t checked_bnum;             /* Number of nonlatest branches failed */
 	hrfs_bindex_t latest_bnum;              /* Number of latest branches */
 	struct hrfs_operation_binfo *op_binfo;  /* Global bindex */
 	hrfs_bindex_t valid_bnum;               /* Number of valid branches */
@@ -250,19 +252,24 @@ static inline int hrfs_oplist_check(struct hrfs_operation_list *list)
 {
 	hrfs_bindex_t bindex = 0;
 	int ret = 0;
+	HENTRY();
 
-	list->valid_bnum = 0;
-	list->success_bnum = 0;
-	list->success_latest_bnum = 0;
-	list->success_nonlatest_bnum = 0;
-	list->fault_bnum = 0;
-	list->fault_latest_bnum = 0;
-	list->fault_nonlatest_bnum = 0;
-	for (bindex = 0; bindex < list->bnum; bindex++) {
+	if (list->checked_bnum == 0) {
+		HASSERT(list->valid_bnum == 0);
+		HASSERT(list->success_bnum == 0);
+		HASSERT(list->success_latest_bnum == 0);
+		HASSERT(list->success_nonlatest_bnum == 0);
+		HASSERT(list->fault_bnum == 0);
+		HASSERT(list->fault_latest_bnum == 0);
+		HASSERT(list->fault_nonlatest_bnum == 0);
+	}
+
+	for (bindex = list->checked_bnum; bindex < list->bnum; bindex++) {
 		if (!list->op_binfo[bindex].valid) {
-			continue;
+			break;
 		}
 
+		list->checked_bnum++;
 		list->valid_bnum++;
 		if (list->op_binfo[bindex].is_suceessful) {
 			list->success_bnum++;
@@ -284,7 +291,8 @@ static inline int hrfs_oplist_check(struct hrfs_operation_list *list)
 	HASSERT(list->success_latest_bnum + list->success_nonlatest_bnum == list->success_bnum);
 	HASSERT(list->success_bnum + list->fault_bnum == list->valid_bnum);
 	HASSERT(list->valid_bnum <= list->bnum);
-	return ret;
+	HASSERT(list->checked_bnum <= list->bnum);
+	HRETURN(ret);
 }
 
 static inline int hrfs_oplist_setbranch(struct hrfs_operation_list *list, hrfs_bindex_t bindex, int is_successful, hrfs_operation_result_t result)
@@ -300,6 +308,41 @@ static inline int hrfs_oplist_setbranch(struct hrfs_operation_list *list, hrfs_b
 static inline hrfs_operation_result_t hrfs_oplist_result(struct hrfs_operation_list *list)
 {
 	return list->op_binfo[0].result;
+}
+
+static inline int hrfs_oplist_update(struct inode *inode, struct hrfs_operation_list *list)
+{
+	hrfs_bindex_t bindex = 0;
+	hrfs_bindex_t i = 0;
+	int ret = 0;
+	HENTRY();
+
+	HASSERT(list->checked_bnum > 0);
+	HASSERT(list->valid_bnum > 0);
+	HASSERT(list->success_latest_bnum > 0);
+	if (list->fault_latest_bnum == 0) {
+		goto out;
+	}
+
+	for (i = 0; i < list->bnum; i++) {
+		bindex = list->op_binfo[i].bindex;
+		if (!list->op_binfo[i].valid) {
+			break;
+		}
+
+		if (!list->op_binfo[i].is_suceessful) {
+			if (hrfs_i2branch(inode, bindex) == NULL) {
+				continue;
+			}
+
+			ret = hrfs_i_invalid_branch(inode, bindex, HRFS_DATA_VALID);
+			if (ret) {
+				HBUG();
+			}
+		}
+	}
+out:
+	HRETURN(ret);
 }
 #endif /* defined (__linux__) && defined(__KERNEL__) */
 #endif /* __HRFS_FLAG_H__ */

@@ -173,11 +173,11 @@ run_test 6f "$RUNAS chgrp .../f6e (should return error) =="
 
 test_6g() {
 	[ $RUNAS_ID -eq $UID ] && skip "RUNAS_ID = UID = $UID -- skipping" && return
-        mkdir $DIR/d6g || error
-        chmod 777 $DIR/d6g || error
-        $RUNAS mkdir $DIR/d6g/d || error
-        chmod g+s $DIR/d6g/d || error
-        mkdir $DIR/d6g/d/subdir
+	mkdir $DIR/d6g || error
+	chmod 777 $DIR/d6g || error
+	$RUNAS mkdir $DIR/d6g/d || error
+	chmod g+s $DIR/d6g/d || error
+	mkdir $DIR/d6g/d/subdir
 	$CHECKSTAT -g \#$RUNAS_ID $DIR/d6g/d/subdir || error
 }
 run_test 6g "Is new dir in sgid dir inheriting group?"

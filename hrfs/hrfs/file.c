@@ -117,113 +117,184 @@ out:
 }
 EXPORT_SYMBOL(hrfs_poll);
 
-int hrfs_open(struct inode *inode, struct file *file)
+int hrfs_open_branch(struct inode *inode, struct file *file, hrfs_bindex_t bindex)
 {
-	int ret = -ENOMEM;
-	int hidden_flags = 0;
+	struct dentry *dentry = file->f_dentry;
+	struct vfsmount *hidden_mnt = hrfs_s2mntbranch(inode->i_sb, bindex);
+	struct dentry *hidden_dentry = hrfs_d2branch(dentry, bindex);
+	int hidden_flags = file->f_flags;
 	struct file *hidden_file = NULL;
-	struct dentry *hidden_dentry = NULL;
-	struct dentry *dentry = NULL;
-	struct super_block *sb = NULL;
-	hrfs_bindex_t bindex = 0;
-	hrfs_bindex_t bnum = 0;
+	int ret = 0;
 	HENTRY();
 
-	dentry = file->f_dentry;
-	HASSERT(dentry);
-	
-	bnum = hrfs_d2bnum(dentry);
-	ret = hrfs_f_alloc(file, bnum);
-	if (unlikely(ret)) {
-		goto out;
-	}
-	
-	hidden_flags = file->f_flags;
-	HASSERT(inode);
-	sb = inode->i_sb;
-	ret = 0;
-	for (bindex = 0; bindex < bnum; bindex++) {
-		hidden_dentry = hrfs_d2branch(dentry, bindex);
-		if (hidden_dentry == NULL || hidden_dentry->d_inode == NULL) {
-			HDEBUG("branch[%d] of dentry [%*s] is %s\n",
-			       bindex, dentry->d_name.len, dentry->d_name.name,
-			       hidden_dentry == NULL ? "NULL" : "negative");
-			if (hrfs_is_primary_bindex(bindex)) {
-				/* primary branch, report failed */
-				ret = -ENOENT; /* which errno? */
-				goto out;
-			} else {
-				continue;
-			}
-		}
-
+	if (hidden_dentry && hidden_dentry->d_inode) {
 		dget(hidden_dentry);
+		mntget(hidden_mnt);
 		/*
-		 * dentry_open will decrement mnt refcnt if err.
-		 * otherwise fput() will do an mntput() for us upon file close.
+		 * dentry_open will dput and mntput if error.
+		 * Otherwise fput() will do an dput and mntput for us upon file close.
 		 */
-		mntget(hrfs_s2mntbranch(sb, bindex));
-		hidden_file = dentry_open(hidden_dentry, hrfs_s2mntbranch(sb, bindex), hidden_flags);
+		hidden_file = dentry_open(hidden_dentry, hidden_mnt, hidden_flags);
 		if (IS_ERR(hidden_file)) {
 			HDEBUG("open branch[%d] of file [%*s], flags = 0x%x, ret = %ld\n", 
 			       bindex, hidden_dentry->d_name.len, hidden_dentry->d_name.name,
 			       hidden_flags, PTR_ERR(hidden_file));
-			ret =  PTR_ERR(hidden_file);
-			goto out;
+			ret = PTR_ERR(hidden_file);
+		} else {
+			hrfs_f2branch(file, bindex) = hidden_file;
 		}
-		hrfs_f2branch(file, bindex) = hidden_file;
-	}
-
-out:
-	/* freeing the allocated resources, and fput the opened files */
-	if (ret < 0 && hrfs_f2info(file)) {
-		for (; bindex >= 0; bindex--) {
-			hidden_file  = hrfs_f2branch(file, bindex);
-			if (hidden_file) {
-				/* fput calls dput for hidden_dentry */
-				fput(hidden_file);  
-			}
-		}
-		hrfs_f_free(file);
+	} else {
+		HDEBUG("branch[%d] of dentry [%*s] is %s\n",
+		       bindex, dentry->d_name.len, dentry->d_name.name,
+		       hidden_dentry == NULL ? "NULL" : "negative");
+		ret = -ENOENT;
 	}
 
 	HRETURN(ret);
 }
+
+int hrfs_open(struct inode *inode, struct file *file)
+{
+	int ret = -ENOMEM;
+	struct file *hidden_file = NULL;
+	hrfs_bindex_t i = 0;
+	hrfs_bindex_t bindex = 0;
+	hrfs_bindex_t bnum = 0;
+	struct hrfs_operation_list *list = NULL;
+	hrfs_operation_result_t result = {0};
+	HENTRY();
+
+	HASSERT(inode);
+	HASSERT(file->f_dentry);
+
+	list = hrfs_oplist_build(inode);
+	if (unlikely(list == NULL)) {
+		HERROR("failed to build operation list\n");
+		ret = -ENOMEM;
+		goto out;
+	}
+
+	if (list->latest_bnum == 0) {
+		HERROR("file [%*s] has no valid branch, please check it\n",
+		       file->f_dentry->d_name.len, file->f_dentry->d_name.name);
+		if (!(hrfs_i2dev(inode)->no_abort)) {
+			ret = -EIO;
+			goto out_free_oplist;
+		}
+	}
+
+	bnum = hrfs_i2bnum(inode);
+	ret = hrfs_f_alloc(file, bnum);
+	if (unlikely(ret)) {
+		goto out_free_oplist;
+	}
+
+	for (i = 0; i < bnum; i++) {
+		bindex = list->op_binfo[i].bindex;
+		ret = hrfs_open_branch(inode, file, bindex);
+		result.ret = ret;
+		hrfs_oplist_setbranch(list, i, (ret == 0 ? 1 : 0), result);
+		if (i == list->latest_bnum - 1) {
+			hrfs_oplist_check(list);
+			if (list->success_latest_bnum <= 0) {
+				HDEBUG("operation failed for all latest branches\n");
+				if (!(hrfs_i2dev(inode)->no_abort)) {
+					result = hrfs_oplist_result(list);
+					ret = result.ret;
+					goto out_free_file;
+				}
+			}
+		}
+	}
+
+	hrfs_oplist_check(list);
+	if (list->success_bnum <= 0) {
+		result = hrfs_oplist_result(list);
+		ret = result.ret;
+		goto out_free_file;
+	}
+	ret = 0;
+
+	goto out_free_oplist;
+out_free_file:
+	for (bindex = 0; bindex < bnum; bindex++) {
+		hidden_file = hrfs_f2branch(file, bindex);
+		if (hidden_file) {
+			/* fput will calls mntput and dput for lowerfs */
+			fput(hidden_file);  
+		}
+	}
+	hrfs_f_free(file);
+out_free_oplist:
+	hrfs_oplist_free(list);
+out:
+	HRETURN(ret);
+}
 EXPORT_SYMBOL(hrfs_open);
+
+int hrfs_flush_branch(struct file *file, fl_owner_t id, hrfs_bindex_t bindex)
+{
+	struct file *hidden_file = hrfs_f2branch(file, bindex);
+	int ret = 0;
+	HENTRY();
+
+	if (hidden_file) {
+		HASSERT(hidden_file->f_op);
+		HASSERT(hidden_file->f_op->flush);
+		ret = hidden_file->f_op->flush(hidden_file, id);
+		if (ret) {
+			HDEBUG("failed to open branch[%d] of file [%*s], ret = %d\n", 
+			       bindex, file->f_dentry->d_name.len, file->f_dentry->d_name.name,
+			       ret);
+		}
+	} else {
+		HDEBUG("branch[%d] of file [%*s] is NULL\n",
+		       bindex, file->f_dentry->d_name.len, file->f_dentry->d_name.name);
+		ret = -ENOENT;
+	}
+	HRETURN(ret);
+}
 
 int hrfs_flush(struct file *file, fl_owner_t id)
 {
 	int ret = 0;
-	struct file *hidden_file = NULL;
 	hrfs_bindex_t bindex;
 	HENTRY();
 
 	HASSERT(hrfs_f2info(file));
 	for (bindex = 0; bindex < hrfs_f2bnum(file); bindex++) {
-		hidden_file = hrfs_f2branch(file, bindex);
-		if (hidden_file) {
-			HASSERT(hidden_file->f_op);
-			if (hidden_file->f_op->flush) {
-				ret = hidden_file->f_op->flush(hidden_file, id);
-			} else {
-				HDEBUG("branch[%d] of file [%*s] does not support flush\n",
-				       bindex, file->f_dentry->d_name.len, file->f_dentry->d_name.name);
-				//ret = -ENOMEM; /* Which errno? */
-			}
-		} else {
-			HDEBUG("branch[%d] of file [%*s] is NULL\n",
-			       bindex, file->f_dentry->d_name.len, file->f_dentry->d_name.name);
-		}
+		ret = hrfs_flush_branch(file, id, bindex);
 	}
 
 	HRETURN(ret);
 }
 EXPORT_SYMBOL(hrfs_flush);
 
+int hrfs_release_branch(struct inode *inode, struct file *file, hrfs_bindex_t bindex)
+{
+	struct file *hidden_file = hrfs_f2branch(file, bindex);
+	int ret = 0;
+	HENTRY();
+
+	if (hidden_file) {
+		/*
+		 * Will decrement file reference,
+		 * and if it count down to zero, destroy the file,
+		 * which will call the lower file system's file release function.
+		 */
+		fput(hidden_file);
+	} else {
+		HDEBUG("branch[%d] of file [%*s] is NULL\n",
+		       bindex, file->f_dentry->d_name.len, file->f_dentry->d_name.name);
+		ret = -ENOENT;
+	}
+
+	HRETURN(ret);
+}
+
 int hrfs_release(struct inode *inode, struct file *file)
 {
-	int err = 0;
-	struct file *hidden_file = NULL;
+	int ret = 0;
 	hrfs_bindex_t bindex = 0;
 	hrfs_bindex_t bnum = 0;
 	HENTRY();
@@ -232,87 +303,95 @@ int hrfs_release(struct inode *inode, struct file *file)
 	if (hrfs_f2info(file) == NULL) {
 		HERROR("file [%*s] has no private data\n",
 		       file->f_dentry->d_name.len, file->f_dentry->d_name.name);
-		return 0;
+		goto out;
 	}
 
-	/*fist_checkinode(inode, "hrfs_release");*/
 	/* fput all the hidden files */
 	bnum = hrfs_f2bnum(file);
 	for (bindex = 0; bindex < bnum; bindex++) {
-		hidden_file = hrfs_f2branch(file, bindex);
-		if (hidden_file) {
-			/* will decrement file refcount, and if 0, destroy the file,
-			 * which will call the lower file system's file release function. */
-			fput(hidden_file);
-		} else {
-			HDEBUG("branch[%d] of file [%*s] is NULL\n",
-			       bindex, file->f_dentry->d_name.len, file->f_dentry->d_name.name);
-		}
+		ret = hrfs_release_branch(inode, file, bindex);
 	}
 	hrfs_f_free(file);
 
-	HRETURN(err);
+out:
+	HRETURN(ret);
 }
 EXPORT_SYMBOL(hrfs_release);
+
+int hrfs_fsync_branch(struct file *file, struct dentry *dentry, int datasync, hrfs_bindex_t bindex)
+{
+	int ret = 0;
+	struct file *hidden_file = hrfs_f2branch(file, bindex);
+	struct dentry *hidden_dentry = hrfs_d2branch(dentry, bindex);
+	HENTRY();
+
+	if (hidden_file && hidden_dentry) {
+		HASSERT(hidden_file->f_op);
+		HASSERT(hidden_file->f_op->fsync);
+		mutex_lock(&hidden_dentry->d_inode->i_mutex);
+		ret = hidden_file->f_op->fsync(hidden_file, hidden_dentry, datasync);
+		mutex_unlock(&hidden_dentry->d_inode->i_mutex);
+		if (unlikely(ret)) {
+			HDEBUG("failed to fsync branch[%d] of file [%*s], ret = %d\n", 
+			       bindex, file->f_dentry->d_name.len, file->f_dentry->d_name.name,
+			       ret);
+		}
+	} else {
+		HASSERT(hidden_file == NULL);
+		HASSERT(hidden_dentry == NULL);
+		HDEBUG("branch[%d] of file [%*s] is NULL\n",
+		       bindex, dentry->d_name.len, dentry->d_name.name);
+	}
+
+	HRETURN(ret);
+}
 
 int hrfs_fsync(struct file *file, struct dentry *dentry, int datasync)
 {
 	int ret = -EINVAL;
-	struct file *hidden_file = NULL;
-	struct dentry *hidden_dentry = NULL;
 	hrfs_bindex_t bindex = 0;
 	HENTRY();
 
 	HASSERT(inode_is_locked(file->f_mapping->host));
 	HASSERT(inode_is_locked(dentry->d_inode));
-
 	HASSERT(hrfs_f2info(file));
+
 	for (bindex = 0; bindex < hrfs_f2bnum(file); bindex++) {
-		hidden_file = hrfs_f2branch(file, bindex);
-		hidden_dentry = hrfs_d2branch(dentry, bindex);
-		if (hidden_file && hidden_dentry) {
-			HASSERT(hidden_file->f_op);
-			HASSERT(hidden_file->f_op->fsync);
-			mutex_lock(&hidden_dentry->d_inode->i_mutex);
-			ret = hidden_file->f_op->fsync(hidden_file, hidden_dentry, datasync);
-			mutex_unlock(&hidden_dentry->d_inode->i_mutex);
-		} else {
-			HASSERT(hidden_file == NULL);
-			HASSERT(hidden_dentry == NULL);
-			HDEBUG("branch[%d] of file [%*s] is NULL\n",
-			       bindex, file->f_dentry->d_name.len, file->f_dentry->d_name.name);
-		}
+		ret = hrfs_fsync_branch(file, dentry, datasync, bindex);
 	}
 
 	HRETURN(ret);
 }
 EXPORT_SYMBOL(hrfs_fsync);
 
+int hrfs_fasync_branch(int fd, struct file *file, int flag, hrfs_bindex_t bindex)
+{
+	int ret = 0;
+	struct file *hidden_file = hrfs_f2branch(file, bindex);
+	HENTRY();
+
+	if (hidden_file) {
+		HASSERT(hidden_file->f_op);
+		HASSERT(hidden_file->f_op->fasync);
+		ret = hidden_file->f_op->fasync(fd, hidden_file, flag);
+	} else {
+		HDEBUG("branch[%d] of file [%*s] is NULL\n",
+		       bindex, file->f_dentry->d_name.len, file->f_dentry->d_name.name);
+	}
+	HRETURN(ret);
+}
+
 int hrfs_fasync(int fd, struct file *file, int flag)
 {
 	int ret = 0;
-	struct file *hidden_file = NULL;
 	hrfs_bindex_t bindex = 0;
 	HENTRY();
 
 	HASSERT(hrfs_f2info(file));
 	for (bindex = 0; bindex < hrfs_f2bnum(file); bindex++) {
-		hidden_file = hrfs_f2branch(file, bindex);
-		if (hidden_file) {
-			HASSERT(hidden_file->f_op);
-			if (hidden_file->f_op->fasync) {
-				ret = hidden_file->f_op->fasync(fd, hidden_file, flag);
-			} else {
-				HDEBUG("branch[%d] of file [%*s] does not support fasync\n",
-				       bindex, file->f_dentry->d_name.len, file->f_dentry->d_name.name);
-				ret = -ENOMEM; /* Which errno? */
-			}
-		} else {
-			HDEBUG("branch[%d] of file [%*s] is NULL\n",
-			       bindex, file->f_dentry->d_name.len, file->f_dentry->d_name.name);
-		}
+		ret = hrfs_fasync_branch(fd, file, flag, bindex);
 	}
-	
+
 	HRETURN(ret);
 }
 EXPORT_SYMBOL(hrfs_fasync);

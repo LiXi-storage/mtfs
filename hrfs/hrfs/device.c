@@ -186,9 +186,23 @@ int hrfs_device_proc_read_bnum(char *page, char **start, off_t off, int count,
 	return ret;
 }
 
+int hrfs_device_proc_read_noabort(char *page, char **start, off_t off, int count,
+                              int *eof, void *data)
+{
+	int ret = 0;
+	struct hrfs_device *device = (struct hrfs_device *)data;
+	char *ptr = page;
+
+	*eof = 1;
+	ret = snprintf(ptr, count, "%d\n", device->no_abort);
+	ptr += ret;
+	return ret;
+}
+
 struct hrfs_proc_vars hrfs_proc_vars_device[] = {
 	{ "device_name", hrfs_device_proc_read_name, NULL, NULL },
 	{ "bnum", hrfs_device_proc_read_bnum, NULL, NULL },
+	{ "no_abort", hrfs_device_proc_read_noabort, NULL, NULL },
 	{ 0 }
 };
 

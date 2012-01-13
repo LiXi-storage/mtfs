@@ -80,6 +80,10 @@ int hrfs_d_revalidate(struct dentry *dentry, struct nameidata *nd)
 	if (list->latest_bnum == 0) {
 		HERROR("dir [%*s] has no valid branch, please check it\n",
 		       dentry->d_parent->d_name.len, dentry->d_parent->d_name.name);
+		if (!(hrfs_i2dev(inode)->no_abort)) {
+			ret = -EIO;
+			goto out_free_oplist;
+		}
 	}
 
 	bnum = hrfs_d2bnum(dentry);

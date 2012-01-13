@@ -68,3 +68,23 @@ out:
 	return is_valid;
 }
 EXPORT_SYMBOL(hrfs_branch_is_valid);
+
+int hrfs_i_invalid_branch(struct inode *inode, hrfs_bindex_t bindex, __u32 valid_flags)
+{
+	__u32 hrfs_flag = 0;
+	struct inode *hidden_inode = hrfs_i2branch(inode, bindex);
+	struct lowerfs_operations *lowerfs_ops = hrfs_i2bops(inode, bindex);
+	int ret = 0;
+
+	HASSERT(hidden_inode);
+	if (lowerfs_ops->lowerfs_inode_get_flag && lowerfs_ops->lowerfs_inode_set_flag) {
+		ret = lowerfs_ops->lowerfs_inode_get_flag(hidden_inode, &hrfs_flag);
+		if ((valid_flags & HRFS_DATA_VALID) != 0 &&
+		    (hrfs_flag & HRFS_FLAG_DATABAD) == 0) {
+			hrfs_flag |= HRFS_FLAG_DATABAD;
+			ret = lowerfs_ops->lowerfs_inode_set_flag(hidden_inode, hrfs_flag);
+		}
+	}
+	
+	return ret;
+}
