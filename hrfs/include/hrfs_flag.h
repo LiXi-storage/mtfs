@@ -6,6 +6,7 @@
 #define __HRFS_FLAG_H__
 #include <hrfs_common.h>
 #include <debug.h>
+#include <hrfs_file.h>
 /*
  * Same to macros defined in swgfs/include/swgfs_idl.h
  * We should keep this ture:
@@ -75,7 +76,7 @@ out:
 #include <hrfs_inode.h>
 #include <hrfs_dentry.h>
 extern int hrfs_branch_is_valid(struct inode *inode, hrfs_bindex_t bindex, __u32 valid_flags);
-int hrfs_i_invalid_branch(struct inode *inode, hrfs_bindex_t bindex, __u32 valid_flags);
+extern int hrfs_i_invalid_branch(struct inode *inode, hrfs_bindex_t bindex, __u32 valid_flags);
 
 /*
  * 1: valid
@@ -151,6 +152,36 @@ out:
 	return hidden_dentry;
 }
 
+static inline hrfs_bindex_t hrfs_f_choose_bindex(struct file *file, __u64 valid_flags, hrfs_bindex_t *bindex)
+{
+	int ret = 0;
+
+	HASSERT(file);
+	HASSERT(hrfs_valid_flags_is_valid(valid_flags));
+
+	ret = hrfs_i_choose_bindex(file->f_dentry->d_inode, valid_flags, bindex);
+
+	return ret;
+}
+
+static inline struct file *hrfs_f_choose_branch(struct file *file, __u64 valid_flags)
+{
+	hrfs_bindex_t bindex = -1;
+	struct file *hidden_file = NULL;
+	int ret = 0;
+
+	ret = hrfs_f_choose_bindex(file, valid_flags, &bindex);
+	if (ret <= 0) {
+		hidden_file = ERR_PTR(ret);
+		goto out;
+	}
+
+	HASSERT(bindex >=0 && bindex < hrfs_f2bnum(file));
+	hidden_file = hrfs_f2branch(file, bindex);
+out:
+	return hidden_file;
+}
+
 typedef union hrfs_operation_result {
 	int ret;
 	void *ptr;
@@ -206,6 +237,17 @@ static inline void hrfs_oplist_free(struct hrfs_operation_list *list)
 	HRFS_FREE_PTR(list);
 }
 
+static inline void hrfs_oplist_dump(struct hrfs_operation_list *list)
+{
+	hrfs_bindex_t bindex = 0;
+
+	HPRINT("oplist bnum = %d\n", list->bnum);
+	HPRINT("oplist latest_bnum = %d\n", list->latest_bnum);
+	for (bindex = 0; bindex < list->bnum; bindex++) {
+		HPRINT("branch[%d]: %d\n", bindex, list->op_binfo[bindex].bindex);
+	}
+}
+
 static inline struct hrfs_operation_list *hrfs_oplist_build(struct inode *inode)
 {
 	struct hrfs_operation_list *list = NULL;
@@ -234,18 +276,9 @@ static inline struct hrfs_operation_list *hrfs_oplist_build(struct inode *inode)
 		binfo->bindex = bindex;
 	}
 	list->latest_bnum = bfirst;
+	hrfs_oplist_dump(list);
 out:
 	return list;
-}
-
-static inline void hrfs_oplist_dump(struct hrfs_operation_list *list)
-{
-	hrfs_bindex_t bindex = 0;
-
-	HPRINT("oplist bnum = %d\n", list->bnum);
-	for (bindex = 0; bindex < list->bnum; bindex++) {
-		HPRINT("branch[%d]: %d\n", bindex, list->op_binfo[bindex].bindex);
-	}
 }
 
 static inline int hrfs_oplist_check(struct hrfs_operation_list *list)
@@ -337,6 +370,7 @@ static inline int hrfs_oplist_update(struct inode *inode, struct hrfs_operation_
 
 			ret = hrfs_i_invalid_branch(inode, bindex, HRFS_DATA_VALID);
 			if (ret) {
+				HERROR("invalid inode failed, ret = %d\n", ret);
 				HBUG();
 			}
 		}

@@ -4,89 +4,6 @@
 
 #include "hrfs_internal.h"
 
-#if 0
-int hrfs_ioctl_flag_convert(int hrfs_flag)
-{
-	int lowerfs_flag = hrfs_flag
-	return lowerfs_flag;
-}
-EXPORT_SYMBOL(hrfs_ioctl_flag_convert);
-
-int hrfs_inode_flag_convert(int lowerfs_iflag)
-{
-	int hrfs_iflag = lowerfs_iflag
-	return hrfs_iflag;
-}
-EXPORT_SYMBOL(hrfs_inode_flag_convert);
-
-static int hrfs_setflags(struct inode *inode, struct file *file, unsigned long arg)
-{
-	int ret = 0;
-	struct file *hidden_file = NULL;
-	struct inode *hidden_inode = NULL;
-	hrfs_bindex_t bindex = 0;
-	int undo_ret = 0;
-	int flags = 0;
-	mm_segment_t old_fs;
-	int lowerfs_flag = 0;
-	HENTRY();
-
-	HASSERT(hrfs_f2info(file));
-
-	for(bindex = 0; bindex < hrfs_f2bnum(file); bindex++) {
-		hidden_file = hrfs_f2branch(file, bindex);
-		hidden_inode = hrfs_i2branch(inode, bindex);
-		if (hidden_file == NULL || hidden_inode == NULL) {
-			HERROR("branch[%d] of file [%*s] is NULL, ioctl getflags skipped\n", 
-			       bindex, file->f_dentry->d_name.len, file->f_dentry->d_name.name);
-			continue;
-		}
-
-		if (hidden_file->f_op == NULL || hidden_file->f_op->ioctl == NULL) {
-			HERROR("branch[%d] of file [%*s] do not support ioctl, ioctl setflags skipped\n", 
-			       bindex, file->f_dentry->d_name.len, file->f_dentry->d_name.name);
-			continue;
-		}	
-		
-
-		hrfs_ioctl_flag_convert();
-		ret = hidden_file->f_op->ioctl(hidden_inode, hidden_file, HRFS_IOC_SETFLAGS, arg);
-		if (ret < 0) {
-			HERROR("ioctl setflags branch[%d] of file [%*s] failed, ret = %d\n",
-			       bindex, file->f_dentry->d_name.len, file->f_dentry->d_name.name, ret);
-			bindex--;
-			goto out_undo;
-		}
-	}
-
-	if (get_user(flags, (int *)arg)) {
-		ret = -EFAULT;
-		goto out;
-	}
-	inode->i_flags = hrfs_lowerfs_to_inode_flags(flags | HRFS_RESERVED_FL);
-	goto out;
-out_undo:
-	for(; bindex >= 0; bindex--) {
-		flags = inode_to_ext_flags(inode->i_flags, 1);
-		hidden_file = hrfs_f2branch(file, bindex);
-		hidden_inode = hrfs_i2branch(inode, bindex);
-		if (!hidden_file) {
-			continue;
-		}
-		old_fs = get_fs();
-		set_fs(get_ds());
-		undo_ret = hidden_file->f_op->ioctl(hidden_inode, hidden_file, FS_IOC_SETFLAGS, (long)&flags);
-		set_fs(old_fs);
-		if (undo_ret < 0) {
-			HERROR("undo ioctl setflags branch[%d] of file [%*s] failed, ret = %d\n",
-			       bindex, file->f_dentry->d_name.len, file->f_dentry->d_name.name, undo_ret);
-		}
-	}
-out:
-	HRETURN(ret);
-}
-#endif
-
 static int hrfs_user_get_state(struct inode *inode, struct hrfs_user_flag __user *user_state, hrfs_bindex_t max_bnum)
 {
 	hrfs_bindex_t bnum = hrfs_i2bnum(inode);
@@ -169,62 +86,160 @@ static int hrfs_user_set_state(struct inode *inode, struct hrfs_user_flag __user
 	for (bindex = 0; bindex < bnum; bindex++) {
 		hidden_inode = hrfs_i2branch(inode, bindex);
 		lowerfs_ops = hrfs_i2bops(inode, bindex);
-		HASSERT(hidden_inode);
-		ret = lowerfs_inode_set_flag(lowerfs_ops, hidden_inode, state->state[bindex].flag);
-		if (ret) {
-			goto recover;
+		if (hidden_inode == NULL) {
+			HERROR("branch[%d] of inode is NULL\n", bindex);
+			ret = -ENOENT;
+			//goto free_state;
+		} else {
+			ret = lowerfs_inode_set_flag(lowerfs_ops, hidden_inode, state->state[bindex].flag);
+			if (ret) {
+				HERROR("lowerfs_inode_set_flag failed, ret = %d\n", ret);
+				goto recover;
+			}
 		}
 	}
 	goto free_state;
 
 recover:
 	/* TODO: If fail, we should recover */
-	LBUG();
+	HBUG();
 free_state:	
 	HRFS_FREE(state, state_size);
 out:
 	return ret;
 }
 
+static int hrfs_ioctl_do_branch(struct inode *inode, struct file *file, unsigned int cmd, unsigned long arg, hrfs_bindex_t bindex)
+{
+	int ret = 0;
+	struct file *hidden_file = hrfs_f2branch(file, bindex);
+	struct inode *hidden_inode = hrfs_i2branch(inode, bindex);
+	HENTRY();
+
+	ret = hrfs_device_branch_errno(hrfs_i2dev(inode), bindex);
+	if (ret) {
+		HDEBUG("branch[%d] is abandoned\n", bindex);
+		goto out; 
+	}
+
+	if (hidden_file && hidden_inode) {
+		HASSERT(hidden_file->f_op);
+		HASSERT(hidden_file->f_op->ioctl);
+		ret = hidden_file->f_op->ioctl(hidden_inode, hidden_file, cmd, arg);
+	} else {
+		HERROR("branch[%d] of file [%*s] is NULL, ioctl setflags skipped\n", 
+		       bindex, file->f_dentry->d_name.len, file->f_dentry->d_name.name);
+		ret = -ENOENT;
+	}
+
+out:
+	HRETURN(ret);
+}
+
+int hrfs_ioctl_write(struct inode *inode, struct file *file, unsigned int cmd, unsigned long arg)
+{
+	int ret = 0;
+	hrfs_bindex_t i = 0;
+	hrfs_bindex_t bindex = 0;
+	struct hrfs_operation_list *list = NULL;
+	hrfs_operation_result_t result = {0};	
+	HENTRY();
+
+	HASSERT(hrfs_f2info(file));
+
+	list = hrfs_oplist_build(inode);
+	if (unlikely(list == NULL)) {
+		HERROR("failed to build operation list\n");
+		ret = -ENOMEM;
+		goto out;
+	}
+
+	if (list->latest_bnum == 0) {
+		HERROR("file [%*s] has no valid branch, please check it\n",
+		       file->f_dentry->d_name.len, file->f_dentry->d_name.name);
+		if (!(hrfs_i2dev(inode)->no_abort)) {
+			ret = -EIO;
+			goto out_free_oplist;
+		}
+	}
+
+	for (i = 0; i < hrfs_f2bnum(file); i++) {
+		bindex = list->op_binfo[i].bindex;
+		ret = hrfs_ioctl_do_branch(inode, file, cmd, arg, bindex);
+		result.ret = ret;
+		hrfs_oplist_setbranch(list, i, (ret == 0 ? 1 : 0), result);
+		if (i == list->latest_bnum - 1) {
+			hrfs_oplist_check(list);
+			if (list->success_latest_bnum <= 0) {
+				HDEBUG("operation failed for all latest %d branches\n", list->latest_bnum);
+				if (!(hrfs_i2dev(inode)->no_abort)) {
+					result = hrfs_oplist_result(list);
+					ret = result.ret;
+					goto out_free_oplist;
+				}
+			}
+		}
+	}
+
+	hrfs_oplist_check(list);
+	if (list->success_bnum <= 0) {
+		result = hrfs_oplist_result(list);
+		ret = result.ret;
+		goto out_free_oplist;
+	}
+
+	ret = hrfs_oplist_update(inode, list);
+	if (ret) {
+		HERROR("failed to update inode\n");
+		HBUG();
+	}
+
+	hrfs_update_inode_attr(inode);
+out_free_oplist:
+	hrfs_oplist_free(list);
+out:
+	HRETURN(ret);
+}
+EXPORT_SYMBOL(hrfs_ioctl_write);
+
 int hrfs_ioctl(struct inode *inode, struct file *file, unsigned int cmd, unsigned long arg)
 {
-	int err = 0;
+	int ret = 0;
 	int val = 0;
 	struct hrfs_operations *operations = NULL;
 	HENTRY();
 
 	switch (cmd) {
 	case HRFS_IOCTL_GET_FLAG:
-		err = hrfs_user_get_state(inode, (struct hrfs_user_flag __user *)arg, HRFS_BRANCH_MAX);
+		ret = hrfs_user_get_state(inode, (struct hrfs_user_flag __user *)arg, HRFS_BRANCH_MAX);
 		break;
 	case HRFS_IOCTL_SET_FLAG:
-		HERROR("HRFS_IOCTL_SET_FLAG in\n");
-		err = hrfs_user_set_state(inode, (struct hrfs_user_flag __user *)arg);
+		ret = hrfs_user_set_state(inode, (struct hrfs_user_flag __user *)arg);
 		break;
 	case HRFS_IOCTL_GET_DEBUG_LEVEL:
 		//val = fist_get_debug_value();
 		printk("IOCTL GET: send arg %d\n", val);
-		err = put_user(val, (int *)arg);
+		ret = put_user(val, (int *)arg);
 		break;
 
 	case HRFS_IOCTL_SET_DEBUG_LEVEL:
-		err = get_user(val, (int *)arg);
-		if (err)
+		ret = get_user(val, (int *)arg);
+		if (ret)
 			break;
 		HDEBUG("IOCTL SET: got arg %d\n", val);
 		if (val < 0 || val > 20) {
-			err = -EINVAL;
+			ret = -EINVAL;
 			break;
 		}
 		break;
 	case HRFS_IOCTL_RULE_ADD:
-		err = -EINVAL;
+		ret = -EINVAL;
 		break;
 	case HRFS_IOCTL_RULE_DEL:
-		err = -EINVAL;
+		ret = -EINVAL;
 		break;
 	case HRFS_IOCTL_RULE_LIST:
-		err = -EINVAL;
+		ret = -EINVAL;
 		break;
 #ifdef LIXI_20110518
 			{
@@ -250,12 +265,12 @@ int hrfs_ioctl(struct inode *inode, struct file *file, unsigned int cmd, unsigne
 	default:
 			operations = hrfs_i2ops(inode);
 			if (operations->ioctl == NULL) {
-				err = -ENOTTY;
+				ret = -ENOTTY;
 			} else {
-				err = operations->ioctl(inode, file, cmd, arg);
+				ret = operations->ioctl(inode, file, cmd, arg);
 			}
 	} /* end of outer switch statement */
 
-	HRETURN(err);
+	HRETURN(ret);
 }
 EXPORT_SYMBOL(hrfs_ioctl);

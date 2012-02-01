@@ -99,6 +99,11 @@ struct dentry *hrfs_dentry_list_mkpath(struct dentry *d_parent, hrfs_list_t *den
 		}
 	}
 out:
+	if (d_child == NULL) {
+		d_child = ERR_PTR(-ENOENT);
+		HERROR("unexpected: dentry_list is empty\n");
+		HBUG();
+	}
 	HRETURN(d_child);
 }
 
@@ -370,9 +375,14 @@ int hrfs_backup_branch(struct dentry *dentry, hrfs_bindex_t bindex)
 		hrfs_list_add_tail(&tmp_entry->list, &dentry_list);
 	}
 
-	hidden_d_parent_new = hrfs_dentry_list_mkpath(hidden_d_recover, &dentry_list);
-	if (IS_ERR(hidden_d_parent_new)) {
-		goto out_free_list;
+	if (hrfs_list_empty(&dentry_list)) {
+		hidden_d_parent_new = dget(hidden_d_root);
+	} else {
+		hidden_d_parent_new = hrfs_dentry_list_mkpath(hidden_d_recover, &dentry_list);
+		if (IS_ERR(hidden_d_parent_new)) {
+			HBUG();
+			goto out_free_list;
+		}
 	}
 
 #ifndef LIXI_20120111

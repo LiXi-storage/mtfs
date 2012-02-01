@@ -297,7 +297,8 @@ test_14d() {
 run_test 14d "chmod of executing file is still possible ========"
 
 test_18() {
-	$MMAP_SANITY -d $HRFS_MNT1 -m $HRFS_MNT2
+	# $MMAP_SANITY -d $HRFS_MNT1 -m $HRFS_MNT2
+	$MMAP_SANITY -d $DIR1 -m $DIR2
 	sync; sleep 1; sync
 }
 run_test 18 "mmap sanity check ================================="

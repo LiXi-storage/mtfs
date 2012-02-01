@@ -87,18 +87,24 @@ struct page *hrfs_swgfs_nopage_branch(struct vm_area_struct *vma, unsigned long 
 	struct file *file = NULL;
 	struct file *hidden_file = NULL;
 	struct vm_operations_struct *vm_ops = NULL;
+	int ret = 0;
 	HENTRY();
 
 	file = vma->vm_file;
 	HASSERT(file);
-	hidden_file = hrfs_f2branch(file, hrfs_get_primary_bindex());
-	HASSERT(hidden_file);
+	hidden_file = hrfs_f_choose_branch(file, HRFS_DATA_VALID);
+	if (IS_ERR(hidden_file)) {
+		ret = PTR_ERR(hidden_file);
+		HERROR("choose branch failed, ret = %d\n", ret);
+		goto out;
+	}
 
 	vm_ops = ll_hrfs_get_vm_ops();
 	HASSERT(vm_ops);
 	vma->vm_file = hidden_file;
 	page = vm_ops->nopage(vma, address, type);
 	vma->vm_file = file;
+out:
 	HRETURN(page);
 }
 
@@ -173,7 +179,7 @@ ssize_t hrfs_swgfs_file_readv(struct file *file, const struct iovec *iov,
 	HRETURN(err);
 }
 
-static ssize_t hrfs_swgfs_file_writev(struct file *file, const struct iovec *iov,
+ssize_t hrfs_swgfs_file_writev(struct file *file, const struct iovec *iov,
                                 unsigned long nr_segs, loff_t *ppos)
 {
 	ssize_t err = 0;
@@ -217,7 +223,11 @@ struct file_operations hrfs_swgfs_main_fops =
 	aio_write:  hrfs_file_aio_write,
 	sendfile:   hrfs_file_sendfile, 
 	readv:      hrfs_file_readv,
+#if 0
 	writev:     hrfs_swgfs_file_writev,
+#else
+	writev:     hrfs_file_writev,
+#endif
 	readdir:    hrfs_readdir,
 	poll:       hrfs_poll,
 	ioctl:      hrfs_ioctl,
@@ -243,13 +253,20 @@ extern int ll_hrfs_inode_get_flag(struct inode *inode, __u32 *hrfs_flag);
 extern int ll_hrfs_idata_init(struct inode *inode, struct inode *parent_inode, int is_primary);
 extern int ll_hrfs_idata_finit(struct inode *inode);
 
-
+#include <hrfs_device.h>
+#if 0
 static int hrfs_swgfs_setflags_branch(struct inode *inode, struct file *file, unsigned long arg, hrfs_bindex_t bindex)
 {
 	int ret = 0;
 	struct file *hidden_file = hrfs_f2branch(file, bindex);
 	struct inode *hidden_inode = hrfs_i2branch(inode, bindex);
 	HENTRY();
+
+	ret = hrfs_device_branch_errno(hrfs_i2dev(inode), bindex);
+	if (ret) {
+		HDEBUG("branch[%d] is abandoned\n", bindex);
+		goto out; 
+	}
 
 	if (hidden_file && hidden_inode) {
 		HASSERT(hidden_file->f_op);
@@ -261,37 +278,78 @@ static int hrfs_swgfs_setflags_branch(struct inode *inode, struct file *file, un
 		ret = -ENOENT;
 	}
 
+out:
 	HRETURN(ret);
 }
 
 static int hrfs_swgfs_setflags(struct inode *inode, struct file *file, unsigned long arg)
 {
 	int ret = 0;
+	hrfs_bindex_t i = 0;
 	hrfs_bindex_t bindex = 0;
+	struct hrfs_operation_list *list = NULL;
+	hrfs_operation_result_t result = {0};	
 	HENTRY();
 
 	HASSERT(hrfs_f2info(file));
 
-	for(bindex = 0; bindex < hrfs_f2bnum(file); bindex++) {
+	list = hrfs_oplist_build(inode);
+	if (unlikely(list == NULL)) {
+		HERROR("failed to build operation list\n");
+		ret = -ENOMEM;
+		goto out;
+	}
+
+	if (list->latest_bnum == 0) {
+		HERROR("file [%*s] has no valid branch, please check it\n",
+		       file->f_dentry->d_name.len, file->f_dentry->d_name.name);
+		if (!(hrfs_i2dev(inode)->no_abort)) {
+			ret = -EIO;
+			goto out_free_oplist;
+		}
+	}
+
+	for (i = 0; i < hrfs_f2bnum(file); i++) {
+		bindex = list->op_binfo[i].bindex;
 		ret = hrfs_swgfs_setflags_branch(inode, file, arg, bindex);
-		if (ret) {
-			HERROR("ioctl setflags branch[%d] of file [%*s] failed, ret = %d\n",
-			       bindex, file->f_dentry->d_name.len, file->f_dentry->d_name.name, ret);
-			if (hrfs_is_primary_bindex(bindex)) {
-				goto out;
+		result.ret = ret;
+		hrfs_oplist_setbranch(list, i, (ret == 0 ? 1 : 0), result);
+		if (i == list->latest_bnum - 1) {
+			hrfs_oplist_check(list);
+			if (list->success_latest_bnum <= 0) {
+				HDEBUG("operation failed for all latest %d branches\n", list->latest_bnum);
+				if (!(hrfs_i2dev(inode)->no_abort)) {
+					result = hrfs_oplist_result(list);
+					ret = result.ret;
+					goto out_free_oplist;
+				}
 			}
 		}
 	}
 
-	/* primary is ok for sure */
-	ret = 0;
+	hrfs_oplist_check(list);
+	if (list->success_bnum <= 0) {
+		result = hrfs_oplist_result(list);
+		ret = result.ret;
+		goto out_free_oplist;
+	}
+
+	ret = hrfs_oplist_update(inode, list);
+	if (ret) {
+		HERROR("failed to update inode\n");
+		HBUG();
+	}
 
 	hrfs_update_inode_attr(inode);
+out_free_oplist:
+	hrfs_oplist_free(list);
 out:
 	HRETURN(ret);
 }
+#endif
 
 #include <hrfs_stack.h>
+#include <hrfs_ioctl.h>
 static int hrfs_swgfs_getflags(struct inode *inode, struct file *file, unsigned long arg)
 {
 	int ret = 0;
@@ -336,7 +394,7 @@ int hrfs_swgfs_ioctl(struct inode *inode, struct file *file, unsigned int cmd, u
 
 	switch (cmd) {
 	case FSFILT_IOC_SETFLAGS:
-		ret = hrfs_swgfs_setflags(inode, file, arg);
+		ret = hrfs_ioctl_write(inode, file, cmd, arg);
 		break;
 	case FSFILT_IOC_GETFLAGS:
 		ret = hrfs_swgfs_getflags(inode, file, arg);

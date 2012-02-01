@@ -19,25 +19,6 @@ extern struct super_operations hrfs_sops;
 /* hrfs root inode number */
 #define HRFS_ROOT_INO	 1
 
-/* hrfs super-block data in memory */
-typedef struct hrfs_sb_info {
-	struct super_block **si_branch; /* hidden_super_block_array */
-	struct vfsmount **si_mnt_branch; /* mnt_array */
-	hrfs_bindex_t si_bnum; /* branch number */
-	int si_level; /* raid level */
-	struct dentry **si_d_recover;
-	struct hrfs_device *si_device;
-} hrfs_s_info_t;
-
-/* DO NOT access hrfs_*_info_t directly, use following macros */
-#define _hrfs_s2info(sb) ((sb)->s_fs_info)
-#define hrfs_s2info(sb) ((hrfs_s_info_t *)_hrfs_s2info(sb))
-#define hrfs_s2branch(sb, bindex) (hrfs_s2info(sb)->si_branch[bindex])
-#define hrfs_s2mntbranch(sb, bindex) (hrfs_s2info(sb)->si_mnt_branch[bindex])
-#define hrfs_s2bnum(sb) (hrfs_s2info(sb)->si_bnum)
-#define hrfs_s2dev(sb) (hrfs_s2info(sb)->si_device)
-#define hrfs_s2brecover(sb, bindex) (hrfs_s2info(sb)->si_d_recover[bindex])
-
 static inline hrfs_s_info_t *hrfs_si_alloc(void)
 {
 	hrfs_s_info_t *s_info = NULL;

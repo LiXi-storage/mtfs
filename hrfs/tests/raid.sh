@@ -2,8 +2,10 @@
 set -e
 ONLY=${ONLY:-"$*"}
 
+BUG_343="1a"
+
 EXCEPT_SLOW=""
-ALWAYS_EXCEPT=${ALWAYS_EXCEPT:-"$EXAMPLE_EXCEPT"}
+ALWAYS_EXCEPT=${ALWAYS_EXCEPT:-"$EXAMPLE_EXCEPT $BUG_343"}
 
 TESTS_DIR=${TESTS_DIR:-$(cd $(dirname $0); echo $PWD)}
 . $TESTS_DIR/test-framework.sh
@@ -140,6 +142,19 @@ test_0b()
 	remove_good_branch 1
 }
 run_test 0b "removing good branches"
+
+test_1a()
+{
+	$UTIL_HRFS setbranch -b 0 -d 1 $HRFS_MNT1
+	$UTIL_HRFS getstate $HRFS_MNT1
+	$UTIL_HRFS setbranch -b 0 -d 0 $HRFS_MNT1
+	$UTIL_HRFS getstate $HRFS_MNT1
+	$UTIL_HRFS setbranch -b 1 -d 1 $HRFS_MNT1
+	$UTIL_HRFS getstate $HRFS_MNT1
+	$UTIL_HRFS setbranch -b 1 -d 0 $HRFS_MNT1
+	$UTIL_HRFS getstate $HRFS_MNT1
+}
+run_test 1a "set and get state of mount point"
 
 cleanup_all
 echo "=== $0: completed ==="

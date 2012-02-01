@@ -240,7 +240,7 @@ EXTRA_DIST := bitmap.h bsearch.h cmd_parser.h debug.h \
 	hrfs_mmap.h hrfs_queue.h hrfs_random.h hrfs_stack.h \
 	hrfs_string.h hrfs_super.h hrfs_support.h hrfs_types.h \
 	hrfs_version.h log.h memory.h parse_option.h parser.h raid.h \
-	rule_tree.h hrfs_flag.h
+	rule_tree.h hrfs_flag.h hrfs_device.h
 all: all-am
 
 .SUFFIXES:

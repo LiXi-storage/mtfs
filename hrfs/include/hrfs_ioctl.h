@@ -41,5 +41,4 @@ static inline int hrfs_user_flag_size(hrfs_bindex_t bnum)
 {
 	return sizeof(struct hrfs_user_flag) + bnum * sizeof(struct hrfs_branch_flag);
 }
-
 #endif /* __HRFS_IOCTL_H__ */

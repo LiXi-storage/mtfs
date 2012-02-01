@@ -578,6 +578,12 @@ static ssize_t hrfs_file_writev_branch(struct file *file, const struct iovec *io
 	struct inode *hidden_inode = NULL;
 	HENTRY();
 
+	ret = hrfs_device_branch_errno(hrfs_f2dev(file), bindex);
+	if (ret) {
+		HDEBUG("branch[%d] is abandoned\n", bindex);
+		goto out; 
+	}
+
 	if (hidden_file) {
 		HASSERT(hidden_file->f_op);
 		HASSERT(hidden_file->f_op->writev);
@@ -599,60 +605,100 @@ static ssize_t hrfs_file_writev_branch(struct file *file, const struct iovec *io
 		ret = -ENOENT;
 	}
 
+out:
 	HRETURN(ret);
 }
 
 ssize_t hrfs_file_writev(struct file *file, const struct iovec *iov,
                          unsigned long nr_segs, loff_t *ppos)
 {
-	ssize_t ret = 0;
-	ssize_t success_ret = 0;
+	int ret = 0;
+	ssize_t size = 0;
 	struct iovec *iov_new = NULL;
 	struct iovec *iov_tmp = NULL;
 	size_t length = sizeof(*iov) * nr_segs;
 	hrfs_bindex_t bindex = 0;
 	loff_t tmp_pos = 0;
-	loff_t success_pos = 0;
+	hrfs_bindex_t i = 0;
+	struct hrfs_operation_list *list = NULL;
+	hrfs_operation_result_t result = {0};
 	HENTRY();
-	
+
 	HRFS_ALLOC(iov_new, length);
 	if (!iov_new) {
-		ret = -ENOMEM;
+		size = -ENOMEM;
 		goto out;
 	}
 	
 	HRFS_ALLOC(iov_tmp, length);
 	if (!iov_tmp) {
-		ret = -ENOMEM;
-		goto new_alloced_err;
+		size = -ENOMEM;
+		goto out_new_alloced;
 	}	
 	memcpy((char *)iov_new, (char *)iov, length); 
-	
-	HASSERT(hrfs_f2info(file));
-	for (bindex = 0; bindex < hrfs_f2bnum(file); bindex++) {
-		memcpy((char *)iov_tmp, (char *)iov_new, length);
-		tmp_pos = *ppos;
-		ret = hrfs_file_writev_branch(file, iov_tmp, nr_segs, &tmp_pos, bindex);
-		HDEBUG("writed branch[%d] of file [%*s] at pos = %llu, ret = %ld\n",
-		       bindex, file->f_dentry->d_name.len, file->f_dentry->d_name.name,
-		       *ppos, ret);
-		/* TODO: set data flags */
-		if (ret >= 0) {
-			success_pos = tmp_pos;
-			success_ret = ret;
+
+	list = hrfs_oplist_build(file->f_dentry->d_inode);
+	if (unlikely(list == NULL)) {
+		HERROR("failed to build operation list\n");
+		size = -ENOMEM;
+		goto out_tmp_alloced;
+	}
+
+	if (list->latest_bnum == 0) {
+		HERROR("file [%*s] has no valid branch, please check it\n",
+		       file->f_dentry->d_name.len, file->f_dentry->d_name.name);
+		if (!(hrfs_i2dev(file->f_dentry->d_inode)->no_abort)) {
+			size = -EIO;
+			goto out_free_oplist;
 		}
 	}
 
-	if (success_ret >= 0) {
-		ret = success_ret;
-		*ppos = success_pos;
+	for (i = 0; i < hrfs_f2bnum(file); i++) {
+		bindex = list->op_binfo[i].bindex;
+		memcpy((char *)iov_tmp, (char *)iov_new, length);
+		tmp_pos = *ppos;
+		size = hrfs_file_writev_branch(file, iov_tmp, nr_segs, &tmp_pos, bindex);
+		result.size = size;
+		hrfs_oplist_setbranch(list, i, (size >= 0 ? 1 : 0), result);
+		if (i == list->latest_bnum - 1) {
+			hrfs_oplist_check(list);
+			if (list->success_latest_bnum <= 0) {
+				HDEBUG("operation failed for all latest %d branches\n", list->latest_bnum);
+				if (!(hrfs_i2dev(file->f_dentry->d_inode)->no_abort)) {
+					result = hrfs_oplist_result(list);
+					size = result.size;
+					goto out_free_oplist;
+				}
+			}
+		}
 	}
-//tmp_alloced_err:
+
+	hrfs_oplist_check(list);
+	if (list->success_bnum <= 0) {
+		result = hrfs_oplist_result(list);
+		size = result.size;
+		goto out_free_oplist;
+	}
+
+	ret = hrfs_oplist_update(file->f_dentry->d_inode, list);
+	if (ret) {
+		HERROR("failed to update inode\n");
+		HBUG();
+	}
+
+	HASSERT(list->success_bnum > 0);
+	result = hrfs_oplist_result(list);
+	size = result.size;
+	*ppos = *ppos + size;
+
+out_free_oplist:
+	hrfs_oplist_free(list);
+out_tmp_alloced:
 	HRFS_FREE(iov_tmp, length);
-new_alloced_err:
+out_new_alloced:
 	HRFS_FREE(iov_new, length);
 out:
-	HRETURN(ret);
+	HRETURN(size);
 }
 EXPORT_SYMBOL(hrfs_file_writev);
 

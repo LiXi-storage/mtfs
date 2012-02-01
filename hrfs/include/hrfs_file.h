@@ -38,6 +38,7 @@ extern loff_t hrfs_file_llseek(struct file *file, loff_t offset, int origin);
 extern int hrfs_file_mmap(struct file * file, struct vm_area_struct * vma);
 extern ssize_t hrfs_file_sendfile(struct file *in_file, loff_t *ppos,
                                   size_t len, read_actor_t actor, void *target);
+extern int hrfs_ioctl_write(struct inode *inode, struct file *file, unsigned int cmd, unsigned long arg);
 
 extern struct file_operations hrfs_main_fops;
 extern struct file_operations hrfs_dir_fops;

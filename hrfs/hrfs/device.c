@@ -512,3 +512,4 @@ int hrfs_device_branch_errno(struct hrfs_device *device, hrfs_bindex_t bindex)
 	}
 	return 0;
 }
+EXPORT_SYMBOL(hrfs_device_branch_errno);

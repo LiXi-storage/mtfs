@@ -41,6 +41,7 @@ int hrfs_branch_is_valid(struct inode *inode, hrfs_bindex_t bindex, __u32 valid_
 	int is_valid = 1;
 	__u32 hrfs_flag = 0;
 	int ret = 0;
+	HENTRY();
 
 	if (hrfs_i2branch(inode, bindex) == NULL) {
 		is_valid = 0;
@@ -65,7 +66,7 @@ int hrfs_branch_is_valid(struct inode *inode, hrfs_bindex_t bindex, __u32 valid_
 	}
 	/* TODO: xattr and attr */
 out:
-	return is_valid;
+	HRETURN(is_valid);
 }
 EXPORT_SYMBOL(hrfs_branch_is_valid);
 
@@ -75,16 +76,32 @@ int hrfs_i_invalid_branch(struct inode *inode, hrfs_bindex_t bindex, __u32 valid
 	struct inode *hidden_inode = hrfs_i2branch(inode, bindex);
 	struct lowerfs_operations *lowerfs_ops = hrfs_i2bops(inode, bindex);
 	int ret = 0;
+	HENTRY();
 
 	HASSERT(hidden_inode);
+	if (inode->i_sb->s_root->d_inode) {
+		HASSERT(inode != inode->i_sb->s_root->d_inode); /* For debug, remove me */
+	}
 	if (lowerfs_ops->lowerfs_inode_get_flag && lowerfs_ops->lowerfs_inode_set_flag) {
 		ret = lowerfs_ops->lowerfs_inode_get_flag(hidden_inode, &hrfs_flag);
+		if (ret) {
+			HERROR("get flag failed, ret %d\n", ret);
+			goto out;
+		}
 		if ((valid_flags & HRFS_DATA_VALID) != 0 &&
 		    (hrfs_flag & HRFS_FLAG_DATABAD) == 0) {
 			hrfs_flag |= HRFS_FLAG_DATABAD;
+			hrfs_flag |= HRFS_FLAG_SETED;
+			HDEBUG("hrfs_flag = %x\n", hrfs_flag);
+			HASSERT(hrfs_flag_is_valid(hrfs_flag));
 			ret = lowerfs_ops->lowerfs_inode_set_flag(hidden_inode, hrfs_flag);
+			if (ret) {
+				HERROR("set flag failed, ret %d\n", ret);
+				goto out;
+			}
 		}
 	}
-	
-	return ret;
+out:
+	HRETURN(ret);
 }
+EXPORT_SYMBOL(hrfs_i_invalid_branch);

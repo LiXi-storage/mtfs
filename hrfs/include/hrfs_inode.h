@@ -4,6 +4,7 @@
 
 #ifndef __HRFS_INODE_H__
 #define __HRFS_INODE_H__
+#if defined (__linux__) && defined(__KERNEL__)
 #include <debug.h>
 #include <linux/fs.h>
 #include <linux/namei.h>
@@ -123,4 +124,5 @@ static inline const char *hrfs_mode2type(umode_t mode)
 	default:       return "unkown type file"; break;
 	}
 }
+#endif /* defined (__linux__) && defined(__KERNEL__) */
 #endif /* __HRFS_INODE_H__ */

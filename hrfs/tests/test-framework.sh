@@ -332,20 +332,26 @@ leak_detect_state_pop()
 	DETECT_LEAK="$FORMER_DETECT_LEAK"
 }
 
+hrfs_hashname()
+{
+	local DEV="$1"
+	cat /proc/fs/hrfs/device_list | grep -w $DEV | awk '{print $2}'
+}
+
 abandon_branch()
 {
 	local DEV="$1"
 	local BRANCH="$2"
 
-	local HASH_NAME=$(cat /proc/fs/hrfs/device_list | grep -w $DEV | awk '{print $2}')
+	local HASH_NAME=$(hrfs_hashname $DEV)
 	if [ $HASH_NAME = "" ]; then
-		echo "failed to abandon branch[$BRANCH] of $dev: not found"
+		echo "failed to abandon branch[$BRANCH] of $DEV: not found"
 		return
 	fi
 
 	local PROC_ERRNO="/proc/fs/hrfs/devices/"$HASH_NAME"/branch"$BRANCH"/errno"
 	echo "abandon $PROC_ERRNO"
-	echo -1 > $PROC_ERRNO
+	echo -5 > $PROC_ERRNO
 }
 
 abandon_branches()
@@ -354,6 +360,32 @@ abandon_branches()
 		abandon_branch $HRFS_DEV $ABANDON_BRANCH
 		if [ "$DOING_MUTLTI" = "yes" ]; then
 			abandon_branch $HRFS2_DEV $ABANDON_BRANCH
+		fi
+	fi
+}
+
+undo_abandon_branch()
+{
+	local DEV="$1"
+	local BRANCH="$2"
+
+	local HASH_NAME=$(hrfs_hashname $DEV)
+	if [ $HASH_NAME = "" ]; then
+		echo "failed to undo abandon branch[$BRANCH] of $DEV: not found"
+		return
+	fi
+
+	local PROC_ERRNO="/proc/fs/hrfs/devices/"$HASH_NAME"/branch"$BRANCH"/errno"
+	echo "abandon $PROC_ERRNO"
+	echo inactive > $PROC_ERRNO
+}
+
+undo_abandon_branches()
+{
+	if [ "$ABANDON_BRANCH" != "-1" ]; then
+		undo_abandon_branch $HRFS_DEV $ABANDON_BRANCH
+		if [ "$DOING_MUTLTI" = "yes" ]; then
+			undo_abandon_branch $HRFS2_DEV $ABANDON_BRANCH
 		fi
 	fi
 }
@@ -497,6 +529,29 @@ check_command()
 	fi	
 }
 
+remake_dir()
+{
+	local NEW_DIR="$1"
+	if [ -d $NEW_DIR ]; then
+		rm -rf $NEW_DIR -fr
+	fi
+
+	if [ -d $NEW_DIR ]; then
+		error "rm $NEW_DIR failed"
+	fi
+
+	mkdir $NEW_DIR -p
+	local RET=$?
+	if [ $RET -ne 0 ]; then
+		error "mkdir $NEW_DIR failed: $RET"
+	fi
+
+	if [ ! -d $NEW_DIR ]; then
+		error "mkdir $NEW_DIR failed"
+	fi
+	echo "mkdir succeed"
+}
+
 init_test_env()
 {
 	export CONFIGS=${CONFIGS:-local}
@@ -612,10 +667,14 @@ init_test_env()
 
 	cleanup_and_setup
 
-	rm -rf $DIR/[Rdfs][0-9]*
-	if [ "$DOING_MUTLTI" = "yes" ]; then
-		rm -rf $DIR1/[Rdfs][0-9]*
-		rm -rf $DIR2/[Rdfs][0-9]*
+	if [ -d $DIR ]; then
+		rm -rf $DIR/[Rdfs][0-9]*
+		if [ "$DOING_MUTLTI" = "yes" ]; then
+			rm -rf $DIR1/[Rdfs][0-9]*
+			rm -rf $DIR2/[Rdfs][0-9]*
+		fi
+	else
+		mkdir $DIR
 	fi
 
 	if [ $UID -ne 0 ]; then

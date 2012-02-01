@@ -11,11 +11,8 @@ ORIGIN_DIR1=$DIR1
 ORIGIN_DIR2=$DIR2
 
 export SINGLE_DIR=${SINGLE_DIR:-$ORIGIN_DIR/single_tests}
-echo "rm start"
-#ls $SINGLE_DIR -l # romove me
 rm $SINGLE_DIR -fr
-echo "rm end"
-mkdir $HRFS_DIR1/$DIR_SUB/single_tests
+mkdir $SINGLE_DIR
 
 export DIR=$SINGLE_DIR
 export DIR1=$HRFS_MNT1/$DIR_SUB/single_tests
