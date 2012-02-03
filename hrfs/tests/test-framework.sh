@@ -349,17 +349,16 @@ abandon_branch()
 		return
 	fi
 
-	local PROC_ERRNO="/proc/fs/hrfs/devices/"$HASH_NAME"/branch"$BRANCH"/errno"
-	echo "abandon $PROC_ERRNO"
-	echo -5 > $PROC_ERRNO
+	local PROC_EMASK="/proc/fs/hrfs/devices/"$HASH_NAME"/branch"$BRANCH"/bops_emask"
+	echo "write_ops read_ops" > $PROC_EMASK
 }
 
 abandon_branches()
 {
-	if [ "$ABANDON_BRANCH" != "-1" ]; then
-		abandon_branch $HRFS_DEV $ABANDON_BRANCH
+	if [ "$ABANDON_BINDEX" != "-1" ]; then
+		abandon_branch $HRFS_DEV $ABANDON_BINDEX
 		if [ "$DOING_MUTLTI" = "yes" ]; then
-			abandon_branch $HRFS2_DEV $ABANDON_BRANCH
+			abandon_branch $HRFS2_DEV $ABANDON_BINDEX
 		fi
 	fi
 }
@@ -375,17 +374,16 @@ undo_abandon_branch()
 		return
 	fi
 
-	local PROC_ERRNO="/proc/fs/hrfs/devices/"$HASH_NAME"/branch"$BRANCH"/errno"
-	echo "abandon $PROC_ERRNO"
-	echo inactive > $PROC_ERRNO
+	local PROC_EMASK="/proc/fs/hrfs/devices/"$HASH_NAME"/branch"$BRANCH"/bops_emask"
+	echo "" > $PROC_EMASK
 }
 
 undo_abandon_branches()
 {
-	if [ "$ABANDON_BRANCH" != "-1" ]; then
-		undo_abandon_branch $HRFS_DEV $ABANDON_BRANCH
+	if [ "$ABANDON_BINDEX" != "-1" ]; then
+		undo_abandon_branch $HRFS_DEV $ABANDON_BINDEX
 		if [ "$DOING_MUTLTI" = "yes" ]; then
-			undo_abandon_branch $HRFS2_DEV $ABANDON_BRANCH
+			undo_abandon_branch $HRFS2_DEV $ABANDON_BINDEX
 		fi
 	fi
 }
@@ -563,7 +561,7 @@ init_test_env()
 	export TESTS_DIR=${TESTS_DIR:-$(cd $(dirname $0); echo $PWD)}
 	export TMP=${TMP:-/tmp}
 	export DIR=${DIR:-$HRFS_MNT1/test}
-	export ABANDON_BRANCH=${ABANDON_BRANCH:-"-1"}
+	export ABANDON_BINDEX=${ABANDON_BINDEX:-"-1"}
 
 	if [ "$DOING_MUTLTI" = "yes" ]; then
 		export DIR1=${DIR1:-$HRFS_MNT1/$DIR_SUB}

@@ -262,13 +262,14 @@ struct hrfs_junction hrfs_ext2_junction = {
 	fs_ops:                  &hrfs_ext2_operations,
 };
 
+#include <hrfs_flag.h>
 struct lowerfs_operations lowerfs_ext2_ops = {
 	lowerfs_owner:           THIS_MODULE,
 	lowerfs_type:            "ext2",
 	lowerfs_magic:           EXT2_SUPER_MAGIC,
 	lowerfs_flag:            0,
-	lowerfs_inode_set_flag:  NULL,
-	lowerfs_inode_get_flag:  NULL,
+	lowerfs_inode_set_flag:  lowerfs_inode_set_flag_default,
+	lowerfs_inode_get_flag:  lowerfs_inode_get_flag_default,
 	lowerfs_idata_init:      NULL,
 	lowerfs_idata_finit:     NULL,
 };

@@ -116,7 +116,7 @@ static int hrfs_ioctl_do_branch(struct inode *inode, struct file *file, unsigned
 	struct inode *hidden_inode = hrfs_i2branch(inode, bindex);
 	HENTRY();
 
-	ret = hrfs_device_branch_errno(hrfs_i2dev(inode), bindex);
+	ret = hrfs_device_branch_errno(hrfs_i2dev(inode), bindex, BOPS_MASK_WRITE);
 	if (ret) {
 		HDEBUG("branch[%d] is abandoned\n", bindex);
 		goto out; 

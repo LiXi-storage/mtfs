@@ -49,6 +49,20 @@ out:
 	return rc;
 }
 
+static inline int hrfs_disk_flag_is_valid(__u32 disk_flag)
+{
+	int ret = 0;
+	__u32 hrfs_flag = disk_flag & HRFS_FLAG_MDS_MASK;
+
+	if ((disk_flag & (~HRFS_FLAG_MDS_MASK)) != HRFS_FLAG_MDS_SYMBOL) {
+		goto out;
+	}
+
+	ret = hrfs_flag_is_valid(hrfs_flag);
+out:
+	return ret;
+}
+
 #define HRFS_DATA_BIT     0x00001
 #define HRFS_ATTR_BIT     0x00002
 #define HRFS_XATTR_BIT    0x00004
@@ -72,21 +86,19 @@ out:
 	return valid;
 }
 
+#define HRFS_FLAG_XATTR_NAME "trusted.hrfs.inode_flag"
+
 #if defined (__linux__) && defined(__KERNEL__)
 #include <hrfs_inode.h>
 #include <hrfs_dentry.h>
 extern int hrfs_branch_is_valid(struct inode *inode, hrfs_bindex_t bindex, __u32 valid_flags);
-extern int hrfs_i_invalid_branch(struct inode *inode, hrfs_bindex_t bindex, __u32 valid_flags);
+extern int hrfs_invalid_branch(struct inode *inode, hrfs_bindex_t bindex, __u32 valid_flags);
 
-/*
- * 1: valid
- * 0: not valid
- * -errno: error
- */
 static inline int hrfs_i_choose_bindex(struct inode *inode, __u32 valid_flags, hrfs_bindex_t *bindex)
 {
 	hrfs_bindex_t i = 0;
 	int ret = 0;
+	HENTRY();
 	
 	HASSERT(inode);
 	HASSERT(hrfs_valid_flags_is_valid(valid_flags));
@@ -95,13 +107,17 @@ static inline int hrfs_i_choose_bindex(struct inode *inode, __u32 valid_flags, h
 		ret = hrfs_branch_is_valid(inode, i, valid_flags);
 		if (ret == 1) {
 			*bindex = i;
-			break;
+			ret = 0;
+			goto out;
 		} else {
 			continue;
 		}
 	}
+	HERROR("None branch choosed\n");
+	ret = -EINVAL;
 
-	return ret;	
+out:
+	HRETURN(ret);
 }
 
 static inline struct inode *hrfs_i_choose_branch(struct inode *inode, __u32 valid_flags)
@@ -109,9 +125,10 @@ static inline struct inode *hrfs_i_choose_branch(struct inode *inode, __u32 vali
 	hrfs_bindex_t bindex = -1;
 	struct inode *hidden_inode = NULL;
 	int ret = 0;
+	HENTRY();
 
 	ret = hrfs_i_choose_bindex(inode, valid_flags, &bindex);
-	if (ret <= 0) {
+	if (ret) {
 		hidden_inode = ERR_PTR(ret);
 		goto out;
 	}
@@ -119,19 +136,20 @@ static inline struct inode *hrfs_i_choose_branch(struct inode *inode, __u32 vali
 	HASSERT(bindex >= 0 && bindex < hrfs_i2bnum(inode));
 	hidden_inode = hrfs_i2branch(inode, bindex);
 out:
-	return hidden_inode;
+	HRETURN(hidden_inode);
 }
 
 static inline hrfs_bindex_t hrfs_d_choose_bindex(struct dentry *dentry, __u64 valid_flags, hrfs_bindex_t *bindex)
 {
 	int ret = 0;
+	HENTRY();
 
 	HASSERT(dentry);
 	HASSERT(hrfs_valid_flags_is_valid(valid_flags));
 
 	ret = hrfs_i_choose_bindex(dentry->d_inode, valid_flags, bindex);
 
-	return ret;
+	HRETURN(ret);
 }
 
 static inline struct dentry *hrfs_d_choose_branch(struct dentry *dentry, __u64 valid_flags)
@@ -139,9 +157,10 @@ static inline struct dentry *hrfs_d_choose_branch(struct dentry *dentry, __u64 v
 	hrfs_bindex_t bindex = -1;
 	struct dentry *hidden_dentry = NULL;
 	int ret = 0;
+	HENTRY();
 
 	ret = hrfs_d_choose_bindex(dentry, valid_flags, &bindex);
-	if (ret <= 0) {
+	if (ret) {
 		hidden_dentry = ERR_PTR(ret);
 		goto out;
 	}
@@ -149,19 +168,20 @@ static inline struct dentry *hrfs_d_choose_branch(struct dentry *dentry, __u64 v
 	HASSERT(bindex >=0 && bindex < hrfs_d2bnum(dentry));
 	hidden_dentry = hrfs_d2branch(dentry, bindex);
 out:
-	return hidden_dentry;
+	HRETURN(hidden_dentry);
 }
 
 static inline hrfs_bindex_t hrfs_f_choose_bindex(struct file *file, __u64 valid_flags, hrfs_bindex_t *bindex)
 {
 	int ret = 0;
+	HENTRY();
 
 	HASSERT(file);
 	HASSERT(hrfs_valid_flags_is_valid(valid_flags));
 
 	ret = hrfs_i_choose_bindex(file->f_dentry->d_inode, valid_flags, bindex);
 
-	return ret;
+	HRETURN(ret);
 }
 
 static inline struct file *hrfs_f_choose_branch(struct file *file, __u64 valid_flags)
@@ -169,9 +189,10 @@ static inline struct file *hrfs_f_choose_branch(struct file *file, __u64 valid_f
 	hrfs_bindex_t bindex = -1;
 	struct file *hidden_file = NULL;
 	int ret = 0;
+	HENTRY();
 
 	ret = hrfs_f_choose_bindex(file, valid_flags, &bindex);
-	if (ret <= 0) {
+	if (ret) {
 		hidden_file = ERR_PTR(ret);
 		goto out;
 	}
@@ -179,7 +200,7 @@ static inline struct file *hrfs_f_choose_branch(struct file *file, __u64 valid_f
 	HASSERT(bindex >=0 && bindex < hrfs_f2bnum(file));
 	hidden_file = hrfs_f2branch(file, bindex);
 out:
-	return hidden_file;
+	HRETURN(hidden_file);
 }
 
 typedef union hrfs_operation_result {
@@ -368,7 +389,7 @@ static inline int hrfs_oplist_update(struct inode *inode, struct hrfs_operation_
 				continue;
 			}
 
-			ret = hrfs_i_invalid_branch(inode, bindex, HRFS_DATA_VALID);
+			ret = hrfs_invalid_branch(inode, bindex, HRFS_DATA_VALID);
 			if (ret) {
 				HERROR("invalid inode failed, ret = %d\n", ret);
 				HBUG();
@@ -378,5 +399,8 @@ static inline int hrfs_oplist_update(struct inode *inode, struct hrfs_operation_
 out:
 	HRETURN(ret);
 }
+
+extern int lowerfs_inode_get_flag_default(struct inode *inode, __u32 *hrfs_flag);
+extern int lowerfs_inode_set_flag_default(struct inode *inode, __u32 hrfs_flag);
 #endif /* defined (__linux__) && defined(__KERNEL__) */
 #endif /* __HRFS_FLAG_H__ */

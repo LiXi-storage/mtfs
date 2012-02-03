@@ -6,23 +6,29 @@
 #include "mmap_internal.h"
 #include <linux/uio.h>
 
-int hrfs_do_writepage(struct page *page, struct inode *inode, hrfs_bindex_t bindex, unsigned hidden_page_index, struct writeback_control *wbc)
+int hrfs_writepage_branch(struct page *page, struct inode *inode, hrfs_bindex_t bindex, unsigned hidden_page_index, struct writeback_control *wbc)
 {
-	int err = 0;
+	int ret = 0;
 	struct inode *lower_inode = NULL;
 	struct page *lower_page;
 	HENTRY();
 
+	ret = hrfs_device_branch_errno(hrfs_i2dev(inode), bindex, BOPS_MASK_WRITE);
+	if (ret) {
+		HDEBUG("branch[%d] is abandoned\n", bindex);
+		goto out; 
+	}
+
 	lower_inode = hrfs_i2branch(inode, bindex);
 	if (lower_inode == NULL) {
-		err = -ENOENT;
+		ret = -ENOENT;
 		goto out;
 	}
 
 	/* This will lock_page */
 	lower_page = grab_cache_page(lower_inode->i_mapping, hidden_page_index);
 	if (!lower_page) {
-		err = -ENOMEM;
+		ret = -ENOMEM;
 		goto out;
 	}
 
@@ -41,8 +47,8 @@ int hrfs_do_writepage(struct page *page, struct inode *inode, hrfs_bindex_t bind
 	SetPageReclaim(lower_page);
 
 	/* This will unlock_page*/
-	err = lower_inode->i_mapping->a_ops->writepage(lower_page, wbc);
-	if (err) {
+	ret = lower_inode->i_mapping->a_ops->writepage(lower_page, wbc);
+	if (ret) {
 		ClearPageReclaim(lower_page);
 		page_cache_release(lower_page);
 		goto out;
@@ -54,19 +60,95 @@ int hrfs_do_writepage(struct page *page, struct inode *inode, hrfs_bindex_t bind
 
 	page_cache_release(lower_page); /* because read_cache_page increased refcnt */
 out:
-	HRETURN(err);
+	HRETURN(ret);
 }
 
 int hrfs_locate_page_raid1(struct page *page, hrfs_bindex_t *bindex, unsigned long *hidden_page_index)
 {
 	unsigned long page_index = page->index;
+	int ret = 0;
+	HENTRY();
 
 	*hidden_page_index = page_index;
-	*bindex = 0;
-	
-	return 0;
+
+	ret = hrfs_i_choose_bindex(page->mapping->host, HRFS_DATA_VALID, bindex);
+	if (ret) {
+		HERROR("choose bindex failed, ret = %d\n", ret);
+		goto out;
+	}
+out:
+	HRETURN(ret);
 }
 
+#ifndef LIXI_20120203
+int hrfs_writepage(struct page *page, struct writeback_control *wbc)
+{
+	int ret = 0;
+	struct inode *inode = page->mapping->host;
+	hrfs_bindex_t i = 0;
+	hrfs_bindex_t bindex = 0;
+	struct hrfs_operation_list *list = NULL;
+	hrfs_operation_result_t result = {0};
+	HENTRY();
+
+	list = hrfs_oplist_build(inode);
+	if (unlikely(list == NULL)) {
+		HERROR("failed to build operation list\n");
+		ret = -ENOMEM;
+		goto out;
+	}
+
+	if (list->latest_bnum == 0) {
+		HERROR("page has no valid branch, please check it\n");
+		if (!(hrfs_i2dev(inode)->no_abort)) {
+			ret = -EIO;
+			goto out_free_oplist;
+		}
+	}
+
+	for (i = 0; i < hrfs_i2bnum(inode); i++) {
+		bindex = list->op_binfo[i].bindex;
+		ret = hrfs_writepage_branch(page, inode, bindex, page->index, wbc);
+		result.ret = ret;
+		hrfs_oplist_setbranch(list, i, (ret == 0 ? 1 : 0), result);
+		if (i == list->latest_bnum - 1) {
+			hrfs_oplist_check(list);
+			if (list->success_latest_bnum <= 0) {
+				HDEBUG("operation failed for all latest branches\n");
+				if (!(hrfs_i2dev(inode)->no_abort)) {
+					ret = -EIO;
+					goto out_free_oplist;
+				}
+			}
+		}
+	}
+
+	hrfs_oplist_check(list);
+	if (list->success_bnum <= 0) {
+		result = hrfs_oplist_result(list);
+		ret = result.size;
+		goto out_free_oplist;
+	}
+
+	ret = hrfs_oplist_update(inode, list);
+	if (ret) {
+		HERROR("failed to update inode\n");
+		HBUG();
+	}
+
+	if (ret) {
+		ClearPageUptodate(page);
+	} else {
+		SetPageUptodate(page);
+	}
+
+out_free_oplist:
+	hrfs_oplist_free(list);
+out:
+	unlock_page(page);
+	HRETURN(ret);
+}
+#else
 int hrfs_writepage(struct page *page, struct writeback_control *wbc)
 {
 	int ret = 0;
@@ -77,7 +159,12 @@ int hrfs_writepage(struct page *page, struct writeback_control *wbc)
 	unsigned long hidden_page_index = 0;
 	HENTRY();
 
-	hrfs_locate_page_raid1(page, &bindex, &hidden_page_index);
+	ret = hrfs_locate_page_raid1(page, &bindex, &hidden_page_index);
+	if (ret) {
+		HERROR("locate error, ret = %d\n", ret);
+		goto out;
+	}
+
 
 	for (bindex = 0; bindex < bnum; bindex++) {
 		ret = hrfs_do_writepage(page, inode, bindex, hidden_page_index, wbc);
@@ -100,8 +187,10 @@ int hrfs_writepage(struct page *page, struct writeback_control *wbc)
 
 	unlock_page(page);
 
+out:
 	HRETURN(ret);
 }
+#endif
 EXPORT_SYMBOL(hrfs_writepage);
 
 struct page *hrfs_read_cache_page(struct file *file, struct inode *hidden_inode, hrfs_bindex_t bindex, unsigned page_index)
@@ -156,7 +245,7 @@ out:
 	return ret;
 }
 
-static int hrfs_do_readpage(struct file *file, char *page_data, hrfs_bindex_t bindex, unsigned hidden_page_index)
+static int hrfs_readpage_branch(struct file *file, char *page_data, hrfs_bindex_t bindex, unsigned hidden_page_index)
 {
 	int err = 0;
 	struct dentry *dentry = NULL;
@@ -187,46 +276,50 @@ static int hrfs_do_readpage(struct file *file, char *page_data, hrfs_bindex_t bi
 
 static int hrfs_readpage_nounlock(struct file *file, struct page *page)
 {
-	int err = 0;
+	int ret = 0;
 	hrfs_bindex_t bindex = 0;
-	unsigned long hidden_page_index = 0;
 	void *page_data = NULL;
 	HENTRY();
 
-	hrfs_locate_page_raid1(page, &bindex, &hidden_page_index);
+	ret = hrfs_i_choose_bindex(page->mapping->host, HRFS_DATA_VALID, &bindex);
+	if (ret) {
+		HERROR("choose bindex failed, ret = %d\n", ret);
+		goto out;
+	}
 
 	page_data = kmap(page);
-	err = hrfs_do_readpage(file, page_data, bindex, hidden_page_index);
+	ret = hrfs_readpage_branch(file, page_data, bindex, page->index);
 	kunmap(page);
 
-	if (err == 0) {
+	if (ret == 0) {
 		SetPageUptodate(page);
 	} else {
 		ClearPageUptodate(page);
 	}
 
-	HRETURN(err);
+out:
+	HRETURN(ret);
 }
 
 int hrfs_readpage(struct file *file, struct page *page)
 {
-	int err = 0;
+	int ret = 0;
 	HENTRY();
 
 	HASSERT(PageLocked(page));
 	HASSERT(!PageUptodate(page));
 	HASSERT(atomic_read(&file->f_dentry->d_inode->i_count) > 0);
 
-	err = hrfs_readpage_nounlock(file, page);
+	ret = hrfs_readpage_nounlock(file, page);
 	unlock_page(page);
 
-	HRETURN(err);
+	HRETURN(ret);
 }
 EXPORT_SYMBOL(hrfs_readpage);
 
 int hrfs_prepare_write(struct file *file, struct page *page, unsigned from, unsigned to)
 {
-	int err = 0;
+	int ret = 0;
 	HENTRY();
 	HBUG(); /* Never needed */
 
@@ -239,17 +332,18 @@ int hrfs_prepare_write(struct file *file, struct page *page, unsigned from, unsi
 
 	/* read the page to "revalidate" our data */
 	/* call the helper function which doesn't unlock the page */
-	if (!PageUptodate(page))
-		err = hrfs_readpage_nounlock(file, page);
+	if (!PageUptodate(page)) {
+		ret = hrfs_readpage_nounlock(file, page);
+	}
 
 out:
-	HRETURN(err);
+	HRETURN(ret);
 }
 EXPORT_SYMBOL(hrfs_prepare_write);
 
 int hrfs_commit_write(struct file *file, struct page *page, unsigned from, unsigned to)
 {
-	int err = 0;
+	int ret = 0;
 	HENTRY();
 	HBUG(); /* Never needed */
 
@@ -264,10 +358,10 @@ int hrfs_commit_write(struct file *file, struct page *page, unsigned from, unsig
 	if (!page_has_buffers(page))
 			create_empty_buffers(page, PAGE_SIZE, 0);
 
-	err = generic_commit_write(file, page, from, to);
+	ret = generic_commit_write(file, page, from, to);
 	kunmap(page);
 
-	HRETURN(err);
+	HRETURN(ret);
 }
 EXPORT_SYMBOL(hrfs_commit_write);
 
@@ -275,7 +369,7 @@ ssize_t hrfs_direct_IO(int rw, struct kiocb *kiocb,
 						const struct iovec *iov, loff_t file_offset,
 						unsigned long nr_segs)
 {
-	ssize_t err = 0;
+	ssize_t ret = 0;
 	struct iovec *iov_new = NULL;
 	struct iovec *iov_tmp = NULL;
 	size_t length = sizeof(*iov) * nr_segs;
@@ -287,13 +381,13 @@ ssize_t hrfs_direct_IO(int rw, struct kiocb *kiocb,
 	
 	HRFS_ALLOC(iov_new, length);
 	if (!iov_new) {
-		err = -ENOMEM;
+		ret = -ENOMEM;
 		goto out;
 	}
 	
 	HRFS_ALLOC(iov_tmp, length);
 	if (!iov_tmp) {
-		err = -ENOMEM;
+		ret = -ENOMEM;
 		goto new_alloced_err;
 	}	
 	memcpy((char *)iov_new, (char *)iov, length); 
@@ -312,10 +406,10 @@ ssize_t hrfs_direct_IO(int rw, struct kiocb *kiocb,
 
 			memcpy((char *)iov_tmp, (char *)iov_new, length); 
 			new_kiocb.ki_filp = hidden_file;
-			err = hidden_file->f_mapping->a_ops->direct_IO(rw, &new_kiocb, iov_tmp, file_offset, nr_segs);
+			ret = hidden_file->f_mapping->a_ops->direct_IO(rw, &new_kiocb, iov_tmp, file_offset, nr_segs);
 
 			if (rw == READ) {
-				if (err > 0) {
+				if (ret > 0) {
 					break;
 				}
 			}
@@ -327,7 +421,7 @@ ssize_t hrfs_direct_IO(int rw, struct kiocb *kiocb,
 new_alloced_err:
 	HRFS_FREE(iov_new, length);
 out:
-	HRETURN(err);
+	HRETURN(ret);
 }
 EXPORT_SYMBOL(hrfs_direct_IO);
 

@@ -9,13 +9,13 @@
 #include <linux/list.h>
 #include <linux/fs.h>
 
-#define LF_RMDIR_NO_DDLETE 0x00000001 /* when rmdir lowerfs, avoid d_delete in vfs_rmdir */
-#define LF_UNLINK_NO_DDLETE 0x00000002 /* when rmdir lowerfs, avoid d_delete in vfs_rmdir */
+#define LF_RMDIR_NO_DDLETE 0x00000001 /* When rmdir lowerfs, avoid d_delete in vfs_rmdir */
+#define LF_UNLINK_NO_DDLETE 0x00000002 /* When rmdir lowerfs, avoid d_delete in vfs_rmdir */
 struct lowerfs_operations {
 	struct list_head lowerfs_list;
 	struct module *lowerfs_owner;
 	char *lowerfs_type;
-	unsigned long lowerfs_magic; /* sb->s_magic */
+	unsigned long lowerfs_magic; /* The same with sb->s_magic */
 	unsigned long lowerfs_flag;
 
 	/* Operations that should be provided */

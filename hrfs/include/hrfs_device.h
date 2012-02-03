@@ -12,7 +12,8 @@
 
 struct hrfs_branch_debug {
 	int active; /* Wheather debug is active */
-	int errno;  /* Every operation should return this errno */
+	int errno;  /* Every write operation should return this errno */
+	__u32 bops_emask; /* Branch operation error mask */
 };
 
 struct hrfs_device_branch {
@@ -62,6 +63,9 @@ static inline struct hrfs_device *hrfs_f2dev(struct file *file)
 	return hrfs_d2dev(file->f_dentry);
 }
 
-extern int hrfs_device_branch_errno(struct hrfs_device *device, hrfs_bindex_t bindex);
+#define BOPS_MASK_WRITE 0x00000001
+#define BOPS_MASK_READ  0x00000002
+
+extern int hrfs_device_branch_errno(struct hrfs_device *device, hrfs_bindex_t bindex, __u32 emask);
 #endif /* defined (__linux__) && defined(__KERNEL__) */
 #endif /* __HRFS_DEVICE_H__ */

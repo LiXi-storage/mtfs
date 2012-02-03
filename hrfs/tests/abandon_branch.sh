@@ -29,17 +29,17 @@ export DIR=$ABANDON_DIR
 export DIR1=$HRFS_MNT1/$DIR_SUB/abandon_tests
 export DIR2=$HRFS_MNT2/$DIR_SUB/abandon_tests
 
-export ABANDON_BRANCH="0"
+export ABANDON_BINDEX="0"
 bash posix.sh
 bash multi_mnt.sh
 
 cleanup_abandon
 
-export ABANDON_BRANCH="1"
+export ABANDON_BINDEX="1"
 bash posix.sh
 bash multi_mnt.sh
 
-export ABANDON_BRANCH="-1"
+export ABANDON_BINDEX="-1"
 
 export DIR=$ORIGIN_DIR
 export DIR1=$ORIGIN_DIR1

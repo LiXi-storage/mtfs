@@ -277,8 +277,202 @@ out:
 	}
 	HRETURN(count);
 }
+
+const char *hrfs_bops_bit2str(__u32 bit)
+{
+	switch (bit) {
+	case BOPS_MASK_WRITE:
+		return "write_ops";
+	case BOPS_MASK_READ:
+		return "read_ops";
+	default:
+		return NULL;
+	}
+	return NULL;
+}
+
+int hrfs_device_proc_bops_emask_read(char *page, char **start, off_t off, int count,
+                                       int *eof, void *data)
+{
+	int ret = 0;
+	struct hrfs_device_branch *dev_branch = (struct hrfs_device_branch *)data;
+	char *ptr = page;
+	__u64 mask = dev_branch->debug.bops_emask;
+	const char *token = NULL;
+	__u64 bit = 0;
+	int i = 0;
+	int first = 1;
+	HENTRY();
+
+	*eof = 1;
+	for (i = 0; i < 32; i++) {
+		bit = 1 << i;
+		if ((mask & bit) == 0) {
+			continue;
+		}
+
+		token = hrfs_bops_bit2str(bit);
+		if (token == NULL) {
+			/* unused bit */
+			continue;
+		}
+
+		HERROR("matched %d\n", i);
+		if (first) {
+			ret += snprintf(ptr + ret, count - ret, "%s", token);
+			first = 0;
+		} else {
+			ret += snprintf(ptr + ret, count - ret, " %s", token);
+		}
+	}
+	ret += snprintf(ptr + ret, count - ret, "\n");
+
+	HRETURN(ret);
+}
+
+int hrfs_bops_str2bit(const char *str, size_t length, __u64 *mask)
+{
+	const char *token = NULL;
+	int i = 0;
+	int ret = 0;
+	__u64 bit = 0;;
+	HENTRY();
+
+	HASSERT(str);
+	HASSERT(length > 0);
+	for (i = 0; i < 32; i++) {
+		bit = 1 << i;
+
+		token = hrfs_bops_bit2str(bit);
+		if (token == NULL) {
+			/* unused bit */
+			continue;
+		}
+
+		if (length != strlen(token)) {
+			continue;
+		}
+
+		ret = strncasecmp(str, token, length);
+		if (ret == 0) {
+			*mask = bit;
+			goto out;
+		}
+	}
+	ret = -EINVAL;
+out:
+	HRETURN(ret);
+}
+
+/*
+ * <str> must be a list of tokens separated by
+ * whitespace and optionally an operator ('+' or '-').  If an operator
+ * appears first in <str>, '*mask' is used as the starting point
+ * (relative), otherwise 0 is used (absolute).  An operator applies to
+ * all following tokens up to the next operator.
+ */
+int hrfs_bops_str2mask(const char *str, __u32 *mask)
+{
+	int ret = 0;
+	__u64 mask_tmp = 0;
+	char op = 0;
+	int matched = 0;
+	__u64 mask_bit = 0;
+	int n = 0;
+	HENTRY();
+
+	while (*str != 0) {
+		while (isspace(*str)) {
+			/* skip whitespace */
+			str++;
+		}
+
+		if (*str == 0) {
+			break;
+		}
+
+		if (*str == '+' || *str == '-') {
+			op = *str++;
+
+			/* op on first token == relative */
+			if (!matched) {
+				mask_tmp = *mask;
+			}
+
+			while (isspace(*str)) {
+				/* skip whitespace */
+				str++;
+			}
+
+			if (*str == 0) {
+				/* trailing op */
+				ret = -EINVAL;
+				goto out;
+			}
+		}
+
+		/* find token length */
+		for (n = 0; str[n] != 0 && !isspace(str[n]); n++);
+		HASSERT(n > 0);
+
+		/* match token */
+		ret = hrfs_bops_str2bit(str, n, &mask_bit);
+		if (ret) {
+			goto out;
+		}
+
+		matched = 1;
+		if (op == '-') {
+			mask_tmp &= ~mask_bit;
+		} else {
+			mask_tmp |= mask_bit;
+		}
+
+		str += n;
+	}
+
+	if (matched) {
+		*mask = mask_tmp;
+	} else {
+		*mask = 0;
+	}
+out:
+	HRETURN(ret);
+}
+
+static int hrfs_device_proc_bops_emask_write(struct file *file, const char *buffer,
+                                               unsigned long count, void *data)
+{
+	int ret = 0;
+	char *kern_buf = NULL;
+	struct hrfs_device_branch *dev_branch = (struct hrfs_device_branch *)data;
+	HENTRY();
+
+	HRFS_ALLOC(kern_buf, count + 1);
+	if (kern_buf == NULL) {
+		ret = -ENOMEM;
+		goto out;
+	}
+
+	if (copy_from_user(kern_buf, buffer, count)) {
+		ret = -EINVAL;
+		goto out_free_buf;
+	}
+	kern_buf[count] = '\0';
+
+	ret = hrfs_bops_str2mask(kern_buf, &(dev_branch->debug.bops_emask));
+out_free_buf:
+	HRFS_FREE(kern_buf, count + 1);
+out:
+	if (ret) {
+		HRETURN(ret);
+	}
+	HRETURN(count);
+}
+
 struct hrfs_proc_vars hrfs_proc_vars_device_branch[] = {
 	{ "errno", hrfs_device_branch_proc_read_errno, hrfs_device_branch_proc_write_errno, NULL },
+	{ "bops_emask", hrfs_device_proc_bops_emask_read, hrfs_device_proc_bops_emask_write, NULL },
 	{ 0 }
 };
 
@@ -502,6 +696,22 @@ int hrfs_proc_read_devices(char *page, char **start, off_t off,
 	return ret;
 }
 
+#ifndef LIXI_20120202
+int hrfs_device_branch_errno(struct hrfs_device *device, hrfs_bindex_t bindex, __u32 emask)
+{
+	struct hrfs_device_branch *dev_branch = hrfs_dev2branch(device, bindex);
+	int errno = -EIO;
+
+	if ((emask & dev_branch->debug.bops_emask) != 0) {
+		if (dev_branch->debug.active) {
+			HASSERT(dev_branch->debug.errno < 0);
+			errno = dev_branch->debug.errno;
+		}
+		return errno;
+	}
+	return 0;
+}
+#else
 int hrfs_device_branch_errno(struct hrfs_device *device, hrfs_bindex_t bindex)
 {
 	struct hrfs_device_branch *dev_branch = hrfs_dev2branch(device, bindex);
@@ -512,4 +722,5 @@ int hrfs_device_branch_errno(struct hrfs_device *device, hrfs_bindex_t bindex)
 	}
 	return 0;
 }
+#endif
 EXPORT_SYMBOL(hrfs_device_branch_errno);

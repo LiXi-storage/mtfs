@@ -133,7 +133,7 @@ int hrfs_inherit_raid_type(struct dentry *dentry, raid_type_t *raid_type)
 	i_parent = dentry->d_parent->d_inode;
 	HASSERT(i_parent);
 	ret = hrfs_i_choose_bindex(i_parent, HRFS_ATTR_VALID, &bindex);
-	if (ret <= 0) {
+	if (ret) {
 		HERROR("choose bindex failed, ret = %d\n", ret);
 		goto out;
 	}
@@ -144,12 +144,13 @@ int hrfs_inherit_raid_type(struct dentry *dentry, raid_type_t *raid_type)
 
 	HDEBUG("parent raid_type = %d\n", *raid_type);
 out:
-	return ret;
+	HRETURN(ret);
 }
 
 int hrfs_get_raid_type(struct dentry *dentry, raid_type_t *raid_type)
 {
 	int ret = 0;
+	HENTRY();
 	
 	ret = hrfs_inherit_raid_type(dentry, raid_type);
 	if (ret != 0 && raid_type_is_valid(*raid_type)) {
@@ -163,7 +164,7 @@ int hrfs_get_raid_type(struct dentry *dentry, raid_type_t *raid_type)
 	/* Use default raid_type */
 	*raid_type = 0; 
 out:
-	return ret;
+	HRETURN(ret);
 }
 
 static struct backing_dev_info hrfs_backing_dev_info = {
@@ -175,7 +176,7 @@ int hrfs_interpose(struct dentry *dentry, struct super_block *sb, int flag)
 {
 	struct inode *hidden_inode = NULL;
 	struct dentry *hidden_dentry = NULL;
-	int err = 0;
+	int ret = 0;
 	struct inode *inode = NULL;
 	hrfs_bindex_t bindex = 0;
 	hrfs_bindex_t bnum = 0;
@@ -205,7 +206,7 @@ int hrfs_interpose(struct dentry *dentry, struct super_block *sb, int flag)
 		/* should be impossible? */
 		HERROR("got a NULL inode for dentry [%*s]",
 		       dentry->d_name.len, dentry->d_name.name);
-		err = -EACCES;
+		ret = -EACCES;
 		goto out;
 	}
 
@@ -247,9 +248,9 @@ int hrfs_interpose(struct dentry *dentry, struct super_block *sb, int flag)
 				hrfs_flag |= (raid_type & HRFS_FLAG_RAID_MASK);
 				hrfs_flag |= HRFS_FLAG_SETED;
 
-				err = lowerfs_inode_set_flag(lowerfs_ops, hrfs_i2branch(inode, bindex), hrfs_flag);
-				if (err) {
-					HERROR("lowerfs_inode_set_flag failed, ret = %d\n", err);
+				ret = lowerfs_inode_set_flag(lowerfs_ops, hrfs_i2branch(inode, bindex), hrfs_flag);
+				if (ret) {
+					HERROR("lowerfs_inode_set_flag failed, ret = %d\n", ret);
 					//goto out;
 					//HBUG();
 				}
@@ -311,7 +312,7 @@ int hrfs_interpose(struct dentry *dentry, struct super_block *sb, int flag)
 	fsstack_copy_inode_size(inode, hidden_inode);
 
 out:
-	HRETURN(err);
+	HRETURN(ret);
 }
 
 struct dentry *hrfs_lookup_branch(struct dentry *dentry, hrfs_bindex_t bindex)
@@ -321,7 +322,7 @@ struct dentry *hrfs_lookup_branch(struct dentry *dentry, hrfs_bindex_t bindex)
 	int ret = 0;
 	HENTRY();
 
-	ret = hrfs_device_branch_errno(hrfs_d2dev(dentry), bindex);
+	ret = hrfs_device_branch_errno(hrfs_d2dev(dentry), bindex, BOPS_MASK_WRITE);
 	if (ret) {
 		HDEBUG("branch[%d] is abandoned\n", bindex);
 		hidden_dentry = ERR_PTR(ret); 
@@ -546,7 +547,7 @@ int hrfs_create_branch(struct dentry *dentry, int mode, hrfs_bindex_t bindex)
 	struct dentry *hidden_dir_dentry = NULL;
 	HENTRY();
 
-	ret = hrfs_device_branch_errno(hrfs_d2dev(dentry), bindex);
+	ret = hrfs_device_branch_errno(hrfs_d2dev(dentry), bindex, BOPS_MASK_WRITE);
 	if (ret) {
 		HDEBUG("branch[%d] is abandoned\n", bindex);
 		goto out; 
@@ -683,7 +684,7 @@ int hrfs_link_branch(struct dentry *old_dentry, struct dentry *new_dentry, hrfs_
 	int ret = 0;
 	HENTRY();
 
-	ret = hrfs_device_branch_errno(hrfs_d2dev(old_dentry), bindex);
+	ret = hrfs_device_branch_errno(hrfs_d2dev(old_dentry), bindex, BOPS_MASK_WRITE);
 	if (ret) {
 		HDEBUG("branch[%d] is abandoned\n", bindex); 
 		goto out; 
@@ -836,7 +837,7 @@ static int hrfs_unlink_branch(struct dentry *dentry, hrfs_bindex_t bindex)
 	struct lowerfs_operations *lowerfs_ops = hrfs_d2bops(dentry, bindex);
 	HENTRY();
 
-	ret = hrfs_device_branch_errno(hrfs_d2dev(dentry), bindex);
+	ret = hrfs_device_branch_errno(hrfs_d2dev(dentry), bindex, BOPS_MASK_WRITE);
 	if (ret) {
 		HDEBUG("branch[%d] is abandoned\n", bindex); 
 		goto out; 
@@ -986,7 +987,7 @@ static int hrfs_rmdir_branch(struct dentry *dentry, hrfs_bindex_t bindex)
 	struct lowerfs_operations *lowerfs_ops = hrfs_d2bops(dentry, bindex);
 	HENTRY();
 
-	ret = hrfs_device_branch_errno(hrfs_d2dev(dentry), bindex);
+	ret = hrfs_device_branch_errno(hrfs_d2dev(dentry), bindex, BOPS_MASK_WRITE);
 	if (ret) {
 		HDEBUG("branch[%d] is abandoned\n", bindex); 
 		goto out; 
@@ -1128,7 +1129,7 @@ static int hrfs_symlink_branch(struct dentry *dentry, hrfs_bindex_t bindex, cons
 	umode_t	mode = S_IALLUGO;
 	HENTRY();
 
-	ret = hrfs_device_branch_errno(hrfs_d2dev(dentry), bindex);
+	ret = hrfs_device_branch_errno(hrfs_d2dev(dentry), bindex, BOPS_MASK_WRITE);
 	if (ret) {
 		HDEBUG("branch[%d] is abandoned\n", bindex); 
 		goto out; 
@@ -1251,7 +1252,7 @@ static int hrfs_mkdir_branch(struct dentry *dentry, int mode, hrfs_bindex_t bind
 	struct dentry *hidden_dir_dentry = NULL;
 	HENTRY();
 
-	ret = hrfs_device_branch_errno(hrfs_d2dev(dentry), bindex);
+	ret = hrfs_device_branch_errno(hrfs_d2dev(dentry), bindex, BOPS_MASK_WRITE);
 	if (ret) {
 		HDEBUG("branch[%d] is abandoned\n", bindex); 
 		goto out; 
@@ -1385,7 +1386,7 @@ static int hrfs_mknod_branch(struct dentry *dentry, int mode, dev_t dev, hrfs_bi
 	struct dentry *hidden_dir_dentry = NULL;
 	HENTRY();
 
-	ret = hrfs_device_branch_errno(hrfs_d2dev(dentry), bindex);
+	ret = hrfs_device_branch_errno(hrfs_d2dev(dentry), bindex, BOPS_MASK_WRITE);
 	if (ret) {
 		HDEBUG("branch[%d] is abandoned\n", bindex); 
 		goto out; 
@@ -1522,7 +1523,7 @@ static int hrfs_rename_branch(struct dentry *old_dentry, struct dentry *new_dent
 	int ret = 0;
 	HENTRY();
 
-	ret = hrfs_device_branch_errno(hrfs_d2dev(old_dentry), bindex);
+	ret = hrfs_device_branch_errno(hrfs_d2dev(old_dentry), bindex, BOPS_MASK_WRITE);
 	if (ret) {
 		HDEBUG("branch[%d] is abandoned\n", bindex); 
 		goto out; 
@@ -1778,7 +1779,7 @@ static int hrfs_setattr_branch(struct dentry *dentry, struct iattr *ia, hrfs_bin
 	struct dentry *hidden_dentry = hrfs_d2branch(dentry, bindex);
 	HENTRY();
 
-	ret = hrfs_device_branch_errno(hrfs_d2dev(dentry), bindex);
+	ret = hrfs_device_branch_errno(hrfs_d2dev(dentry), bindex, BOPS_MASK_WRITE);
 	if (ret) {
 		HDEBUG("branch[%d] is abandoned\n", bindex); 
 		goto out; 
@@ -1874,7 +1875,7 @@ int hrfs_getattr(struct vfsmount *mnt, struct dentry *dentry, struct kstat *stat
 	HDEBUG("getattr [%*s]\n", dentry->d_name.len, dentry->d_name.name);
 
 	ret = hrfs_i_choose_bindex(inode, HRFS_BRANCH_VALID, &bindex);
-	if (ret <= 0) {
+	if (ret) {
 		HERROR("choose bindex failed, ret = %d\n", ret);
 		goto out;
 	}
@@ -1928,7 +1929,7 @@ int hrfs_setxattr_branch(struct dentry *dentry, const char *name, const void *va
 	struct dentry *hidden_dentry = hrfs_d2branch(dentry, bindex);
 	HENTRY();
 
-	ret = hrfs_device_branch_errno(hrfs_d2dev(dentry), bindex);
+	ret = hrfs_device_branch_errno(hrfs_d2dev(dentry), bindex, BOPS_MASK_WRITE);
 	if (ret) {
 		HDEBUG("branch[%d] is abandoned\n", bindex);
 		hidden_dentry = ERR_PTR(ret); 
@@ -2024,7 +2025,7 @@ int hrfs_removexattr_branch(struct dentry *dentry, const char *name, hrfs_bindex
 	struct dentry *hidden_dentry = hrfs_d2branch(dentry, bindex);
 	HENTRY();
 
-	ret = hrfs_device_branch_errno(hrfs_d2dev(dentry), bindex);
+	ret = hrfs_device_branch_errno(hrfs_d2dev(dentry), bindex, BOPS_MASK_WRITE);
 	if (ret) {
 		HDEBUG("branch[%d] is abandoned\n", bindex);
 		goto out; 

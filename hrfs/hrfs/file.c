@@ -578,7 +578,7 @@ static ssize_t hrfs_file_writev_branch(struct file *file, const struct iovec *io
 	struct inode *hidden_inode = NULL;
 	HENTRY();
 
-	ret = hrfs_device_branch_errno(hrfs_f2dev(file), bindex);
+	ret = hrfs_device_branch_errno(hrfs_f2dev(file), bindex, BOPS_MASK_WRITE);
 	if (ret) {
 		HDEBUG("branch[%d] is abandoned\n", bindex);
 		goto out; 
