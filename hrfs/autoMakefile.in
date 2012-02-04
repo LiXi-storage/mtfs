@@ -253,7 +253,7 @@ target_vendor = @target_vendor@
 AUTOMAKE_OPTIONS = foreign
 
 # Also update hrfs/autoconf/hrfs-core.m4 AC_CONFIG_FILES
-ALWAYS_SUBDIRS := autoconf hrfs include libuser scripts tests utils random
+ALWAYS_SUBDIRS := autoconf hrfs include libuser scripts tests utils random doc
 SWGFS_SUPPORT_SUBDIRS := swgfs_support
 EXT2_SUPPORT_SUBDIRS := ext2_support
 EXT3_SUPPORT_SUBDIRS := ext3_support

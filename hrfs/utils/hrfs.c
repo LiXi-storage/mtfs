@@ -19,10 +19,10 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 
-#define LFS_VERSION "0.0.0"
+#define HRFS_UTILS_VERSION "2.0.0"
 int hrfs_get_version(int argc, char **argv)
 {
-	printf("version: %s\n", LFS_VERSION);
+	printf("version: %s\n", HRFS_UTILS_VERSION);
 	return 0;
 }
 

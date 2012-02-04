@@ -9428,7 +9428,7 @@ EXTRA_KCFLAGS="-include $PWD/config.h $EXTRA_KCFLAGS"
 
 
 
-                                                                                                                                                                                                                                                                                                  ac_config_files="$ac_config_files hrfs/Makefile hrfs/autoMakefile hrfs/autoconf/Makefile hrfs/include/Makefile hrfs/random/Makefile hrfs/random/autoMakefile hrfs/hrfs/Makefile hrfs/hrfs/autoMakefile hrfs/libuser/Makefile hrfs/libuser/tests/Makefile hrfs/manage/Makefile hrfs/scripts/Makefile hrfs/tests/Makefile hrfs/tests/pjd_fstest/Makefile hrfs/tests/src/Makefile hrfs/utils/libcoreutils/Makefile hrfs/utils/Makefile hrfs/ext2_support/Makefile hrfs/ext2_support/autoMakefile hrfs/ext3_support/Makefile hrfs/ext3_support/autoMakefile hrfs/ext4_support/Makefile hrfs/ext4_support/autoMakefile hrfs/nfs_support/Makefile hrfs/nfs_support/autoMakefile hrfs/swgfs_support/Makefile hrfs/swgfs_support/autoMakefile hrfs/tmpfs_support/Makefile hrfs/tmpfs_support/autoMakefile"
+                                                                                                                                                                                                                                                                                                            ac_config_files="$ac_config_files hrfs/Makefile hrfs/autoMakefile hrfs/autoconf/Makefile hrfs/doc/Makefile hrfs/include/Makefile hrfs/random/Makefile hrfs/random/autoMakefile hrfs/hrfs/Makefile hrfs/hrfs/autoMakefile hrfs/libuser/Makefile hrfs/libuser/tests/Makefile hrfs/manage/Makefile hrfs/scripts/Makefile hrfs/tests/Makefile hrfs/tests/pjd_fstest/Makefile hrfs/tests/src/Makefile hrfs/utils/libcoreutils/Makefile hrfs/utils/Makefile hrfs/ext2_support/Makefile hrfs/ext2_support/autoMakefile hrfs/ext3_support/Makefile hrfs/ext3_support/autoMakefile hrfs/ext4_support/Makefile hrfs/ext4_support/autoMakefile hrfs/nfs_support/Makefile hrfs/nfs_support/autoMakefile hrfs/swgfs_support/Makefile hrfs/swgfs_support/autoMakefile hrfs/tmpfs_support/Makefile hrfs/tmpfs_support/autoMakefile"
 
 
 
@@ -10143,6 +10143,7 @@ do
   "hrfs/Makefile" ) CONFIG_FILES="$CONFIG_FILES hrfs/Makefile" ;;
   "hrfs/autoMakefile" ) CONFIG_FILES="$CONFIG_FILES hrfs/autoMakefile" ;;
   "hrfs/autoconf/Makefile" ) CONFIG_FILES="$CONFIG_FILES hrfs/autoconf/Makefile" ;;
+  "hrfs/doc/Makefile" ) CONFIG_FILES="$CONFIG_FILES hrfs/doc/Makefile" ;;
   "hrfs/include/Makefile" ) CONFIG_FILES="$CONFIG_FILES hrfs/include/Makefile" ;;
   "hrfs/random/Makefile" ) CONFIG_FILES="$CONFIG_FILES hrfs/random/Makefile" ;;
   "hrfs/random/autoMakefile" ) CONFIG_FILES="$CONFIG_FILES hrfs/random/autoMakefile" ;;

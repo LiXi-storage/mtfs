@@ -340,6 +340,7 @@ AC_DEFUN([LC_CONFIG_FILES],
 hrfs/Makefile
 hrfs/autoMakefile
 hrfs/autoconf/Makefile
+hrfs/doc/Makefile
 hrfs/include/Makefile
 hrfs/random/Makefile
 hrfs/random/autoMakefile

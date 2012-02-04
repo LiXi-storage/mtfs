@@ -361,7 +361,7 @@ static int hrfs_swgfs_getflags(struct inode *inode, struct file *file, unsigned 
 	HENTRY();
 
 	ret = hrfs_i_choose_bindex(inode, HRFS_ATTR_VALID, &bindex);
-	if (ret <= 0) {
+	if (ret) {
 		HERROR("choose bindex failed, ret = %d\n", ret);
 		goto out;
 	}

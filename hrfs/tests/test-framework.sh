@@ -344,7 +344,7 @@ abandon_branch()
 	local BRANCH="$2"
 
 	local HASH_NAME=$(hrfs_hashname $DEV)
-	if [ $HASH_NAME = "" ]; then
+	if [ "$HASH_NAME" = "" ]; then
 		echo "failed to abandon branch[$BRANCH] of $DEV: not found"
 		return
 	fi
@@ -369,7 +369,7 @@ undo_abandon_branch()
 	local BRANCH="$2"
 
 	local HASH_NAME=$(hrfs_hashname $DEV)
-	if [ $HASH_NAME = "" ]; then
+	if [ "$HASH_NAME" = "" ]; then
 		echo "failed to undo abandon branch[$BRANCH] of $DEV: not found"
 		return
 	fi
