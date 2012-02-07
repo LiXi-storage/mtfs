@@ -20,11 +20,13 @@ hrfs-objs   := dentry.o \
 	device.o \
 	ioctl.o \
 	flag.o \
-	selfheal.o
+	selfheal.o \
+	oplist.o
 
 EXTRA_DIST := $(hrfs-objs:.o=.c)
 EXTRA_DIST += dentry_internal.h device_internal.h file_internal.h hide_internal.h hrfs_internal.h
 EXTRA_DIST += inode_internal.h junction_internal.h main_internal.h mmap_internal.h selfheal_internal.h
 EXTRA_DIST += proc_internal.h super_internal.h support_internal.h flag_internal.h ioctl_internal.h
+EXTRA_DIST += oplist_internal.h
 
 @INCLUDE_RULES@

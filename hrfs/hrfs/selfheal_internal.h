@@ -4,7 +4,7 @@
 
 #ifndef __HRFS_SELFHEAL_INTERNAL_H__
 #define __HRFS_SELFHEAL_INTERNAL_H__
-#include <hrfs_flag.h>
+#include <hrfs_oplist.h>
 
 struct dentry *hrfs_dchild_create(struct dentry *dparent, const char *name, umode_t mode, dev_t rdev);
 struct dentry *hrfs_dchild_remove(struct dentry *dparent, const char *name);

@@ -87,6 +87,16 @@ remove_bad_branch()
 	check_exist $DIR/$tfile || error "not exist $? after removed branch[$BRANCH_NUM]"
 }
 
+get_opposite_bindex()
+{
+	local BINDEX=$1
+	if [ "$BINDEX" = "0" ]; then
+		echo "1"
+	else
+		echo "0"
+	fi
+}
+
 # Dentry Should be removed if the latest branch is removed.
 remove_good_branch() 
 {
@@ -94,10 +104,7 @@ remove_good_branch()
 	local BRANCH="BRANCH"_"$BRANCH_NUM"
 	local BRANCH_DIR=${!BRANCH}
 	
-	local BAD_BRANCH_NUM=0
-	if [ "$BRANCH_NUM" = "0" ]; then
-		BAD_BRANCH_NUM=1
-	fi
+	local BAD_BRANCH_NUM=$(get_opposite_bindex $BRANCH_NUM)
 
 	rm $DIR/$tfile -f 2>&1 > /dev/null
 	check_nonexist $BRANCH_0/$tfile || error "branch[0]: $BRANCH_0/$tfile exist $?"
@@ -155,6 +162,51 @@ test_1a()
 	$UTIL_HRFS getstate $HRFS_MNT1
 }
 run_test 1a "set and get state of mount point"
+
+check_isolate()
+{
+	local ENTRY="$1"
+	local BINDEX="$2"
+	FAILED_BINDEX=$($UTIL_HRFS getstate $ENTRY | grep ffff | awk '{print $1}')
+	if [ "$FAILED_BINDEX" = "$BINDEX" ]; then
+		return 0
+	fi
+	return 1
+}
+
+isolate_long_path()
+{
+	local BINDEX="$1"
+	#local CMD="$2"
+	local PWD=`pwd`
+	local ENTRY;
+	local DEPTH=10000
+
+	mkdir $DIR/d2a
+	cd $DIR/d2a
+	for((ENTRY = 0;ENTRY < $DEPTH; ENTRY++)) {
+		mkdir $ENTRY
+		cd $ENTRY
+		PARENT=$ENTRY
+		echo $ENTRY
+	}
+	touch ./$ENTRY
+
+	$UTIL_HRFS rmbranch -b $BINDEX $ENTRY  || error "failed to rmbranch";
+	check_isolate $ENTRY $BINDEX || error "failed to isolate";
+	local OPPOSITE_BINDEX=$(get_opposite_bindex $BINDEX)
+	echo "$UTIL_HRFS setbranch -b $OPPOSITE_BINDEX -d 1 $ENTRY"
+	$UTIL_HRFS setbranch -b $OPPOSITE_BINDEX -d 1 ./ 2>&1 > /dev/null || error "set flag failed"
+	check_nonexist $ENTRY || error "$ENTRY exist $?"
+
+	cd $PWD
+}
+test_2a()
+{
+	isolate_long_path 1 || error "failed to isolate long path"
+	#isolate_long_path 0 || error "failed to isolate long path"
+}
+run_test 2a "long path when cleanup branch"
 
 cleanup_all
 echo "=== $0: completed ==="

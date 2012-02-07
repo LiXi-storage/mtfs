@@ -232,5 +232,84 @@ free_state:
 	HRFS_FREE(state, state_size);
 out:
 	return ret;
-	return 0;
+}
+
+#include <sys/types.h>
+#include <dirent.h>
+/* set errno upon failure */
+static DIR *opendir_parent(char *path)
+{
+	DIR *parent = NULL;
+	char *entry_name = NULL;
+	char c;
+
+	entry_name = strrchr(path, '/');
+	if (entry_name == NULL) {
+		return opendir(".");
+	}
+
+	c = entry_name[1];
+	entry_name[1] = '\0';
+	parent = opendir(path);
+	entry_name[1] = c;
+	return parent;
+}
+
+static char *get_entry_name(char *path)
+{
+	char *entry_name = strrchr(path, '/');
+	entry_name = (entry_name == NULL ? path : entry_name + 1);
+
+	return entry_name;
+}
+
+int hrfs_api_rmbranch(const char *path, hrfs_bindex_t bindex, hrfs_param_t *param)
+{
+	int ret = 0;
+	int len = strlen(path);
+	char *buff = NULL;
+	DIR *dir = NULL;
+	char *entry_name = NULL;
+	struct hrfs_remove_branch_info *remove_info = NULL;
+
+	if (len > PATH_MAX) {
+		HERROR("path name '%s' is too long\n", path);
+		ret = -EINVAL;
+		goto out;
+	}
+
+	HRFS_ALLOC_PTR(remove_info);
+	if (remove_info == NULL) {
+		ret = -ENOMEM;
+		goto out;
+	}
+
+	HRFS_ALLOC(buff, PATH_MAX + 1);
+	if (buff == NULL) {
+		ret = -ENOMEM;
+		goto out_free_info;
+	}
+
+	strncpy(buff, path, PATH_MAX + 1);
+
+	dir = opendir_parent(buff);
+	if (dir == NULL) {
+		ret = -errno;
+		goto out_free_dir;
+	}
+
+	entry_name = get_entry_name(buff);
+	strncpy(remove_info->name, entry_name, strlen(entry_name));
+	remove_info->bindex = bindex;
+
+	ret = ioctl(dirfd(dir), HRFS_IOCTL_REMOVE_BRANCH,
+	            (void *)remove_info);
+
+	closedir(dir);
+out_free_dir:
+	HRFS_FREE(buff, PATH_MAX + 1);
+out_free_info:
+	HRFS_FREE_PTR(remove_info);
+out:
+	return ret;
 }

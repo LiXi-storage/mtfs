@@ -257,6 +257,7 @@ struct kmem_cache *hrfs_dentry_info_cache;
 struct kmem_cache *hrfs_inode_info_cache;
 struct kmem_cache *hrfs_sb_info_cache;
 struct kmem_cache *hrfs_device_cache;
+struct kmem_cache *hrfs_oplist_cache;
 
 static struct hrfs_cache_info hrfs_cache_infos[] = {
 	{
@@ -284,6 +285,11 @@ static struct hrfs_cache_info hrfs_cache_infos[] = {
 		.cache = &hrfs_device_cache,
 		.name = "hrfs_device_cache",
 		.size = sizeof(struct hrfs_device),
+	},
+	{
+		.cache = &hrfs_oplist_cache,
+		.name = "hrfs_oplist_cache",
+		.size = sizeof(struct hrfs_operation_list),
 	},
 };
 	

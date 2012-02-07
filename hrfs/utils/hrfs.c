@@ -53,6 +53,7 @@ static int hrfs_log(int argc, char **argv);
 static int hrfs_cp(int argc, char **argv);
 static int hrfs_hide(int argc, char **argv);
 static int hrfs_grouplock(int argc, char **argv);
+static int hrfs_rmbranch(int argc, char **argv);
 
 command_t hrfs_cmdlist[] = {
 	/* Metacommands */
@@ -81,6 +82,11 @@ command_t hrfs_cmdlist[] = {
 	"usage: setbranch [--quiet | -q] [--verbose | -v]\n"
 	"                [--branch | -b bindex] [--data | -d flag]"
 	"                [--attr | -a flag] [--xattr | -x flag]"
+	"                <dir|file> ...\n"},
+	{"rmbranch", hrfs_rmbranch, 0,
+	"To set the state info for a branch of a given file or directory.\n"
+	"usage: setbranch [--quiet | -q] [--verbose | -v]\n"
+	"                [--branch | -b bindex]"
 	"                <dir|file> ...\n"},
 	{"setraid", hrfs_setraid, 0,
 	"To set a raid level for a given file or directory.\n"
@@ -246,7 +252,7 @@ out:
 }
 
 /*
- * setbranch -b bindex -d 1 -x 1 -a 1 /path/to/hrfs/
+ * setbranch -b bindex -d 1 -x 1 -a 1 /path/to/hrfs/file
 */
 static int hrfs_setbranch(int argc, char **argv)
 {
@@ -316,16 +322,13 @@ static int hrfs_setbranch(int argc, char **argv)
 		goto out;
 	}
 
-	if (branch_arg != NULL) {
-		bindex = strtoul(branch_arg, &end, 0);
-		if (bindex < 0 ||
-		    *end != '\0') {
-			fprintf(stderr, "error: %s: bad branch index '%s'\n",
-			        argv[0], branch_arg);
-			        rc = CMD_HELP;
-			        goto out;
-		}
-		valid.data_valid = is_valid;
+	bindex = strtoul(branch_arg, &end, 0);
+	if (bindex < 0 ||
+	    *end != '\0') {
+		fprintf(stderr, "error: %s: bad branch index '%s'\n",
+		        argv[0], branch_arg);
+		        rc = CMD_HELP;
+		        goto out;
 	}
 
 	if (data_arg != NULL) {
@@ -366,6 +369,81 @@ static int hrfs_setbranch(int argc, char **argv)
 
 	do {
 		rc = hrfs_api_setbranch(argv[optind], bindex, &valid, &param);
+	} while (++optind < argc && !rc);
+
+	if (rc) {
+		fprintf(stderr, "error: %s failed for %s, ret = %d.\n",
+		        argv[0], argv[optind - 1], rc);
+	}
+out:
+	return rc;
+}
+
+/*
+ * rmbranch -b bindex /path/to/hrfs/file
+*/
+static int hrfs_rmbranch(int argc, char **argv)
+{
+	struct option long_opts[] = {
+		{"quiet", no_argument, 0, 'q'},
+		{"verbose", no_argument, 0, 'v'},
+		{"branch", no_argument, 0, 'b'},
+		{0, 0, 0, 0}
+	};
+	char short_opts[] = "qvb:d:a:x:";
+	int c = 0;
+	int rc = 0;
+	hrfs_param_t param = { 0 };
+	char *end = NULL;
+	char *branch_arg = NULL;
+	hrfs_bindex_t bindex = 0;
+
+	optind = 0;
+	while ((c = getopt_long(argc, argv, short_opts, long_opts, NULL)) != -1) {
+		switch (c) {
+		case 'q':
+ 			param.quiet++;
+			param.verbose = 0;
+			break;
+		case 'v':
+			param.verbose++;
+			param.quiet = 0;
+			break;
+		case 'b':
+			branch_arg = optarg;
+			break;
+		case '?':
+			rc = CMD_HELP;
+			goto out;
+		default:
+			fprintf(stderr, "error: %s: option '%s' unrecognized\n",
+			        argv[0], argv[optind - 1]);
+			rc = CMD_HELP;
+			goto out;
+		}
+	}
+	
+	if (optind >= argc) {
+		rc = CMD_HELP;
+		goto out;
+	}
+
+	if (branch_arg == NULL) {
+		rc = CMD_HELP;
+		goto out;
+	}
+
+	bindex = strtoul(branch_arg, &end, 0);
+	if (bindex < 0 ||
+	    *end != '\0') {
+		fprintf(stderr, "error: %s: bad branch index '%s'\n",
+		        argv[0], branch_arg);
+		        rc = CMD_HELP;
+		        goto out;
+	}
+
+	do {
+		rc = hrfs_api_rmbranch(argv[optind], bindex, &param);
 	} while (++optind < argc && !rc);
 
 	if (rc) {

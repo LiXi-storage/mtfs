@@ -20,22 +20,26 @@
 #define	HRFS_IOC_SETVERSION         FS_IOC_SETVERSION
 #define HRFS_IOCTL_GET_FLAG         _IOR(0x15, 1, HRFS_IOCTL_DATA_TYPE)
 #define HRFS_IOCTL_SET_FLAG         _IOW(0x15, 2, HRFS_IOCTL_DATA_TYPE)
-#define HRFS_IOCTL_GET_DEBUG_LEVEL  _IOR(0x15, 3, HRFS_IOCTL_DATA_TYPE)
-#define HRFS_IOCTL_SET_DEBUG_LEVEL  _IOW(0x15, 4, HRFS_IOCTL_DATA_TYPE)
-#define HRFS_IOCTL_RULE_ADD         _IOW(0x15, 5, HRFS_IOCTL_DATA_TYPE)
-#define HRFS_IOCTL_RULE_DEL         _IOW(0x15, 6, HRFS_IOCTL_DATA_TYPE)
-#define HRFS_IOCTL_RULE_LIST        _IOW(0x15, 7, HRFS_IOCTL_DATA_TYPE)
+#define HRFS_IOCTL_RULE_ADD         _IOW(0x15, 3, HRFS_IOCTL_DATA_TYPE)
+#define HRFS_IOCTL_RULE_DEL         _IOW(0x15, 4, HRFS_IOCTL_DATA_TYPE)
+#define HRFS_IOCTL_RULE_LIST        _IOW(0x15, 5, HRFS_IOCTL_DATA_TYPE)
+#define HRFS_IOCTL_REMOVE_BRANCH    _IOW(0x15, 6, HRFS_IOCTL_DATA_TYPE)
 
-typedef struct hrfs_branch_flag {
+struct hrfs_branch_flag {
 	__u32 flag;
 	__u32 flag1;
-} hrfs_branch_flag_t;
+};
 
-typedef struct hrfs_user_flag {
+struct hrfs_user_flag {
 	int state_size;
 	hrfs_bindex_t bnum; /* must be bigger than hrfs_bindex_t */
-	hrfs_branch_flag_t state[0]; /* per-brach data */
-} hrfs_user_flag_t;
+	struct hrfs_branch_flag state[0]; /* per-brach data */
+};
+
+struct hrfs_remove_branch_info {
+	char name[PATH_MAX + 1];
+	hrfs_bindex_t bindex;
+};
 
 static inline int hrfs_user_flag_size(hrfs_bindex_t bnum)
 {

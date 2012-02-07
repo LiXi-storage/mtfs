@@ -4,7 +4,7 @@
 
 #include "hrfs_internal.h"
 
-static int hrfs_user_get_state(struct inode *inode, struct hrfs_user_flag __user *user_state, hrfs_bindex_t max_bnum)
+static int hrfs_user_get_state(struct inode *inode, struct file *file, struct hrfs_user_flag __user *user_state, hrfs_bindex_t max_bnum)
 {
 	hrfs_bindex_t bnum = hrfs_i2bnum(inode);
 	hrfs_bindex_t bindex = 0;
@@ -14,6 +14,7 @@ static int hrfs_user_get_state(struct inode *inode, struct hrfs_user_flag __user
 	int state_size = 0;
 	struct inode *hidden_inode = NULL;
 	struct lowerfs_operations *lowerfs_ops = NULL;
+	HENTRY();
 
 	HASSERT(bnum <= max_bnum);
 
@@ -45,10 +46,10 @@ static int hrfs_user_get_state(struct inode *inode, struct hrfs_user_flag __user
 free_state:	
 	HRFS_FREE(state, state_size);
 out:
-	return ret;	
+	HRETURN(ret);	
 }
 
-static int hrfs_user_set_state(struct inode *inode, struct hrfs_user_flag __user *user_state)
+static int hrfs_user_set_state(struct inode *inode, struct file *file, struct hrfs_user_flag __user *user_state)
 {
 	hrfs_bindex_t bnum = hrfs_i2bnum(inode);
 	hrfs_bindex_t bindex = 0;
@@ -57,7 +58,8 @@ static int hrfs_user_set_state(struct inode *inode, struct hrfs_user_flag __user
 	int state_size = 0;
 	struct inode *hidden_inode = NULL;
 	struct lowerfs_operations *lowerfs_ops = NULL;
-	
+	HENTRY();
+
 	state_size = hrfs_user_flag_size(bnum);
 	HRFS_ALLOC(state, state_size);
 	if (state == NULL) {
@@ -106,7 +108,60 @@ recover:
 free_state:	
 	HRFS_FREE(state, state_size);
 out:
-	return ret;
+	HRETURN(ret);
+}
+
+static int hrfs_remove_branch(struct dentry *d_parent, const char *name, hrfs_bindex_t bindex)
+{
+	int ret = 0;
+	struct dentry *d_child = NULL;
+	struct dentry *hidden_d_parent = hrfs_d2branch(d_parent, bindex);
+	HENTRY();
+
+	if (hidden_d_parent|| hidden_d_parent->d_inode) {
+		d_child = hrfs_dchild_remove(hidden_d_parent, name);
+		if (IS_ERR(d_child)) {
+			ret = PTR_ERR(d_child);
+			goto out;
+		} else {
+			dput(d_child);
+		}
+	} else {
+		if (hidden_d_parent == NULL) {
+			HDEBUG("branch[%d] of dentry [%*s] is NULL\n", bindex,
+			       d_parent->d_name.len, d_parent->d_parent->d_name.name);
+		} else {
+			HDEBUG("branch[%d] of dentry [%*s] is negative\n", bindex,
+			       d_parent->d_name.len, d_parent->d_parent->d_name.name);
+		}
+		ret = -ENOENT;
+	}
+out:
+	HRETURN(ret);
+}
+
+static int hrfs_user_remove_branch(struct inode *parent_inode, struct file *parent_file, struct hrfs_remove_branch_info __user *user_remove_info)
+{
+	int ret = 0;
+	struct hrfs_remove_branch_info *remove_info = NULL;
+	HENTRY();
+
+	HRFS_ALLOC_PTR(remove_info);
+	if (remove_info == NULL) {
+		goto out;
+	}
+
+	ret = copy_from_user(remove_info, user_remove_info, sizeof(struct hrfs_remove_branch_info));
+	if (ret) {
+		ret = -EFAULT;
+		goto out_free_info;
+	}
+
+	ret = hrfs_remove_branch(parent_file->f_dentry, remove_info->name, remove_info->bindex);
+out_free_info:
+	HRFS_FREE_PTR(remove_info);
+out:
+	HRETURN(ret);
 }
 
 static int hrfs_ioctl_do_branch(struct inode *inode, struct file *file, unsigned int cmd, unsigned long arg, hrfs_bindex_t bindex)
@@ -205,32 +260,18 @@ EXPORT_SYMBOL(hrfs_ioctl_write);
 int hrfs_ioctl(struct inode *inode, struct file *file, unsigned int cmd, unsigned long arg)
 {
 	int ret = 0;
-	int val = 0;
 	struct hrfs_operations *operations = NULL;
 	HENTRY();
 
 	switch (cmd) {
 	case HRFS_IOCTL_GET_FLAG:
-		ret = hrfs_user_get_state(inode, (struct hrfs_user_flag __user *)arg, HRFS_BRANCH_MAX);
+		ret = hrfs_user_get_state(inode, file, (struct hrfs_user_flag __user *)arg, HRFS_BRANCH_MAX);
 		break;
 	case HRFS_IOCTL_SET_FLAG:
-		ret = hrfs_user_set_state(inode, (struct hrfs_user_flag __user *)arg);
+		ret = hrfs_user_set_state(inode,  file, (struct hrfs_user_flag __user *)arg);
 		break;
-	case HRFS_IOCTL_GET_DEBUG_LEVEL:
-		//val = fist_get_debug_value();
-		printk("IOCTL GET: send arg %d\n", val);
-		ret = put_user(val, (int *)arg);
-		break;
-
-	case HRFS_IOCTL_SET_DEBUG_LEVEL:
-		ret = get_user(val, (int *)arg);
-		if (ret)
-			break;
-		HDEBUG("IOCTL SET: got arg %d\n", val);
-		if (val < 0 || val > 20) {
-			ret = -EINVAL;
-			break;
-		}
+	case HRFS_IOCTL_REMOVE_BRANCH:
+		ret = hrfs_user_remove_branch(inode, file, (struct hrfs_remove_branch_info __user *)arg);
 		break;
 	case HRFS_IOCTL_RULE_ADD:
 		ret = -EINVAL;

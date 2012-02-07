@@ -28,4 +28,5 @@ typedef struct hrfs_param {
 int hrfs_api_getstate(char *path, hrfs_param_t *param);
 int hrfs_api_setbranch(const char *path, hrfs_bindex_t bindex, struct hrfs_branch_valid *valid, hrfs_param_t *param);
 int hrfs_api_setraid(char *path, raid_type_t raid_pattern, hrfs_param_t *param);
+int hrfs_api_rmbranch(const char *path, hrfs_bindex_t bindex, hrfs_param_t *param);
 #endif /* __HRFS_LIBHRFSAPI_H__ */

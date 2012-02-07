@@ -1689,7 +1689,11 @@ int hrfs_readlink(struct dentry *dentry, char __user *buf, int bufsiz)
 
 	HDEBUG("readlink [%*s]\n", dentry->d_name.len, dentry->d_name.name);
 	hidden_dentry = hrfs_d_choose_branch(dentry, HRFS_ATTR_VALID);
-	HASSERT(hidden_dentry);
+	if (IS_ERR(hidden_dentry)) {
+		ret = PTR_ERR(hidden_dentry);
+		goto out;
+	}
+
 	HASSERT(hidden_dentry->d_inode);
 	HASSERT(hidden_dentry->d_inode->i_op);
 	HASSERT(hidden_dentry->d_inode->i_op->readlink);
@@ -1700,6 +1704,7 @@ int hrfs_readlink(struct dentry *dentry, char __user *buf, int bufsiz)
 		fsstack_copy_attr_atime(dentry->d_inode, hidden_dentry->d_inode);
 	}
 
+out:
 	HRETURN(ret);
 }
 EXPORT_SYMBOL(hrfs_readlink);
@@ -2117,20 +2122,24 @@ EXPORT_SYMBOL(hrfs_removexattr);
 ssize_t hrfs_listxattr(struct dentry *dentry, char *list, size_t size)
 {
 	struct dentry *hidden_dentry = NULL;
-	ssize_t err = -EOPNOTSUPP; 
+	ssize_t ret = -EOPNOTSUPP; 
 	HENTRY();
 
 	HDEBUG("listxattr [%*s]\n", dentry->d_name.len, dentry->d_name.name);
 	hidden_dentry = hrfs_d_choose_branch(dentry, HRFS_ATTR_VALID);
-	HASSERT(hidden_dentry);
+	if (IS_ERR(hidden_dentry)) {
+		ret = PTR_ERR(hidden_dentry);
+		goto out;
+	}
 
 	HASSERT(hidden_dentry->d_inode);
 	HASSERT(hidden_dentry->d_inode->i_op);
 	if (hidden_dentry->d_inode->i_op->listxattr) {
-		err = hidden_dentry->d_inode->i_op->listxattr(hidden_dentry, list, size);
+		ret = hidden_dentry->d_inode->i_op->listxattr(hidden_dentry, list, size);
 	}
 
-	HRETURN(err);
+out:
+	HRETURN(ret);
 }
 EXPORT_SYMBOL(hrfs_listxattr);
 
@@ -2145,12 +2154,16 @@ int hrfs_update_inode_size(struct inode *inode)
 	HASSERT(inode);
 	if (S_ISREG(inode->i_mode)) {
 		hidden_inode = hrfs_i_choose_branch(inode, HRFS_DATA_VALID);
-		HASSERT(hidden_inode);
+		if(IS_ERR(hidden_inode)) {
+			ret = PTR_ERR(hidden_inode);
+			goto out;
+		}
 
 		i_size_write(inode, i_size_read(hidden_inode));
 		inode->i_blocks = hidden_inode->i_blocks;
 		HDEBUG("inode(%p) has i_size = %d, i_blocks = %d\n", inode, i_size, i_blocks);
 	}
+out:
 	HRETURN(ret);
 }
 EXPORT_SYMBOL(hrfs_update_inode_size);
@@ -2163,8 +2176,13 @@ int hrfs_update_inode_attr(struct inode *inode)
 
 	HASSERT(inode);
 	hidden_inode = hrfs_i_choose_branch(inode, HRFS_ATTR_VALID);
-	HASSERT(hidden_inode);
+	if(IS_ERR(hidden_inode)) {
+		ret = PTR_ERR(hidden_inode);
+		goto out;
+	}
+
 	fsstack_copy_attr_all(inode, hidden_inode, hrfs_get_nlinks);
+out:
 	HRETURN(ret);
 }
 EXPORT_SYMBOL(hrfs_update_inode_attr);

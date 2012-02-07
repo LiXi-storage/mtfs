@@ -10,6 +10,7 @@ extern struct kmem_cache *hrfs_dentry_info_cache;
 extern struct kmem_cache *hrfs_inode_info_cache;
 extern struct kmem_cache *hrfs_sb_info_cache;
 extern struct kmem_cache *hrfs_device_cache;
+extern struct kmem_cache *hrfs_oplist_cache;
 
 extern int hrfs_debug_level;
 #endif /* __HRFS_MAIN_H__ */

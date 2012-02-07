@@ -12,6 +12,9 @@ struct hrfs_dentry_list {
 	struct dentry *dentry;
 };
 
+/*
+ * Return d_child needed to be dput()
+ */
 struct dentry *hrfs_dchild_create(struct dentry *dparent, const char *name, umode_t mode, dev_t rdev)
 {
 	int ret = 0;
@@ -20,6 +23,7 @@ struct dentry *hrfs_dchild_create(struct dentry *dparent, const char *name, umod
 
 	HASSERT(dparent);
 	HASSERT(name);
+	HASSERT(dparent->d_inode);
 	mutex_lock(&dparent->d_inode->i_mutex);
 
 	dchild = lookup_one_len(name, dparent, strlen(name));
@@ -66,6 +70,8 @@ struct dentry *hrfs_dchild_create(struct dentry *dparent, const char *name, umod
 	}
 	if (ret) {
 		goto out_put;
+	} else {
+		HASSERT(dchild->d_inode);
 	}
 	goto out;
 out_put:
@@ -87,16 +93,18 @@ struct dentry *hrfs_dentry_list_mkpath(struct dentry *d_parent, hrfs_list_t *den
 	HENTRY();
 
 	hrfs_list_for_each_entry(tmp_entry, dentry_list, list) {
-		if (d_child) {
-			dput(d_child);
-		}
 		name = tmp_entry->dentry->d_name.name;
+
 		d_child = hrfs_dchild_create(d_parent_tmp, name, S_IFDIR | S_IRWXU, 0);
+		if (d_parent_tmp != d_parent) {
+			dput(d_parent_tmp);
+		}	
 		if (IS_ERR(d_child)) {
 			HERROR("create [%*s/%s] failed\n",
 			       d_parent_tmp->d_name.len, d_parent_tmp->d_name.name, name);
 			goto out;
 		}
+		d_parent_tmp = d_child;
 	}
 out:
 	if (d_child == NULL) {
@@ -118,6 +126,9 @@ static inline void hrfs_dentry_list_cleanup(hrfs_list_t *dentry_list)
 	}
 }
 
+/*
+ * needed to dput $dentry after being called.
+ */
 struct dentry *hrfs_dchild_remove(struct dentry *dparent, const char *name)
 {
 	int ret = 0;
@@ -153,16 +164,18 @@ struct dentry *hrfs_dchild_remove(struct dentry *dparent, const char *name)
 	case S_IFIFO:
 	case S_IFSOCK:
 		ret = vfs_unlink(dparent->d_inode, dchild);
+		HDEBUG("vfs_unlink, ret = %d\n", ret);
 		break;
 	default:
-		HDEBUG("bad file type 0%o\n", dchild->d_inode->i_mode & S_IFMT);
+		HERROR("bad file type 0%o\n", dchild->d_inode->i_mode & S_IFMT);
 		ret = -EINVAL;
 	}
 
 	if (ret) {
 		dput(dchild);
 	} else {
-		HASSERT(dchild->d_inode == NULL);
+		/* This is not true, but why? */
+		//HASSERT(dchild->d_inode == NULL);
 	}
 	
 out:
@@ -232,6 +245,10 @@ repeat:
 	       dchild_old->d_name.len, dchild_old->d_name.name,
 	       dparent->d_name.len, dparent->d_name.name,
 	       dchild_new->d_name.len, dchild_new->d_name.name);
+	/*
+	 * Rename in the same dir, and dir is locked,
+	 * no need to lock_rename()
+	 */
 	ret = vfs_rename(dparent->d_inode, dchild_old,
 	                 dparent->d_inode, dchild_new);
 
@@ -260,7 +277,6 @@ static inline int mutex_lock_if_needed(struct mutex *lock)
 	return 0;
 }
 
-#define inode_is_locked(inode) (mutex_is_locked(&(inode)->i_mutex))
 /*
  * p1 and p2 should be directories on the same fs.
  */
@@ -369,10 +385,11 @@ int hrfs_backup_branch(struct dentry *dentry, hrfs_bindex_t bindex)
 		if (tmp_entry == NULL) {
 			ret = -ENOMEM;
 			dput(hidden_d_tmp);
+			HBUG();
 			goto out_free_list;
 		}
 		tmp_entry->dentry = hidden_d_tmp;
-		hrfs_list_add_tail(&tmp_entry->list, &dentry_list);
+		hrfs_list_add(&tmp_entry->list, &dentry_list);
 	}
 
 	if (hrfs_list_empty(&dentry_list)) {
