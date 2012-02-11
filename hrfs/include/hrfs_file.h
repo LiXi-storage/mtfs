@@ -36,6 +36,7 @@ extern ssize_t hrfs_file_aio_write(struct kiocb *iocb, const char __user *buf,
                                    size_t count, loff_t pos);
 extern loff_t hrfs_file_llseek(struct file *file, loff_t offset, int origin);
 extern int hrfs_file_mmap(struct file * file, struct vm_area_struct * vma);
+extern int hrfs_file_mmap_nowrite(struct file *file, struct vm_area_struct * vma);
 extern ssize_t hrfs_file_sendfile(struct file *in_file, loff_t *ppos,
                                   size_t len, read_actor_t actor, void *target);
 extern int hrfs_ioctl_write(struct inode *inode, struct file *file, unsigned int cmd, unsigned long arg);

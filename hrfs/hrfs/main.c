@@ -330,11 +330,6 @@ out:
 	return ret;
 }
 
-//#define MEM_LEAK_TEST
-#ifdef MEM_LEAK_TEST
-char *memtest = NULL;
-#endif
-
 static int __init hrfs_init(void)
 {
 	int ret = 0;
@@ -349,28 +344,26 @@ static int __init hrfs_init(void)
 
 	ret = hrfs_insert_proc();
 	if (ret) {
-		HERROR("insert_proc: error %d\n", ret);
+		HERROR("failed to insert_proc: error %d\n", ret);
 		goto out;
 	}
 	
 	ret = register_filesystem(&hrfs_fs_type);
+	if (ret) {
+		HERROR("failed to register filesystem type hrfs: error %d\n", ret);
+		goto out_remove_proc;
+	}
 
-#ifdef MEM_LEAK_TEST
-	HRFS_ALLOC(memtest, sizeof(*memtest));
-	if (unlikely(memtest == NULL)) {
-		HERROR("Memroy alloc failed\n");
-		return -ENOMEM;
+	ret = register_filesystem(&hrfs_hidden_fs_type);
+	if (ret) {
+		HERROR("failed to register filesystem type hidden_hrfs: error %d\n", ret);
+		goto out_unregister_hrfs;
 	}
-	
-	HRFS_SLAB_ALLOC(memtest, hrfs_inode_info_cache, sizeof(struct hrfs_inode_info));
-	if (unlikely(memtest == NULL)) {
-		HERROR("Slab alloc failed\n");
-		return -ENOMEM;
-	}
-#endif
-	register_filesystem(&hrfs_hidden_fs_type);
+
 	goto out;
-//remove_proc:
+out_unregister_hrfs:
+	unregister_filesystem(&hrfs_fs_type);
+out_remove_proc:
 	hrfs_remove_proc();
 out:
 	return ret;
@@ -382,7 +375,6 @@ static void __exit hrfs_exit(void)
 	hrfs_remove_proc();
 	unregister_filesystem(&hrfs_fs_type);
 	hrfs_free_kmem_caches();
-
 	unregister_filesystem(&hrfs_hidden_fs_type);
 }
 

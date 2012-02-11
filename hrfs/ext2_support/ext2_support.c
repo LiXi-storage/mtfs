@@ -256,7 +256,7 @@ const char *supported_secondary_types[] = {
 
 struct hrfs_junction hrfs_ext2_junction = {
 	junction_owner:          THIS_MODULE,
-	junction_name:           "unknown",
+	junction_name:           "ext2",
 	primary_type:            "ext2",
 	secondary_types:         supported_secondary_types,
 	fs_ops:                  &hrfs_ext2_operations,

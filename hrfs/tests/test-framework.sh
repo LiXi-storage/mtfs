@@ -44,8 +44,8 @@ filesystem_free()
 
 filesystem_is_mounted()
 {
-	local FS_TYPE=$1
-	local MOUNT_POINT=$2
+	local FS_TYPE="$1"
+	local MOUNT_POINT="$2"
 	/bin/grep -w $MOUNT_POINT /proc/mounts | awk '{ print $3 }' | grep -w -q $FS_TYPE
 }
 
@@ -63,6 +63,8 @@ mount_filesystem_noexit()
 
 		if ! $(filesystem_is_mounted $FS_TYPE $MOUNT_POINT); then
 			echo "failed"
+			echo "fs_type: $FS_TYPE"
+			/bin/grep -w $MOUNT_POINT /proc/mounts | awk '{ print $3 }' | grep $FS_TYPE
 			echo "CMD: $MOUNT_CMD $DEV $MOUNT_POINT $OPTION"
 			return -1
 		else
@@ -155,9 +157,9 @@ umount_lowerfs2()
 
 remount_lowerfs()
 {
-	mount_lowerfs
+	umount_lowerfs
 	if [ "$DOING_MUTLTI" = "yes" ]; then
-		mount_lowerfs2
+		umount_lowerfs2
 	fi
 
 	if [ "$LOWERFS_NAME" = "swgfs" ]; then 
@@ -165,9 +167,10 @@ remount_lowerfs()
 		#/bin/sleep 2
 		# BUG: if no sleep, mount may fail complaining "device already exist"
 	fi
-	umount_lowerfs
+
+	mount_lowerfs
 	if [ "$DOING_MUTLTI" = "yes" ]; then
-		umount_lowerfs2
+		mount_lowerfs2
 	fi
 	return
 }
@@ -554,7 +557,6 @@ init_test_env()
 {
 	export CONFIGS=${CONFIGS:-local}
 	. $TESTS_DIR/cfg/$CONFIGS.sh
-
 	export TEST_FAILED=false
 	export SAVE_PWD=${SAVE_PWD:-$PWD}
 	export TESTSUITE=`basename $0 .sh`
@@ -662,7 +664,6 @@ init_test_env()
 	
 	export UTIL_HRFS=${UTIL_HRFS:-$UTILS_DIR/hrfs}
 	check_command $UTIL_HRFS
-
 	cleanup_and_setup
 
 	if [ -d $DIR ]; then

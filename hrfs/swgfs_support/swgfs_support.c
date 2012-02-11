@@ -121,68 +121,28 @@ struct page *hrfs_swgfs_nopage(struct vm_area_struct *vma, unsigned long address
 	HRETURN(page);
 }
 
-struct vm_operations_struct hrfs_swgfs_file_vm_ops = {
+struct vm_operations_struct hrfs_swgfs_vm_ops = {
 	nopage:         hrfs_swgfs_nopage,
 	populate:       filemap_populate
 };
 
-#if 0
-int hrfs_swgfs_file_mmap(struct file *file, struct vm_area_struct * vma)
-{
-	int ret = 0;
-	
-	struct hrfs_operations *operations = NULL;
-	HENTRY();
-	
-	operations = hrfs_d2ops(file->f_dentry)
-	if (operations->dops) {
-		dentry->d_op = operations->dops;
-	} else {
-		HDEBUG("vm operations not supplied, use default\n");
-		dentry->d_op = &hrfs_file_vm_ops;
-		HDEBUG();
-	}
-
-	ret = generic_file_mmap(file, vma);
-	if (ret == 0) {
-		vma->vm_ops = &hrfs_file_vm_ops;
-		/* Swgfs will update the inode's size and mtime */
-	}
-	HRETURN(ret);
-}
-#endif
-
-static int hrfs_swgfs_file_mmap(struct file *file, struct vm_area_struct * vma)
-{
-	int ret = 0;
-	HENTRY();
-
-	ret = generic_file_mmap(file, vma);
-	if (ret == 0) {
-		vma->vm_ops = &hrfs_swgfs_file_vm_ops;
-		/* Swgfs will update the inode's size and mtime */
-	}
-
-	HRETURN(ret);
-}
-
 ssize_t hrfs_swgfs_file_readv(struct file *file, const struct iovec *iov,
                                unsigned long nr_segs, loff_t *ppos)
 { 
-	ssize_t err = 0;
+	ssize_t ret = 0;
 	HENTRY();
 
 	if (hrfs_f2info(file) != NULL) {
-		err = ll_hrfs_file_readv(file, hrfs_f2bnum(file), hrfs_f2barray(file), iov, nr_segs, ppos);
+		ret = ll_hrfs_file_readv(file, hrfs_f2bnum(file), hrfs_f2barray(file), iov, nr_segs, ppos);
 	}
 
-	HRETURN(err);
+	HRETURN(ret);
 }
 
 ssize_t hrfs_swgfs_file_writev(struct file *file, const struct iovec *iov,
                                 unsigned long nr_segs, loff_t *ppos)
 {
-	ssize_t err = 0;
+	ssize_t ret = 0;
 	struct iovec *iov_new = NULL;
 	struct iovec *iov_tmp = NULL;
 	size_t length = sizeof(*iov) * nr_segs;
@@ -190,27 +150,40 @@ ssize_t hrfs_swgfs_file_writev(struct file *file, const struct iovec *iov,
 
 	HRFS_ALLOC(iov_new, length);
 	if (!iov_new) {
-		err = -ENOMEM;
+		ret = -ENOMEM;
 		goto out;
 	}
 	
 	HRFS_ALLOC(iov_tmp, length);
 	if (!iov_tmp) {
-		err = -ENOMEM;
-		goto new_alloced_err;
+		ret = -ENOMEM;
+		goto out_new_alloced;
 	}	
 	memcpy((char *)iov_new, (char *)iov, length); 
 	
 	if (hrfs_f2info(file) != NULL) {
-		err = ll_hrfs_file_writev(file, hrfs_f2bnum(file), hrfs_f2barray(file), iov, nr_segs, ppos);
+		ret = ll_hrfs_file_writev(file, hrfs_f2bnum(file), hrfs_f2barray(file), iov, nr_segs, ppos);
 	}
 	hrfs_update_inode_size(file->f_dentry->d_inode);
 
 //tmp_alloced_err:
 	HRFS_FREE(iov_tmp, length);
-new_alloced_err:
+out_new_alloced:
 	HRFS_FREE(iov_new, length);
 out:
+	HRETURN(ret);
+}
+
+ssize_t hrfs_swgfs_file_sendfile(struct file *in_file, loff_t *ppos,
+                                 size_t len, read_actor_t actor, void *target)
+{
+	ssize_t err = 0;
+	HENTRY();
+
+	if (hrfs_f2info(in_file) != NULL) { 
+		err = ll_hrfs_file_sendfile(in_file, hrfs_f2bnum(in_file), hrfs_f2barray(in_file), ppos, len, actor, target);
+	}
+
 	HRETURN(err);
 }
 
@@ -221,7 +194,7 @@ struct file_operations hrfs_swgfs_main_fops =
 	aio_read:   hrfs_file_aio_read,
 	write:      hrfs_file_write,
 	aio_write:  hrfs_file_aio_write,
-	sendfile:   hrfs_file_sendfile, 
+	sendfile:   hrfs_swgfs_file_sendfile, 
 	readv:      hrfs_file_readv,
 #if 0
 	writev:     hrfs_swgfs_file_writev,
@@ -231,7 +204,7 @@ struct file_operations hrfs_swgfs_main_fops =
 	readdir:    hrfs_readdir,
 	poll:       hrfs_poll,
 	ioctl:      hrfs_ioctl,
-	mmap:       hrfs_swgfs_file_mmap,
+	mmap:       hrfs_file_mmap,
 	open:       hrfs_open,
 	release:    hrfs_release,
 	fsync:      hrfs_fsync,
@@ -244,109 +217,8 @@ struct address_space_operations hrfs_swgfs_aops =
 {
 	direct_IO:      hrfs_direct_IO,
 	writepage:      hrfs_writepage,
-	readpage:       hrfs_readpage_1,
+	readpage:       hrfs_readpage,
 };
-
-
-extern int ll_hrfs_inode_set_flag(struct inode *inode, __u32 flag);
-extern int ll_hrfs_inode_get_flag(struct inode *inode, __u32 *hrfs_flag);
-extern int ll_hrfs_idata_init(struct inode *inode, struct inode *parent_inode, int is_primary);
-extern int ll_hrfs_idata_finit(struct inode *inode);
-
-#include <hrfs_device.h>
-#if 0
-static int hrfs_swgfs_setflags_branch(struct inode *inode, struct file *file, unsigned long arg, hrfs_bindex_t bindex)
-{
-	int ret = 0;
-	struct file *hidden_file = hrfs_f2branch(file, bindex);
-	struct inode *hidden_inode = hrfs_i2branch(inode, bindex);
-	HENTRY();
-
-	ret = hrfs_device_branch_errno(hrfs_i2dev(inode), bindex);
-	if (ret) {
-		HDEBUG("branch[%d] is abandoned\n", bindex);
-		goto out; 
-	}
-
-	if (hidden_file && hidden_inode) {
-		HASSERT(hidden_file->f_op);
-		HASSERT(hidden_file->f_op->ioctl);
-		ret = hidden_file->f_op->ioctl(hidden_inode, hidden_file, FSFILT_IOC_SETFLAGS, arg);
-	} else {
-		HERROR("branch[%d] of file [%*s] is NULL, ioctl setflags skipped\n", 
-		       bindex, file->f_dentry->d_name.len, file->f_dentry->d_name.name);
-		ret = -ENOENT;
-	}
-
-out:
-	HRETURN(ret);
-}
-
-static int hrfs_swgfs_setflags(struct inode *inode, struct file *file, unsigned long arg)
-{
-	int ret = 0;
-	hrfs_bindex_t i = 0;
-	hrfs_bindex_t bindex = 0;
-	struct hrfs_operation_list *list = NULL;
-	hrfs_operation_result_t result = {0};	
-	HENTRY();
-
-	HASSERT(hrfs_f2info(file));
-
-	list = hrfs_oplist_build(inode);
-	if (unlikely(list == NULL)) {
-		HERROR("failed to build operation list\n");
-		ret = -ENOMEM;
-		goto out;
-	}
-
-	if (list->latest_bnum == 0) {
-		HERROR("file [%*s] has no valid branch, please check it\n",
-		       file->f_dentry->d_name.len, file->f_dentry->d_name.name);
-		if (!(hrfs_i2dev(inode)->no_abort)) {
-			ret = -EIO;
-			goto out_free_oplist;
-		}
-	}
-
-	for (i = 0; i < hrfs_f2bnum(file); i++) {
-		bindex = list->op_binfo[i].bindex;
-		ret = hrfs_swgfs_setflags_branch(inode, file, arg, bindex);
-		result.ret = ret;
-		hrfs_oplist_setbranch(list, i, (ret == 0 ? 1 : 0), result);
-		if (i == list->latest_bnum - 1) {
-			hrfs_oplist_check(list);
-			if (list->success_latest_bnum <= 0) {
-				HDEBUG("operation failed for all latest %d branches\n", list->latest_bnum);
-				if (!(hrfs_i2dev(inode)->no_abort)) {
-					result = hrfs_oplist_result(list);
-					ret = result.ret;
-					goto out_free_oplist;
-				}
-			}
-		}
-	}
-
-	hrfs_oplist_check(list);
-	if (list->success_bnum <= 0) {
-		result = hrfs_oplist_result(list);
-		ret = result.ret;
-		goto out_free_oplist;
-	}
-
-	ret = hrfs_oplist_update(inode, list);
-	if (ret) {
-		HERROR("failed to update inode\n");
-		HBUG();
-	}
-
-	hrfs_update_inode_attr(inode);
-out_free_oplist:
-	hrfs_oplist_free(list);
-out:
-	HRETURN(ret);
-}
-#endif
 
 #include <hrfs_stack.h>
 #include <hrfs_ioctl.h>
@@ -415,6 +287,7 @@ struct hrfs_operations hrfs_swgfs_operations = {
 	dir_fops:                &hrfs_swgfs_dir_fops,
 	sops:                    &hrfs_swgfs_sops,
 	dops:                    &hrfs_swgfs_dops,
+	vm_ops:                  &hrfs_swgfs_vm_ops,
 	ioctl:                   &hrfs_swgfs_ioctl,
 };
 
@@ -425,12 +298,16 @@ const char *supported_secondary_types[] = {
 
 struct hrfs_junction hrfs_swgfs_junction = {
 	junction_owner:          THIS_MODULE,
-	junction_name:           "unknown",
+	junction_name:           "swgfs",
 	primary_type:            "swgfs",
 	secondary_types:         supported_secondary_types,
 	fs_ops:                  &hrfs_swgfs_operations,
 };
 
+extern int ll_hrfs_inode_set_flag(struct inode *inode, __u32 flag);
+extern int ll_hrfs_inode_get_flag(struct inode *inode, __u32 *hrfs_flag);
+extern int ll_hrfs_idata_init(struct inode *inode, struct inode *parent_inode, int is_primary);
+extern int ll_hrfs_idata_finit(struct inode *inode);
 
 struct lowerfs_operations lowerfs_swgfs_ops = {
 	lowerfs_owner:           THIS_MODULE,

@@ -123,7 +123,7 @@ out:
 }
 EXPORT_SYMBOL(hrfs_invalid_branch);
 
-int lowerfs_inode_get_flag_default(struct inode *inode, __u32 *hrfs_flag)
+int lowerfs_inode_get_flag_xattr(struct inode *inode, __u32 *hrfs_flag, const char *xattr_name)
 {
 	struct dentry de = { .d_inode = inode };
 	int ret = 0;
@@ -140,7 +140,7 @@ int lowerfs_inode_get_flag_default(struct inode *inode, __u32 *hrfs_flag)
 		need_unlock = 1;
 	}
 
-	ret = inode->i_op->getxattr(&de, HRFS_FLAG_XATTR_NAME,
+	ret = inode->i_op->getxattr(&de, xattr_name,
                               &disk_flag, sizeof(disk_flag));
 	if (ret == -ENODATA) {
 		HDEBUG("not set\n");
@@ -173,9 +173,17 @@ out:
 	}
 	HRETURN(ret);
 }
+EXPORT_SYMBOL(lowerfs_inode_get_flag_xattr);
+
+int lowerfs_inode_get_flag_default(struct inode *inode, __u32 *hrfs_flag)
+{
+	int ret = 0;
+	ret = lowerfs_inode_get_flag_xattr(inode, hrfs_flag, HRFS_FLAG_XATTR_NAME);
+	HRETURN(ret);
+}
 EXPORT_SYMBOL(lowerfs_inode_get_flag_default);
 
-int lowerfs_inode_set_flag_default(struct inode *inode, __u32 hrfs_flag)
+int lowerfs_inode_set_flag_xattr(struct inode *inode, __u32 hrfs_flag, const char *xattr_name)
 {
 	int ret = 0;
 	struct dentry de = { .d_inode = inode };
@@ -202,7 +210,7 @@ int lowerfs_inode_set_flag_default(struct inode *inode, __u32 hrfs_flag)
 		goto out;
 	}
 
-	ret = inode->i_op->setxattr(&de, HRFS_FLAG_XATTR_NAME,
+	ret = inode->i_op->setxattr(&de, xattr_name,
                              &disk_flag, sizeof(disk_flag), flag);
 	if (ret != 0) {
 		HERROR("setxattr failed, rc = %d\n", ret);
@@ -213,6 +221,14 @@ out:
 	if (need_unlock) {
 		mutex_unlock(&inode->i_mutex);
 	}
+	HRETURN(ret);
+}
+EXPORT_SYMBOL(lowerfs_inode_set_flag_xattr);
+
+int lowerfs_inode_set_flag_default(struct inode *inode, __u32 hrfs_flag)
+{
+	int ret = 0;
+	ret = lowerfs_inode_set_flag_xattr(inode, hrfs_flag, HRFS_FLAG_XATTR_NAME);
 	HRETURN(ret);
 }
 EXPORT_SYMBOL(lowerfs_inode_set_flag_default);

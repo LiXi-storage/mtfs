@@ -6,7 +6,8 @@
 #include "mmap_internal.h"
 #include <linux/uio.h>
 
-int hrfs_writepage_branch(struct page *page, struct inode *inode, hrfs_bindex_t bindex, unsigned hidden_page_index, struct writeback_control *wbc)
+static int hrfs_writepage_branch(struct page *page, struct inode *inode, hrfs_bindex_t bindex,
+                                 unsigned hidden_page_index, struct writeback_control *wbc)
 {
 	int ret = 0;
 	struct inode *lower_inode = NULL;
@@ -63,24 +64,6 @@ out:
 	HRETURN(ret);
 }
 
-int hrfs_locate_page_raid1(struct page *page, hrfs_bindex_t *bindex, unsigned long *hidden_page_index)
-{
-	unsigned long page_index = page->index;
-	int ret = 0;
-	HENTRY();
-
-	*hidden_page_index = page_index;
-
-	ret = hrfs_i_choose_bindex(page->mapping->host, HRFS_DATA_VALID, bindex);
-	if (ret) {
-		HERROR("choose bindex failed, ret = %d\n", ret);
-		goto out;
-	}
-out:
-	HRETURN(ret);
-}
-
-#ifndef LIXI_20120203
 int hrfs_writepage(struct page *page, struct writeback_control *wbc)
 {
 	int ret = 0;
@@ -148,49 +131,6 @@ out:
 	unlock_page(page);
 	HRETURN(ret);
 }
-#else
-int hrfs_writepage(struct page *page, struct writeback_control *wbc)
-{
-	int ret = 0;
-	struct inode *inode = page->mapping->host;
-	hrfs_bindex_t bindex = 0;
-	hrfs_bindex_t bnum = hrfs_i2bnum(inode);
-	hrfs_bindex_t success_bnum = 0;
-	unsigned long hidden_page_index = 0;
-	HENTRY();
-
-	ret = hrfs_locate_page_raid1(page, &bindex, &hidden_page_index);
-	if (ret) {
-		HERROR("locate error, ret = %d\n", ret);
-		goto out;
-	}
-
-
-	for (bindex = 0; bindex < bnum; bindex++) {
-		ret = hrfs_do_writepage(page, inode, bindex, hidden_page_index, wbc);
-		if (ret) {
-			/* TODO: set data broken flag */
-		} else {
-			success_bnum ++;
-		}
-	}
-
-	if (success_bnum) {
-		ret = 0;
-	}
-
-	if (ret) {
-		ClearPageUptodate(page);
-	} else {
-		SetPageUptodate(page);
-	}
-
-	unlock_page(page);
-
-out:
-	HRETURN(ret);
-}
-#endif
 EXPORT_SYMBOL(hrfs_writepage);
 
 struct page *hrfs_read_cache_page(struct file *file, struct inode *hidden_inode, hrfs_bindex_t bindex, unsigned page_index)
@@ -217,37 +157,9 @@ out:
 	return hidden_page;
 }
 
-int hrfs_recover_page_raid1(struct file *file, struct inode *inode, void *broken_page_data, hrfs_bindex_t broken_bindex, unsigned long hidden_page_index)
-{
-	hrfs_bindex_t bnum = 0;
-	int i = 0;
-	struct inode *correct_inode = NULL;
-	struct page *correct_page = NULL;
-	int ret = 0;
-	
-	bnum = hrfs_i2bnum(inode);
-	for (i = 0; i < bnum; i++) {
-		if (i == broken_bindex) {
-			continue;
-		}
-
-		correct_inode = hrfs_i2branch(inode, i);
-		correct_page = hrfs_read_cache_page(file, correct_inode, i, hidden_page_index); 
-		if (!IS_ERR(correct_page)) {
-			goto copy;
-		}
-	}
-	ret = -EIO;
-	goto out;
-copy:
-	copy_page_data(broken_page_data, correct_page, correct_inode, hidden_page_index);
-out:
-	return ret;
-}
-
 static int hrfs_readpage_branch(struct file *file, char *page_data, hrfs_bindex_t bindex, unsigned hidden_page_index)
 {
-	int err = 0;
+	int ret = 0;
 	struct dentry *dentry = NULL;
 	struct file *hidden_file = NULL;
 	struct inode *inode = NULL;
@@ -263,15 +175,16 @@ static int hrfs_readpage_branch(struct file *file, char *page_data, hrfs_bindex_
 	hidden_inode = hrfs_i2branch(inode, bindex);
 
 	hidden_page = hrfs_read_cache_page(hidden_file, hidden_inode, bindex, hidden_page_index);
-
 	if (IS_ERR(hidden_page)) {
-		err = hrfs_recover_page_raid1(file, inode, page_data, bindex, hidden_page_index);
-	} else {
-		copy_page_data(page_data, hidden_page, hidden_inode, hidden_page_index);
-		page_cache_release(hidden_page);
+		ret = PTR_ERR(hidden_page);
+		goto out;
 	}
 
-	HRETURN(err);
+	copy_page_data(page_data, hidden_page, hidden_inode, hidden_page_index);
+	page_cache_release(hidden_page);
+
+out:
+	HRETURN(ret);
 }
 
 static int hrfs_readpage_nounlock(struct file *file, struct page *page)
@@ -388,7 +301,7 @@ ssize_t hrfs_direct_IO(int rw, struct kiocb *kiocb,
 	HRFS_ALLOC(iov_tmp, length);
 	if (!iov_tmp) {
 		ret = -ENOMEM;
-		goto new_alloced_err;
+		goto out_new_alloced;
 	}	
 	memcpy((char *)iov_new, (char *)iov, length); 
 	
@@ -418,28 +331,12 @@ ssize_t hrfs_direct_IO(int rw, struct kiocb *kiocb,
 
 //tmp_alloced_err:
 	HRFS_FREE(iov_tmp, length);
-new_alloced_err:
+out_new_alloced:
 	HRFS_FREE(iov_new, length);
 out:
 	HRETURN(ret);
 }
 EXPORT_SYMBOL(hrfs_direct_IO);
-
-int hrfs_readpage_1(struct file *file, struct page *page)
-{
-	int err = 0;
-	HENTRY();
-
-	HASSERT(PageLocked(page));
-	HASSERT(!PageUptodate(page));
-	HASSERT(atomic_read(&file->f_dentry->d_inode->i_count) > 0);
-
-	err = hrfs_readpage_nounlock(file, page);
-	unlock_page(page);
-
-	HRETURN(err);
-}
-EXPORT_SYMBOL(hrfs_readpage_1);
 
 /**
  * Page fault handler.
@@ -470,7 +367,7 @@ struct address_space_operations hrfs_aops =
 {
 	direct_IO:      hrfs_direct_IO,
 	writepage:      hrfs_writepage,
-	readpage:       hrfs_readpage_1,
+	readpage:       hrfs_readpage,
 	prepare_write:  hrfs_prepare_write,  /* Never needed */
 	commit_write:   hrfs_commit_write    /* Never needed */
 };

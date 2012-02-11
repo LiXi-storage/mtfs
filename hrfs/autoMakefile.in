@@ -46,7 +46,8 @@ target_triplet = @target@
 @EXT4_SUPPORT_TRUE@am__append_4 = $(EXT4_SUPPORT_SUBDIRS)
 @NFS_SUPPORT_TRUE@am__append_5 = $(NFS_SUPPORT_SUBDIRS)
 @TMPFS_SUPPORT_TRUE@am__append_6 = $(TMPFS_SUPPORT_SUBDIRS)
-@MANAGE_TRUE@am__append_7 = $(MANAGE_SUBDIRS)
+@NTFS3G_SUPPORT_TRUE@am__append_7 = $(NTFS3G_SUPPORT_SUBDIRS)
+@MANAGE_TRUE@am__append_8 = $(MANAGE_SUBDIRS)
 subdir = hrfs
 DIST_COMMON = $(srcdir)/Makefile.in $(srcdir)/autoMakefile.am \
 	$(srcdir)/autoMakefile.in ChangeLog
@@ -169,6 +170,8 @@ MODULE_TARGET = @MODULE_TARGET@
 MOSTLYCLEANFILES = @MOSTLYCLEANFILES@
 NFS_SUPPORT_FALSE = @NFS_SUPPORT_FALSE@
 NFS_SUPPORT_TRUE = @NFS_SUPPORT_TRUE@
+NTFS3G_SUPPORT_FALSE = @NTFS3G_SUPPORT_FALSE@
+NTFS3G_SUPPORT_TRUE = @NTFS3G_SUPPORT_TRUE@
 OBJEXT = @OBJEXT@
 PACKAGE = @PACKAGE@
 PACKAGE_BUGREPORT = @PACKAGE_BUGREPORT@
@@ -260,14 +263,16 @@ EXT3_SUPPORT_SUBDIRS := ext3_support
 EXT4_SUPPORT_SUBDIRS := ext4_support
 NFS_SUPPORT_SUBDIRS := nfs_support
 TMPFS_SUPPORT_SUBDIRS := tmpfs_support
+NTFS3G_SUPPORT_SUBDIRS := ntfs3g_support
 MANAGE_SUBDIRS := manage
 SUBDIRS := $(ALWAYS_SUBDIRS) $(am__append_1) $(am__append_2) \
 	$(am__append_3) $(am__append_4) $(am__append_5) \
-	$(am__append_6) $(am__append_7)
+	$(am__append_6) $(am__append_7) $(am__append_8)
 DIST_SUBDIRS := $(ALWAYS_SUBDIRS) $(SWGFS_SUPPORT_SUBDIRS) \
 	$(EXT2_SUPPORT_SUBDIRS) $(EXT3_SUPPORT_SUBDIRS) \
 	$(EXT4_SUPPORT_SUBDIRS) $(NFS_SUPPORT_SUBDIRS) \
-	$(TMPFS_SUPPORT_SUBDIRS) $(MANAGE_SUBDIRS)
+	$(TMPFS_SUPPORT_SUBDIRS) $(NTFS3G_SUPPORT_SUBDIRS) \
+	$(MANAGE_SUBDIRS)
 EXTRA_DIST = 
 BUILD_VER_H = $(top_builddir)/hrfs/include/hrfs_build_version.h
 all: all-recursive

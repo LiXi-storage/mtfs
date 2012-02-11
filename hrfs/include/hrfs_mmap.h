@@ -12,7 +12,6 @@ extern int hrfs_commit_write(struct file *file, struct page *page, unsigned from
 extern ssize_t hrfs_direct_IO(int rw, struct kiocb *kiocb,
 						      const struct iovec *iov, loff_t file_offset,
 						      unsigned long nr_segs);
-extern int hrfs_readpage_1(struct file *file, struct page *page);
 extern struct page *hrfs_nopage(struct vm_area_struct *vma, unsigned long address,
                          int *type);
 #endif /* __HRFS_MMAP_H__ */

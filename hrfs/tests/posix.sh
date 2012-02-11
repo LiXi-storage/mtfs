@@ -11,6 +11,7 @@ EXCEPT_SLOW="24v 51a 51b 51c"
 
 export CONFIGS=${CONFIGS:-local}
 . $TESTS_DIR/cfg/$CONFIGS.sh
+
 if [ "$LOWERFS_STRICT_TIMESTAMP" = "no" ]; then
 	LOWERFS_BUG_326="36a 36c 36d 39c"
 fi
@@ -19,13 +20,26 @@ if [ "$LOWERFS_SUPPORT_CHATTR" = "no" ]; then
 	LOWERFS_BUG_327="52a"
 fi
 
+if [ "$LOWERFS_NO_ATTR" = "yes" ]; then
+	LOWERFS_SKIP_ATTR="0b 5 6 7a 8 11 12 19c 22 24m 28 33 35a 36e 39 40 52a"
+fi
+
+if [ "$LOWERFS_NO_MMAP" = "yes" ]; then
+	LOWERFS_SKIP_NOMMAP="61 99"
+fi
+
+if [ "$LOWERFS_MMAP_NO_WRITE" = "yes" ]; then
+	LOWERFS_SKIP_MMAP_NO_WRITE="43a 43b"
+fi
+
 ALWAYS_EXCEPT=${ALWAYS_EXCEPT:-"$BUG_318 $LOWERFS_BUG_251 $BUG_242 $BUG_304
-                                $LOWERFS_BUG_305 $LOWERFS_BUG_326 $LOWERFS_BUG_327 $POSIX_EXCEPT"}
+                                $LOWERFS_BUG_305 $LOWERFS_BUG_326 $LOWERFS_BUG_327
+                                $LOWERFS_SKIP_ATTR $LOWERFS_SKIP_NOMMAP
+                                $LOWERFS_SKIP_MMAP_NO_WRITE $POSIX_EXCEPT"}
 
 TESTS_DIR=${TESTS_DIR:-$(cd $(dirname $0); echo $PWD)}
 . $TESTS_DIR/test-framework.sh
 init_test_env
-
 echo "==== $0: started ===="
 
 umask 077
@@ -2385,7 +2399,7 @@ test_155() {
 	true
 }
 leak_detect_state_push "no"
-run_test 155 "Verification of correctness: read cache:?? write_cache:??"
+run_test 155 "Verification of correctness"
 leak_detect_state_pop
 
 test_212() {

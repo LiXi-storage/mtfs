@@ -9,4 +9,5 @@ subdir-m += hrfs random
 @EXT4_SUPPORT_TRUE@subdir-m += ext4_support
 @EXT4_SUPPORT_TRUE@subdir-m += nfs_support
 @TMPFS_SUPPORT_TRUE@subdir-m += tmpfs_support
+@NTFS3G_SUPPORT_TRUE@subdir-m += ntfs3g_support
 @INCLUDE_RULES@

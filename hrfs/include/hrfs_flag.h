@@ -205,6 +205,8 @@ out:
 	HRETURN(hidden_file);
 }
 
+extern int lowerfs_inode_get_flag_xattr(struct inode *inode, __u32 *hrfs_flag, const char *xattr_name);
+extern int lowerfs_inode_set_flag_xattr(struct inode *inode, __u32 hrfs_flag, const char *xattr_name);
 extern int lowerfs_inode_get_flag_default(struct inode *inode, __u32 *hrfs_flag);
 extern int lowerfs_inode_set_flag_default(struct inode *inode, __u32 hrfs_flag);
 #endif /* defined (__linux__) && defined(__KERNEL__) */

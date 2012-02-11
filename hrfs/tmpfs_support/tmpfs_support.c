@@ -222,7 +222,7 @@ struct file_operations hrfs_tmpfs_main_fops =
 struct address_space_operations hrfs_tmpfs_aops =
 {
 	writepage:      hrfs_writepage,
-	readpage:       hrfs_readpage_1,
+	readpage:       hrfs_readpage,
 	prepare_write:  hrfs_prepare_write,  /* Never needed */
 	commit_write:   hrfs_commit_write    /* Never needed */
 };

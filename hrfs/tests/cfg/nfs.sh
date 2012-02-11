@@ -67,7 +67,7 @@ LOWERFS_SUPPORT_DIRECTIO=${LOWERFS_SUPPORT_DIRECTIO:-yes}
 
 #
 # When dir is opened and unlinked, whether it will be unreacheable at all.
-# Especially for nfs. Other filesystems usually keep the dentry untill the dir is closed.
+# Especially for nfs and fuse. Other filesystems usually keep the dentry untill the dir is closed.
 #
 LOWERFS_DIR_UNREACHEABLE_WHEN_REMOVED_THOUGH_OPENED=${LOWERFS_DIR_UNREACHEABLE_WHEN_REMOVED_THOUGH_OPENED:-yes}
 

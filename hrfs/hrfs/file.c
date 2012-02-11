@@ -880,22 +880,61 @@ loff_t hrfs_file_llseek(struct file *file, loff_t offset, int origin)
 }
 EXPORT_SYMBOL(hrfs_file_llseek);
 
-int hrfs_file_mmap(struct file * file, struct vm_area_struct * vma)
+int hrfs_file_mmap(struct file *file, struct vm_area_struct * vma)
 {
 	int ret = 0;
+	struct hrfs_operations *operations = NULL;
 	HENTRY();
 
 	ret = generic_file_mmap(file, vma);
-	if (ret == 0) {
-		vma->vm_ops = &hrfs_file_vm_ops;
-		/* Swgfs will update the inode's size and mtime */
+	if (ret) {
+		goto out;
 	}
 
+	operations = hrfs_f2ops(file);
+	if (operations->vm_ops) {
+		vma->vm_ops = operations->vm_ops;
+	} else {
+		HDEBUG("vm operations not supplied, use default\n");
+		vma->vm_ops = &hrfs_file_vm_ops;
+	}
+
+	/* Swgfs will update the inode's size and mtime */
+out:
 	HRETURN(ret);
 }
 EXPORT_SYMBOL(hrfs_file_mmap);
 
-#ifndef LIXI_20110928
+int hrfs_file_mmap_nowrite(struct file *file, struct vm_area_struct * vma)
+{
+	int ret = 0;
+	struct hrfs_operations *operations = NULL;
+	HENTRY();
+
+	if ((vma->vm_flags & VM_WRITE) != 0) {
+		ret = -EOPNOTSUPP;
+		goto out;
+	}
+		
+	ret = generic_file_mmap(file, vma);
+	if (ret) {
+		goto out;
+	}
+
+	operations = hrfs_f2ops(file);
+	if (operations->vm_ops) {
+		vma->vm_ops = operations->vm_ops;
+	} else {
+		HDEBUG("vm operations not supplied, use default\n");
+		vma->vm_ops = &hrfs_file_vm_ops;
+	}
+
+	/* Swgfs will update the inode's size and mtime */
+out:
+	HRETURN(ret);
+}
+EXPORT_SYMBOL(hrfs_file_mmap_nowrite);
+
 ssize_t hrfs_file_sendfile(struct file *in_file, loff_t *ppos,
                            size_t len, read_actor_t actor, void *target)
 {
@@ -928,20 +967,6 @@ ssize_t hrfs_file_sendfile(struct file *in_file, loff_t *ppos,
 	HRETURN(ret);
 }
 EXPORT_SYMBOL(hrfs_file_sendfile);
-#else
-ssize_t hrfs_file_sendfile(struct file *in_file, loff_t *ppos,
-                                size_t len, read_actor_t actor, void *target)
-{
-	ssize_t err = 0;
-	HENTRY();
-
-	if (hrfs_f2info(in_file) != NULL) { 
-		err = ll_hrfs_file_sendfile(in_file, hrfs_f2bnum(in_file), hrfs_f2barray(in_file), ppos, len, actor, target);
-	}
-
-	HRETURN(err);
-}
-#endif
 
 struct file_operations hrfs_dir_fops =
 {

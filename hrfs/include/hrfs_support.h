@@ -14,8 +14,9 @@
 struct lowerfs_operations {
 	struct list_head lowerfs_list;
 	struct module *lowerfs_owner;
-	char *lowerfs_type;
+	const char *lowerfs_type;
 	unsigned long lowerfs_magic; /* The same with sb->s_magic */
+	const char *lowerfs_version; /* Only a hint for compatibility */
 	unsigned long lowerfs_flag;
 
 	/* Operations that should be provided */

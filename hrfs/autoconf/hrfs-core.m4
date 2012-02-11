@@ -144,6 +144,19 @@ AC_ARG_ENABLE([tmpfs-support],
 AC_MSG_RESULT([$enable_tmpfs_support])])
 
 #
+# LC_CONFIG_BACKEDN_NTFS3G
+#
+# whether to build ntfs3g backend support
+#
+AC_DEFUN([LC_CONFIG_BACKEDN_NTFS3G],
+[AC_MSG_CHECKING([whether to build ntfs3g backend support])
+AC_ARG_ENABLE([ntfs3g-support],
+        AC_HELP_STRING([--disable-ntfs3g-support],
+                        [disable ntfs3g backend support]),
+        [],[enable_ntfs3g_support='yes'])
+AC_MSG_RESULT([$enable_ntfs3g_support])])
+
+#
 # LC_CONFIG_MANAGE
 #
 # whether to build manage support
@@ -326,6 +339,7 @@ AM_CONDITIONAL(EXT3_SUPPORT, test x$enable_ext3_support = xyes)
 AM_CONDITIONAL(EXT4_SUPPORT, test x$enable_ext4_support = xyes)
 AM_CONDITIONAL(NFS_SUPPORT, test x$enable_nfs_support = xyes)
 AM_CONDITIONAL(TMPFS_SUPPORT, test x$enable_tmpfs_support = xyes)
+AM_CONDITIONAL(NTFS3G_SUPPORT, test x$enable_ntfs3g_support = xyes)
 AM_CONDITIONAL(MANAGE, test x$enable_manage = xyes)
 AM_CONDITIONAL(MANAGE_TESTS, test x$enable_manage_tests = xyes)
 ])
@@ -363,6 +377,8 @@ hrfs/ext4_support/Makefile
 hrfs/ext4_support/autoMakefile
 hrfs/nfs_support/Makefile
 hrfs/nfs_support/autoMakefile
+hrfs/ntfs3g_support/Makefile
+hrfs/ntfs3g_support/autoMakefile
 hrfs/swgfs_support/Makefile
 hrfs/swgfs_support/autoMakefile
 hrfs/tmpfs_support/Makefile

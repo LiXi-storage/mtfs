@@ -135,4 +135,10 @@ static inline struct hrfs_operations *hrfs_d2ops(struct dentry *dentry)
 	struct super_block *sb = dentry->d_sb;
 	return hrfs_s2ops(sb);
 }
+
+static inline struct hrfs_operations *hrfs_f2ops(struct file *file)
+{
+	struct dentry *dentry = file->f_dentry;
+	return hrfs_d2ops(dentry);
+}
 #endif /* __HRFS_SUPPORT_INTERNAL_H__ */
