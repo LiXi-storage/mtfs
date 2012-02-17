@@ -13,20 +13,18 @@ struct hrfs_dentry_list {
 };
 
 /*
- * Return d_child needed to be dput()
+ * Return d_child needed to be dput() if succeed
  */
-struct dentry *hrfs_dchild_create(struct dentry *dparent, const char *name, umode_t mode, dev_t rdev)
+struct dentry *_hrfs_dchild_create(struct dentry *dparent, const unsigned char *name,
+                                  unsigned int len, umode_t mode, dev_t rdev, int rename)
 {
 	int ret = 0;
 	struct dentry *dchild = NULL;
 	HENTRY();
 
-	HASSERT(dparent);
-	HASSERT(name);
-	HASSERT(dparent->d_inode);
-	mutex_lock(&dparent->d_inode->i_mutex);
+	HASSERT(inode_is_locked(dparent->d_inode));
 
-	dchild = lookup_one_len(name, dparent, strlen(name));
+	dchild = lookup_one_len(name, dparent, len);
 	if (IS_ERR(dchild)) {
 		HERROR("lookup [%s] under [%*s] failed, ret = %d\n",
 		       name, dparent->d_name.len, dparent->d_name.name, ret);
@@ -36,18 +34,43 @@ struct dentry *hrfs_dchild_create(struct dentry *dparent, const char *name, umod
 
 	if (dchild->d_inode) {
 		if ((dchild->d_inode->i_mode & S_IFMT) == (mode & S_IFMT)) {
-			HDEBUG("[%*s/%s] already existed\n",
-			       dparent->d_name.len, dparent->d_name.name, name);
+			HDEBUG("[%*s/%*s] already existed\n",
+			       dparent->d_name.len, dparent->d_name.name, len, name);
 			if ((dchild->d_inode->i_mode & S_IALLUGO) != (mode & S_IALLUGO)) {
-				HDEBUG("permission mode of [%*s/%s] is 0%04o which should be 0%04o for security\n",
-				       dparent->d_name.len, dparent->d_name.name, name, dchild->d_inode->i_mode & S_IALLUGO, S_IRWXU);
+				HDEBUG("permission mode of [%*s/%*s] is 0%04o, "
+				       "which should be 0%04o for security\n",
+				       dparent->d_name.len, dparent->d_name.name, len, name,
+				       dchild->d_inode->i_mode & S_IALLUGO, S_IRWXU);
 			}
 			goto out;
 		} else {
+#ifndef LIXI_20120213
+			HDEBUG("[%*s/%*s] already existed, and is a %s, not a %s\n",
+			       dparent->d_name.len, dparent->d_name.name, len, name,
+			       hrfs_mode2type(dchild->d_inode->i_mode), hrfs_mode2type(mode));
+			if (rename) {
+				struct dentry *dchild_new = NULL;
+				HDEBUG("Trying to rename [%*s/%*s]\n",
+				       dparent->d_name.len, dparent->d_name.name, len, name);
+				dchild_new = _hrfs_dchild_add_ino(dparent, dchild);
+				if (IS_ERR(dchild_new)) {
+					ret = PTR_ERR(dchild_new);
+					goto out_put;
+				}
+				dput(dchild_new);
+				ret = -EAGAIN;
+				goto out_put;
+			} else {
+				ret = -EEXIST;
+				goto out_put;
+			}
+#else
 			HDEBUG("[%*s/%s] already existed, and is a %s, not a %s\n",
-			       dparent->d_name.len, dparent->d_name.name, name, hrfs_mode2type(dchild->d_inode->i_mode), hrfs_mode2type(mode));
+			       dparent->d_name.len, dparent->d_name.name, name,
+			       hrfs_mode2type(dchild->d_inode->i_mode), hrfs_mode2type(mode));
 			ret = -EEXIST;
 			goto out_put;
+#endif
 		}
 	}
 
@@ -77,10 +100,32 @@ struct dentry *hrfs_dchild_create(struct dentry *dparent, const char *name, umod
 out_put:
 	dput(dchild);
 out:
-	mutex_unlock(&dparent->d_inode->i_mutex);
 	if (ret) {
 		dchild = ERR_PTR(ret);
 	}
+	HRETURN(dchild);
+}
+
+/*
+ * Return d_child needed to be dput() if succeed
+ */
+struct dentry *hrfs_dchild_create(struct dentry *dparent, const unsigned char *name,
+                                  unsigned int len, umode_t mode, dev_t rdev, int repeat)
+{
+	struct dentry *dchild = NULL;
+	HENTRY();
+
+	HASSERT(dparent);
+	HASSERT(name);
+	HASSERT(dparent->d_inode);
+	mutex_lock(&dparent->d_inode->i_mutex);
+	dchild = _hrfs_dchild_create(dparent, name, len, mode, rdev, repeat);
+	if (IS_ERR(dchild)) {
+		if ((PTR_ERR(dchild) == -EAGAIN) && repeat) {
+			dchild = _hrfs_dchild_create(dparent, name, len, mode, rdev, 0);
+		}
+	}
+	mutex_unlock(&dparent->d_inode->i_mutex);
 	HRETURN(dchild);
 }
 
@@ -89,19 +134,18 @@ struct dentry *hrfs_dentry_list_mkpath(struct dentry *d_parent, hrfs_list_t *den
 	struct hrfs_dentry_list *tmp_entry = NULL;
 	struct dentry *d_child = NULL;
 	struct dentry *d_parent_tmp = d_parent;
-	const char *name = NULL;
 	HENTRY();
 
 	hrfs_list_for_each_entry(tmp_entry, dentry_list, list) {
-		name = tmp_entry->dentry->d_name.name;
-
-		d_child = hrfs_dchild_create(d_parent_tmp, name, S_IFDIR | S_IRWXU, 0);
+		d_child = hrfs_dchild_create(d_parent_tmp, tmp_entry->dentry->d_name.name,
+		                             tmp_entry->dentry->d_name.len, S_IFDIR | S_IRWXU, 0, 1);
 		if (d_parent_tmp != d_parent) {
 			dput(d_parent_tmp);
 		}	
 		if (IS_ERR(d_child)) {
-			HERROR("create [%*s/%s] failed\n",
-			       d_parent_tmp->d_name.len, d_parent_tmp->d_name.name, name);
+			HERROR("create [%*s/%*s] failed\n",
+			       d_parent_tmp->d_name.len, d_parent_tmp->d_name.name,
+			       tmp_entry->dentry->d_name.len, tmp_entry->dentry->d_name.name);
 			goto out;
 		}
 		d_parent_tmp = d_child;
@@ -187,6 +231,112 @@ out:
 	HRETURN(dchild);
 }
 
+/* If succeed, return dchild_new which needed to be dput */
+struct dentry *hrfs_dchild_rename2new(struct dentry *dparent, struct dentry *dchild_old,
+                                      const unsigned char *name_new, unsigned int len)
+{
+	struct dentry *dchild_new = NULL;
+	int ret = 0;
+	HENTRY();
+
+	HASSERT(inode_is_locked(dparent->d_inode));
+	dchild_new = lookup_one_len(name_new, dparent, len);
+	if (IS_ERR(dchild_new)) {
+		HERROR("lookup [%*s/%s] failed, ret = %d\n",
+		       dparent->d_name.len, dparent->d_name.name, name_new, ret);
+		goto out;
+	}
+
+	if (dchild_new->d_inode != NULL) {
+		dput(dchild_new);
+		dchild_new = ERR_PTR(-EEXIST);
+		goto out;
+	}
+
+	HDEBUG("renaming [%*s/%*s] to [%*s/%*s]\n",
+	       dparent->d_name.len, dparent->d_name.name,
+	       dchild_old->d_name.len, dchild_old->d_name.name,
+	       dparent->d_name.len, dparent->d_name.name,
+	       dchild_new->d_name.len, dchild_new->d_name.name);
+	/*
+	 * Rename in the same dir, and dir is locked,
+	 * no need to lock_rename()
+	 */
+	ret = vfs_rename(dparent->d_inode, dchild_old,
+	                 dparent->d_inode, dchild_new);
+	if (ret) {
+		dput(dchild_new);
+		dchild_new = ERR_PTR(ret);
+	}
+
+out:
+	HRETURN(dchild_new);
+}
+
+struct dentry *_hrfs_dchild_add_ino(struct dentry *dparent, struct dentry *dchild_old)
+{
+	char *name_new = NULL;
+	struct dentry *dchild_new = NULL;
+	HENTRY();
+
+	HASSERT(dparent);
+	HASSERT(dparent->d_inode);
+	HASSERT(inode_is_locked(dparent->d_inode));
+	HRFS_ALLOC(name_new, PATH_MAX);
+	if (unlikely(name_new == NULL)) {
+		dchild_new = ERR_PTR(-ENOMEM);
+		goto out;
+	}
+
+	strncpy(name_new, dchild_old->d_name.name, dchild_old->d_name.len);
+	sprintf(name_new, "%s:%lx", name_new, dchild_old->d_inode->i_ino);
+	dchild_new = hrfs_dchild_rename2new(dparent, dchild_old, name_new, strlen(name_new));
+
+	HRFS_FREE(name_new, PATH_MAX);
+out:
+	HRETURN(dchild_new);
+}
+
+#ifndef LIXI_20120213
+struct dentry *hrfs_dchild_add_ino(struct dentry *dparent, const unsigned char *name, unsigned int len)
+{
+	int ret = 0;
+	struct dentry *dchild_old = NULL;
+	struct dentry *dchild_new = NULL;
+	HENTRY();
+
+	HASSERT(dparent);
+	HASSERT(dparent->d_inode);
+	HASSERT(name);
+	dget(dparent);
+	mutex_lock(&dparent->d_inode->i_mutex);
+
+	dchild_old = lookup_one_len(name, dparent, len);
+	if (IS_ERR(dchild_old)) {
+		HERROR("lookup [%*s/%s] failed, ret = %d\n",
+		       dparent->d_name.len, dparent->d_name.name, name, ret);
+		ret = PTR_ERR(dchild_old);
+		goto out_unlock;
+	}
+
+	if (dchild_old->d_inode == NULL) {
+		dchild_new = dchild_old;
+		goto out_unlock;
+	}
+
+	dchild_new = _hrfs_dchild_add_ino(dparent, dchild_old);
+
+	dput(dchild_old);
+out_unlock:
+	mutex_unlock(&dparent->d_inode->i_mutex);
+	dput(dparent);
+
+	if (ret) {
+		dchild_new = ERR_PTR(ret);
+	}
+	HRETURN(dchild_new);
+}
+#else
 struct dentry *hrfs_dchild_add_ino(struct dentry *dparent, const char *name)
 {
 	int ret = 0;
@@ -268,6 +418,7 @@ out:
 	}
 	HRETURN(dchild_new);
 }
+#endif
 
 static inline int mutex_lock_if_needed(struct mutex *lock)
 {
@@ -338,8 +489,6 @@ int hrfs_backup_branch(struct dentry *dentry, hrfs_bindex_t bindex)
 	int ret = 0;
 	struct dentry *hidden_d_parent_new = NULL;
 	struct dentry *hidden_d_parent_old = NULL;
-	int old_locked = 0;
-	int new_locked = 0;
 	HENTRY();
 
 	HASSERT(hidden_d_old);
@@ -403,7 +552,8 @@ int hrfs_backup_branch(struct dentry *dentry, hrfs_bindex_t bindex)
 	}
 
 #ifndef LIXI_20120111
-	hidden_d_new = hrfs_dchild_add_ino(hidden_d_parent_new, hidden_d_old->d_name.name);
+	hidden_d_new = hrfs_dchild_add_ino(hidden_d_parent_new,
+	                                   hidden_d_old->d_name.name, hidden_d_old->d_name.len);
 #else
 	hidden_d_new = hrfs_dchild_remove(hidden_d_parent_new, hidden_d_old->d_name.name);
 #endif
@@ -411,14 +561,14 @@ int hrfs_backup_branch(struct dentry *dentry, hrfs_bindex_t bindex)
 		goto out_dput;		
 	}
 
-	hidden_d_parent_old = hidden_d_old->d_parent;
-	old_locked = inode_is_locked(hidden_d_parent_old->d_inode);
-	new_locked = inode_is_locked(hidden_d_parent_new->d_inode);
-	hrfs_lock_rename(hidden_d_parent_old, hidden_d_parent_new);
+	hidden_d_parent_old = dget(hidden_d_old->d_parent);
+	lock_rename(hidden_d_parent_old, hidden_d_parent_new);
 	ret = vfs_rename(hidden_d_parent_old->d_inode, hidden_d_old,
 	                 hidden_d_parent_new->d_inode, hidden_d_new);
-	hrfs_unlock_rename(hidden_d_parent_old, hidden_d_parent_new, old_locked, new_locked);
+	unlock_rename(hidden_d_parent_old, hidden_d_parent_new);
+	dput(hidden_d_parent_old);
 	dput(hidden_d_new);
+
 out_dput:
 	dput(hidden_d_parent_new);
 out_free_list:
@@ -432,11 +582,13 @@ out:
 	HRETURN(ret);
 }
 
-struct dentry *hrfs_cleanup_branch(struct dentry *dentry, hrfs_bindex_t bindex)
+struct dentry *hrfs_cleanup_branch(struct inode *dir, struct dentry *dentry, hrfs_bindex_t bindex)
 {
 	int ret = 0;
 	struct dentry *hidden_dentry = hrfs_d2branch(dentry, bindex);
 	HENTRY();
+
+	HASSERT(inode_is_locked(dir));
 
 	if (hidden_dentry != NULL) {
 		ret = hrfs_backup_branch(dentry, bindex);
@@ -461,7 +613,7 @@ out:
 	HRETURN(hidden_dentry);
 }
 
-int hrfs_lookup_discard_dentry(struct dentry *dentry, struct hrfs_operation_list *list)
+int hrfs_lookup_discard_dentry(struct inode *dir, struct dentry *dentry, struct hrfs_operation_list *list)
 {
 	int ret = 0;
 	hrfs_bindex_t bindex = 0;
@@ -469,16 +621,18 @@ int hrfs_lookup_discard_dentry(struct dentry *dentry, struct hrfs_operation_list
 	struct dentry *hidden_dentry = NULL;
 	HENTRY();
 
+	HASSERT(inode_is_locked(dir));
 	for (i = list->latest_bnum; i < list->bnum; i++) {
-		bindex = list->op_binfo[i].bindex;
 		if (list->op_binfo[i].is_suceessful) {
-			hidden_dentry = hrfs_cleanup_branch(dentry, bindex);
+			bindex = list->op_binfo[i].bindex;
+			hidden_dentry = hrfs_cleanup_branch(dir, dentry, bindex);
 			if (IS_ERR(hidden_dentry)) {
 				ret = PTR_ERR(hidden_dentry);
 				HERROR("failed to cleanup branch[%d] of dentry [%*s], ret = %d\n",
 				       bindex, dentry->d_name.len, dentry->d_name.name, ret);
 				goto out;
 			}
+			
 		}
 	}
 out:

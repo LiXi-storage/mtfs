@@ -365,7 +365,9 @@ int hrfs_lookup_backend(struct inode *dir, struct dentry *dentry, int interpose_
 	hrfs_operation_result_t result = {0};
 	HENTRY();
 
-	list = hrfs_oplist_build(dentry->d_parent->d_inode);
+	HASSERT(inode_is_locked(dir));
+
+	list = hrfs_oplist_build(dir);
 	if (unlikely(list == NULL)) {
 		HERROR("failed to build operation list\n");
 		ret = -ENOMEM;
@@ -419,7 +421,7 @@ int hrfs_lookup_backend(struct inode *dir, struct dentry *dentry, int interpose_
 			/* TODO: remove branch */
 			HERROR("nonlatest branches exist when lastest branches absent, "
 			       "removing those branches\n");
-			ret = hrfs_lookup_discard_dentry(dentry, list);
+			ret = hrfs_lookup_discard_dentry(dir, dentry, list);
 			if (ret) {
 				HERROR("failed to remove branches\n");
 			}

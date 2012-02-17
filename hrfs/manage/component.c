@@ -635,7 +635,7 @@ struct component *component_search(struct component *parent, const char *name)
 	}
 
 	hrfs_list_for_each(p, &parent->this_graph.subcomponents) {
-		found = list_entry(p, struct component, component_list);
+		found = hrfs_list_entry(p, struct component, component_list);
 		HASSERT(found->name);
 		HASSERT(found);
 		if (strcmp(found->name, name) == 0) {
@@ -662,7 +662,7 @@ int component_subs_eachdo(struct component *parent, int (*func)(struct component
 
 	HDEBUG("eachdo subcomponents of %s\n", parent->name);
 	hrfs_list_for_each_safe(p, tmp, &parent->this_graph.subcomponents) {
-		found = list_entry(p, struct component, component_list);
+		found = hrfs_list_entry(p, struct component, component_list);
 		HDEBUG("doing %s\n", found->name);
 		ret = func(found);
 		if (ret) {
@@ -687,7 +687,7 @@ int component_copy_subs(struct component *old_parent, struct component *parent)
 
 	HDEBUG("copy subcomponents of %s to %s\n", old_parent->name, parent->name);
 	hrfs_list_for_each(p, &old_parent->this_graph.subcomponents) {
-		sub = list_entry(p, struct component, component_list);
+		sub = hrfs_list_entry(p, struct component, component_list);
 		new_sub = component_copy(sub, parent, sub->name);
 		if (IS_ERR(new_sub)) {
 			ret = PTR_ERR(new_sub);

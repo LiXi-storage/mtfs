@@ -177,10 +177,9 @@ check_isolate()
 isolate_long_path()
 {
 	local BINDEX="$1"
-	#local CMD="$2"
+	local DEPTH=$2
 	local PWD=`pwd`
 	local ENTRY;
-	local DEPTH=10000
 
 	mkdir $DIR/d2a
 	cd $DIR/d2a
@@ -203,8 +202,8 @@ isolate_long_path()
 }
 test_2a()
 {
-	isolate_long_path 1 || error "failed to isolate long path"
-	#isolate_long_path 0 || error "failed to isolate long path"
+	isolate_long_path 1 10 || error "failed to isolate long path"
+	isolate_long_path 1 11 || error "failed to isolate long path"
 }
 run_test 2a "long path when cleanup branch"
 
