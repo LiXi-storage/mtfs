@@ -1,8 +1,37 @@
 /* -*- mode: c; c-basic-offset: 8; indent-tabs-mode: nil; -*-
  * vim:expandtab:shiftwidth=8:tabstop=8:
  *
- * FROM: swgfs/tests
+ * GPL HEADER START
  *
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 only,
+ * as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * General Public License version 2 for more details (a copy is included
+ * in the LICENSE file that accompanied this code).
+ *
+ * You should have received a copy of the GNU General Public License
+ * version 2 along with this program; If not, see
+ * http://www.sun.com/software/products/lustre/docs/GPLv2.pdf
+ *
+ * Please contact Sun Microsystems, Inc., 4150 Network Circle, Santa Clara,
+ * CA 95054 USA or visit www.sun.com if you need additional information or
+ * have any questions.
+ *
+ * GPL HEADER END
+ */
+/*
+ * Copyright (c) 2003, 2010, Oracle and/or its affiliates. All rights reserved.
+ * Use is subject to license terms.
+ */
+/*
+ * This file is part of Lustre, http://www.lustre.org/
+ * Lustre is a trademark of Sun Microsystems, Inc.
  */
 
 #include <stdio.h>
@@ -18,14 +47,11 @@
 #include <limits.h>
 #include <sys/ioctl.h>
 
-#if 0
-#include <linux/ldiskfs_fs.h>
-#endif
-#ifdef LIXI_20110408
-#include <libswgfs.h>
-#include <swgfs_lib.h>
+#if HRFS_IS_LUSTRE
+#include <liblustre.h>
+#include <lustre_lib.h>
 #include <obd.h>
-#endif
+#endif /* HRFS_IS_LUSTRE */
 
 struct option longopts[] = {
 	{"ea", 0, 0, 'e'},
@@ -53,16 +79,16 @@ static int usage(char *prog, FILE *out)
 
 int main(int argc, char ** argv)
 {
-        long i, c, count, iter = LONG_MAX, mode = 0, offset;
-        long int start, length = LONG_MAX, last, rc = 0;
+        long i, count, iter = LONG_MAX, mode = 0, offset;
+        long int start, length = LONG_MAX, last;
         char parent[4096], *t;
 	char *prog = argv[0], *base;
-	int seed = 0;
+	int seed = 0, rc;
 	int fd = -1;
 
-	while ((c = getopt_long(argc, argv, shortopts, longopts, NULL)) != -1) {
+	while ((rc = getopt_long(argc, argv, shortopts, longopts, NULL)) != -1) {
 		char *e;
-		switch (c) {
+		switch (rc) {
 		case 'r':
 			seed = strtoul(optarg, &e, 0);
 			if (*e) {
@@ -73,7 +99,7 @@ int main(int argc, char ** argv)
 		case 'e':
 		case 'l':
 		case 's':
-			mode = c;
+			mode = rc;
 			break;
 		case '0':
 		case '1':
@@ -86,9 +112,9 @@ int main(int argc, char ** argv)
 		case '8':
 		case '9':
 			if (length == LONG_MAX)
-				length = c - '0';
+				length = rc - '0';
 			else
-				length = length * 10 + (c - '0');
+				length = length * 10 + (rc - '0');
 			break;
 		case 'h':
 			usage(prog, stdout);
@@ -147,80 +173,80 @@ int main(int argc, char ** argv)
 		}
 	}
 
-	for (i = 0; i < iter && time(0) - start < length; i++) {
-		char filename[4096];
-		int tmp;
+        for (i = 0; i < iter && time(0) - start < length; i++) {
+                char filename[4096];
+                int tmp;
 
-		tmp = random() % count;
-		sprintf(filename, "%s%d", base, tmp);
+                tmp = random() % count;
+                sprintf(filename, "%s%d", base, tmp);
 
-		if (mode == 'e') {
+                if (mode == 'e') {
 #if 0
-			fd = open(filename, O_RDWR|O_LARGEFILE);
-			if (fd < 0) {
-				printf("open(%s) error: %s\n", filename,
-				strerror(errno));
-				break;
-			}
-			rc = ioctl(fd, LDISKFS_IOC_GETEA, NULL);
-			if (rc < 0) {
-				printf("ioctl(%s) error: %s\n", filename,
-				strerror(errno));
-				break;
-				}
-			close(fd);
-			break;
+                        fd = open(filename, O_RDWR|O_LARGEFILE);
+                        if (fd < 0) {
+                                printf("open(%s) error: %s\n", filename,
+                                       strerror(errno));
+                                break;
+                        }
+                        rc = ioctl(fd, LDISKFS_IOC_GETEA, NULL);
+                        if (rc < 0) {
+                                printf("ioctl(%s) error: %s\n", filename,
+                                       strerror(errno));
+                                break;
+                        }
+                        close(fd);
+                        break;
 #endif
 		} else if (mode == 's') {
-			struct stat buf;
+                        struct stat buf;
 
-			rc = stat(filename, &buf);
-			if (rc < 0) {
-				printf("stat(%s) error: %s\n", filename,
-				strerror(errno));
-				break;
-			}
+                        rc = stat(filename, &buf);
+                        if (rc < 0) {
+                                printf("stat(%s) error: %s\n", filename,
+                                       strerror(errno));
+                                break;
+                        }
 		} else if (mode == 'l') {
-#ifdef LIXI_20110408
-			struct obd_ioctl_data data;
-			char rawbuf[8192];
-			char *buf = rawbuf;
-			int max = sizeof(rawbuf);
+#ifdef HRFS_IS_LUSTRE
+                        struct obd_ioctl_data data;
+                        char rawbuf[8192];
+                        char *buf = rawbuf;
+                        int max = sizeof(rawbuf);
 
-			memset(&data, 0, sizeof(data));
-			data.ioc_version = OBD_IOCTL_VERSION;
-			data.ioc_len = sizeof(data);
-			if (offset >= 0)
-				data.ioc_inlbuf1 = filename + offset;
-			else
-				data.ioc_inlbuf1 = filename;
-			ata.ioc_inllen1 = strlen(data.ioc_inlbuf1) + 1;
+                        memset(&data, 0, sizeof(data));
+                        data.ioc_version = OBD_IOCTL_VERSION;
+                        data.ioc_len = sizeof(data);
+                        if (offset >= 0)
+                                data.ioc_inlbuf1 = filename + offset;
+                        else
+                                data.ioc_inlbuf1 = filename;
+                        data.ioc_inllen1 = strlen(data.ioc_inlbuf1) + 1;
 
-			if (obd_ioctl_pack(&data, &buf, max)) {
-				printf("ioctl_pack failed.\n");
-				break;
-			}
+                        if (obd_ioctl_pack(&data, &buf, max)) {
+                                printf("ioctl_pack failed.\n");
+                                break;
+                        }
 
-			rc = ioctl(fd, IOC_MDC_LOOKUP, buf);
-			if (rc < 0) {
-				printf("ioctl(%s) error: %s\n", filename,
-				strerror(errno));
-				break;
-			}
-#endif
-		}
-		if ((i % 10000) == 0) {
-			printf(" - stat %lu (time %ld ; total %ld ; last %ld)\n",
-				i, time(0), time(0) - start, time(0) - last);
-			last = time(0);
-		}
-	}
+                        rc = ioctl(fd, IOC_MDC_LOOKUP, buf);
+                        if (rc < 0) {
+                                printf("ioctl(%s) error: %s\n", filename,
+                                       strerror(errno));
+                                break;
+                        }
+#endif /* HRFS_IS_LUSTRE */
+                }
+                if ((i % 10000) == 0) {
+                        printf(" - stat %lu (time %ld ; total %ld ; last %ld)\n",
+                               i, time(0), time(0) - start, time(0) - last);
+                        last = time(0);
+                }
+        }
 
 	if (mode == 'l')
 		close(fd);
 
-	printf("total: %lu stats in %ld seconds: %f stats/second\n", i,
-		time(0) - start, ((float)i / (time(0) - start)));
+        printf("total: %lu stats in %ld seconds: %f stats/second\n", i,
+               time(0) - start, ((float)i / (time(0) - start)));
 
-	exit(rc);
+        exit(rc);
 }

@@ -1,10 +1,39 @@
 /* -*- mode: c; c-basic-offset: 8; indent-tabs-mode: nil; -*-
  * vim:expandtab:shiftwidth=8:tabstop=8:
  *
- * FROM: swgfs/tests
+ * GPL HEADER START
  *
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 only,
+ * as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * General Public License version 2 for more details (a copy is included
+ * in the LICENSE file that accompanied this code).
+ *
+ * You should have received a copy of the GNU General Public License
+ * version 2 along with this program; If not, see
+ * http://www.sun.com/software/products/lustre/docs/GPLv2.pdf
+ *
+ * Please contact Sun Microsystems, Inc., 4150 Network Circle, Santa Clara,
+ * CA 95054 USA or visit www.sun.com if you need additional information or
+ * have any questions.
+ *
+ * GPL HEADER END
  */
- 
+/*
+ * Copyright (c) 2002, 2010, Oracle and/or its affiliates. All rights reserved.
+ * Use is subject to license terms.
+ */
+/*
+ * This file is part of Lustre, http://www.lustre.org/
+ * Lustre is a trademark of Sun Microsystems, Inc.
+ */
+
 #ifndef _GNU_SOURCE
 #define  _GNU_SOURCE
 #endif
@@ -18,11 +47,23 @@
 #include <sys/stat.h>
 #include <sys/mman.h>
 
+/* return index of the first byte not matching given byte
+ * or buffer size if all bytes are matching */
+static size_t check_bytes(const char *buf, int byte, size_t len)
+{
+        const char *p;
+
+        for (p = buf; p < buf + len; p++)
+                if (*p != byte)
+                        break;
+        return p - buf;
+}
+
 int main(int argc, char **argv)
 {
 #ifdef O_DIRECT
         int fd;
-        char *wbuf, *fname;
+        char *buf, *fname;
         int blocks, seek_blocks;
         long len;
         off64_t seek;
@@ -77,12 +118,12 @@ int main(int argc, char **argv)
         seek = (off64_t)seek_blocks * (off64_t)st.st_blksize;
         len = blocks * st.st_blksize;
 
-        wbuf = mmap(0, len, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANON, 0, 0);
-        if (wbuf == MAP_FAILED) {
+        buf = mmap(0, len, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANON, 0, 0);
+        if (buf == MAP_FAILED) {
                 printf("No memory %s\n", strerror(errno));
                 return 1;
         }
-        memset(wbuf, pad, len);
+        memset(buf, pad, len);
 
         if (action == O_WRONLY || action == O_RDWR) {
                 if (lseek64(fd, seek, SEEK_SET) < 0) {
@@ -90,7 +131,7 @@ int main(int argc, char **argv)
                         return 1;
                 }
 
-                rc = write(fd, wbuf, len);
+                rc = write(fd, buf, len);
                 if (rc != len) {
                         printf("Write error %s (rc = %d, len = %ld)\n",
                                strerror(errno), rc, len);
@@ -99,26 +140,19 @@ int main(int argc, char **argv)
         }
 
         if (action == O_RDONLY || action == O_RDWR) {
-                char *rbuf;
-
                 if (lseek64(fd, seek, SEEK_SET) < 0) {
                         printf("Cannot seek %s\n", strerror(errno));
                         return 1;
                 }
-
-                rbuf =mmap(0,len,PROT_READ|PROT_WRITE,MAP_PRIVATE|MAP_ANON,0,0);
-                if (rbuf == MAP_FAILED) {
-                        printf("No memory %s\n", strerror(errno));
-                        return 1;
-                }
-
-                rc = read(fd, rbuf, len);
+                /* reset all bytes to something nor 0x0 neither 0xab */
+                memset(buf, 0x5e, len);
+                rc = read(fd, buf, len);
                 if (rc != len) {
                         printf("Read error: %s rc = %d\n",strerror(errno),rc);
                         return 1;
                 }
 
-                if (memcmp(wbuf, rbuf, len)) {
+                if (check_bytes(buf, pad, len) != len) {
                         printf("Data mismatch\n");
                         return 1;
                 }

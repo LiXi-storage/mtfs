@@ -6,11 +6,11 @@ DOING_MUTLTI="yes"
 
 LOWERFS_BUG_331="4"
 LOWERFS_BUG_260="5"
-BUG_267="14x 14b"
+LOWERFS_BUG_268="14b"
 LOWERFS_BUG_274="25"
 
 EXCEPT_SLOW=""
-ALWAYS_EXCEPT=${ALWAYS_EXCEPT:-"$LOWERFS_BUG_260 $BUG_267 $LOWERFS_BUG_274 $LOWERFS_BUG_331 $MULTI_MNT_EXCEPT"}
+ALWAYS_EXCEPT=${ALWAYS_EXCEPT:-"$LOWERFS_BUG_260 $LOWERFS_BUG_268 $LOWERFS_BUG_274 $LOWERFS_BUG_331 $MULTI_MNT_EXCEPT"}
 
 TESTS_DIR=${TESTS_DIR:-$(cd $(dirname $0); echo $PWD)}
 . $TESTS_DIR/test-framework.sh
@@ -162,13 +162,13 @@ test_10b() {
 
 	$TRUNCATE $DIR1/f10b 4096 || error "truncate 4096"
 
-	dd if=$DIR2/f10b of=$TMP/f10b-swgfs bs=4k count=1 || error "dd $DIR2"
+	dd if=$DIR2/f10b of=$TMP/f10b-hrfs bs=4k count=1 || error "dd $DIR2"
 
 	# create a test file locally to compare
 	dd if=$TMP/f10b-seed of=$TMP/f10b bs=3k count=1 || error "dd random"
 	$TRUNCATE $TMP/f10b 4096 || error "truncate 4096"
-	cmp $TMP/f10b $TMP/f10b-swgfs || error "file miscompare"
-	rm $TMP/f10b $TMP/f10b-swgfs $TMP/f10b-seed
+	cmp $TMP/f10b $TMP/f10b-hrfs || error "file miscompare"
+	rm $TMP/f10b $TMP/f10b-hrfs $TMP/f10b-seed
 }
 run_test 10b "write of file with sub-page size on multiple mounts "
 
@@ -240,20 +240,6 @@ test_14a() {
 	rm $TMP/test14.junk $DIR1/d14/multiop || error "removing multiop"
 }
 run_test 14a "open(RDWR) of executing file returns -ETXTBSY ===="
-
-test_14x() {
-	mkdir -p /mnt/swgfs/d14
-	cp -p $MULTIOP /mnt/swgfs/d14/multiop || error "cp failed"
-	MULTIOP_PROG=/mnt/swgfs/d14/multiop multiop_bg_pause $TMP/test14.junk O_c || return 1
-	MULTIOP_PID=$!
-	$TRUNCATE /mnt/swgfs2/d14/multiop 0 && kill -9 $MULTIOP_PID && \
-		error "expected truncate error, got success"
-	kill -USR1 $MULTIOP_PID || return 2
-	wait $MULTIOP_PID || return 3
-	cmp $MULTIOP $DIR1/d14/multiop || error "binary changed"
-	rm $TMP/test14.junk $DIR1/d14/multiop || error "removing multiop"
-}
-run_test 14x "truncate of executing file returns -ETXTBSY ======"
 
 test_14b() {
 	mkdir -p $DIR1/d14

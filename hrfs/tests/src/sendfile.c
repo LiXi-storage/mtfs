@@ -1,10 +1,38 @@
 /* -*- mode: c; c-basic-offset: 8; indent-tabs-mode: nil; -*-
  * vim:expandtab:shiftwidth=8:tabstop=8:
  *
- * FROM: swgfs/tests
+ * GPL HEADER START
  *
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 only,
+ * as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * General Public License version 2 for more details (a copy is included
+ * in the LICENSE file that accompanied this code).
+ *
+ * You should have received a copy of the GNU General Public License
+ * version 2 along with this program; If not, see
+ * http://www.sun.com/software/products/lustre/docs/GPLv2.pdf
+ *
+ * Please contact Sun Microsystems, Inc., 4150 Network Circle, Santa Clara,
+ * CA 95054 USA or visit www.sun.com if you need additional information or
+ * have any questions.
+ *
+ * GPL HEADER END
  */
-
+/*
+ * Copyright (c) 2008, 2010, Oracle and/or its affiliates. All rights reserved.
+ * Use is subject to license terms.
+ */
+/*
+ * This file is part of Lustre, http://www.lustre.org/
+ * Lustre is a trademark of Sun Microsystems, Inc.
+ */
 
 #include <stdio.h>
 #include <unistd.h>
@@ -15,17 +43,18 @@
 #include <sys/sendfile.h>
 #include <sys/stat.h>
 #include <sys/socket.h>
-#include <errno.h>
-#include <time.h>
 
-#if 0
+#if HRFS_IS_LUSTRE
 #include <liblustre.h>
 #include <lnet/lnetctl.h>
 #include <obd.h>
 #include <lustre_lib.h>
 #include <obd_lov.h>
 #include <lustre/liblustreapi.h>
-#endif
+#else /* HRFS_IS_LUSTRE */
+#include <errno.h>
+#include <time.h>
+#endif /* HRFS_IS_LUSTRE */
 
 #define syserr(str) { perror(str); exit(-1); }
 
@@ -52,15 +81,14 @@ int main(int argc, char *argv[])
 
         if (stat(sfile, &stbuf) < 0) {
                 if (errno == ENOENT) {
-#if 0
                         /* assume doing non-object file testing */
+#if HRFS_IS_LUSTRE
                         infd = open(sfile, O_LOV_DELAY_CREATE|O_CREAT|O_RDWR,
                                     0644);
-#else
-                        /* assume doing non-object file testing */
+#else /* HRFS_IS_LUSTRE */
                         infd = open(sfile, O_CREAT|O_RDWR,
                                     0644);
-#endif
+#endif /* HRFS_IS_LUSTRE */
                         if (infd < 0)
                                 syserr("open source file:");
 

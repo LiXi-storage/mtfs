@@ -1,8 +1,5 @@
 /* -*- mode: c; c-basic-offset: 8; indent-tabs-mode: nil; -*-
  * vim:expandtab:shiftwidth=8:tabstop=8:
- *
- * FROM: swgfs/tests
- *
  */
 
 #include <stdio.h>
@@ -14,16 +11,18 @@
 #include <errno.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <string.h>
 
-#if 0
+#if HRFS_IS_LUSTRE
 #include <liblustre.h>
 #include <lnet/lnetctl.h>
 #include <obd.h>
 #include <lustre_lib.h>
 #include <obd_lov.h>
 #include <lustre/liblustreapi.h>
-#endif
+#else /* HRFS_IS_LUSTRE */
+#include <string.h>
+#define GOTO(label, rc)   do { rc; goto label; } while (0)
+#endif /* HRFS_IS_LUSTRE */
 
 #define ACT_NONE        0
 #define ACT_READ        1
@@ -31,8 +30,6 @@
 #define ACT_SEEK        4
 #define ACT_READHOLE    8
 #define ACT_VERIFY      16
-
-#define GOTO(label, rc)   do { rc; goto label; } while (0)
 
 void usage()
 {
@@ -43,9 +40,7 @@ void usage()
         printf("-w  file write (O_WRONLY)\n");
         printf("-s  set the start pos of the read/write test\n");
         printf("-z  test for read hitting hole\n");
-#if 0
         printf("-d  create flags (O_LOV_DELAY_CREATE)\n");
-#endif
         printf("-v  verify the data content of read\n");
 }
 
@@ -115,11 +110,11 @@ int main(int argc, char** argv)
                 case 'a':
                         flags |= O_APPEND;
                         break;
-#if 0
+#if HRFS_IS_LUSTRE
                 case 'd':
                         flags |= O_LOV_DELAY_CREATE;
                         break;
-#endif
+#endif /* HRFS_IS_LUSTRE */
                 case 'z':
                         pad = 0;
                         act |= ACT_READHOLE;

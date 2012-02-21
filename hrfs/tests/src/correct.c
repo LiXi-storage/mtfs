@@ -1,3 +1,4 @@
+
 #include <memory.h>
 #include <hrfs_random.h>
 #include <debug.h>
@@ -6,6 +7,9 @@ typedef struct block {
 	char *data;
 	size_t block_size;
 } block_t;
+/*
+ * Copyright (C) 2011 Li Xi <pkuelelixi@163.com>
+ */
 
 #define MAX_BLOCK_SIZE 1048576
 #define MAX_LSEEK_OFFSET 1048576000

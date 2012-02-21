@@ -1,8 +1,37 @@
 /* -*- mode: c; c-basic-offset: 8; indent-tabs-mode: nil; -*-
  * vim:expandtab:shiftwidth=8:tabstop=8:
  *
- * FROM: swgfs/tests
+ * GPL HEADER START
  *
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 only,
+ * as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * General Public License version 2 for more details (a copy is included
+ * in the LICENSE file that accompanied this code).
+ *
+ * You should have received a copy of the GNU General Public License
+ * version 2 along with this program; If not, see
+ * http://www.sun.com/software/products/lustre/docs/GPLv2.pdf
+ *
+ * Please contact Sun Microsystems, Inc., 4150 Network Circle, Santa Clara,
+ * CA 95054 USA or visit www.sun.com if you need additional information or
+ * have any questions.
+ *
+ * GPL HEADER END
+ */
+/*
+ * Copyright (c) 2003, 2010, Oracle and/or its affiliates. All rights reserved.
+ * Use is subject to license terms.
+ */
+/*
+ * This file is part of Lustre, http://www.lustre.org/
+ * Lustre is a trademark of Sun Microsystems, Inc.
  */
 
 #ifndef _GNU_SOURCE
@@ -20,7 +49,10 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <semaphore.h>
-//#include <swgfs/libswgfsapi.h>
+#include <libcfs/libcfs.h>
+#if HRFS_IS_LUSTRE
+#include <lustre/liblustreapi.h>
+#endif /* HRFS_IS_LUSTRE */
 
 #define T1 "write data before unlink\n"
 #define T2 "write data after unlink\n"
@@ -30,13 +62,11 @@ int bufsize = 0;
 sem_t sem;
 #define ALIGN 65535
 
-char usage[] = 
+char usage[] =
 "Usage: %s filename command-sequence\n"
 "    command-sequence items:\n"
 "        c  close\n"
-#ifdef LIXI_20110307
 "        C[num] create with optional stripes\n"
-#endif
 "        d  mkdir\n"
 "        D  open(O_DIRECTORY)\n"
 "        f  statfs\n"
@@ -55,6 +85,7 @@ char usage[] =
 "        T[num] ftruncate [optional position, default 0]\n"
 "        u  unlink\n"
 "        U  munmap\n"
+"        v  verbose\n"
 "        w[num] write optional length\n"
 "        W  write entire mmap-ed region\n"
 "        y  fsync\n"
@@ -152,7 +183,6 @@ int get_flags(char *data, int *rflags)
 }
 
 #define POP_ARG() (pop_arg(argc, argv))
-#define min(a,b) ((a)>(b)?(b):(a))
 
 int main(int argc, char **argv)
 {
@@ -177,6 +207,7 @@ int main(int argc, char **argv)
         /* use sigaction instead of signal to avoid SA_ONESHOT semantics */
         sigaction(SIGUSR1, &(const struct sigaction){.sa_handler = &usr1_handler},
                   NULL);
+
         fname = argv[1];
 
         for (commands = argv[2]; *commands; commands++) {
@@ -197,12 +228,7 @@ int main(int argc, char **argv)
                         fd = -1;
                         break;
                 case 'C':
-#ifndef LIXI_20110307
-						fprintf(stderr, "unknown command \"%c\"\n", *commands);
-                        fprintf(stderr, usage, argv[0]);
-                        exit(1);
-						break;
-#else
+#if HRFS_IS_LUSTRE
                         len = atoi(commands+1);
                         fd = llapi_file_open(fname, O_CREAT | O_WRONLY, 0644,
                                              0, 0, len, 0);
@@ -211,7 +237,11 @@ int main(int argc, char **argv)
                                 perror("create stripe file");
                                 exit(save_errno);
                         }
-#endif
+#else /* HRFS_IS_LUSTRE */
+                        fprintf(stderr, "unknown command \"%c\"\n", *commands);
+                        fprintf(stderr, usage, argv[0]);
+                        exit(1);
+#endif /* HRFS_IS_LUSTRE */
                         break;
                 case 'd':
                         if (mkdir(fname, 0755) == -1) {
@@ -334,6 +364,8 @@ int main(int argc, char **argv)
                                         fprintf(stderr, "short read: %u/%u\n",
                                                 rc, len);
                                 len -= rc;
+                                if (verbose >= 2)
+                                        printf("%.*s\n", rc, buf_align);
                         }
                         break;
                 case 'R':
@@ -385,7 +417,7 @@ int main(int argc, char **argv)
                         }
                         break;
                 case 'v':
-                        verbose = 1;
+                        verbose++;
                         break;
                 case 'w':
                         len = atoi(commands+1);

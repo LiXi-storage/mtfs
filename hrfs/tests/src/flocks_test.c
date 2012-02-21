@@ -1,8 +1,37 @@
 /* -*- mode: c; c-basic-offset: 8; indent-tabs-mode: nil; -*-
  * vim:expandtab:shiftwidth=8:tabstop=8:
  *
- * FROM: swgfs/tests
+ * GPL HEADER START
  *
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 only,
+ * as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * General Public License version 2 for more details (a copy is included
+ * in the LICENSE file that accompanied this code).
+ *
+ * You should have received a copy of the GNU General Public License
+ * version 2 along with this program; If not, see
+ * http://www.sun.com/software/products/lustre/docs/GPLv2.pdf
+ *
+ * Please contact Sun Microsystems, Inc., 4150 Network Circle, Santa Clara,
+ * CA 95054 USA or visit www.sun.com if you need additional information or
+ * have any questions.
+ *
+ * GPL HEADER END
+ */
+/*
+ * Copyright (c) 2007, 2010, Oracle and/or its affiliates. All rights reserved.
+ * Use is subject to license terms.
+ */
+/*
+ * This file is part of Lustre, http://www.lustre.org/
+ * Lustre is a trademark of Sun Microsystems, Inc.
  */
 
 #include <errno.h>
@@ -13,6 +42,7 @@
 #include <unistd.h>
 #include <pthread.h>
 #include <sys/file.h>
+#include <sys/wait.h>
 #include <stdarg.h>
 
 #define MAX_PATH_LENGTH 4096
@@ -211,7 +241,8 @@ int t2(int argc, char* argv[])
         }
 
         t_fcntl(fd, F_SETFL, O_APPEND);
-        if (!(rc = t_fcntl(fd, F_GETFL)) & O_APPEND) {
+        rc = t_fcntl(fd, F_GETFL);
+        if ((rc & O_APPEND) == 0) {
                 fprintf(stderr, "error get flag: ret %x\n", rc);
                 return EXIT_FAILURE;
         }
@@ -238,6 +269,87 @@ out:
         return rc;
 }
 
+/** =================================================================
+ * test number 3
+ *
+ * Bug 24040: Two conflicting flocks from same process different fds should fail
+ *            two conflicting flocks from different processes but same fs
+ *            should succeed.
+ */
+int t3(int argc, char *argv[])
+{
+        int fd, fd2;
+        int pid;
+        int rc = EXIT_SUCCESS;
+
+        if (argc != 3) {
+                fprintf(stderr, "Usage: ./flocks_test 3 filename\n");
+                return EXIT_FAILURE;
+        }
+
+        if ((fd = open(argv[2], O_RDWR)) < 0) {
+                fprintf(stderr, "Couldn't open file: %s\n", argv[1]);
+                return EXIT_FAILURE;
+        }
+        if (flock(fd, LOCK_EX | LOCK_NB) < 0) {
+                perror("first flock failed");
+                rc = EXIT_FAILURE;
+                goto out;
+        }
+        if ((fd2 = open(argv[2], O_RDWR)) < 0) {
+                fprintf(stderr, "Couldn't open file: %s\n", argv[1]);
+                rc = EXIT_FAILURE;
+                goto out;
+        }
+        if (flock(fd2, LOCK_EX | LOCK_NB) >= 0) {
+                fprintf(stderr, "Second flock succeeded - FAIL\n");
+                rc = EXIT_FAILURE;
+                close(fd2);
+                goto out;
+        }
+
+        close(fd2);
+
+        pid = fork();
+        if (pid == -1) {
+                perror("fork");
+                rc = EXIT_FAILURE;
+                goto out;
+        }
+
+        if (pid == 0) {
+                if ((fd2 = open(argv[2], O_RDWR)) < 0) {
+                        fprintf(stderr, "Couldn't open file: %s\n", argv[1]);
+                        rc = EXIT_FAILURE;
+                        exit(rc);
+                }
+                if (flock(fd2, LOCK_EX | LOCK_NB) >= 0) {
+                        fprintf(stderr, "Second flock succeeded - FAIL\n");
+                        rc = EXIT_FAILURE;
+                        goto out_child;
+                }
+                if (flock(fd, LOCK_UN) == -1) {
+                        fprintf(stderr, "Child unlock on parent fd failed\n");
+                        rc = EXIT_FAILURE;
+                        goto out_child;
+                }
+                if (flock(fd2, LOCK_EX | LOCK_NB) == -1) {
+                        fprintf(stderr, "Relock after parent unlock failed!\n");
+                        rc = EXIT_FAILURE;
+                        goto out_child;
+                }
+        out_child:
+                close(fd2);
+                exit(rc);
+        }
+
+        waitpid(pid, &rc, 0);
+out:
+        close(fd);
+        return rc;
+}
+
+
 /** ==============================================================
  * program entry
  */
@@ -263,6 +375,9 @@ int main(int argc, char* argv[])
                 break;
         case 2:
                 rc = t2(argc, argv);
+                break;
+        case 3:
+                rc = t3(argc, argv);
                 break;
         default:
                 fprintf(stderr, "unknow test number %s\n", argv[1]);

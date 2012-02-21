@@ -1,8 +1,37 @@
 /* -*- mode: c; c-basic-offset: 8; indent-tabs-mode: nil; -*-
  * vim:expandtab:shiftwidth=8:tabstop=8:
  *
- * FROM: swgfs/tests
+ * GPL HEADER START
  *
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 only,
+ * as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * General Public License version 2 for more details (a copy is included
+ * in the LICENSE file that accompanied this code).
+ *
+ * You should have received a copy of the GNU General Public License
+ * version 2 along with this program; If not, see
+ * http://www.sun.com/software/products/lustre/docs/GPLv2.pdf
+ *
+ * Please contact Sun Microsystems, Inc., 4150 Network Circle, Santa Clara,
+ * CA 95054 USA or visit www.sun.com if you need additional information or
+ * have any questions.
+ *
+ * GPL HEADER END
+ */
+/*
+ * Copyright (c) 2004, 2010, Oracle and/or its affiliates. All rights reserved.
+ * Use is subject to license terms.
+ */
+/*
+ * This file is part of Lustre, http://www.lustre.org/
+ * Lustre is a trademark of Sun Microsystems, Inc.
  */
 
 #include <stdio.h>
@@ -27,7 +56,7 @@ char mmap_sanity[256];
 static void usage(void)
 {
         printf("Usage: mmap_sanity -d dir [-m dir2]\n");
-        printf("       dir      swgfs mount point\n");
+        printf("       dir      lustre mount point\n");
         printf("       dir2     another mount point\n");
         exit(127);
 }
@@ -64,7 +93,7 @@ static int mmap_initialize(char *myself)
                 return errno;
         }
 
-        /* copy myself to swgfs for another client */
+        /* copy myself to lustre for another client */
         fdr = open(myself, O_RDONLY);
         if (fdr < 0) {
                 perror(myself);
@@ -129,7 +158,11 @@ static int mmap_tst1(char *mnt)
                 perror(mmap_file);
                 return errno;
         }
-        ftruncate(fd, region);
+        if (ftruncate(fd, region) < 0) {
+                perror("ftruncate()");
+                rc = errno;
+                goto out_close;
+        }
 
         ptr = mmap(NULL, region, PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0);
         if (ptr == MAP_FAILED) {
@@ -164,7 +197,11 @@ static int mmap_tst2(char *mnt)
                 perror(mmap_file);
                 return errno;
         }
-        ftruncate(fd, page_size);
+        if (ftruncate(fd, page_size) < 0) {
+                perror("ftruncate()");
+                rc = errno;
+                goto out_close;
+        }
 
         ptr = mmap(NULL, page_size, PROT_READ|PROT_WRITE, MAP_PRIVATE, fd, 0);
         if (ptr == MAP_FAILED) {
@@ -221,7 +258,11 @@ static int mmap_tst3(char *mnt)
                 perror(mmap_file);
                 return errno;
         }
-        ftruncate(fd, region);
+        if (ftruncate(fd, region) < 0) {
+                perror("ftruncate()");
+                rc = errno;
+                goto out_close;
+        }
 
         ptr = mmap(NULL, region, PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0);
         if (ptr == MAP_FAILED) {
@@ -299,14 +340,22 @@ static int mmap_tst4(char *mnt)
                 perror(fileb);
                 return errno;
         }
-        ftruncate(fdr, region);
+        if (ftruncate(fdr, region) < 0) {
+                perror("ftruncate()");
+                rc = errno;
+                goto out_close;
+        }
         fdw = open(filea, O_CREAT|O_RDWR, 0600);
         if (fdw < 0) {
                 perror(filea);
                 rc = errno;
                 goto out_close;
         }
-        ftruncate(fdw, region);
+        if (ftruncate(fdw, region) < 0) {
+                perror("ftruncate()");
+                rc = errno;
+                goto out_close;
+        }
         
         ptr = mmap(NULL, region, PROT_READ|PROT_WRITE, MAP_SHARED, fdr, 0);
         if (ptr == MAP_FAILED) {
@@ -407,9 +456,9 @@ static int cancel_lru_locks(char *prefix)
         }
 
         if (prefix)
-                sprintf(cmd, "ls /proc/fs/swgfs/ldlm/namespaces/*/lru_size | grep -i %s", prefix);
+                sprintf(cmd, "ls /proc/fs/lustre/ldlm/namespaces/*-%s-*/lru_size", prefix);
         else
-                sprintf(cmd, "ls /proc/fs/swgfs/ldlm/namespaces/*/lru_size");
+                sprintf(cmd, "ls /proc/fs/lustre/ldlm/namespaces/*/lru_size");
 
         file = popen(cmd, "r");
         if (file == NULL) {
@@ -465,7 +514,11 @@ static int mmap_tst5(char *mnt)
                 perror(mmap_file);
                 return errno;
         }
-        ftruncate(fd, region);
+        if (ftruncate(fd, region) < 0) {
+                perror("ftruncate()");
+                rc = errno;
+                goto out_close;
+        }
 
         ptr = mmap(NULL, region, PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0);
         if (ptr == MAP_FAILED) {
@@ -520,7 +573,11 @@ static int mmap_tst6(char *mnt)
                 perror(mmap_file);
                 return errno;
         }
-        ftruncate(fd, page_size);
+        if (ftruncate(fd, page_size) < 0) {
+                perror("ftruncate()");
+                rc = errno;
+                goto out;
+        }
 
         fd2 = open(mmap_file2, O_RDWR, 0600);
         if (fd2 < 0) {
@@ -595,7 +652,7 @@ static int mmap_tst7_func(char *mnt, int rw)
                 rc = errno;
                 goto out;
         }
-        buf = mmap(NULL, 2 * page_size,
+        buf = mmap(NULL, page_size,
                    PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
         if (buf == MAP_FAILED) {
                 perror("mmap");

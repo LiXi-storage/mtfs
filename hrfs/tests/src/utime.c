@@ -1,8 +1,41 @@
 /* -*- mode: c; c-basic-offset: 8; indent-tabs-mode: nil; -*-
  * vim:expandtab:shiftwidth=8:tabstop=8:
  *
- * FROM: swgfs/tests
+ * GPL HEADER START
  *
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 only,
+ * as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * General Public License version 2 for more details (a copy is included
+ * in the LICENSE file that accompanied this code).
+ *
+ * You should have received a copy of the GNU General Public License
+ * version 2 along with this program; If not, see
+ * http://www.sun.com/software/products/lustre/docs/GPLv2.pdf
+ *
+ * Please contact Sun Microsystems, Inc., 4150 Network Circle, Santa Clara,
+ * CA 95054 USA or visit www.sun.com if you need additional information or
+ * have any questions.
+ *
+ * GPL HEADER END
+ */
+/*
+ * Copyright (c) 2003, 2010, Oracle and/or its affiliates. All rights reserved.
+ * Use is subject to license terms.
+ */
+/*
+ * This file is part of Lustre, http://www.lustre.org/
+ * Lustre is a trademark of Sun Microsystems, Inc.
+ *
+ * lustre/tests/utime.c
+ *
+ * Simple test for validating mtime on a file create and set via utime.
  */
 
 #include <stdio.h>
@@ -32,9 +65,6 @@ int main(int argc, char *argv[])
 	struct stat st, st2;
 	int rc;
         int c;
-
-	utb.actime = 200000;
-	utb.modtime = 100000;
 
         while ((c = getopt(argc, argv, "s:")) != -1) {
                 switch(c) {
@@ -71,9 +101,9 @@ int main(int argc, char *argv[])
 		}
 
 		if (st.st_mtime < before_mknod || st.st_mtime > after_mknod) {
-			fprintf(stderr,
-				"%s: bad mknod times %lu <= %lu <= %lu false\n",
-				prog, before_mknod, st.st_mtime, after_mknod);
+			fprintf(stderr, "%s: bad mknod(%s) times %lu <= %lu <= "
+                                "%lu false\n", prog, filename, before_mknod,
+                                st.st_mtime, after_mknod);
 			return 4;
 		}
 
@@ -93,9 +123,10 @@ int main(int argc, char *argv[])
 
                         if (st2.st_mtime < before_mknod || 
                             st2.st_mtime > after_mknod) {
-                                fprintf(stderr, "%s: bad mknod times %lu <= %lu"
-                                        " <= %lu false\n", prog, before_mknod,
-                                        st2.st_mtime, after_mknod);
+                                fprintf(stderr, "%s: bad mknod(%s) times %lu "
+                                        " <= %lu <= %lu false\n", prog,
+                                        filename, before_mknod, st2.st_mtime,
+                                        after_mknod);
                                 return 6;
                         }
 
@@ -106,7 +137,8 @@ int main(int argc, char *argv[])
                 }
 	}
 
-	/* See above */
+	utb.actime = 200000;
+	utb.modtime = 100000;
 	rc = utime(filename, &utb);
 	if (rc) {
 		fprintf(stderr, "%s: utime(%s) failed: rc %d: %s\n",
@@ -122,14 +154,14 @@ int main(int argc, char *argv[])
 	}
 
 	if (st.st_mtime != utb.modtime ) {
-		fprintf(stderr, "%s: bad utime mtime %lu should be  %lu\n",
-			prog, st.st_mtime, utb.modtime);
+		fprintf(stderr, "%s: bad utime mtime(%s) %lu should be %lu\n",
+			prog, filename, st.st_mtime, utb.modtime);
 		return 9;
 	}
 
 	if (st.st_atime != utb.actime ) {
-		fprintf(stderr, "%s: bad utime atime %lu should be  %lu\n",
-			prog, st.st_atime, utb.actime);
+		fprintf(stderr, "%s: bad utime atime(%s) %lu should be %lu\n",
+			prog, filename, st.st_atime, utb.actime);
 		return 10;
 	}
 
@@ -148,14 +180,16 @@ int main(int argc, char *argv[])
 	}
 
 	if (st2.st_mtime != st.st_mtime) {
-		fprintf(stderr, "%s: not synced mtime between clients: %lu "
-                        "should be  %lu\n", prog, st2.st_mtime, st.st_mtime);
+		fprintf(stderr, "%s: not synced mtime(%s) between clients: "
+                        "%lu should be %lu\n", prog, secname,
+                        st2.st_mtime, st.st_mtime);
 		return 13;
 	}
 
 	if (st2.st_ctime != st.st_ctime) {
-		fprintf(stderr, "%s: not synced ctime between clients: %lu "
-                        " should be  %lu\n", prog, st2.st_ctime, st.st_ctime);
+		fprintf(stderr, "%s: not synced ctime(%s) between clients: "
+                        "%lu should be %lu\n", prog, secname,
+                        st2.st_ctime, st.st_ctime);
 		return 14;
 	}
 	

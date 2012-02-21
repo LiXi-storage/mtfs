@@ -2365,7 +2365,7 @@ test_155() {
 	#local list=$(comma_list $(osts_nodes))
 	#local big=$(do_nodes $list grep "cache" /proc/cpuinfo | \
 	#	awk '{sum+=$4} END{print sum}')
-	##local big=1048576 #so big, as to cas swgfs network problem
+	##local big=1048576 #so big, as to cas lustre network problem
 	local big=65536
 
 	log big is $big K

@@ -1,8 +1,37 @@
 /* -*- mode: c; c-basic-offset: 8; indent-tabs-mode: nil; -*-
  * vim:expandtab:shiftwidth=8:tabstop=8:
  *
- * FROM: swgfs/tests
+ * GPL HEADER START
  *
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 only,
+ * as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * General Public License version 2 for more details (a copy is included
+ * in the LICENSE file that accompanied this code).
+ *
+ * You should have received a copy of the GNU General Public License
+ * version 2 along with this program; If not, see
+ * http://www.sun.com/software/products/lustre/docs/GPLv2.pdf
+ *
+ * Please contact Sun Microsystems, Inc., 4150 Network Circle, Santa Clara,
+ * CA 95054 USA or visit www.sun.com if you need additional information or
+ * have any questions.
+ *
+ * GPL HEADER END
+ */
+/*
+ * Copyright (c) 2003, 2010, Oracle and/or its affiliates. All rights reserved.
+ * Use is subject to license terms.
+ */
+/*
+ * This file is part of Lustre, http://www.lustre.org/
+ * Lustre is a trademark of Sun Microsystems, Inc.
  */
 
 #include <stdio.h>
@@ -23,9 +52,11 @@
 #endif
 
 static const char usage[] =
-"Usage: %s -u user_id [-g grp_id] [-G[gid0,gid1,...]] command\n"
+"Usage: %s -u user_id [-g grp_id] [-v euid] [-j egid] [-G[gid0,gid1,...]] command\n"
 "  -u user_id           switch to UID user_id\n"
 "  -g grp_id            switch to GID grp_id\n"
+"  -v euid              switch euid to UID\n"
+"  -j egid              switch egid to GID\n"
 "  -G[gid0,gid1,...]    set supplementary groups\n";
 
 void Usage_and_abort(const char *name)
@@ -41,6 +72,9 @@ int main(int argc, char **argv)
         int gid_is_set = 0, uid_is_set = 0, num_supp = -1;
         uid_t user_id = 0;
         gid_t grp_id = 0, supp_groups[NGROUPS_MAX] = { 0 };
+        int euid_is_set = 0, egid_is_set = 0;
+        uid_t euid = 0;
+        gid_t egid = 0;
 
         if (argc == 1) {
                 fprintf(stderr, "No parameter count\n");
@@ -48,7 +82,7 @@ int main(int argc, char **argv)
         }
 
         // get UID and GID
-        while ((c = getopt(argc, argv, "+u:g:hG::")) != -1) {
+        while ((c = getopt(argc, argv, "+u:g:v:j:hG::")) != -1) {
                 switch (c) {
                 case 'u':
                         if (!isdigit(optarg[0])) {
@@ -80,6 +114,36 @@ int main(int argc, char **argv)
                                 grp_id = (gid_t)atoi(optarg);
                         }
                         gid_is_set = 1;
+                        break;
+
+                case 'v':
+                        if (!isdigit(optarg[0])) {
+                                struct passwd *pw = getpwnam(optarg);
+                                if (pw == NULL) {
+                                        fprintf(stderr, "parameter '%s' bad\n",
+                                                optarg);
+                                        Usage_and_abort(name);
+                                }
+                                euid = pw->pw_uid;
+                        } else {
+                                euid = (uid_t)atoi(optarg);
+                        }
+                        euid_is_set = 1;
+                        break;
+
+                case 'j':
+                        if (!isdigit(optarg[0])) {
+                                struct group *gr = getgrnam(optarg);
+                                if (gr == NULL) {
+                                        fprintf(stderr, "getgrname %s failed\n",
+                                                optarg);
+                                        Usage_and_abort(name);
+                                }
+                                egid = gr->gr_gid;
+                        } else {
+                                egid = (gid_t)atoi(optarg);
+                        }
+                        egid_is_set = 1;
                         break;
 
                 case 'G':
@@ -130,10 +194,12 @@ int main(int argc, char **argv)
 #endif
 
         // set GID
-        status = setregid(grp_id, grp_id);
+        if (!egid_is_set)
+                egid = grp_id;
+        status = setregid(grp_id, egid);
         if (status == -1) {
-                 fprintf(stderr, "Cannot change grp_ID to %d, errno=%d (%s)\n",
-                         grp_id, errno, strerror(errno) );
+                 fprintf(stderr, "Cannot change gid to %d/%d, errno=%d (%s)\n",
+                         grp_id, egid, errno, strerror(errno) );
                  exit(-1);
         }
 
@@ -146,16 +212,19 @@ int main(int argc, char **argv)
         }
 
         // set UID
-        status = setreuid(user_id, user_id );
+        if (!euid_is_set)
+                euid = user_id;
+        status = setreuid(user_id, euid);
         if(status == -1) {
-                  fprintf(stderr,"Cannot change user_ID to %d, errno=%d (%s)\n",
-                           user_id, errno, strerror(errno) );
+                  fprintf(stderr,"Cannot change uid to %d/%d, errno=%d (%s)\n",
+                           user_id, euid, errno, strerror(errno) );
                   exit(-1);
         }
 
-        fprintf(stderr, "running as UID %d, GID %d", user_id, grp_id);
+        fprintf(stderr, "running as uid/gid/euid/egid %d/%d/%d/%d, groups:",
+                user_id, grp_id, euid, egid);
         for (i = 0; i < num_supp; i++)
-                fprintf(stderr, ":%d", supp_groups[i]);
+                fprintf(stderr, " %d", supp_groups[i]);
         fprintf(stderr, "\n");
 
         for (i = 0; i < argc - optind; i++)
