@@ -15,6 +15,7 @@ static struct component *component_workspace = NULL;
 int component_root_init()
 {
 	int ret = 0;
+	HENTRY();
 
 	HRFS_STRDUP(component_root.name, "/");
 	if (component_root.name == NULL) {
@@ -28,19 +29,21 @@ int component_root_init()
 	HRFS_INIT_LIST_HEAD(&component_root.this_graph.subcomponents);
 	component_workspace = &component_root;
 out:
-	return ret;
+	HRETURN(ret);
 }
 
 int component_root_finit()
 {
+	HENTRY();
 	HRFS_FREE_STR(component_root.name);
-	return 0;
+	HRETURN(0);
 }
 
 static int workspace_list_wrap(lua_State *L)
 {
 	int top = 0;
 	int i = 0;
+	HENTRY();
 
 	top = lua_gettop(L);
 	if (top == 0) {
@@ -67,13 +70,14 @@ static int workspace_list_wrap(lua_State *L)
 		}
 	}
 out:
-    return 0;
+	HRETURN(0);
 }
 
 static int workspace_pwd_wrap(lua_State *L)
 {
 	char *path = NULL;
 	int top = 0;
+	HENTRY();
 
 	top = lua_gettop(L);
 	if (top != 0) {
@@ -90,13 +94,14 @@ static int workspace_pwd_wrap(lua_State *L)
 	printf("%s\n", path);
 	free(path);
 out:
-    return 0;
+	HRETURN(0);
 }
 
 static int workspace_cd(const char *name)
 {
 	struct component *found = NULL;
 	int ret = 0;
+	HENTRY();
 
 	if (strcmp(name, "..") == 0) {
 		component_workspace = component_workspace->parent;
@@ -117,7 +122,7 @@ static int workspace_cd(const char *name)
 		component_workspace = found;
 	}
 out:
-	return ret;
+	HRETURN(ret);
 }
 
 static int workspace_cd_wrap(lua_State *L)
@@ -125,6 +130,7 @@ static int workspace_cd_wrap(lua_State *L)
 	const char *name = NULL;
 	int ret = 0;
 	int top = 0;
+	HENTRY();
 
 	top = lua_gettop(L);
 	if (top != 1) {
@@ -141,15 +147,16 @@ static int workspace_cd_wrap(lua_State *L)
 	}
 
 out:
-    return 0;
+	HRETURN(0);
 }
 
 static int workspace_type_wrap(lua_State *L)
 {
+	HENTRY();
 	workspace_cd("types");
 	workspace_list_wrap(L);
 	workspace_cd("..");
-	return 0;
+	HRETURN(0);
 }
 
 static int workspace_copy_wrap(lua_State *L)
@@ -198,7 +205,7 @@ static int workspace_copy_wrap(lua_State *L)
 	}
 	new_component = component_copy(old_component, component_workspace, new_name);
 out:
-    HRETURN(0);
+	HRETURN(0);
 }
 
 static int workspace_rename_wrap(lua_State *L)
@@ -209,6 +216,7 @@ static int workspace_rename_wrap(lua_State *L)
 	struct component *old_component = NULL;
 	int ret = 0;
 	int top = 0;
+	HENTRY();
 
 	top = lua_gettop(L);
 	if (top != 2) {
@@ -246,18 +254,20 @@ static int workspace_rename_wrap(lua_State *L)
 	}
 	ret = component_rename(old_component, new_name);
 out:
-    return ret;
+  HRETURN(ret);
 }
 
 static int digit_number(unsigned int number)
 {
 	int digit = 1;
 	unsigned int max_number = 9;
+	HENTRY();
+
 	while(number > max_number) {
 		max_number = max_number * 10 + 9;
 		digit++;
 	}
-	return digit;
+	HRETURN(digit);
 }
 
 #define MAX_NAME_LENGTH (1024)
@@ -267,6 +277,7 @@ static int workspace_declare_graph(lua_State *L, const char *name)
 	char *type = NULL;
 	int ret = 0;
 	struct component *component = NULL;
+	HENTRY();
 
 	type = fsmL_field_getstring(L, 1, "type");
 	if (type == NULL) {
@@ -299,7 +310,7 @@ static int workspace_declare_graph(lua_State *L, const char *name)
 out_free_type:
 	HRFS_FREE_STR(type);
 out:
-	return ret;
+	HRETURN(ret);
 }
 
 static int workspace_declare_filter(lua_State *L)
@@ -312,6 +323,7 @@ static int workspace_declare_filter(lua_State *L)
 	int outpin_num = 0;
 	int ret = 0;
 	int i = 0;
+	HENTRY();
 
 	type = fsmL_field_getstring(L, 1, "type");
 	if (type == NULL) {
@@ -470,13 +482,14 @@ out_free_inpin:
 out_free_type:
 	HRFS_FREE_STR(type);
 out:
-	return 0;
+	HRETURN(0);
 }
 
 static int workspace_declare_wrap(lua_State *L)
 {
 	int top = 0;
 	const char *name = NULL;
+	HENTRY();
 
 	top = lua_gettop(L);
 	if (top != 1) {
@@ -500,7 +513,7 @@ static int workspace_declare_wrap(lua_State *L)
 	}
 	lua_remove(L, -1);
 out:
-	return 0;
+	HRETURN(0);
 }
 
 static int workspace_new_wrap(lua_State *L)
@@ -565,6 +578,7 @@ out:
 
 static int workspace_help_wrap(lua_State *L)
 {
+	HENTRY();
 	printf("Filter commands:\n"
 	       "    help(): show this message\n"
 	       "    new({type=<type>, name=<name>}): alloc a component in workspace\n"
@@ -572,8 +586,7 @@ static int workspace_help_wrap(lua_State *L)
 	       "    ls(): list all sub graphs and sub components in workspace\n"
 	       "    type(): list all component types declared\n"
 	       "    declare({type=<type>, out_num=<out_num>, selector=<selector>}): declare a component type\n");
-
-    return 0;
+	HRETURN(0);
 }
 
 static int workspace_link_wrap(lua_State *L)
@@ -589,7 +602,7 @@ static int workspace_link_wrap(lua_State *L)
 	int top = 0;
 	HENTRY();
 
-  	top = lua_gettop(L);
+	top = lua_gettop(L);
 	if (top != 4) {
 		HERROR("argument error: too %s arguments\n", top > 4 ? "many" : "few" );
 		goto out;
@@ -632,7 +645,66 @@ static int workspace_link_wrap(lua_State *L)
 	}
 	ret = component_link(source_component, source_pin, dest_component, dest_pin);
 out:
-    HRETURN(0);
+	HRETURN(0);
+}
+
+static int workspace_unlink_wrap(lua_State *L)
+{
+	const char *source_name = NULL;
+	const char *source_pin = NULL;
+	const char *dest_name = NULL;
+	const char *dest_pin = NULL;
+	struct component *source_component = NULL;
+	struct component *dest_component = NULL;
+	int ret = 0;
+	int i = 0;
+	int top = 0;
+	HENTRY();
+
+	top = lua_gettop(L);
+	if (top != 4) {
+		HERROR("argument error: too %s arguments\n", top > 4 ? "many" : "few" );
+		goto out;
+	}
+
+	for (i = 1; i <= 4; i++) {
+		if (!lua_isstring(L, i)) {
+			HERROR("argument error: argument[%d] is expected to be a string, got %s\n", i, luaL_typename(L, i));
+			goto out;
+		}
+	}
+	
+	source_name = lua_tostring(L, 1);
+	source_pin = lua_tostring(L, 2);
+	dest_name = lua_tostring(L, 3);
+	dest_pin = lua_tostring(L, 4);
+
+	HASSERT(source_name);
+	HASSERT(source_pin);
+	HASSERT(dest_name);
+	HASSERT(dest_pin);
+	
+	if (strcmp(source_name, dest_name) == 0) {
+		HERROR("argument error: linking component %s to itself is not allowed\n", source_name);
+		goto out;
+	}	
+
+	source_component = component_search(component_workspace, source_name);
+	if (source_component == NULL) {
+		HERROR("failed to link, %s does not exists\n", source_name);
+		ret = -ENOMEM; /* Which errno? */
+		goto out;
+	}
+
+	dest_component = component_search(component_workspace, dest_name);
+	if (dest_component == NULL) {
+		HERROR("failed to link, %s does not exist\n", dest_name);
+		ret = -ENOMEM; /* Which errno? */
+		goto out;
+	}
+	ret = component_unlink(source_component, source_pin, dest_component, dest_pin);
+out:
+	HRETURN(0);
 }
 
 static int workspace_general_wrap(lua_State *L, int (*func)(struct component *subcomponent))
@@ -640,6 +712,7 @@ static int workspace_general_wrap(lua_State *L, int (*func)(struct component *su
 	int top = 0;
 	int i = 0;
 	int ret = 0;
+	HENTRY();
 
 	top = lua_gettop(L);
 	if (top == 0) {
@@ -665,14 +738,16 @@ static int workspace_general_wrap(lua_State *L, int (*func)(struct component *su
 		}
 	}
 out:
-    return 0;
+	HRETURN(0);
 }
 
 static int workspace_remove_wrap(lua_State *L)
 {
 	int ret = 0;
+	HENTRY();
+
 	ret = workspace_general_wrap(L, component_remove);
-	return 0;
+	HRETURN(0);
 }
 
 #define MAX_BUFF_SIZE (2048)
@@ -691,6 +766,7 @@ static int component_instance_dump2graphviz(struct component *component)
 {
 	char *buff = NULL;
 	int ret = 0;
+	HENTRY();
 
 	HRFS_ALLOC(buff, MAX_BUFF_SIZE);
 	if (buff == NULL) {
@@ -703,13 +779,14 @@ static int component_instance_dump2graphviz(struct component *component)
 	code_line_print(buff);
 	HRFS_FREE(buff, MAX_BUFF_SIZE);
 out:
-	return ret;
+	HRETURN(ret);
 }
 
 static int component_outlinks2brother_dump2graphviz(struct component *component)
 {
 	char *buff = NULL;
 	int ret = 0;
+	HENTRY();
 
 	HRFS_ALLOC(buff, MAX_BUFF_SIZE);
 	if (buff == NULL) {
@@ -733,7 +810,7 @@ static int component_outlinks2brother_dump2graphviz(struct component *component)
 			}
 
 			next_component = next->parent;
-			if (next_component ->parent == component->parent) {
+			if (next_component->parent == component->parent) {
 					snprintf(buff, MAX_BUFF_SIZE, "%s->%s;",
 					         component->name, next_component->name);
 					code_line_print(buff);
@@ -743,13 +820,14 @@ static int component_outlinks2brother_dump2graphviz(struct component *component)
 
 	HRFS_FREE(buff, MAX_BUFF_SIZE);
 out:
-	return ret;
+	HRETURN(ret);
 }
 
 static int workspace_dump2graphviz_wrap(lua_State *L)
 {
 	int top = 0;
 	int i = 0;
+	HENTRY();
 
 	code_line_print("digraph G {");
 	graphviz_indent++;
@@ -781,7 +859,7 @@ out:
 	graphviz_indent--;
 	code_line_print("}");
 	HASSERT(graphviz_indent == 0);
-    return 0;
+	HRETURN(0);
 }
 
 static int workspace_pack_wrap(lua_State *L)
@@ -929,6 +1007,7 @@ const struct luaL_reg workspacelib[] = {
 	{"cp", workspace_copy_wrap},
 	{"declare", workspace_declare_wrap},
 	{"link", workspace_link_wrap},
+	{"unlink", workspace_unlink_wrap},
 	{"dump", workspace_dump2graphviz_wrap},
 	{NULL, NULL},
 };

@@ -3,6 +3,7 @@
 #
 
 subdir-m += hrfs random
+@LUSTRE_SUPPORT_TRUE@subdir-m += lustre_support
 @SWGFS_SUPPORT_TRUE@subdir-m += swgfs_support
 @EXT2_SUPPORT_TRUE@subdir-m += ext2_support
 @EXT3_SUPPORT_TRUE@subdir-m += ext3_support

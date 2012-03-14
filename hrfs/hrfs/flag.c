@@ -163,7 +163,7 @@ int lowerfs_inode_get_flag_xattr(struct inode *inode, __u32 *hrfs_flag, const ch
 		ret = -EINVAL;
 		goto out;
 	}
-	*hrfs_flag = disk_flag & HRFS_FLAG_MDS_MASK;
+	*hrfs_flag = disk_flag & HRFS_FLAG_DISK_MASK;
 	HDEBUG("ret = %d, hrfs_flag = 0x%x\n", ret, *hrfs_flag);
 out_succeeded:
 	ret = 0;
@@ -204,7 +204,7 @@ int lowerfs_inode_set_flag_xattr(struct inode *inode, __u32 hrfs_flag, const cha
 		goto out;
 	}
 
-	disk_flag = hrfs_flag | HRFS_FLAG_MDS_SYMBOL;
+	disk_flag = hrfs_flag | HRFS_FLAG_DISK_SYMBOL;
 	if (unlikely(!inode->i_op || !inode->i_op->setxattr)) {
 		ret = -EPERM;
 		goto out;

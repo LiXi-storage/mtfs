@@ -34,12 +34,21 @@ struct hrfs_operation_list {
 	hrfs_bindex_t fault_nonlatest_bnum;     /* Number of nonlatest branches failed */
 };
 
+extern struct hrfs_operation_list *hrfs_oplist_build_keep_order(struct inode *inode);
 extern struct hrfs_operation_list *hrfs_oplist_build(struct inode *inode);
+extern struct hrfs_operation_list *hrfs_oplist_alloc(hrfs_bindex_t bnum);
 extern void hrfs_oplist_free(struct hrfs_operation_list *list);
-int hrfs_oplist_setbranch(struct hrfs_operation_list *list,
+static inline int hrfs_oplist_setbranch(struct hrfs_operation_list *list,
                           hrfs_bindex_t bindex,
                           int is_successful,
-                          hrfs_operation_result_t result);
+                          hrfs_operation_result_t result)
+{
+	HASSERT(bindex >= 0 && bindex < list->bnum);
+	list->op_binfo[bindex].valid = 1;
+	list->op_binfo[bindex].is_suceessful = is_successful;
+	list->op_binfo[bindex].result = result;
+	return 0;
+}
 hrfs_operation_result_t hrfs_oplist_result(struct hrfs_operation_list *list);
 int hrfs_oplist_update(struct inode *inode, struct hrfs_operation_list *list);
 int hrfs_oplist_check(struct hrfs_operation_list *list);

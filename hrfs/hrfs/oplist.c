@@ -7,7 +7,7 @@
 #include <hrfs_flag.h>
 #include "main_internal.h"
 
-static struct hrfs_operation_list *hrfs_oplist_alloc(hrfs_bindex_t bnum)
+struct hrfs_operation_list *hrfs_oplist_alloc(hrfs_bindex_t bnum)
 {
 	struct hrfs_operation_list *list = NULL;
 
@@ -27,6 +27,7 @@ out_free_list:
 out:
 	return list;
 }
+EXPORT_SYMBOL(hrfs_oplist_alloc);
 
 void hrfs_oplist_free(struct hrfs_operation_list *list)
 {
@@ -45,6 +46,26 @@ static inline void hrfs_oplist_dump(struct hrfs_operation_list *list)
 		HPRINT("branch[%d]: %d\n", bindex, list->op_binfo[bindex].bindex);
 	}
 }
+
+struct hrfs_operation_list *hrfs_oplist_build_keep_order(struct inode *inode)
+{
+	struct hrfs_operation_list *list = NULL;
+	hrfs_bindex_t bindex = 0;
+	hrfs_bindex_t bnum = hrfs_i2bnum(inode);
+
+	list = hrfs_oplist_alloc(bnum);
+	if (unlikely(list == NULL)) {
+		goto out;
+	}
+
+	for (bindex = 0; bindex < bnum; bindex++) {
+	        list->op_binfo[bindex].bindex = bindex;
+	}
+	list->latest_bnum = bnum;
+out:
+	return list;
+}
+EXPORT_SYMBOL(hrfs_oplist_build_keep_order);
 
 struct hrfs_operation_list *hrfs_oplist_build(struct inode *inode)
 {
@@ -74,7 +95,6 @@ struct hrfs_operation_list *hrfs_oplist_build(struct inode *inode)
 		binfo->bindex = bindex;
 	}
 	list->latest_bnum = bfirst;
-	hrfs_oplist_dump(list);
 out:
 	return list;
 }
@@ -128,23 +148,18 @@ int hrfs_oplist_check(struct hrfs_operation_list *list)
 }
 EXPORT_SYMBOL(hrfs_oplist_check);
 
-int hrfs_oplist_setbranch(struct hrfs_operation_list *list,
-                          hrfs_bindex_t bindex,
-                          int is_successful,
-                          hrfs_operation_result_t result)
-{
-	HASSERT(bindex >= 0 && bindex < list->bnum);
-	list->op_binfo[bindex].valid = 1;
-	list->op_binfo[bindex].is_suceessful = is_successful;
-	list->op_binfo[bindex].result = result;
-	return 0;
-}
-EXPORT_SYMBOL(hrfs_oplist_setbranch);
-
 /* Choose a operation status returned */
 hrfs_operation_result_t hrfs_oplist_result(struct hrfs_operation_list *list)
 {
-	return list->op_binfo[0].result;
+	hrfs_bindex_t bindex = 0;
+	if (list->success_bnum > 0) {
+		for (bindex = 0; bindex < list->bnum; bindex++) {
+			if (list->op_binfo[bindex].is_suceessful) {
+				break;
+			}
+		}
+	}
+	return list->op_binfo[bindex].result;
 }
 EXPORT_SYMBOL(hrfs_oplist_result);
 

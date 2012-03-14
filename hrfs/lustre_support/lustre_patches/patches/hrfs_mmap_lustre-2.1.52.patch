@@ -1,0 +1,16 @@
+Index: lustre-2.1.52/lustre/llite/llite_mmap.c
+===================================================================
+--- lustre-2.1.52.orig/lustre/llite/llite_mmap.c	2011-11-12 13:24:06.000000000 +0800
++++ lustre-2.1.52/lustre/llite/llite_mmap.c	2012-03-14 09:16:57.000000000 +0800
+@@ -440,3 +440,11 @@
+ 
+         RETURN(rc);
+ }
++
++#ifndef DISABLE_HRFS_SUPPORT
++struct vm_operations_struct *hrfs_ll_get_vm_ops(void)
++{
++        return &ll_file_vm_ops;
++}
++EXPORT_SYMBOL(hrfs_ll_get_vm_ops);
++#endif /* !DISABLE_HRFS_SUPPORT */

@@ -8,7 +8,7 @@ desc="tests for rule_tree"
 dir=`dirname $0`
 . ${dir}/../misc.sh
 
-echo "1..34"
+echo "1..37"
 
 #
 # TEST FORMAT:
@@ -491,3 +491,76 @@ workspace.ls("sub1_1")
 sub1_1: type="type2", pins={"in0", "out0", "out1"}, is_graph
 ' expect 0
 
+# test 35
+# unlink can work
+IN='
+workspace.declare({type="type1", out_num=2, selector=function () print "aoao" end, inpin_name="in0", outpin_names={"out0", "out1"}})
+workspace.new({type="type1", name="sub1"})
+workspace.new({type="type1", name="sub2"})
+workspace.new({type="type1", name="sub3"})
+workspace.link("sub1", "out0", "sub2", "in0")
+workspace.link("sub1", "out1", "sub2", "in0")
+workspace.link("sub2", "out0", "sub3", "in0")
+workspace.link("sub2", "out1", "sub3", "in0")
+workspace.unlink("sub1", "out0", "sub2", "in0")
+workspace.unlink("sub1", "out1", "sub2", "in0")
+workspace.unlink("sub2", "out0", "sub3", "in0")
+workspace.unlink("sub2", "out1", "sub3", "in0")
+workspace.unlink("sub2", "out1", "sub3", "in0")
+workspace.dump()
+' OUT='
+digraph G {
+	sub3 [label= "sub3"];
+	sub2 [label= "sub2"];
+	sub1 [label= "sub1"];
+	types [label= "types"];
+}
+' expect 0
+
+# test 36
+# remove a component should unlink all links
+IN='
+workspace.declare({type="type1", out_num=2, selector=function () print "aoao" end, inpin_name="in0", outpin_names={"out0", "out1"}})
+workspace.new({type="type1", name="sub1"})
+workspace.new({type="type1", name="sub2"})
+workspace.new({type="type1", name="sub3"})
+workspace.link("sub1", "out0", "sub2", "in0")
+workspace.link("sub1", "out1", "sub2", "in0")
+workspace.link("sub2", "out0", "sub3", "in0")
+workspace.link("sub2", "out1", "sub3", "in0")
+workspace.rm("sub2")
+workspace.rm("sub3")
+workspace.dump()
+' OUT='
+digraph G {
+	sub1 [label= "sub1"];
+	types [label= "types"];
+}
+' expect 0
+
+# test 37
+# remove a component and its links should be ok to linked again
+IN='
+workspace.declare({type="type1", out_num=2, selector=function () print "aoao" end, inpin_name="in0", outpin_names={"out0", "out1"}})
+workspace.new({type="type1", name="sub1"})
+workspace.new({type="type1", name="sub2"})
+workspace.new({type="type1", name="sub3"})
+workspace.link("sub1", "out0", "sub2", "in0")
+workspace.link("sub1", "out1", "sub2", "in0")
+workspace.link("sub2", "out0", "sub3", "in0")
+workspace.link("sub2", "out1", "sub3", "in0")
+workspace.rm("sub2")
+workspace.rm("sub3")
+workspace.new({type="type1", name="sub4"})
+workspace.link("sub1", "out0", "sub4", "in0")
+workspace.link("sub1", "out1", "sub4", "in0")
+workspace.dump()
+' OUT='
+digraph G {
+	sub4 [label= "sub4"];
+	sub1 [label= "sub1"];
+	types [label= "types"];
+	sub1->sub4;
+	sub1->sub4;
+}
+' expect 0

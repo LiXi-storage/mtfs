@@ -7,8 +7,8 @@ set -e
 #UNLINKMANY=${UNLINKMANY:-unlinkmany}
 #LCTL=${LCTL:-lctl}
 
-#MOUNT=${MOUNT:-/mnt/swgfs}
-#MOUNT2=${MOUNT2:-/mnt/swgfs2}
+#MOUNT=${MOUNT:-/mnt/lustre}
+#MOUNT2=${MOUNT2:-/mnt/lustre2}
 #DIR=${DIR:-$MOUNT}
 #DIR2=${DIR2:-$MOUNT2}
 COUNT=${COUNT:-100}
@@ -42,7 +42,7 @@ while [ $MINRES -gt $MAXRES ]; do
 		MAXDIR=$DIRTMP
 		MAXRES=$DIRRES
 	fi
-	if [ $FILERES -lt $MINRES ]; then
+	if [ $FILERES -lt $MINRES -o -z "$MINFILE" ]; then
 		[ -f "$MINFILE" ] && rm $MINFILE
 		MINFILE=$FILETMP
 		MINRES=$FILERES
@@ -56,7 +56,7 @@ mv $MAXDIR $LOCKDIR
 mv $MINFILE $LOCKFILE
 rm -rf $DIR/d$$
 
-#$LCTL mark "start dir: $LOCKDIR=$MAXRES file: $LOCKFILE=$MINRES"
+# $LCTL mark "start dir: $LOCKDIR=$MAXRES file: $LOCKFILE=$MINRES"
 # link will lock $LOCKFILE and $DIR as it creates ${LOCKFILE}{0,1,...}
 $CREATEMANY -l$LOCKFILE $LOCKFILE -$COUNT &
 CR_PID=$!

@@ -1773,7 +1773,13 @@ int hrfs_permission(struct inode *inode, int mask, struct nameidata *nd)
 		goto out;
 	}
 
+#ifndef LIXI_20120309
+	HASSERT(hidden_inode->i_op);
+	HASSERT(hidden_inode->i_op->permission);
+	ret = hidden_inode->i_op->permission(hidden_inode, mask, nd);
+#else
 	ret = permission(hidden_inode, mask, NULL);
+#endif
 out:
 	HRETURN(ret);
 }

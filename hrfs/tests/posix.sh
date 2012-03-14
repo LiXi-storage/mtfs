@@ -218,10 +218,15 @@ test_7b() {
 	if [ ! -d $DIR/d7 ]; then
 		mkdir $DIR/d7
 	fi
+	echo 1
 	$MCREATE $DIR/d7/f2
+	echo 2
 	echo -n foo > $DIR/d7/f2
+	echo 3
 	[ "`cat $DIR/d7/f2`" = "foo" ] || error
+	echo 4
 	$CHECKSTAT -t file -s 3 $DIR/d7/f2 || error
+	echo 5
 }
 run_test 7b "mkdir .../d7; mcreate d7/f2; echo foo > d7/f2 ====="
 

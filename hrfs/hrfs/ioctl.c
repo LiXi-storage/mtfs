@@ -84,14 +84,22 @@ static int hrfs_user_set_state(struct inode *inode, struct file *file, struct hr
 		ret = -EINVAL;
 		goto free_state;
 	}
-	
+
+	for (bindex = 0; bindex < bnum; bindex++) {
+		hidden_inode = hrfs_i2branch(inode, bindex);
+		if (hidden_inode != NULL) {
+			if (unlikely(!hrfs_flag_is_valid(state->state[bindex].flag))) {
+				ret = -EPERM;
+				goto out;
+			}
+		}
+	}
+
 	for (bindex = 0; bindex < bnum; bindex++) {
 		hidden_inode = hrfs_i2branch(inode, bindex);
 		lowerfs_ops = hrfs_i2bops(inode, bindex);
 		if (hidden_inode == NULL) {
-			HERROR("branch[%d] of inode is NULL\n", bindex);
-			ret = -ENOENT;
-			//goto free_state;
+			HDEBUG("branch[%d] of inode is NULL, skipping\n", bindex);
 		} else {
 			ret = lowerfs_inode_set_flag(lowerfs_ops, hidden_inode, state->state[bindex].flag);
 			if (ret) {
@@ -179,8 +187,13 @@ static int hrfs_ioctl_do_branch(struct inode *inode, struct file *file, unsigned
 
 	if (hidden_file && hidden_inode) {
 		HASSERT(hidden_file->f_op);
+#ifdef HAVE_UNLOCKED_IOCTL
+		HASSERT(hidden_file->f_op->unlocked_ioctl);
+		ret = hidden_file->f_op->unlocked_ioctl(hidden_file, cmd, arg);
+#else
 		HASSERT(hidden_file->f_op->ioctl);
 		ret = hidden_file->f_op->ioctl(hidden_inode, hidden_file, cmd, arg);
+#endif
 	} else {
 		HERROR("branch[%d] of file [%*s] is NULL, ioctl setflags skipped\n", 
 		       bindex, file->f_dentry->d_name.len, file->f_dentry->d_name.name);

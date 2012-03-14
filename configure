@@ -312,7 +312,7 @@ ac_includes_default="\
 # include <unistd.h>
 #endif"
 
-ac_subst_vars='SHELL PATH_SEPARATOR PACKAGE_NAME PACKAGE_TARNAME PACKAGE_VERSION PACKAGE_STRING PACKAGE_BUGREPORT exec_prefix prefix program_transform_name bindir sbindir libexecdir datadir sysconfdir sharedstatedir localstatedir libdir includedir oldincludedir infodir mandir build_alias host_alias target_alias DEFS ECHO_C ECHO_N ECHO_T LIBS AC_HRFS_MAJOR AC_HRFS_MINOR AC_HRFS_PATCH AC_HRFS_FIX AC_HRFS_VERSION_STRING AC_HRFS_VER_ALLOWED_OFFSET AC_HRFS_LIB_VER_OFFSET_WARN AC_HRFS_CLI_VER_OFFSET_WARN AC_HRFS_CLIENT_URN AC_HRFS_MDS_URN AC_HRFS_MGS_URN AC_HRFS_OSS_URN build build_cpu build_vendor build_os host host_cpu host_vendor host_os target target_cpu target_vendor target_os INSTALL_PROGRAM INSTALL_SCRIPT INSTALL_DATA CYGPATH_W PACKAGE VERSION ACLOCAL AUTOCONF AUTOMAKE AUTOHEADER MAKEINFO install_sh STRIP ac_ct_STRIP INSTALL_STRIP_PROGRAM mkdir_p AWK SET_MAKE am__leading_dot AMTAR am__tar am__untar CC CFLAGS LDFLAGS CPPFLAGS ac_ct_CC EXEEXT OBJEXT DEPDIR am__include am__quote AMDEP_TRUE AMDEP_FALSE AMDEPBACKSLASH CCDEPMODE am__fastdepCC_TRUE am__fastdepCC_FALSE lb_target_os LIBCFS_SUBDIR LIBCFS_INCLUDE_DIR INCLUDE_RULES docdir HRFS rootsbindir RANLIB ac_ct_RANLIB CPP EGREP LLCPPFLAGS LLCFLAGS EXTRA_KCFLAGS ENABLE_DOC ENABLE_INIT_SCRIPTS LINUX LINUX_OBJ LINUX_CONFIG ARCH_UM UML_CFLAGS MODULE_TARGET linux25 KMODEXT LINUXRELEASE moduledir modulefsdir modulenetdir RELEASE SYMVERFILE EXTRA_KLDFLAGS EXTRA_KLIBS kextdir plistdir macosdir LIBEFENCE PTHREAD_LIBS ENABLE_LIBPTHREAD SWGFS LIBREADLINE LIBLUA MODULES_TRUE MODULES_FALSE UTILS_TRUE UTILS_FALSE TESTS_TRUE TESTS_FALSE DOC_TRUE DOC_FALSE INIT_SCRIPTS_TRUE INIT_SCRIPTS_FALSE LINUX_TRUE LINUX_FALSE DARWIN_TRUE DARWIN_FALSE CRAY_XT3_TRUE CRAY_XT3_FALSE SUNOS_TRUE SUNOS_FALSE LINUX25_TRUE LINUX25_FALSE LIBHRFS_TRUE LIBHRFS_FALSE LIBHRFS_TESTS_TRUE LIBHRFS_TESTS_FALSE SWGFS_SUPPORT_TRUE SWGFS_SUPPORT_FALSE EXT2_SUPPORT_TRUE EXT2_SUPPORT_FALSE EXT3_SUPPORT_TRUE EXT3_SUPPORT_FALSE EXT4_SUPPORT_TRUE EXT4_SUPPORT_FALSE NFS_SUPPORT_TRUE NFS_SUPPORT_FALSE TMPFS_SUPPORT_TRUE TMPFS_SUPPORT_FALSE NTFS3G_SUPPORT_TRUE NTFS3G_SUPPORT_FALSE MANAGE_TRUE MANAGE_FALSE MANAGE_TESTS_TRUE MANAGE_TESTS_FALSE ac_configure_args MOSTLYCLEANFILES LIBOBJS LTLIBOBJS'
+ac_subst_vars='SHELL PATH_SEPARATOR PACKAGE_NAME PACKAGE_TARNAME PACKAGE_VERSION PACKAGE_STRING PACKAGE_BUGREPORT exec_prefix prefix program_transform_name bindir sbindir libexecdir datadir sysconfdir sharedstatedir localstatedir libdir includedir oldincludedir infodir mandir build_alias host_alias target_alias DEFS ECHO_C ECHO_N ECHO_T LIBS AC_HRFS_MAJOR AC_HRFS_MINOR AC_HRFS_PATCH AC_HRFS_FIX AC_HRFS_VERSION_STRING AC_HRFS_VER_ALLOWED_OFFSET AC_HRFS_LIB_VER_OFFSET_WARN AC_HRFS_CLI_VER_OFFSET_WARN AC_HRFS_CLIENT_URN AC_HRFS_MDS_URN AC_HRFS_MGS_URN AC_HRFS_OSS_URN build build_cpu build_vendor build_os host host_cpu host_vendor host_os target target_cpu target_vendor target_os INSTALL_PROGRAM INSTALL_SCRIPT INSTALL_DATA CYGPATH_W PACKAGE VERSION ACLOCAL AUTOCONF AUTOMAKE AUTOHEADER MAKEINFO install_sh STRIP ac_ct_STRIP INSTALL_STRIP_PROGRAM mkdir_p AWK SET_MAKE am__leading_dot AMTAR am__tar am__untar CC CFLAGS LDFLAGS CPPFLAGS ac_ct_CC EXEEXT OBJEXT DEPDIR am__include am__quote AMDEP_TRUE AMDEP_FALSE AMDEPBACKSLASH CCDEPMODE am__fastdepCC_TRUE am__fastdepCC_FALSE lb_target_os LIBCFS_SUBDIR LIBCFS_INCLUDE_DIR INCLUDE_RULES docdir HRFS rootsbindir RANLIB ac_ct_RANLIB CPP EGREP LLCPPFLAGS LLCFLAGS EXTRA_KCFLAGS ENABLE_DOC ENABLE_INIT_SCRIPTS LINUX LINUX_OBJ LINUX_CONFIG ARCH_UM UML_CFLAGS MODULE_TARGET linux25 KMODEXT LINUXRELEASE moduledir modulefsdir modulenetdir RELEASE SYMVERFILE EXTRA_KLDFLAGS EXTRA_KLIBS kextdir plistdir macosdir LIBEFENCE PTHREAD_LIBS ENABLE_LIBPTHREAD SWGFS LUSTRE LIBREADLINE LIBLUA MODULES_TRUE MODULES_FALSE UTILS_TRUE UTILS_FALSE TESTS_TRUE TESTS_FALSE DOC_TRUE DOC_FALSE INIT_SCRIPTS_TRUE INIT_SCRIPTS_FALSE LINUX_TRUE LINUX_FALSE DARWIN_TRUE DARWIN_FALSE CRAY_XT3_TRUE CRAY_XT3_FALSE SUNOS_TRUE SUNOS_FALSE LINUX25_TRUE LINUX25_FALSE LIBHRFS_TRUE LIBHRFS_FALSE LIBHRFS_TESTS_TRUE LIBHRFS_TESTS_FALSE LUSTRE_SUPPORT_TRUE LUSTRE_SUPPORT_FALSE SWGFS_SUPPORT_TRUE SWGFS_SUPPORT_FALSE EXT2_SUPPORT_TRUE EXT2_SUPPORT_FALSE EXT3_SUPPORT_TRUE EXT3_SUPPORT_FALSE EXT4_SUPPORT_TRUE EXT4_SUPPORT_FALSE NFS_SUPPORT_TRUE NFS_SUPPORT_FALSE TMPFS_SUPPORT_TRUE TMPFS_SUPPORT_FALSE NTFS3G_SUPPORT_TRUE NTFS3G_SUPPORT_FALSE MANAGE_TRUE MANAGE_FALSE MANAGE_TESTS_TRUE MANAGE_TESTS_FALSE ac_configure_args MOSTLYCLEANFILES LIBOBJS LTLIBOBJS'
 ac_subst_files=''
 
 # Initialize some variables set by options.
@@ -860,6 +860,8 @@ Optional Features:
   --disable-doc           skip creation of pdf documentation
   --disable-utils         disable building of Hrfs utility programs
   --disable-tests         disable building of Hrfs tests
+  --disable-lustre-support
+                          disable lustre backend support
   --disable-swgfs-support disable swgfs backend support
   --disable-ext2-support  disable ext2 backend support
   --disable-ext3-support  disable ext3 backend support
@@ -894,6 +896,7 @@ Optional Packages:
                           Use a different kernel version header. Consult
                           build/README.kernel-source for details.
   --with-swgfs=path       set path to Swgfs source (default=/usr/src/swgfs)
+  --with-lustre=path      set path to lustre source (default=/usr/src/lustre)
 
 Some influential environment variables:
   CC          C compiler command
@@ -4207,6 +4210,17 @@ echo "$as_me:$LINENO: result: $enable_tests" >&5
 echo "${ECHO_T}$enable_tests" >&6
 
 
+echo "$as_me:$LINENO: checking whether to build lustre backend support" >&5
+echo $ECHO_N "checking whether to build lustre backend support... $ECHO_C" >&6
+# Check whether --enable-lustre-support or --disable-lustre-support was given.
+if test "${enable_lustre_support+set}" = set; then
+  enableval="$enable_lustre_support"
+
+else
+  enable_lustre_support='yes'
+fi;
+echo "$as_me:$LINENO: result: $enable_lustre_support" >&5
+echo "${ECHO_T}$enable_lustre_support" >&6
 echo "$as_me:$LINENO: checking whether to build swgfs backend support" >&5
 echo $ECHO_N "checking whether to build swgfs backend support... $ECHO_C" >&6
 # Check whether --enable-swgfs-support or --disable-swgfs-support was given.
@@ -8994,6 +9008,129 @@ fi
 
 fi
 
+if test x$enable_lustre_support = xyes ; then
+	echo "$as_me:$LINENO: checking for Lustre sources" >&5
+echo $ECHO_N "checking for Lustre sources... $ECHO_C" >&6
+
+# Check whether --with-lustre or --without-lustre was given.
+if test "${with_lustre+set}" = set; then
+  withval="$with_lustre"
+
+
+	LUSTRE=$(readlink -f $with_lustre)
+
+	new_configure_args=
+	eval "set x $ac_configure_args"
+	shift
+	for arg; do
+		case $arg in
+			--with-lustre=*)
+				arg=--with-lustre=$LUSTRE
+				;;
+			*\'*)
+				arg=$(printf %s\n "$arg" | \
+				      sed "s/'/'\\\\\\\\''/g")
+				;;
+		esac
+				new_configure_args="$new_configure_args \"$arg\""
+	done
+	ac_configure_args=$new_configure_args
+
+
+
+else
+  LUSTRE=/usr/src/lustre
+fi;
+echo "$as_me:$LINENO: result: $LUSTRE" >&5
+echo "${ECHO_T}$LUSTRE" >&6
+
+
+# -------- check for lustre --------
+as_lb_File=`echo "lb_cv_file_$LUSTRE" | $as_tr_sh`
+echo "$as_me:$LINENO: checking for $LUSTRE" >&5
+echo $ECHO_N "checking for $LUSTRE... $ECHO_C" >&6
+if eval "test \"\${$as_lb_File+set}\" = set"; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+else
+  if test -r "$LUSTRE"; then
+  eval "$as_lb_File=yes"
+else
+  eval "$as_lb_File=no"
+fi
+fi
+echo "$as_me:$LINENO: result: `eval echo '${'$as_lb_File'}'`" >&5
+echo "${ECHO_T}`eval echo '${'$as_lb_File'}'`" >&6
+if test `eval echo '${'$as_lb_File'}'` = yes; then
+  :
+else
+  { { echo "$as_me:$LINENO: error: Lustre source $LUSTRE could not be found." >&5
+echo "$as_me: error: Lustre source $LUSTRE could not be found." >&2;}
+   { (exit 1); exit 1; }; }
+fi
+
+
+# -------- check for version --------
+as_lb_File=`echo "lb_cv_file_$LUSTRE/lustre/include/hrfs_version.h" | $as_tr_sh`
+echo "$as_me:$LINENO: checking for $LUSTRE/lustre/include/hrfs_version.h" >&5
+echo $ECHO_N "checking for $LUSTRE/lustre/include/hrfs_version.h... $ECHO_C" >&6
+if eval "test \"\${$as_lb_File+set}\" = set"; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+else
+  if test -r "$LUSTRE/lustre/include/hrfs_version.h"; then
+  eval "$as_lb_File=yes"
+else
+  eval "$as_lb_File=no"
+fi
+fi
+echo "$as_me:$LINENO: result: `eval echo '${'$as_lb_File'}'`" >&5
+echo "${ECHO_T}`eval echo '${'$as_lb_File'}'`" >&6
+if test `eval echo '${'$as_lb_File'}'` = yes; then
+  :
+else
+
+        { echo "$as_me:$LINENO: WARNING: Unpatched lustre source code detected." >&5
+echo "$as_me: WARNING: Unpatched lustre source code detected." >&2;}
+        { echo "$as_me:$LINENO: WARNING: Lustre backend support cannot be built with an unpatched lustre source code;" >&5
+echo "$as_me: WARNING: Lustre backend support cannot be built with an unpatched lustre source code;" >&2;}
+        { echo "$as_me:$LINENO: WARNING: disabling lustre support" >&5
+echo "$as_me: WARNING: disabling lustre support" >&2;}
+        enable_lustre_support='no'
+
+fi
+
+
+# -------- check for head directory --------
+as_lb_File=`echo "lb_cv_file_$LUSTRE/lustre/include" | $as_tr_sh`
+echo "$as_me:$LINENO: checking for $LUSTRE/lustre/include" >&5
+echo $ECHO_N "checking for $LUSTRE/lustre/include... $ECHO_C" >&6
+if eval "test \"\${$as_lb_File+set}\" = set"; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+else
+  if test -r "$LUSTRE/lustre/include"; then
+  eval "$as_lb_File=yes"
+else
+  eval "$as_lb_File=no"
+fi
+fi
+echo "$as_me:$LINENO: result: `eval echo '${'$as_lb_File'}'`" >&5
+echo "${ECHO_T}`eval echo '${'$as_lb_File'}'`" >&6
+if test `eval echo '${'$as_lb_File'}'` = yes; then
+  :
+else
+  { { echo "$as_me:$LINENO: error: Lustre head directory $LUSTRE/lustre/include could not be found." >&5
+echo "$as_me: error: Lustre head directory $LUSTRE/lustre/include could not be found." >&2;}
+   { (exit 1); exit 1; }; }
+fi
+
+
+# -------- define lustre dir --------
+	LUSTRE_INCLUDE_DIR="$LUSTRE/lustre/include"
+	#CPPFLAGS="$CPPFLAGS -I$LUSTRE_INCLUDE_DIR"
+	EXTRA_KCFLAGS="$EXTRA_KCFLAGS -I$LUSTRE_INCLUDE_DIR"
+
+
+fi
+
 echo "$as_me:$LINENO: checking whether to enable HRFS_TAG" >&5
 echo $ECHO_N "checking whether to enable HRFS_TAG... $ECHO_C" >&6
 # Check whether --enable-hrfs_tag or --disable-hrfs_tag was given.
@@ -9346,6 +9483,16 @@ fi
 
 
 
+if test x$enable_lustre_support = xyes; then
+  LUSTRE_SUPPORT_TRUE=
+  LUSTRE_SUPPORT_FALSE='#'
+else
+  LUSTRE_SUPPORT_TRUE='#'
+  LUSTRE_SUPPORT_FALSE=
+fi
+
+
+
 if test x$enable_swgfs_support = xyes; then
   SWGFS_SUPPORT_TRUE=
   SWGFS_SUPPORT_FALSE='#'
@@ -9451,7 +9598,7 @@ EXTRA_KCFLAGS="-include $PWD/config.h $EXTRA_KCFLAGS"
 
 
 
-                                                                                                                                                                                                                                                                                                                                ac_config_files="$ac_config_files hrfs/Makefile hrfs/autoMakefile hrfs/autoconf/Makefile hrfs/doc/Makefile hrfs/include/Makefile hrfs/random/Makefile hrfs/random/autoMakefile hrfs/hrfs/Makefile hrfs/hrfs/autoMakefile hrfs/libuser/Makefile hrfs/libuser/tests/Makefile hrfs/manage/Makefile hrfs/scripts/Makefile hrfs/tests/Makefile hrfs/tests/pjd_fstest/Makefile hrfs/tests/src/Makefile hrfs/utils/libcoreutils/Makefile hrfs/utils/Makefile hrfs/ext2_support/Makefile hrfs/ext2_support/autoMakefile hrfs/ext3_support/Makefile hrfs/ext3_support/autoMakefile hrfs/ext4_support/Makefile hrfs/ext4_support/autoMakefile hrfs/nfs_support/Makefile hrfs/nfs_support/autoMakefile hrfs/ntfs3g_support/Makefile hrfs/ntfs3g_support/autoMakefile hrfs/swgfs_support/Makefile hrfs/swgfs_support/autoMakefile hrfs/tmpfs_support/Makefile hrfs/tmpfs_support/autoMakefile"
+                                                                                                                                                                                                                                                                                                                                                    ac_config_files="$ac_config_files hrfs/Makefile hrfs/autoMakefile hrfs/autoconf/Makefile hrfs/doc/Makefile hrfs/include/Makefile hrfs/random/Makefile hrfs/random/autoMakefile hrfs/hrfs/Makefile hrfs/hrfs/autoMakefile hrfs/libuser/Makefile hrfs/libuser/tests/Makefile hrfs/manage/Makefile hrfs/scripts/Makefile hrfs/tests/Makefile hrfs/tests/pjd_fstest/Makefile hrfs/tests/src/Makefile hrfs/utils/libcoreutils/Makefile hrfs/utils/Makefile hrfs/ext2_support/Makefile hrfs/ext2_support/autoMakefile hrfs/ext3_support/Makefile hrfs/ext3_support/autoMakefile hrfs/ext4_support/Makefile hrfs/ext4_support/autoMakefile hrfs/nfs_support/Makefile hrfs/nfs_support/autoMakefile hrfs/ntfs3g_support/Makefile hrfs/ntfs3g_support/autoMakefile hrfs/swgfs_support/Makefile hrfs/swgfs_support/autoMakefile hrfs/lustre_support/Makefile hrfs/lustre_support/autoMakefile hrfs/tmpfs_support/Makefile hrfs/tmpfs_support/autoMakefile"
 
 
 
@@ -9646,6 +9793,13 @@ if test -z "${LIBHRFS_TESTS_TRUE}" && test -z "${LIBHRFS_TESTS_FALSE}"; then
   { { echo "$as_me:$LINENO: error: conditional \"LIBHRFS_TESTS\" was never defined.
 Usually this means the macro was only invoked conditionally." >&5
 echo "$as_me: error: conditional \"LIBHRFS_TESTS\" was never defined.
+Usually this means the macro was only invoked conditionally." >&2;}
+   { (exit 1); exit 1; }; }
+fi
+if test -z "${LUSTRE_SUPPORT_TRUE}" && test -z "${LUSTRE_SUPPORT_FALSE}"; then
+  { { echo "$as_me:$LINENO: error: conditional \"LUSTRE_SUPPORT\" was never defined.
+Usually this means the macro was only invoked conditionally." >&5
+echo "$as_me: error: conditional \"LUSTRE_SUPPORT\" was never defined.
 Usually this means the macro was only invoked conditionally." >&2;}
    { (exit 1); exit 1; }; }
 fi
@@ -10200,6 +10354,8 @@ do
   "hrfs/ntfs3g_support/autoMakefile" ) CONFIG_FILES="$CONFIG_FILES hrfs/ntfs3g_support/autoMakefile" ;;
   "hrfs/swgfs_support/Makefile" ) CONFIG_FILES="$CONFIG_FILES hrfs/swgfs_support/Makefile" ;;
   "hrfs/swgfs_support/autoMakefile" ) CONFIG_FILES="$CONFIG_FILES hrfs/swgfs_support/autoMakefile" ;;
+  "hrfs/lustre_support/Makefile" ) CONFIG_FILES="$CONFIG_FILES hrfs/lustre_support/Makefile" ;;
+  "hrfs/lustre_support/autoMakefile" ) CONFIG_FILES="$CONFIG_FILES hrfs/lustre_support/autoMakefile" ;;
   "hrfs/tmpfs_support/Makefile" ) CONFIG_FILES="$CONFIG_FILES hrfs/tmpfs_support/Makefile" ;;
   "hrfs/tmpfs_support/autoMakefile" ) CONFIG_FILES="$CONFIG_FILES hrfs/tmpfs_support/autoMakefile" ;;
   "depfiles" ) CONFIG_COMMANDS="$CONFIG_COMMANDS depfiles" ;;
@@ -10390,6 +10546,7 @@ s,@LIBEFENCE@,$LIBEFENCE,;t t
 s,@PTHREAD_LIBS@,$PTHREAD_LIBS,;t t
 s,@ENABLE_LIBPTHREAD@,$ENABLE_LIBPTHREAD,;t t
 s,@SWGFS@,$SWGFS,;t t
+s,@LUSTRE@,$LUSTRE,;t t
 s,@LIBREADLINE@,$LIBREADLINE,;t t
 s,@LIBLUA@,$LIBLUA,;t t
 s,@MODULES_TRUE@,$MODULES_TRUE,;t t
@@ -10416,6 +10573,8 @@ s,@LIBHRFS_TRUE@,$LIBHRFS_TRUE,;t t
 s,@LIBHRFS_FALSE@,$LIBHRFS_FALSE,;t t
 s,@LIBHRFS_TESTS_TRUE@,$LIBHRFS_TESTS_TRUE,;t t
 s,@LIBHRFS_TESTS_FALSE@,$LIBHRFS_TESTS_FALSE,;t t
+s,@LUSTRE_SUPPORT_TRUE@,$LUSTRE_SUPPORT_TRUE,;t t
+s,@LUSTRE_SUPPORT_FALSE@,$LUSTRE_SUPPORT_FALSE,;t t
 s,@SWGFS_SUPPORT_TRUE@,$SWGFS_SUPPORT_TRUE,;t t
 s,@SWGFS_SUPPORT_FALSE@,$SWGFS_SUPPORT_FALSE,;t t
 s,@EXT2_SUPPORT_TRUE@,$EXT2_SUPPORT_TRUE,;t t

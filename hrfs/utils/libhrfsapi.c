@@ -219,6 +219,7 @@ int hrfs_api_setbranch(const char *path, hrfs_bindex_t bindex, struct hrfs_branc
 		}
 	}
 
+        state->state[bindex].flag |= HRFS_FLAG_SETED;
 	ret = ioctl(fd, HRFS_IOCTL_SET_FLAG, (void *)state);
 	if (ret) {
 		HERROR("fail to setstate '%s', ret = %d\n", path, ret);

@@ -716,8 +716,11 @@ EXPORT_SYMBOL(hrfs_file_read);
 ssize_t hrfs_file_write(struct file *file, const char __user *buf, size_t len, loff_t *ppos)
 {
 	struct iovec local_iov = { .iov_base = (void __user *)buf,
-								.iov_len = len };
-	return hrfs_file_writev(file, &local_iov, 1, ppos);	
+	                           .iov_len = len };
+	HASSERT(file->f_op);
+	HASSERT(file->f_op->writev);
+	/* Not neccessarily hrfs_file_writev() */
+	return file->f_op->writev(file, &local_iov, 1, ppos);	
 }
 EXPORT_SYMBOL(hrfs_file_write);
 

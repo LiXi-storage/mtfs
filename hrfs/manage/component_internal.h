@@ -92,6 +92,8 @@ void component_type_dump(struct component *type);
 void component_instance_dump(struct component *instance);
 int component_link(struct component *source_component, const char *source_pin_name,
                    struct component *dest_component, const char *dest_pin_name);
+int component_unlink(struct component *source_component, const char *source_pin_name,
+                     struct component *dest_component, const char *dest_pin_name);
 int component_dump(struct component *component);
 int component_pack(struct component *component,
                    int table_number, struct pin_map_table *tables);

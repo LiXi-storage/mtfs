@@ -41,7 +41,7 @@ static int hrfs_d_revalidate_branch(struct dentry *dentry, struct nameidata *nd,
 	hidden_dentry = hrfs_d2branch(dentry, bindex);
 	if (likely(hidden_dentry)) {
 		//HASSERT(!d_unhashed(hidden_dentry));
-		ret = hidden_dentry->d_op->d_revalidate(hidden_dentry, NULL);
+		ret = hidden_dentry->d_op->d_revalidate(hidden_dentry, nd);
 		if (ret <= 0) {
 			HDEBUG("branch[%d] of dentry [%*s] is invalid, ret = %d\n",
 			       bindex, dentry->d_name.len, dentry->d_name.name, ret);
@@ -74,7 +74,16 @@ int hrfs_d_revalidate(struct dentry *dentry, struct nameidata *nd)
 		if (hrfs_d2branch(dentry, bindex) == NULL) {
 			continue;
 		}
-		ret = hrfs_d_revalidate_branch(dentry, NULL, bindex);
+
+		if (nd) {
+			struct nameidata new_nd = {0};
+
+			/* Revalidate the attr, see BUG351 */
+			new_nd.flags |= LOOKUP_REVAL;
+			ret = hrfs_d_revalidate_branch(dentry, &new_nd, bindex);
+		} else {
+			ret = hrfs_d_revalidate_branch(dentry, NULL, bindex);
+		}
 		if (ret <= 0) {
 			goto out_d_drop;
 		}

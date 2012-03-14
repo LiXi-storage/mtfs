@@ -79,6 +79,19 @@ AC_ARG_ENABLE([swgfs-support],
 AC_MSG_RESULT([$enable_swgfs_support])])
 
 #
+# LC_CONFIG_BACKEDN_LUSTRE
+#
+# whether to build lustre backend support
+#
+AC_DEFUN([LC_CONFIG_BACKEDN_LUSTRE],
+[AC_MSG_CHECKING([whether to build lustre backend support])
+AC_ARG_ENABLE([lustre-support],
+        AC_HELP_STRING([--disable-lustre-support],
+                        [disable lustre backend support]),
+        [],[enable_lustre_support='yes'])
+AC_MSG_RESULT([$enable_lustre_support])])
+
+#
 # LC_CONFIG_BACKEDN_EXT2
 #
 # whether to build ext2 backend support
@@ -244,6 +257,46 @@ LB_CHECK_FILE([$SWGFS/swgfs/include],[],
 ]) # end of LC_CONFIG_SWGFS_PATH
 
 #
+#
+# LC_CONFIG_LUSTRE_PATH
+#
+# Find paths for lustre
+#
+AC_DEFUN([LC_CONFIG_LUSTRE_PATH],
+[AC_MSG_CHECKING([for Lustre sources])
+AC_ARG_WITH([lustre],
+        AC_HELP_STRING([--with-lustre=path],
+                       [set path to lustre source (default=/usr/src/lustre)]),
+        [LB_ARG_CANON_PATH([lustre], [LUSTRE])],
+        [LUSTRE=/usr/src/lustre])
+AC_MSG_RESULT([$LUSTRE])
+AC_SUBST(LUSTRE)
+
+# -------- check for lustre --------
+LB_CHECK_FILE([$LUSTRE],[],
+        [AC_MSG_ERROR([Lustre source $LUSTRE could not be found.])])
+
+# -------- check for version --------
+LB_CHECK_FILE([$LUSTRE/lustre/include/hrfs_version.h], [],[
+        AC_MSG_WARN([Unpatched lustre source code detected.])
+        AC_MSG_WARN([Lustre backend support cannot be built with an unpatched lustre source code;])
+        AC_MSG_WARN([disabling lustre support])
+        enable_lustre_support='no'
+])
+
+# -------- check for head directory --------
+LB_CHECK_FILE([$LUSTRE/lustre/include],[],
+	[AC_MSG_ERROR([Lustre head directory $LUSTRE/lustre/include could not be found.])])
+	
+# -------- define lustre dir --------
+	LUSTRE_INCLUDE_DIR="$LUSTRE/lustre/include"
+	#CPPFLAGS="$CPPFLAGS -I$LUSTRE_INCLUDE_DIR"
+	EXTRA_KCFLAGS="$EXTRA_KCFLAGS -I$LUSTRE_INCLUDE_DIR"
+
+]) # end of LC_CONFIG_LUSTRE_PATH
+
+
+#
 # LC_CONFIG_READLINE
 #
 # Build with readline
@@ -316,6 +369,10 @@ if test x$enable_swgfs_support = xyes ; then
 	LC_CONFIG_SWGFS_PATH
 fi
 
+if test x$enable_lustre_support = xyes ; then
+	LC_CONFIG_LUSTRE_PATH
+fi
+
 LC_CONFIG_HRFS_TAG
 LC_CONFIG_READLINE
 LC_CONFIG_LUA
@@ -333,6 +390,7 @@ AC_DEFUN([LC_CONDITIONALS],
 [
 AM_CONDITIONAL(LIBHRFS, test x$enable_libhrfs = xyes)
 AM_CONDITIONAL(LIBHRFS_TESTS, test x$enable_libhrfs_tests = xyes)
+AM_CONDITIONAL(LUSTRE_SUPPORT, test x$enable_lustre_support = xyes)
 AM_CONDITIONAL(SWGFS_SUPPORT, test x$enable_swgfs_support = xyes)
 AM_CONDITIONAL(EXT2_SUPPORT, test x$enable_ext2_support = xyes)
 AM_CONDITIONAL(EXT3_SUPPORT, test x$enable_ext3_support = xyes)
@@ -381,6 +439,8 @@ hrfs/ntfs3g_support/Makefile
 hrfs/ntfs3g_support/autoMakefile
 hrfs/swgfs_support/Makefile
 hrfs/swgfs_support/autoMakefile
+hrfs/lustre_support/Makefile
+hrfs/lustre_support/autoMakefile
 hrfs/tmpfs_support/Makefile
 hrfs/tmpfs_support/autoMakefile
 ])

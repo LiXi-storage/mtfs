@@ -163,6 +163,9 @@ LINUX_TRUE = @LINUX_TRUE@
 LLCFLAGS = @LLCFLAGS@
 LLCPPFLAGS = @LLCPPFLAGS@
 LTLIBOBJS = @LTLIBOBJS@
+LUSTRE = @LUSTRE@
+LUSTRE_SUPPORT_FALSE = @LUSTRE_SUPPORT_FALSE@
+LUSTRE_SUPPORT_TRUE = @LUSTRE_SUPPORT_TRUE@
 MAKEINFO = @MAKEINFO@
 MANAGE_FALSE = @MANAGE_FALSE@
 MANAGE_TESTS_FALSE = @MANAGE_TESTS_FALSE@
@@ -269,7 +272,7 @@ noinst_SCRIPTS = acceptance-small.sh test-framework.sh compile.sh \
 	example.sh mount.sh multi_mnt.sh pjd_fstest.sh posix.sh \
 	racer.sh raid.sh setup.sh single_branch.sh lockorder.sh
 nobase_noinst_SCRIPTS = cfg/ext2.sh cfg/ext3.sh cfg/ext4.sh \
-	cfg/swgfs.sh cfg/tmpfs.sh racer/dir_create.sh \
+	cfg/swgfs.sh cfg/tmpfs.sh cfg/lustre.sh racer/dir_create.sh \
 	racer/file_create.sh racer/file_list.sh racer/file_rm.sh \
 	racer/racer.sh racer/file_concat.sh racer/file_link.sh \
 	racer/file_rename.sh racer/file_symlink.sh

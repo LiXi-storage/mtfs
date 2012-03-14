@@ -19,8 +19,8 @@
 #define HRFS_FLAG_RECOVERING             0x00000040
 #define HRFS_FLAG_SETED                  0x00000080
 
-#define HRFS_FLAG_MDS_MASK               0x000000ff
-#define HRFS_FLAG_MDS_SYMBOL             0xc0ffee00
+#define HRFS_FLAG_DISK_MASK              0x000000ff
+#define HRFS_FLAG_DISK_SYMBOL            0xc0ffee00
 
 #define HRFS_FLAG_RAID_MASK              0x0000000f
 
@@ -34,7 +34,7 @@ static inline int hrfs_flag_is_valid(__u32 hrfs_flag)
 		goto out;
 	}
 
-	if ((hrfs_flag & (~HRFS_FLAG_MDS_MASK)) != 0) {
+	if ((hrfs_flag & (~HRFS_FLAG_DISK_MASK)) != 0) {
 		/* Should not set unused flag*/
 		goto out;
 	}
@@ -52,9 +52,9 @@ out:
 static inline int hrfs_disk_flag_is_valid(__u32 disk_flag)
 {
 	int ret = 0;
-	__u32 hrfs_flag = disk_flag & HRFS_FLAG_MDS_MASK;
+	__u32 hrfs_flag = disk_flag & HRFS_FLAG_DISK_MASK;
 
-	if ((disk_flag & (~HRFS_FLAG_MDS_MASK)) != HRFS_FLAG_MDS_SYMBOL) {
+	if ((disk_flag & (~HRFS_FLAG_DISK_MASK)) != HRFS_FLAG_DISK_SYMBOL) {
 		goto out;
 	}
 

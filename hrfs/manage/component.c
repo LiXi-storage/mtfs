@@ -110,12 +110,14 @@ struct component *component_get(struct component *parent, const char *type_name)
 
 void component_put(struct component *component)
 {
+	HENTRY();
 	HASSERT(component->ref > 0);
 	component->ref --;
 
 	if (component->ref == 0) {
 		component_remove(component);
 	}
+	_HRETURN();
 }
 
 struct component *component_type_get(const char *type_name)
@@ -125,7 +127,9 @@ struct component *component_type_get(const char *type_name)
 
 void component_type_put(struct component *type)
 {
+	HENTRY();
 	component_put(type);
+	_HRETURN();
 }
 
 int component_dump(struct component *component)
@@ -459,6 +463,68 @@ int component_types_eachdo(int (*func)(struct component *subcomponent))
 	return component_subs_eachdo(&component_types, func);
 }
 
+static int componen_output_pin_unlink(struct pin *output_pin)
+{
+	int ret = 0;
+	HENTRY();
+
+	HASSERT(!output_pin->is_input);
+	if (output_pin->next == NULL) {
+		goto out;
+	}
+
+	hrfs_list_del(&(output_pin->pin_list));
+	output_pin->next = NULL;
+
+out:
+	HRETURN(ret);
+}
+
+/* 
+ * @func can unlink
+ */
+int componen_input_pin_unlink(struct pin *input_pin)
+{
+	struct component *prev_component = NULL;
+	struct pin *prev_pin = NULL;
+	struct hrfs_list_head *p = NULL;
+	struct hrfs_list_head *tmp = NULL;
+	int ret = 0;
+	HENTRY();
+
+	HASSERT(input_pin->is_input);
+
+	HDEBUG("unlink prevs of input pin %s which belong to %s\n", input_pin->name, input_pin->parent->name);
+	hrfs_list_for_each_safe(p, tmp, &input_pin->prevs) {
+		prev_pin = hrfs_list_entry(p, struct pin, pin_list);
+		prev_component = prev_pin->parent;
+		HDEBUG("doing of component %s\n", prev_component->name);
+		componen_output_pin_unlink(prev_pin);
+		if (ret) {
+			goto out;
+		}
+		HDEBUG("done\n");
+	}
+out:
+	HRETURN(ret);
+}
+
+int componen_remove_links(struct component *component)
+{
+	int ret = 0;
+	HENTRY();
+	if (component->pins) {
+		int i = 0;
+		for (i = 0; i < component->pin_num; i++) {
+			if (component->pins[i].is_input) {
+				componen_input_pin_unlink(&component->pins[i]);
+			} else {
+				componen_output_pin_unlink(&component->pins[i]);
+			}
+		}
+	}
+	HRETURN(ret);
+}
 /*
  * This is a recursive remove funtion.
  */
@@ -474,6 +540,7 @@ int component_remove(struct component *component)
 		}
 	}
 
+	componen_remove_links(component);
 	if (component->type != NULL &&
 	    component->type != component) {
 		/* This is not a type */
@@ -797,6 +864,56 @@ int component_link(struct component *source_component, const char *source_pin_na
 
 	hrfs_list_add(&(source_pin->pin_list), &dest_pin->prevs);
 	source_pin->next = dest_pin;
+out:
+	HRETURN(ret);
+}
+
+int component_unlink(struct component *source_component, const char *source_pin_name,
+                     struct component *dest_component, const char *dest_pin_name)
+{
+	int ret = 0;
+	struct pin *source_pin = NULL;
+	struct pin *dest_pin = NULL;
+	HENTRY();
+
+	HASSERT(source_component);
+	HASSERT(dest_component);
+	if (source_component == dest_component) {
+		HERROR("try to unlink pins of the same compoent %s\n", source_component->name);
+		ret = -ENOMEM; /* Which errno? */
+		goto out;
+	}
+
+	source_pin = component_search_pin(source_component, source_pin_name);
+	if (source_pin == NULL) {
+		HERROR("compoent %s have no outpin called %s\n", source_component->name, source_pin_name);
+		ret = -EINVAL;
+		goto out;
+	} else if (source_pin->is_input) {
+		HERROR("pin %s of compoent %s is a input pin\n", source_pin_name, source_component->name);
+		ret = -EINVAL;
+		goto out;
+	}
+
+	dest_pin = component_search_pin(dest_component, dest_pin_name);
+	if (dest_pin == NULL) {
+		HERROR("compoent %s have no inpin called %s\n", dest_component->name, dest_pin_name);
+		ret = -EINVAL;
+		goto out;
+	} else if (!dest_pin->is_input) {
+		HERROR("pin %s of compoent %s is a output pin\n", dest_pin_name, dest_component->name);
+		ret = -EINVAL;
+		goto out;
+	}
+
+	if (source_pin->next == NULL) {
+		HERROR("the pin %s of component %s is not linked to any component\n",
+		       source_pin_name, source_component->name);
+		ret = -ENOMEM; /* Which errno? */
+		goto out;
+	}
+
+	ret = componen_output_pin_unlink(source_pin);
 out:
 	HRETURN(ret);
 }

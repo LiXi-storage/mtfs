@@ -24,7 +24,7 @@ echo "1..5"
 IN="
 device=/mnt/hrfs1:/mnt/hrfs2:/mnt/hrfs3:/mnt/hrfs4:/mnt/hrfs5:/mnt/hrfs6,debug=0
 " OUT="
-branch_number = 6
+bnum = 6
 /mnt/hrfs1:/mnt/hrfs2:/mnt/hrfs3:/mnt/hrfs4:/mnt/hrfs5:/mnt/hrfs6
 debug_level = 0
 " expect 0
@@ -36,7 +36,7 @@ debug_level = 0
 IN="
 device=:/mnt/hrfs1:/mnt/hrfs2:,debug=1
 " OUT="
-branch_number = 2
+bnum = 2
 /mnt/hrfs1:/mnt/hrfs2
 debug_level = 1
 " expect 0
