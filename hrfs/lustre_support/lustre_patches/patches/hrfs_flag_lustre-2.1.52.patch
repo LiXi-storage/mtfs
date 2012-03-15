@@ -1,18 +1,16 @@
 Index: lustre-2.1.52/lustre/include/lustre/lustre_idl.h
 ===================================================================
 --- lustre-2.1.52.orig/lustre/include/lustre/lustre_idl.h	2012-03-14 09:17:27.000000000 +0800
-+++ lustre-2.1.52/lustre/include/lustre/lustre_idl.h	2012-03-14 09:18:37.000000000 +0800
-@@ -1335,6 +1335,9 @@
++++ lustre-2.1.52/lustre/include/lustre/lustre_idl.h	2012-03-15 10:14:56.000000000 +0800
+@@ -1335,7 +1335,6 @@
  #define XATTR_NAME_LMV          "trusted.lmv"
  #define XATTR_NAME_LINK         "trusted.link"
  
-+#ifndef DISABLE_HRFS_SUPPORT
-+#define XATTR_NAME_HRFS_FLAG "trusted.hrfs.flag"
-+#endif /* !DISABLE_HRFS_SUPPORT */
- 
+-
  struct lov_mds_md_v3 {            /* LOV EA mds/wire data (little-endian) */
          __u32 lmm_magic;          /* magic number = LOV_MAGIC_V3 */
-@@ -1403,11 +1406,22 @@
+         __u32 lmm_pattern;        /* LOV_PATTERN_RAID0, LOV_PATTERN_RAID1 */
+@@ -1403,11 +1402,22 @@
  #define OBD_MD_FLRMTRSETFACL (0x0004000000000000ULL) /* lfs rsetfacl case */
  #define OBD_MD_FLRMTRGETFACL (0x0008000000000000ULL) /* lfs rgetfacl case */
  
@@ -35,7 +33,7 @@ Index: lustre-2.1.52/lustre/include/lustre/lustre_idl.h
  
  /* don't forget obdo_fid which is way down at the bottom so it can
   * come after the definition of llog_cookie */
-@@ -1651,6 +1665,14 @@
+@@ -1651,6 +1661,14 @@
          __u64          padding_10;
  }; /* 216 */
  
@@ -50,7 +48,7 @@ Index: lustre-2.1.52/lustre/include/lustre/lustre_idl.h
  extern void lustre_swab_mdt_body (struct mdt_body *b);
  
  struct mdt_ioepoch {
-@@ -1784,6 +1806,14 @@
+@@ -1784,6 +1802,14 @@
          __u32           sa_padding_5;
  };
  
@@ -65,7 +63,7 @@ Index: lustre-2.1.52/lustre/include/lustre/lustre_idl.h
  extern void lustre_swab_mdt_rec_setattr (struct mdt_rec_setattr *sa);
  
  /*
-@@ -1851,6 +1881,14 @@
+@@ -1851,6 +1877,14 @@
  #define MDS_OPEN_NORESTORE  0100000000000ULL /* Do not restore file at open */
  #define MDS_OPEN_NEWSTRIPE  0200000000000ULL /* New stripe needed (restripe or
                                                * hsm restore) */
@@ -75,7 +73,7 @@ Index: lustre-2.1.52/lustre/include/lustre/lustre_idl.h
 + */
 +
 +/* set when modifying dir's hrfs_flag at mds */
-+#define HRFS_MDT_SET_FLAG	MDS_OPEN_NEWSTRIPE
++#define HRFS_MDT_SET_FLAG	MDS_OPEN_JOIN_FILE
 +#endif /* !DISABLE_HRFS_SUPPORT */
  
  /* permission for create non-directory file */
@@ -110,7 +108,7 @@ Index: lustre-2.1.52/lustre/llite/llite_internal.h
 Index: lustre-2.1.52/lustre/llite/llite_lib.c
 ===================================================================
 --- lustre-2.1.52.orig/lustre/llite/llite_lib.c	2012-03-14 09:17:27.000000000 +0800
-+++ lustre-2.1.52/lustre/llite/llite_lib.c	2012-03-14 09:18:37.000000000 +0800
++++ lustre-2.1.52/lustre/llite/llite_lib.c	2012-03-15 14:46:27.000000000 +0800
 @@ -1545,6 +1545,9 @@
          cfs_up(&lli->lli_size_sem);
  }
@@ -141,7 +139,7 @@ Index: lustre-2.1.52/lustre/llite/llite_lib.c
  }
  
  void ll_read_inode2(struct inode *inode, void *opaque)
-@@ -2228,3 +2244,104 @@
+@@ -2228,3 +2244,108 @@
  
          RETURN(0);
  }
@@ -192,6 +190,8 @@ Index: lustre-2.1.52/lustre/llite/llite_lib.c
 +                goto out;
 +        }
 +
++        *hrfs_flag = flag;
++
 +        /* Update flag of inode */
 +        rc = ll_prep_inode(&inode, req, NULL);
 +
@@ -229,6 +229,8 @@ Index: lustre-2.1.52/lustre/llite/llite_lib.c
 +        op_data->op_attr.ia_valid |= HRFS_MDT_SET_FLAG;
 +        op_data->op_hrfs_flag = hrfs_flag;
 +
++        CERROR("in %x, %u\n",
++               op_data->op_attr.ia_valid, op_data->op_hrfs_flag);
 +        rc = ll_md_setattr(inode, op_data, &mod);
 +        if (rc) {
 +                goto out;
@@ -264,7 +266,7 @@ Index: lustre-2.1.52/lustre/include/lu_object.h
 Index: lustre-2.1.52/lustre/mdt/mdt_handler.c
 ===================================================================
 --- lustre-2.1.52.orig/lustre/mdt/mdt_handler.c	2012-03-14 09:17:27.000000000 +0800
-+++ lustre-2.1.52/lustre/mdt/mdt_handler.c	2012-03-14 09:18:37.000000000 +0800
++++ lustre-2.1.52/lustre/mdt/mdt_handler.c	2012-03-15 12:03:05.000000000 +0800
 @@ -405,6 +405,11 @@
          b->blocks = ma->ma_som->msd_blocks;
  }
@@ -308,7 +310,7 @@ Index: lustre-2.1.52/lustre/mdt/mdt_handler.c
 Index: lustre-2.1.52/lustre/mdd/mdd_object.c
 ===================================================================
 --- lustre-2.1.52.orig/lustre/mdd/mdd_object.c	2012-03-14 09:17:27.000000000 +0800
-+++ lustre-2.1.52/lustre/mdd/mdd_object.c	2012-03-14 10:51:40.000000000 +0800
++++ lustre-2.1.52/lustre/mdd/mdd_object.c	2012-03-15 14:34:17.000000000 +0800
 @@ -751,6 +751,50 @@
          RETURN(0);
  }
@@ -322,7 +324,7 @@ Index: lustre-2.1.52/lustre/mdd/mdd_object.c
 +{
 +        int rc = 0;
 +        __u32 disk_flag = 0;
-+        int flag_size;
++        int flag_size = sizeof(disk_flag);
 +        HENTRY();
 +
 +        rc = mdd_get_md(env, mdd_obj, &disk_flag, &flag_size,
@@ -387,6 +389,45 @@ Index: lustre-2.1.52/lustre/mdd/mdd_object.c
  
          if (needlock)
                  mdd_read_lock(env, mdd_obj, MOR_TGT_CHILD);
+@@ -1449,6 +1504,24 @@
+                                         md2mdd_obj(obj), handle);
+ }
+ 
++#ifndef DISABLE_HRFS_SUPPORT
++static int hrfs_mdd_flag_set_md(const struct lu_env *env,
++                                struct mdd_object *mdd_obj,
++                                const struct md_attr *ma,
++                                struct thandle *handle)
++{
++        int             rc = 0;
++        struct lu_buf  *buf = NULL;
++        struct lu_attr *la = &((struct md_attr *)ma)->ma_attr;
++        HENTRY();
++
++        HASSERT(hrfs_disk_flag_is_valid(la->la_hrfs_disk_flag));
++        buf = mdd_buf_get(env, &la->la_hrfs_disk_flag, sizeof(la->la_hrfs_disk_flag));
++        rc = mdd_xattr_set_txn(env, mdd_obj, buf, XATTR_NAME_HRFS_FLAG, 0, handle);
++        HRETURN(rc);
++}
++#endif /* !DISABLE_HRFS_SUPPORT */
++
+ /* set attr and LOV EA at once, return updated attr */
+ static int mdd_attr_set(const struct lu_env *env, struct md_object *obj,
+                         const struct md_attr *ma)
+@@ -1583,6 +1656,13 @@
+                         rc = mdd_lma_set_locked(env, mdd_obj, ma, handle);
+ 
+         }
++
++#ifndef DISABLE_HRFS_SUPPORT
++        if (rc == 0 && ma->ma_valid & MA_HRFS) {
++                rc = hrfs_mdd_flag_set_md(env, mdd_obj, ma, handle);
++        }
++#endif /* !DISABLE_HRFS_SUPPORT */
++
+ cleanup:
+         if (rc == 0)
+                 rc = mdd_attr_set_changelog(env, obj, handle,
 Index: lustre-2.1.52/lustre/include/md_object.h
 ===================================================================
 --- lustre-2.1.52.orig/lustre/include/md_object.h	2012-03-14 09:17:27.000000000 +0800
@@ -423,14 +464,17 @@ Index: lustre-2.1.52/lustre/include/obd.h
 Index: lustre-2.1.52/lustre/mdc/mdc_lib.c
 ===================================================================
 --- lustre-2.1.52.orig/lustre/mdc/mdc_lib.c	2012-03-14 09:17:27.000000000 +0800
-+++ lustre-2.1.52/lustre/mdc/mdc_lib.c	2012-03-14 09:18:37.000000000 +0800
-@@ -310,6 +310,14 @@
++++ lustre-2.1.52/lustre/mdc/mdc_lib.c	2012-03-15 10:55:26.000000000 +0800
+@@ -310,6 +310,17 @@
                  rec->sa_suppgid = op_data->op_attr.ia_gid;
          else
                  rec->sa_suppgid = op_data->op_suppgids[0];
 +
 +#ifndef DISABLE_HRFS_SUPPORT
++        CERROR("in mdc_setattr_pack_rec %x, %u\n",
++               op_data->op_attr.ia_valid, op_data->op_hrfs_flag);
 +        if (op_data->op_attr.ia_valid & HRFS_MDT_SET_FLAG) {
++                CERROR("setting flag %u\n", op_data->op_hrfs_flag);
 +                rec->sa_valid |= HRFS_MDT_SET_FLAG;
 +                rec->sa_hrfs_flag = op_data->op_hrfs_flag;
 +        }
@@ -442,14 +486,26 @@ Index: lustre-2.1.52/lustre/mdc/mdc_lib.c
 Index: lustre-2.1.52/lustre/mdt/mdt_lib.c
 ===================================================================
 --- lustre-2.1.52.orig/lustre/mdt/mdt_lib.c	2012-03-14 09:17:27.000000000 +0800
-+++ lustre-2.1.52/lustre/mdt/mdt_lib.c	2012-03-14 09:18:37.000000000 +0800
-@@ -800,6 +800,13 @@
++++ lustre-2.1.52/lustre/mdt/mdt_lib.c	2012-03-15 14:14:24.000000000 +0800
+@@ -766,6 +766,9 @@
+ }
+ /* unpacking */
+ 
++#ifndef DISABLE_HRFS_SUPPORT
++#include <hrfs/hrfs_flag.h>
++#endif /* !DISABLE_HRFS_SUPPORT */
+ static int mdt_setattr_unpack_rec(struct mdt_thread_info *info)
+ {
+         struct md_ucred         *uc  = mdt_ucred(info);
+@@ -800,6 +803,15 @@
          la->la_mtime = rec->sa_mtime;
          ma->ma_valid = MA_INODE;
  
 +#ifndef DISABLE_HRFS_SUPPORT
 +        if (rec->sa_valid & HRFS_MDT_SET_FLAG) {
-+                la->la_hrfs_disk_flag = rec->sa_hrfs_flag;
++                CERROR("setting hrfs flag %u\n", rec->sa_hrfs_flag);
++                HASSERT(hrfs_flag_is_valid(rec->sa_hrfs_flag));
++                la->la_hrfs_disk_flag = rec->sa_hrfs_flag | HRFS_FLAG_DISK_SYMBOL;
 +                ma->ma_valid |= MA_HRFS;
 +        }
 +#endif /* !DISABLE_HRFS_SUPPORT */

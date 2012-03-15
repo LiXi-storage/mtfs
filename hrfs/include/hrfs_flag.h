@@ -71,7 +71,7 @@ out:
 #define HRFS_DATA_VALID   (HRFS_DATA_BIT)
 #define HRFS_ATTR_VALID   (HRFS_ATTR_BIT)
 #define HRFS_XATTR_VALID  (HRFS_XATTR_BIT)
-#define HRFS_BRANCH_VALID  (HRFS_BRANCH_BIT)
+#define HRFS_BRANCH_VALID (HRFS_BRANCH_BIT)
 #define HRFS_ALL_VALID    (HRFS_DATA_BIT | HRFS_ATTR_BIT | HRFS_XATTR_BIT | HRFS_BRANCH_VALID)
 
 static inline int hrfs_valid_flags_is_valid(__u32 valid_flags)
@@ -86,7 +86,7 @@ out:
 	return valid;
 }
 
-#define HRFS_FLAG_XATTR_NAME "trusted.hrfs.inode_flag"
+#define XATTR_NAME_HRFS_FLAG    "trusted.hrfs.flag"
 
 #if defined (__linux__) && defined(__KERNEL__)
 #include <hrfs_inode.h>

@@ -178,7 +178,7 @@ EXPORT_SYMBOL(lowerfs_inode_get_flag_xattr);
 int lowerfs_inode_get_flag_default(struct inode *inode, __u32 *hrfs_flag)
 {
 	int ret = 0;
-	ret = lowerfs_inode_get_flag_xattr(inode, hrfs_flag, HRFS_FLAG_XATTR_NAME);
+	ret = lowerfs_inode_get_flag_xattr(inode, hrfs_flag, XATTR_NAME_HRFS_FLAG);
 	HRETURN(ret);
 }
 EXPORT_SYMBOL(lowerfs_inode_get_flag_default);
@@ -228,7 +228,7 @@ EXPORT_SYMBOL(lowerfs_inode_set_flag_xattr);
 int lowerfs_inode_set_flag_default(struct inode *inode, __u32 hrfs_flag)
 {
 	int ret = 0;
-	ret = lowerfs_inode_set_flag_xattr(inode, hrfs_flag, HRFS_FLAG_XATTR_NAME);
+	ret = lowerfs_inode_set_flag_xattr(inode, hrfs_flag, XATTR_NAME_HRFS_FLAG);
 	HRETURN(ret);
 }
 EXPORT_SYMBOL(lowerfs_inode_set_flag_default);

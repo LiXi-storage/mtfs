@@ -17,24 +17,24 @@ BRANCH_1="$HRFS_DIR2/test"
 
 check_nonexist()
 {
-	local FILE=$1
-	local DIR=$(dirname $1)
-	local BASE=$(basename $1)
+	local LOCAL_FILE=$1
+	local LOCAL_DIR=$(dirname $1)
+	local LOCAL_BASE=$(basename $1)
 	local EXIST=0
 
-	$CHECKSTAT -t file $FILE > /dev/null 2>&1
+	$CHECKSTAT -t file $LOCAL_FILE > /dev/null 2>&1
 	local RETVAL=$?
 	if [ $RETVAL -eq 0 ]; then
 		EXIST=`expr $EXIST + 1`
 	fi
 
-	ls $FILE > /dev/null 2>&1
+	ls $LOCAL_FILE > /dev/null 2>&1
 	RETVAL=$?
 	if [ $RETVAL -eq 0 ]; then
 		EXIST=`expr $EXIST + 2`
 	fi
 
-	ls $DIR | grep -q $BASE > /dev/null 2>&1
+	ls $LOCAL_DIR | grep -q $LOCAL_BASE > /dev/null 2>&1
 	RETVAL=$?
 	if [ $RETVAL -eq 0 ]; then
 		EXIST=`expr $EXIST + 4`
@@ -68,6 +68,7 @@ remove_bad_branch()
 	local BRANCH_DIR=${!BRANCH}
 
 	rm $DIR/$tfile -f 2>&1 > /dev/null
+	echo "rm $DIR/$tfile -f"
 	check_nonexist $BRANCH_0/$tfile || error "branch[0]: exist $?"
 	check_nonexist $BRANCH_1/$tfile || error "branch[1]: exist $?"
 	touch $DIR/$tfile || error "create failed"
@@ -84,6 +85,7 @@ remove_bad_branch()
 		cleanup_and_setup
 	fi
 
+        echo "xxx s"
 	check_exist $DIR/$tfile || error "not exist $? after removed branch[$BRANCH_NUM]"
 }
 
