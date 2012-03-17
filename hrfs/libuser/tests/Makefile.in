@@ -46,7 +46,8 @@ target_triplet = @target@
 @LIBHRFS_TESTS_TRUE@noinst_PROGRAMS = err2str$(EXEEXT) \
 @LIBHRFS_TESTS_TRUE@	test_rule_tree$(EXEEXT) \
 @LIBHRFS_TESTS_TRUE@	test_branch_bitmap$(EXEEXT) \
-@LIBHRFS_TESTS_TRUE@	test_parse_option$(EXEEXT)
+@LIBHRFS_TESTS_TRUE@	test_parse_option$(EXEEXT) \
+@LIBHRFS_TESTS_TRUE@	test_cfg$(EXEEXT)
 subdir = hrfs/libuser/tests
 DIST_COMMON = $(srcdir)/Makefile.am $(srcdir)/Makefile.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
@@ -70,6 +71,9 @@ am__test_branch_bitmap_SOURCES_DIST = test_branch_bitmap.c
 @LIBHRFS_TESTS_TRUE@am_test_branch_bitmap_OBJECTS = test_branch_bitmap-test_branch_bitmap.$(OBJEXT)
 test_branch_bitmap_OBJECTS = $(am_test_branch_bitmap_OBJECTS)
 am__DEPENDENCIES_1 = $(top_builddir)/hrfs/libuser/libuser.a
+am__test_cfg_SOURCES_DIST = test_cfg.c
+@LIBHRFS_TESTS_TRUE@am_test_cfg_OBJECTS = test_cfg-test_cfg.$(OBJEXT)
+test_cfg_OBJECTS = $(am_test_cfg_OBJECTS)
 am__test_parse_option_SOURCES_DIST = test_parse_option.c
 @LIBHRFS_TESTS_TRUE@am_test_parse_option_OBJECTS = test_parse_option-test_parse_option.$(OBJEXT)
 test_parse_option_OBJECTS = $(am_test_parse_option_OBJECTS)
@@ -85,9 +89,10 @@ COMPILE = $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) \
 	$(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
 CCLD = $(CC)
 LINK = $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -o $@
-SOURCES = err2str.c $(test_branch_bitmap_SOURCES) \
+SOURCES = err2str.c $(test_branch_bitmap_SOURCES) $(test_cfg_SOURCES) \
 	$(test_parse_option_SOURCES) $(test_rule_tree_SOURCES)
 DIST_SOURCES = err2str.c $(am__test_branch_bitmap_SOURCES_DIST) \
+	$(am__test_cfg_SOURCES_DIST) \
 	$(am__test_parse_option_SOURCES_DIST) \
 	$(am__test_rule_tree_SOURCES_DIST)
 DATA = $(noinst_DATA)
@@ -293,9 +298,13 @@ LIBHRFS_LIBS = $(top_builddir)/hrfs/libuser/libuser.a
 @LIBHRFS_TESTS_TRUE@test_parse_option_CFLAGS = $(LL_CFLAGS)
 @LIBHRFS_TESTS_TRUE@test_parse_option_LDADD := $(LIBHRFS_LIBS)
 @LIBHRFS_TESTS_TRUE@test_parse_option_DEPENDENCIES := $(LIBHRFS_LIBS)
+@LIBHRFS_TESTS_TRUE@test_cfg_SOURCES = test_cfg.c
+@LIBHRFS_TESTS_TRUE@test_cfg_CFLAGS = $(LL_CFLAGS)
+@LIBHRFS_TESTS_TRUE@test_cfg_LDADD := $(LIBHRFS_LIBS)
+@LIBHRFS_TESTS_TRUE@test_cfg_DEPENDENCIES := $(LIBHRFS_LIBS)
 noinst_DATA = 
 noinst_SCRIPTS = 
-EXTRA_DIST = run.sh misc.sh rule_tree
+EXTRA_DIST = run.sh misc.sh rule_tree branch_bitmap parse_option cfg
 all: all-am
 
 .SUFFIXES:
@@ -338,6 +347,9 @@ err2str$(EXEEXT): $(err2str_OBJECTS) $(err2str_DEPENDENCIES)
 test_branch_bitmap$(EXEEXT): $(test_branch_bitmap_OBJECTS) $(test_branch_bitmap_DEPENDENCIES) 
 	@rm -f test_branch_bitmap$(EXEEXT)
 	$(LINK) $(test_branch_bitmap_LDFLAGS) $(test_branch_bitmap_OBJECTS) $(test_branch_bitmap_LDADD) $(LIBS)
+test_cfg$(EXEEXT): $(test_cfg_OBJECTS) $(test_cfg_DEPENDENCIES) 
+	@rm -f test_cfg$(EXEEXT)
+	$(LINK) $(test_cfg_LDFLAGS) $(test_cfg_OBJECTS) $(test_cfg_LDADD) $(LIBS)
 test_parse_option$(EXEEXT): $(test_parse_option_OBJECTS) $(test_parse_option_DEPENDENCIES) 
 	@rm -f test_parse_option$(EXEEXT)
 	$(LINK) $(test_parse_option_LDFLAGS) $(test_parse_option_OBJECTS) $(test_parse_option_LDADD) $(LIBS)
@@ -353,6 +365,7 @@ distclean-compile:
 
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/err2str.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_branch_bitmap-test_branch_bitmap.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_cfg-test_cfg.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_parse_option-test_parse_option.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_rule_tree-test_rule_tree.Po@am__quote@
 
@@ -383,6 +396,20 @@ test_branch_bitmap-test_branch_bitmap.obj: test_branch_bitmap.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='test_branch_bitmap.c' object='test_branch_bitmap-test_branch_bitmap.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_branch_bitmap_CFLAGS) $(CFLAGS) -c -o test_branch_bitmap-test_branch_bitmap.obj `if test -f 'test_branch_bitmap.c'; then $(CYGPATH_W) 'test_branch_bitmap.c'; else $(CYGPATH_W) '$(srcdir)/test_branch_bitmap.c'; fi`
+
+test_cfg-test_cfg.o: test_cfg.c
+@am__fastdepCC_TRUE@	if $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_cfg_CFLAGS) $(CFLAGS) -MT test_cfg-test_cfg.o -MD -MP -MF "$(DEPDIR)/test_cfg-test_cfg.Tpo" -c -o test_cfg-test_cfg.o `test -f 'test_cfg.c' || echo '$(srcdir)/'`test_cfg.c; \
+@am__fastdepCC_TRUE@	then mv -f "$(DEPDIR)/test_cfg-test_cfg.Tpo" "$(DEPDIR)/test_cfg-test_cfg.Po"; else rm -f "$(DEPDIR)/test_cfg-test_cfg.Tpo"; exit 1; fi
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='test_cfg.c' object='test_cfg-test_cfg.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_cfg_CFLAGS) $(CFLAGS) -c -o test_cfg-test_cfg.o `test -f 'test_cfg.c' || echo '$(srcdir)/'`test_cfg.c
+
+test_cfg-test_cfg.obj: test_cfg.c
+@am__fastdepCC_TRUE@	if $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_cfg_CFLAGS) $(CFLAGS) -MT test_cfg-test_cfg.obj -MD -MP -MF "$(DEPDIR)/test_cfg-test_cfg.Tpo" -c -o test_cfg-test_cfg.obj `if test -f 'test_cfg.c'; then $(CYGPATH_W) 'test_cfg.c'; else $(CYGPATH_W) '$(srcdir)/test_cfg.c'; fi`; \
+@am__fastdepCC_TRUE@	then mv -f "$(DEPDIR)/test_cfg-test_cfg.Tpo" "$(DEPDIR)/test_cfg-test_cfg.Po"; else rm -f "$(DEPDIR)/test_cfg-test_cfg.Tpo"; exit 1; fi
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='test_cfg.c' object='test_cfg-test_cfg.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_cfg_CFLAGS) $(CFLAGS) -c -o test_cfg-test_cfg.obj `if test -f 'test_cfg.c'; then $(CYGPATH_W) 'test_cfg.c'; else $(CYGPATH_W) '$(srcdir)/test_cfg.c'; fi`
 
 test_parse_option-test_parse_option.o: test_parse_option.c
 @am__fastdepCC_TRUE@	if $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_parse_option_CFLAGS) $(CFLAGS) -MT test_parse_option-test_parse_option.o -MD -MP -MF "$(DEPDIR)/test_parse_option-test_parse_option.Tpo" -c -o test_parse_option-test_parse_option.o `test -f 'test_parse_option.c' || echo '$(srcdir)/'`test_parse_option.c; \

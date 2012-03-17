@@ -85,7 +85,6 @@ remove_bad_branch()
 		cleanup_and_setup
 	fi
 
-        echo "xxx s"
 	check_exist $DIR/$tfile || error "not exist $? after removed branch[$BRANCH_NUM]"
 }
 

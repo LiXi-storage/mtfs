@@ -1,9 +1,5 @@
 /*
- * Copyright (C) 2011 Li Xi <pkuelelixi@163.com>
- */
- 
-/*
- * Copied from Lustre-2.0
+ * Copied from Lustre-2.1
  */
 
 #ifndef __HRFS_LIST_H__

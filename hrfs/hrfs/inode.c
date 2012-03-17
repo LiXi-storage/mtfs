@@ -180,9 +180,6 @@ int hrfs_interpose(struct dentry *dentry, struct super_block *sb, int flag)
 	struct inode *inode = NULL;
 	hrfs_bindex_t bindex = 0;
 	hrfs_bindex_t bnum = 0;
-	raid_type_t raid_type = 0;
-	__u32 hrfs_flag = 0;
-	struct lowerfs_operations *lowerfs_ops = NULL;
 	struct hrfs_operations *operations = NULL;
 	HENTRY();
 
@@ -213,49 +210,17 @@ int hrfs_interpose(struct dentry *dentry, struct super_block *sb, int flag)
 	if (inode->i_state & I_NEW) {
 		unlock_new_inode(inode);
 	} else {
+		HERROR("got a old inode unexpcectly\n");
+		ret = -ENOMEM;
 		HBUG();
-		for (bindex = 0; bindex < bnum; bindex++) {
-			hidden_dentry = hrfs_d2branch(dentry, bindex);
-			if (hidden_dentry == NULL || hidden_dentry->d_inode) {
-				continue;
-			}
-
-			iput(hidden_dentry->d_inode);
-		}
+		goto out_iput;
 	}
 
 	hidden_inode = hrfs_i_choose_branch(inode, HRFS_ATTR_VALID);
 	if (IS_ERR(hidden_inode)) {
 		HERROR("choose branch failed, ret = %ld\n", PTR_ERR(hidden_inode));
-		HBUG();
-	}
-
-	if (S_ISREG(hidden_inode->i_mode) || S_ISDIR(hidden_inode->i_mode)) {
-		for (bindex = 0; bindex < bnum; bindex++) {
-			if (hrfs_i2branch(inode, bindex) == NULL) {
-				continue;
-			}
-			lowerfs_ops = hrfs_d2bops(dentry, bindex);
-			/* Let ll_update_inode() set the primary branch field in inode info */
-			lowerfs_idata_init(lowerfs_ops, hrfs_i2branch(inode, bindex), inode, -1);
-			if (flag == INTERPOSE_DEFAULT) {
-				hrfs_get_raid_type(dentry, &raid_type);
-
-				hrfs_flag = 0;
-				if (HRFS_DEFAULT_PRIMARY_BRANCH == bindex) {
-					hrfs_flag |= HRFS_FLAG_PRIMARY;
-				}
-				hrfs_flag |= (raid_type & HRFS_FLAG_RAID_MASK);
-				hrfs_flag |= HRFS_FLAG_SETED;
-
-				ret = lowerfs_inode_set_flag(lowerfs_ops, hrfs_i2branch(inode, bindex), hrfs_flag);
-				if (ret) {
-					HERROR("lowerfs_inode_set_flag failed, ret = %d\n", ret);
-					//goto out;
-					//HBUG();
-				}
-			}
-		}
+		ret = PTR_ERR(hidden_inode);
+		goto out_iput;
 	}
 
 	/* Use different set of inode ops for symlinks & directories*/
@@ -310,7 +275,16 @@ int hrfs_interpose(struct dentry *dentry, struct super_block *sb, int flag)
 
 	fsstack_copy_attr_all(inode, hidden_inode, hrfs_get_nlinks);
 	fsstack_copy_inode_size(inode, hidden_inode);
-
+	goto out;
+out_iput:
+	iput(inode);
+	for (bindex = 0; bindex < bnum; bindex++) {
+		hidden_dentry = hrfs_d2branch(dentry, bindex);
+		if (hidden_dentry == NULL || hidden_dentry->d_inode) {
+			continue;
+		}
+		iput(hidden_dentry->d_inode);
+	}
 out:
 	HRETURN(ret);
 }

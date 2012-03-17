@@ -51,7 +51,8 @@ target_triplet = @target@
 @TESTS_TRUE@	small_write$(EXEEXT) statmany$(EXEEXT) \
 @TESTS_TRUE@	truncate$(EXEEXT) unlinkmany$(EXEEXT) \
 @TESTS_TRUE@	utime$(EXEEXT) mlink$(EXEEXT) rwv$(EXEEXT) \
-@TESTS_TRUE@	sendfile$(EXEEXT) correct$(EXEEXT)
+@TESTS_TRUE@	sendfile$(EXEEXT) correct$(EXEEXT) \
+@TESTS_TRUE@	multicorrect$(EXEEXT)
 subdir = hrfs/tests/src
 DIST_COMMON = $(srcdir)/Makefile.am $(srcdir)/Makefile.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
@@ -71,111 +72,116 @@ PROGRAMS = $(noinst_PROGRAMS)
 checkstat_SOURCES = checkstat.c
 checkstat_OBJECTS = checkstat.$(OBJEXT)
 checkstat_LDADD = $(LDADD)
-checkstat_DEPENDENCIES =
+am__DEPENDENCIES_1 = $(top_builddir)/hrfs/libuser/libuser.a
+checkstat_DEPENDENCIES = $(am__DEPENDENCIES_1)
 correct_SOURCES = correct.c
 correct_OBJECTS = correct.$(OBJEXT)
 correct_LDADD = $(LDADD)
-correct_DEPENDENCIES =
+correct_DEPENDENCIES = $(am__DEPENDENCIES_1)
 createmany_SOURCES = createmany.c
 createmany_OBJECTS = createmany.$(OBJEXT)
 createmany_LDADD = $(LDADD)
-createmany_DEPENDENCIES =
+createmany_DEPENDENCIES = $(am__DEPENDENCIES_1)
 createtest_SOURCES = createtest.c
 createtest_OBJECTS = createtest.$(OBJEXT)
 createtest_LDADD = $(LDADD)
-createtest_DEPENDENCIES =
+createtest_DEPENDENCIES = $(am__DEPENDENCIES_1)
 directio_SOURCES = directio.c
 directio_OBJECTS = directio.$(OBJEXT)
 directio_LDADD = $(LDADD)
-directio_DEPENDENCIES =
+directio_DEPENDENCIES = $(am__DEPENDENCIES_1)
 flocks_test_SOURCES = flocks_test.c
 flocks_test_OBJECTS = flocks_test.$(OBJEXT)
 flocks_test_LDADD = $(LDADD)
-flocks_test_DEPENDENCIES =
+flocks_test_DEPENDENCIES = $(am__DEPENDENCIES_1)
 mcreate_SOURCES = mcreate.c
 mcreate_OBJECTS = mcreate.$(OBJEXT)
 mcreate_LDADD = $(LDADD)
-mcreate_DEPENDENCIES =
+mcreate_DEPENDENCIES = $(am__DEPENDENCIES_1)
 mlink_SOURCES = mlink.c
 mlink_OBJECTS = mlink.$(OBJEXT)
 mlink_LDADD = $(LDADD)
-mlink_DEPENDENCIES =
+mlink_DEPENDENCIES = $(am__DEPENDENCIES_1)
 mmap_sanity_SOURCES = mmap_sanity.c
 mmap_sanity_OBJECTS = mmap_sanity.$(OBJEXT)
 mmap_sanity_LDADD = $(LDADD)
-mmap_sanity_DEPENDENCIES =
+mmap_sanity_DEPENDENCIES = $(am__DEPENDENCIES_1)
 mrename_SOURCES = mrename.c
 mrename_OBJECTS = mrename.$(OBJEXT)
 mrename_LDADD = $(LDADD)
-mrename_DEPENDENCIES =
+mrename_DEPENDENCIES = $(am__DEPENDENCIES_1)
+multicorrect_SOURCES = multicorrect.c
+multicorrect_OBJECTS = multicorrect.$(OBJEXT)
+multicorrect_LDADD = $(LDADD)
+multicorrect_DEPENDENCIES = $(am__DEPENDENCIES_1)
 multifstat_SOURCES = multifstat.c
 multifstat_OBJECTS = multifstat.$(OBJEXT)
 multifstat_LDADD = $(LDADD)
-multifstat_DEPENDENCIES =
+multifstat_DEPENDENCIES = $(am__DEPENDENCIES_1)
 multiop_SOURCES = multiop.c
 multiop_OBJECTS = multiop.$(OBJEXT)
 multiop_LDADD = $(LDADD)
-multiop_DEPENDENCIES =
+multiop_DEPENDENCIES = $(am__DEPENDENCIES_1)
 munlink_SOURCES = munlink.c
 munlink_OBJECTS = munlink.$(OBJEXT)
 munlink_LDADD = $(LDADD)
-munlink_DEPENDENCIES =
+munlink_DEPENDENCIES = $(am__DEPENDENCIES_1)
 opendevunlink_SOURCES = opendevunlink.c
 opendevunlink_OBJECTS = opendevunlink.$(OBJEXT)
 opendevunlink_LDADD = $(LDADD)
-opendevunlink_DEPENDENCIES =
+opendevunlink_DEPENDENCIES = $(am__DEPENDENCIES_1)
 opendirunlink_SOURCES = opendirunlink.c
 opendirunlink_OBJECTS = opendirunlink.$(OBJEXT)
 opendirunlink_LDADD = $(LDADD)
-opendirunlink_DEPENDENCIES =
+opendirunlink_DEPENDENCIES = $(am__DEPENDENCIES_1)
 openfile_SOURCES = openfile.c
 openfile_OBJECTS = openfile.$(OBJEXT)
 openfile_LDADD = $(LDADD)
-openfile_DEPENDENCIES =
+openfile_DEPENDENCIES = $(am__DEPENDENCIES_1)
 openfilleddirunlink_SOURCES = openfilleddirunlink.c
 openfilleddirunlink_OBJECTS = openfilleddirunlink.$(OBJEXT)
 openfilleddirunlink_LDADD = $(LDADD)
-openfilleddirunlink_DEPENDENCIES =
+openfilleddirunlink_DEPENDENCIES = $(am__DEPENDENCIES_1)
 openunlink_SOURCES = openunlink.c
 openunlink_OBJECTS = openunlink.$(OBJEXT)
 openunlink_LDADD = $(LDADD)
-openunlink_DEPENDENCIES =
+openunlink_DEPENDENCIES = $(am__DEPENDENCIES_1)
 rename_many_SOURCES = rename_many.c
 rename_many_OBJECTS = rename_many.$(OBJEXT)
 rename_many_LDADD = $(LDADD)
-rename_many_DEPENDENCIES =
+rename_many_DEPENDENCIES = $(am__DEPENDENCIES_1)
 runas_SOURCES = runas.c
 runas_OBJECTS = runas.$(OBJEXT)
 runas_LDADD = $(LDADD)
-runas_DEPENDENCIES =
+runas_DEPENDENCIES = $(am__DEPENDENCIES_1)
 rwv_SOURCES = rwv.c
 rwv_OBJECTS = rwv.$(OBJEXT)
 rwv_LDADD = $(LDADD)
-rwv_DEPENDENCIES =
+rwv_DEPENDENCIES = $(am__DEPENDENCIES_1)
 sendfile_SOURCES = sendfile.c
 sendfile_OBJECTS = sendfile.$(OBJEXT)
 sendfile_LDADD = $(LDADD)
-sendfile_DEPENDENCIES =
+sendfile_DEPENDENCIES = $(am__DEPENDENCIES_1)
 small_write_SOURCES = small_write.c
 small_write_OBJECTS = small_write.$(OBJEXT)
 small_write_LDADD = $(LDADD)
-small_write_DEPENDENCIES =
+small_write_DEPENDENCIES = $(am__DEPENDENCIES_1)
 statmany_SOURCES = statmany.c
 statmany_OBJECTS = statmany.$(OBJEXT)
 statmany_LDADD = $(LDADD)
-statmany_DEPENDENCIES =
+statmany_DEPENDENCIES = $(am__DEPENDENCIES_1)
 truncate_SOURCES = truncate.c
 truncate_OBJECTS = truncate.$(OBJEXT)
 truncate_LDADD = $(LDADD)
-truncate_DEPENDENCIES =
+truncate_DEPENDENCIES = $(am__DEPENDENCIES_1)
 unlinkmany_SOURCES = unlinkmany.c
 unlinkmany_OBJECTS = unlinkmany.$(OBJEXT)
 unlinkmany_LDADD = $(LDADD)
-unlinkmany_DEPENDENCIES =
+unlinkmany_DEPENDENCIES = $(am__DEPENDENCIES_1)
 utime_SOURCES = utime.c
 utime_OBJECTS = utime.$(OBJEXT)
 utime_LDADD = $(LDADD)
-utime_DEPENDENCIES =
+utime_DEPENDENCIES = $(am__DEPENDENCIES_1)
 am__vpath_adj_setup = srcdirstrip=`echo "$(srcdir)" | sed 's|.|.|g'`;
 am__vpath_adj = case $$p in \
     $(srcdir)/*) f=`echo "$$p" | sed "s|^$$srcdirstrip/||"`;; \
@@ -197,16 +203,18 @@ CCLD = $(CC)
 LINK = $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -o $@
 SOURCES = checkstat.c correct.c createmany.c createtest.c directio.c \
 	flocks_test.c mcreate.c mlink.c mmap_sanity.c mrename.c \
-	multifstat.c multiop.c munlink.c opendevunlink.c \
-	opendirunlink.c openfile.c openfilleddirunlink.c openunlink.c \
-	rename_many.c runas.c rwv.c sendfile.c small_write.c \
-	statmany.c truncate.c unlinkmany.c utime.c
+	multicorrect.c multifstat.c multiop.c munlink.c \
+	opendevunlink.c opendirunlink.c openfile.c \
+	openfilleddirunlink.c openunlink.c rename_many.c runas.c rwv.c \
+	sendfile.c small_write.c statmany.c truncate.c unlinkmany.c \
+	utime.c
 DIST_SOURCES = checkstat.c correct.c createmany.c createtest.c \
 	directio.c flocks_test.c mcreate.c mlink.c mmap_sanity.c \
-	mrename.c multifstat.c multiop.c munlink.c opendevunlink.c \
-	opendirunlink.c openfile.c openfilleddirunlink.c openunlink.c \
-	rename_many.c runas.c rwv.c sendfile.c small_write.c \
-	statmany.c truncate.c unlinkmany.c utime.c
+	mrename.c multicorrect.c multifstat.c multiop.c munlink.c \
+	opendevunlink.c opendirunlink.c openfile.c \
+	openfilleddirunlink.c openunlink.c rename_many.c runas.c rwv.c \
+	sendfile.c small_write.c statmany.c truncate.c unlinkmany.c \
+	utime.c
 nobase_testsrcDATA_INSTALL = $(install_sh_DATA)
 testsrcDATA_INSTALL = $(INSTALL_DATA)
 DATA = $(nobase_noinst_DATA) $(nobase_testsrc_DATA) $(noinst_DATA) \
@@ -397,7 +405,9 @@ target_os = @target_os@
 target_vendor = @target_vendor@
 AM_CPPFLAGS = $(LLCPPFLAGS)
 AM_CFLAGS = $(LLCFLAGS)
-LDADD = -lpthread
+LIBHRFS_LIBS = $(top_builddir)/hrfs/libuser/libuser.a
+LDADD = -lpthread $(LIBHRFS_LIBS)
+DEPENDENCIES = $(LIBHRFS_LIBS)
 # LDADD = -lldap
 # LDADD := -lreadline -ltermcap # -lefence
 noinst_DATA = 
@@ -478,6 +488,9 @@ mmap_sanity$(EXEEXT): $(mmap_sanity_OBJECTS) $(mmap_sanity_DEPENDENCIES)
 mrename$(EXEEXT): $(mrename_OBJECTS) $(mrename_DEPENDENCIES) 
 	@rm -f mrename$(EXEEXT)
 	$(LINK) $(mrename_LDFLAGS) $(mrename_OBJECTS) $(mrename_LDADD) $(LIBS)
+multicorrect$(EXEEXT): $(multicorrect_OBJECTS) $(multicorrect_DEPENDENCIES) 
+	@rm -f multicorrect$(EXEEXT)
+	$(LINK) $(multicorrect_LDFLAGS) $(multicorrect_OBJECTS) $(multicorrect_LDADD) $(LIBS)
 multifstat$(EXEEXT): $(multifstat_OBJECTS) $(multifstat_DEPENDENCIES) 
 	@rm -f multifstat$(EXEEXT)
 	$(LINK) $(multifstat_LDFLAGS) $(multifstat_OBJECTS) $(multifstat_LDADD) $(LIBS)
@@ -590,6 +603,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/mlink.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/mmap_sanity.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/mrename.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/multicorrect.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/multifstat.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/multiop.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/munlink.Po@am__quote@

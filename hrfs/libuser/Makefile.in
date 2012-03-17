@@ -74,7 +74,7 @@ libuser_a_OBJECTS = $(am_libuser_a_OBJECTS)
 libuser_local_a_AR = $(AR) $(ARFLAGS)
 libuser_local_a_LIBADD =
 am_libuser_local_a_OBJECTS = parser.$(OBJEXT) cmd_parser.$(OBJEXT) \
-	log.$(OBJEXT)
+	log.$(OBJEXT) multithread.$(OBJEXT) cfg.$(OBJEXT)
 libuser_local_a_OBJECTS = $(am_libuser_local_a_OBJECTS)
 DEFAULT_INCLUDES = -I. -I$(srcdir) -I$(top_builddir)
 depcomp = $(SHELL) $(top_srcdir)/depcomp
@@ -286,7 +286,7 @@ USER_LIBS = $(top_builddir)/hrfs/hrfs/libhrfs.a $(top_builddir)/libcfs/libcfs/li
 @LIBHRFS_TRUE@lib_LIBRARIES = libuser.a
 @LIBHRFS_TRUE@noinst_LIBRARIES = libuser_local.a
 libuser_a_SOURCES = 
-libuser_local_a_SOURCES = parser.c cmd_parser.c log.c
+libuser_local_a_SOURCES = parser.c cmd_parser.c log.c multithread.c cfg.c
 EXTRA_DIST = genlib.sh
 CLEANFILES := libuser.so
 all: all-recursive
@@ -365,8 +365,10 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/cfg.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/cmd_parser.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/log.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/multithread.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/parser.Po@am__quote@
 
 .c.o:

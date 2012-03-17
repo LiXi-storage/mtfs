@@ -299,6 +299,9 @@ int hrfs_release(struct inode *inode, struct file *file)
 	hrfs_bindex_t bnum = 0;
 	HENTRY();
 
+	HDEBUG("release file [%*s]\n",
+	       file->f_dentry->d_name.len, file->f_dentry->d_name.name);
+
 	/* #BUG(posix:80): empty symlink */
 	if (hrfs_f2info(file) == NULL) {
 		HERROR("file [%*s] has no private data\n",

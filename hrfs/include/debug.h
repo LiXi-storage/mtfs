@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011 Li Xi <pkuelelixi@163.com>
+ * Copyright (C) 2011 Li Xi <pkuelelixi@gmail.com>
  */
 
 #ifndef __HRFS_DEBUG_H__
@@ -11,16 +11,16 @@
 #define HASSERT LASSERT
 #define HBUG LBUG
 
-#if 0
-#define HDEBUG(format, args...) CDEBUG(D_INFO, "hrfs: "format, ##args)
+#if 1
+#define HDEBUG(format, args...)     CDEBUG(D_INFO, "hrfs: "format, ##args)
 #else
-#define HDEBUG(format, args...) CERROR("hrfs: "format, ##args)
-//#define HDEBUG(format, args...) CDEBUG(D_SUPER, "hrfs: "format, ##args)
+#define HDEBUG(format, args...)     CERROR("hrfs: "format, ##args)
+//#define HDEBUG(format, args...)   CDEBUG(D_SUPER, "hrfs: "format, ##args)
 #endif
 #define HDEBUG_MEM(format, args...) CDEBUG(D_SUPER, format, ##args)
-#define HERROR(format, args...) CERROR("hrfs: "format, ##args)
-#define HWARN(format, args...) CERROR("hrfs: "format, ##args)
-#define HPRINT(format, args...) CERROR("hrfs: "format, ##args)
+#define HERROR(format, args...)     CERROR("hrfs: "format, ##args)
+#define HWARN(format, args...)      CERROR("hrfs: "format, ##args)
+#define HPRINT(format, args...)     CERROR("hrfs: "format, ##args)
 
 #else /* !(defined (__linux__) && defined(__KERNEL__)) */
 #include <errno.h>
@@ -31,8 +31,9 @@
 
 #define HDEBUG(format, args...) fprintf(stderr, "DEBUG: %s(%d) %s(): " format, __FILE__,  __LINE__, __FUNCTION__, ##args)
 #define HERROR(format, args...) fprintf(stderr, "ERROR: %s(%d) %s(): " format, __FILE__,  __LINE__, __FUNCTION__, ##args)
-#define HWARN(format, args...) fprintf(stderr, "WARN: %s(%d) %s(): " format, __FILE__,  __LINE__, __FUNCTION__, ##args)
+#define HWARN(format, args...)  fprintf(stderr, "WARN: %s(%d) %s(): " format, __FILE__,  __LINE__, __FUNCTION__, ##args)
 #define HPRINT(format, args...) fprintf(stdout, format, ##args)
+#define HFLUSH() fflush(stdout)
 
 #define IS_ERR(a) ((unsigned long)(a) > (unsigned long)-1000L)
 #define PTR_ERR(a) ((long)(a))

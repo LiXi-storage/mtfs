@@ -11,7 +11,7 @@ LIBHRFS_LIBS = $(top_builddir)/hrfs/libuser/libuser.a
 if LIBHRFS_TESTS
 noinst_PROGRAMS = err2str
 
-noinst_PROGRAMS += test_rule_tree test_branch_bitmap test_parse_option
+noinst_PROGRAMS += test_rule_tree test_branch_bitmap test_parse_option test_cfg
 
 test_rule_tree_SOURCES = test_rule_tree.c
 test_rule_tree_CFLAGS = $(LL_CFLAGS)
@@ -27,9 +27,14 @@ test_parse_option_SOURCES = test_parse_option.c
 test_parse_option_CFLAGS = $(LL_CFLAGS)
 test_parse_option_LDADD := $(LIBHRFS_LIBS)
 test_parse_option_DEPENDENCIES := $(LIBHRFS_LIBS)
+
+test_cfg_SOURCES = test_cfg.c
+test_cfg_CFLAGS = $(LL_CFLAGS)
+test_cfg_LDADD := $(LIBHRFS_LIBS)
+test_cfg_DEPENDENCIES := $(LIBHRFS_LIBS)
 endif #LIBHRFS_TESTS
 
 noinst_DATA = 
 noinst_SCRIPTS =
 EXTRA_DIST = run.sh misc.sh
-EXTRA_DIST += rule_tree
+EXTRA_DIST += rule_tree branch_bitmap parse_option cfg
