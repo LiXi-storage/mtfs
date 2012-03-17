@@ -10,20 +10,20 @@
 #include <linux/namei.h>
 #include <hrfs_common.h>
 
-typedef struct hrfs_inode_branch {
+struct hrfs_inode_branch {
 	struct inode *binode;
-} hrfs_i_branch_t;
+};
 
 /* hrfs inode data in memory */
-typedef struct hrfs_inode_info {
+struct hrfs_inode_info {
 	struct inode vfs_inode;
 	struct rw_semaphore rwsem; /* protect barray */
 	hrfs_bindex_t bnum;
-	hrfs_i_branch_t *barray;   /*TODO: change to barray[] */
-} hrfs_i_info_t;
+	struct hrfs_inode_branch barray[HRFS_BRANCH_MAX];
+};
 
 /* DO NOT access hrfs_*_info_t directly, use following macros */
-#define hrfs_i2info(inode) (container_of(inode, hrfs_i_info_t, vfs_inode))
+#define hrfs_i2info(inode) (container_of(inode, struct hrfs_inode_info, vfs_inode))
 #define hrfs_i2bnum(inode) (hrfs_i2info(inode)->bnum)
 #define hrfs_i2barray(inode) (hrfs_i2info(inode)->barray)
 #define hrfs_i2branch(inode, bindex) (hrfs_i2barray(inode)[bindex].binode)

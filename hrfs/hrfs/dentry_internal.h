@@ -12,90 +12,35 @@ extern struct dentry_operations hrfs_dops;
 
 int hrfs_dentry_dump(struct dentry *dentry);
 
-static inline hrfs_d_info_t *hrfs_di_alloc(void)
-{
-	hrfs_d_info_t *d_info = NULL;
-
-	HRFS_SLAB_ALLOC_PTR(d_info, hrfs_dentry_info_cache);
-	return d_info;
-}
-
-static inline void hrfs_di_free(hrfs_d_info_t *d_info)
-{
-	HRFS_SLAB_FREE_PTR(d_info, hrfs_dentry_info_cache);
-	HASSERT(d_info == NULL);
-}
-
-static inline int hrfs_di_branch_alloc(hrfs_d_info_t *d_info, hrfs_bindex_t bnum)
-{
-	int ret = -ENOMEM;
-	
-	HASSERT(d_info);
-	
-	HRFS_ALLOC(d_info->barray, sizeof(*d_info->barray) * bnum);
-	if (unlikely(d_info->barray == NULL)) {
-		goto out;
-	}
-
-	d_info->bnum = bnum;
-	ret = 0;	
-out:
-	return ret;
-}
-
-static inline int hrfs_di_branch_free(hrfs_d_info_t *d_info)
-{
-	int ret = 0;
-	
-	HASSERT(d_info);
-	HASSERT(d_info->barray);
-	
-	HRFS_FREE(d_info->barray, sizeof(*d_info->barray) * d_info->bnum);
-	
-	//i_info->ii_branch = NULL; /* HRFS_FREE will do this */
-	HASSERT(d_info->barray == NULL);
-	return ret;
-}
-
 static inline int hrfs_d_alloc(struct dentry *dentry, hrfs_bindex_t bnum)
 {
-	hrfs_d_info_t *d_info = NULL;
+	struct hrfs_dentry_info *d_info = NULL;
 	int ret = 0;
 	
 	HASSERT(dentry);
-	
-	d_info = hrfs_di_alloc();
+	HASSERT(bnum > 0 && bnum <= HRFS_BRANCH_MAX);
+	HRFS_SLAB_ALLOC_PTR(d_info, hrfs_dentry_info_cache);
 	if (unlikely(d_info == NULL)) {
 		ret = -ENOMEM;
 		goto out;
 	}
-	
-	ret = hrfs_di_branch_alloc(d_info, bnum);
-	if (unlikely(ret)) {
-		goto out_dinfo;
-	}
-	
+	d_info->bnum = bnum;
+
 	_hrfs_d2info(dentry) = d_info;
-	ret = 0;
-	goto out;
-out_dinfo:
-	hrfs_di_free(d_info);
 out:
 	return ret;
 }
 
 static inline int hrfs_d_free(struct dentry *dentry)
 {
-	hrfs_d_info_t *d_info = NULL;
+	struct hrfs_dentry_info *d_info = NULL;
 	int ret = 0;
 	
 	HASSERT(dentry);
 	d_info = hrfs_d2info(dentry);
 	HASSERT(d_info);
 	
-	hrfs_di_branch_free(d_info);
-	
-	hrfs_di_free(d_info);
+	HRFS_SLAB_FREE_PTR(d_info, hrfs_dentry_info_cache);
 	_hrfs_d2info(dentry) = NULL;
 	HASSERT(_hrfs_d2info(dentry) == NULL);
 	return ret;

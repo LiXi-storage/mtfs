@@ -15,50 +15,18 @@ int hrfs_interpose(struct dentry *dentry, struct super_block *sb, int flag);
 int hrfs_inode_dump(struct inode *inode);
 struct dentry *hrfs_lookup_branch(struct dentry *dentry, hrfs_bindex_t bindex);
 
-static inline hrfs_i_info_t *hrfs_ii_alloc(void)
+static inline struct hrfs_inode_info *hrfs_ii_alloc(void)
 {
-	hrfs_i_info_t *i_info = NULL;
+	struct hrfs_inode_info *i_info = NULL;
 
 	HRFS_SLAB_ALLOC_PTR(i_info, hrfs_inode_info_cache);	
 	return i_info;
 }
 
-static inline void hrfs_ii_free(hrfs_i_info_t *i_info)
+static inline void hrfs_ii_free(struct hrfs_inode_info *i_info)
 {
 	HRFS_SLAB_FREE_PTR(i_info, hrfs_inode_info_cache);
 	HASSERT(i_info == NULL);
-}
-
-static inline int hrfs_ii_branch_alloc(hrfs_i_info_t *i_info, hrfs_bindex_t bnum)
-{
-	int ret = -ENOMEM;
-	
-	HASSERT(i_info);
-
-	HRFS_ALLOC_GFP(i_info->barray, sizeof(*i_info->barray) * bnum, GFP_ATOMIC);
-	if (unlikely(i_info->barray == NULL)) {
-		goto out;
-	}
-
-	i_info->bnum = bnum;
-	ret = 0;
-
-out:
-	return ret;
-}
-
-static inline int hrfs_ii_branch_free(hrfs_i_info_t *i_info)
-{
-	int ret = 0;
-	
-	HASSERT(i_info);
-	HASSERT(i_info->barray);
-	
-	HRFS_FREE(i_info->barray, sizeof(*i_info->barray) * i_info->bnum);
-	
-	//i_info->ii_branch = NULL; /* HRFS_FREE will do this */
-	HASSERT(i_info->barray == NULL);
-	return ret;
 }
 
 /*

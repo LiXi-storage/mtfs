@@ -30,15 +30,6 @@ void hrfs_destroy_inode(struct inode *inode)
 	struct hrfs_inode_info *inode_info = hrfs_i2info(inode);
 	HENTRY();
 
-	/*
-	 * TODO: alloc branch array in hrfs_alloc_inode?
-	 * Since branch array not alloced in hrfs_alloc_inode, 
-	 * it may be null after get_new_inode()
-	 * called hrfs_struct inodeest and failed to alloc memory
-	 */
-	if (inode_info->barray != NULL) {
-		hrfs_ii_branch_free(inode_info);
-	}
 	hrfs_ii_free(inode_info);
 	_HRETURN();
 }

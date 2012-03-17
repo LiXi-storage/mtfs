@@ -24,7 +24,7 @@ struct hrfs_operation_list {
 	hrfs_bindex_t bnum;                     /* Branch number */
 	hrfs_bindex_t checked_bnum;             /* Number of nonlatest branches failed */
 	hrfs_bindex_t latest_bnum;              /* Number of latest branches */
-	struct hrfs_operation_binfo *op_binfo;  /* Global bindex */
+	struct hrfs_operation_binfo op_binfo[HRFS_BRANCH_MAX];  /* Global bindex */
 	hrfs_bindex_t valid_bnum;               /* Number of valid branches */
 	hrfs_bindex_t success_bnum;             /* Number of branches succeeded */
 	hrfs_bindex_t success_latest_bnum;      /* Number of latest branches succeeded */

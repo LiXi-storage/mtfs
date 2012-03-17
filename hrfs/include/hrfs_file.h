@@ -50,21 +50,21 @@ extern struct file_operations hrfs_dir_fops;
  * If change this, change there too.
  * Alright, it is urgly.
  */
-typedef struct hrfs_file_branch {
+struct hrfs_file_branch {
 	int is_used;
 	int is_valid;
 	struct file *bfile;
-} hrfs_f_branch_t;
+};
 
 /* file private data. */
-typedef struct hrfs_file_info {
+struct hrfs_file_info {
 	hrfs_bindex_t bnum;
-	hrfs_f_branch_t *barray; /*TODO: change to barray[] */
-} hrfs_f_info_t;
+	struct hrfs_file_branch barray[HRFS_BRANCH_MAX];
+};
 
 /* DO NOT access hrfs_*_info_t directly, use following macros */
 #define _hrfs_f2info(file) ((file)->private_data)
-#define hrfs_f2info(file) ((hrfs_f_info_t *)_hrfs_f2info(file))
+#define hrfs_f2info(file) ((struct hrfs_file_info *)_hrfs_f2info(file))
 #define hrfs_f2bnum(file) (hrfs_f2info(file)->bnum)
 #define hrfs_f2barray(file) (hrfs_f2info(file)->barray)
 #define hrfs_f2branch(file, bindex) (hrfs_f2barray(file)[bindex].bfile)

@@ -7,20 +7,20 @@
 #include <hrfs_common.h>
 #include <linux/dcache.h>
 
-typedef struct hrfs_dentry_branch {
+struct hrfs_dentry_branch {
 	__u64 invalid_flags;
 	struct dentry *bdentry;
-} hrfs_d_branch_t;
+};
 
 /* hrfs dentry data in memory */
-typedef struct hrfs_dentry_info {
+struct hrfs_dentry_info {
 	hrfs_bindex_t bnum;
-	hrfs_d_branch_t *barray; /*TODO: change to barray[] */
-} hrfs_d_info_t;
+	struct hrfs_dentry_branch barray[HRFS_BRANCH_MAX];
+};
 
 /* DO NOT access hrfs_*_dentry_t directly, use following macros */
 #define _hrfs_d2info(dentry) ((dentry)->d_fsdata)
-#define hrfs_d2info(dentry) ((hrfs_d_info_t *)_hrfs_d2info(dentry))
+#define hrfs_d2info(dentry) ((struct hrfs_dentry_info *)_hrfs_d2info(dentry))
 #define hrfs_d2bnum(dentry) (hrfs_d2info(dentry)->bnum)
 #define hrfs_d2barray(dentry) (hrfs_d2info(dentry)->barray)
 #define hrfs_d2branch(dentry, bindex) (hrfs_d2barray(dentry)[bindex].bdentry)

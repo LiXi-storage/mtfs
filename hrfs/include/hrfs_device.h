@@ -33,7 +33,7 @@ struct hrfs_device {
 	struct proc_dir_entry *proc_entry;   /* Proc entry for this device */
 	int no_abort;                        /* Do not abort when no latest branch success */
 	hrfs_bindex_t bnum;                  /* Branch number */
-	struct hrfs_device_branch *branch;   /* Info for each branch */
+	struct hrfs_device_branch branch[HRFS_BRANCH_MAX];   /* Info for each branch */
 };
 
 #define hrfs_dev2bops(device, bindex) (device->branch[bindex].ops)

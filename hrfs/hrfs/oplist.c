@@ -11,19 +11,13 @@ struct hrfs_operation_list *hrfs_oplist_alloc(hrfs_bindex_t bnum)
 {
 	struct hrfs_operation_list *list = NULL;
 
+	HASSERT(bnum > 0 && bnum <= HRFS_BRANCH_MAX);
 	HRFS_SLAB_ALLOC_PTR(list, hrfs_oplist_cache);	
 	if (unlikely(list == NULL)) {
 		goto out;
 	}
-	
 	list->bnum = bnum;
-	HRFS_ALLOC(list->op_binfo, sizeof(*list->op_binfo) * bnum);
-	if (unlikely(list->op_binfo == NULL)) {
-		goto out_free_list;
-	}
-	goto out;
-out_free_list:
-	HRFS_SLAB_FREE_PTR(list, hrfs_oplist_cache);
+
 out:
 	return list;
 }
@@ -31,7 +25,6 @@ EXPORT_SYMBOL(hrfs_oplist_alloc);
 
 void hrfs_oplist_free(struct hrfs_operation_list *list)
 {
-	HRFS_FREE(list->op_binfo, sizeof(*list->op_binfo) * list->bnum);
 	HRFS_SLAB_FREE_PTR(list, hrfs_oplist_cache);
 }
 EXPORT_SYMBOL(hrfs_oplist_free);

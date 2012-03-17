@@ -12,17 +12,13 @@ static struct hrfs_device *hrfs_device_alloc(mount_option_t *mount_option)
 	hrfs_bindex_t bindex = 0;
 	hrfs_bindex_t bnum = mount_option->bnum;
 
+	HASSERT(bnum > 0 && bnum <= HRFS_BRANCH_MAX);
 	HRFS_SLAB_ALLOC_PTR(device, hrfs_device_cache);
 	if (device == NULL) {
 		goto out;
 	}
 
 	device->bnum = bnum;
-
-	HRFS_ALLOC(device->branch, sizeof(*device->branch) * bnum);
-	if (device->branch == NULL) {
-		goto out_free_device;
-	}
 
 	for(bindex = 0; bindex < bnum; bindex++) {
 		int length = mount_option->branch[bindex].length;
@@ -54,8 +50,6 @@ out_free_path:
 		HRFS_FREE(hrfs_dev2bpath(device, bindex), hrfs_dev2blength(device, bindex));
 	}
 //out_free_branch:
-	HRFS_FREE(device->branch, sizeof(*device->branch) * bnum);
-out_free_device:
 	HRFS_SLAB_FREE_PTR(device, hrfs_device_cache);
 	HASSERT(device == NULL);
 out:
@@ -71,7 +65,6 @@ static void hrfs_device_free(struct hrfs_device *device)
 	for(bindex = 0; bindex < bnum; bindex++) {
 		HRFS_FREE(hrfs_dev2bpath(device, bindex), hrfs_dev2blength(device, bindex));
 	}
-	HRFS_FREE(device->branch, sizeof(*(device->branch)) * bnum);
 	HRFS_FREE(device->device_name, device->name_length);
 	HRFS_SLAB_FREE_PTR(device, hrfs_device_cache);
 }

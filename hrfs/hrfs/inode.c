@@ -36,12 +36,8 @@ int hrfs_inode_init(struct inode *inode, struct dentry *dentry)
 	struct dentry *hidden_dentry = NULL;
 	struct hrfs_operations *operations = NULL;
 	HENTRY();
-	
-	ret = hrfs_ii_branch_alloc(hrfs_i2info(inode), bnum);
-	if (unlikely(ret)) {
-		ret = -ENOMEM;
-		goto out;
-	}
+
+	HASSERT(bnum > 0 && bnum < HRFS_BRANCH_MAX);
 	hrfs_i2bnum(inode) = bnum;
 
 	for (bindex = 0; bindex < bnum; bindex++) {
@@ -77,7 +73,7 @@ int hrfs_inode_init(struct inode *inode, struct dentry *dentry)
 		inode->i_mapping->a_ops = &hrfs_aops;
 	}
 	hrfs_i_init_lock(inode);
-out:
+
 	HRETURN(ret);
 }
 
