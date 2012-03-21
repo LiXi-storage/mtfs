@@ -127,7 +127,7 @@ struct vm_operations_struct hrfs_lustre_vm_ops = {
 };
 
 ssize_t hrfs_lustre_file_writev(struct file *file, const struct iovec *iov,
-                         unsigned long nr_segs, loff_t *ppos)
+                                unsigned long nr_segs, loff_t *ppos)
 {
 	ssize_t size = 0;
 	int ret = 0;

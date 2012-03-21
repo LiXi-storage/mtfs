@@ -25,8 +25,8 @@ Index: lustre-2.1.52/lustre/include/cl_object.h
 Index: lustre-2.1.52/lustre/llite/file.c
 ===================================================================
 --- lustre-2.1.52.orig/lustre/llite/file.c	2012-03-14 09:17:32.000000000 +0800
-+++ lustre-2.1.52/lustre/llite/file.c	2012-03-17 11:00:03.000000000 +0800
-@@ -2747,3 +2747,645 @@
++++ lustre-2.1.52/lustre/llite/file.c	2012-03-19 11:22:34.000000000 +0800
+@@ -2747,3 +2747,648 @@
                  *rcp = rc;
          return ret;
  }
@@ -146,7 +146,7 @@ Index: lustre-2.1.52/lustre/llite/file.c
 +        result = ll_file_get_iov_count(iov, &nr_segs, &count);
 +        if (result) {
 +                HERROR("iov count is error\n");
-+        	goto out;
++                goto out;
 +        }
 +
 +        vector = hrfs_env_vector_alloc(bnum);
@@ -228,7 +228,7 @@ Index: lustre-2.1.52/lustre/llite/file.c
 +                    !(cio->cui_fd->fd_flags & LL_FILE_GROUP_LOCKED)) {
 +                        if(cfs_down_interruptible(&lli->lli_write_sem)) {
 +                                result = -ERESTARTSYS;
-+                                goto out;
++                                goto out_fini;
 +                        }
 +                } else if (iot == CIT_READ) {
 +                        cfs_down_read(&lli->lli_trunc_sem);
@@ -246,6 +246,9 @@ Index: lustre-2.1.52/lustre/llite/file.c
 +                CERROR("Unknow IO type - %u\n", vio->cui_io_subtype);
 +                LBUG();
 +        }
++        goto out;
++out_fini:
++        cl_io_fini(env, io);
 +out:
 +        HRETURN(result);
 +}
@@ -406,11 +409,11 @@ Index: lustre-2.1.52/lustre/llite/file.c
 +        HENTRY();
 +
 +        for (bindex = 0; bindex < bnum; bindex++) {
-+        	if (hrfs_f2branch(hrfs_file, bindex) != NULL) {
-+        		result = 0;
-+        		*first_bindex = bindex;
-+        		break;
-+        	}
++                if (hrfs_f2branch(hrfs_file, bindex) != NULL) {
++                        result = 0;
++                        *first_bindex = bindex;
++                        break;
++                }
 +        }
 +        HRETURN(result);
 +}
@@ -574,10 +577,10 @@ Index: lustre-2.1.52/lustre/llite/file.c
 +                hrfs_lu_env_attach((struct lu_env *)first_env);
 +                result = cl_io_iter_init(first_env, first_io);
 +                if (!result) {
-+			nob = first_io->ci_nob;
-+			result = cl_io_lock(first_env, first_io);
++                        nob = first_io->ci_nob;
++                        result = cl_io_lock(first_env, first_io);
 +                }
-+		cl_env_reenter();
++                cl_env_reenter();
 +
 +                if (result) {
 +                        break;
@@ -586,14 +589,14 @@ Index: lustre-2.1.52/lustre/llite/file.c
 +                result = hrfs_cl_io_lock_secondary(env_vector, hrfs_file,
 +                                first_bindex, first_env, first_io);
 +                if (result) {
-+                	hrfs_lu_env_attach((struct lu_env *)first_env);
-+			goto loop_unlock;
++                        hrfs_lu_env_attach((struct lu_env *)first_env);
++                        goto loop_unlock;
 +                }
 +                result = hrfs_cl_io_finsh_secondary_reverse(env_vector,
 +                                hrfs_file, first_bindex, first_env, first_io);
 +                if (result) {
-+                	hrfs_lu_env_attach((struct lu_env *)first_env);
-+			goto loop_unlock;
++                        hrfs_lu_env_attach((struct lu_env *)first_env);
++                        goto loop_unlock;
 +                }
 +
 +                hrfs_lu_env_attach((struct lu_env *)first_env);
@@ -651,7 +654,7 @@ Index: lustre-2.1.52/lustre/llite/file.c
 +        result = ll_file_get_iov_count(iov, &nr_segs, &count);
 +        if (result) {
 +                HERROR("iov count is error\n");
-+        	goto out;
++                goto out;
 +        }
 +
 +        env_vector = hrfs_env_vector_alloc(bnum);

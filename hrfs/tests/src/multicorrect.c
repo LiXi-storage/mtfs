@@ -10,6 +10,7 @@
 #include <memory.h>
 #include <unistd.h>
 #include <stdlib.h>
+#include <sys/prctl.h>
 
 typedef struct block {
 	char *data;
@@ -97,7 +98,7 @@ int random_fill_block(block_t *block)
 			position++;
 		}
 	}
-	
+
 	for(; position < char_number; position ++) {
 		block->data[position] = hrfs_random() & 0xFF;
 	}
@@ -107,7 +108,7 @@ int random_fill_block(block_t *block)
 int dump_block(block_t *block)
 {
 	int i = 0;
-	
+
 	HPRINT("block_size: %lu\n", block->block_size);
 	for(i = 0; i < block->block_size; i++) {
 		HPRINT("%02X", (uint8_t)(block->data[i]));
@@ -119,7 +120,7 @@ int dump_block(block_t *block)
 int cmp_block(block_t *s1, block_t *s2)
 {
 	HASSERT(s1->block_size == s2->block_size);
-	
+
 	return memcmp(s1->data, s2->data, s1->block_size);
 }
 
@@ -144,6 +145,13 @@ void *write_little_proc(thread_info_t *thread_info)
 	block_t *block = NULL;
 	off_t offset = 0;
 	off_t writed = 0;
+	int ret = 0;
+
+	ret = prctl(PR_SET_NAME, thread_info->identifier, 0, 0, 0);
+	if (ret) {
+		HERROR("failed to set thead name\n");
+		goto out;
+	}	
 
 	block = alloc_block(block_size);
 	if (block == NULL) {
@@ -188,6 +196,13 @@ void *write_proc(thread_info_t *thread_info)
 	block_t *block = NULL;
 	off_t offset = 0;
 	off_t writed = 0;
+	int ret = 0;
+
+	ret = prctl(PR_SET_NAME, thread_info->identifier, 0, 0, 0);
+	if (ret) {
+		HERROR("failed to set thead name\n");
+		goto out;
+	}	
 
 	block = alloc_block(block_size);
 	if (block == NULL) {
@@ -234,6 +249,12 @@ void *check_proc(thread_info_t *thread_info)
 	struct stat *first_stat_buf = NULL;
 	int ret = 0;
 	int i = 0;
+
+	ret = prctl(PR_SET_NAME, thread_info->identifier, 0, 0, 0);
+	if (ret) {
+		HERROR("failed to set thead name\n");
+		goto out;
+	}	
 
 	HRFS_ALLOC(buf, count);
 	if (buf == NULL) {
@@ -316,10 +337,10 @@ void *check_proc(thread_info_t *thread_info)
 						goto out;
 					}
 
-					if (memcmp(first_buf, buf, read_count) != 0) {
-						HERROR("buff differ\n");
-						goto out;
-					}
+					//if (memcmp(first_buf, buf, read_count) != 0) {
+					//	HERROR("buff differ\n");
+					//	goto out;
+					//}
 				}
 			} while (first_read_count != 0);
 			HPRINT("checked\n");
@@ -340,13 +361,14 @@ out:
 	if (first_stat_buf != NULL) {
 		HRFS_FREE_PTR(first_stat_buf);
 	}
+	exit(1);
 	return NULL;
 }
 
 const thread_group_t thread_groups[] = {
-	{8, "write_little_thread", (void *(*)(thread_info_t *))write_little_proc},
-	{1, "write_thread", (void *(*)(thread_info_t *))write_proc},
-	{1, "check_thread", (void *(*)(thread_info_t *))check_proc},
+	{4, "write_little", (void *(*)(thread_info_t *))write_little_proc},
+	{1, "write", (void *(*)(thread_info_t *))write_proc},
+	{1, "check", (void *(*)(thread_info_t *))check_proc},
 	{0, NULL, NULL}, /* for end detection */
 };
 

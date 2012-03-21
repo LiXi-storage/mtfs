@@ -1,7 +1,7 @@
 Index: lustre-2.1.52/lustre/include/lustre/lustre_idl.h
 ===================================================================
---- lustre-2.1.52.orig/lustre/include/lustre/lustre_idl.h	2012-03-14 09:17:27.000000000 +0800
-+++ lustre-2.1.52/lustre/include/lustre/lustre_idl.h	2012-03-15 10:14:56.000000000 +0800
+--- lustre-2.1.52.orig/lustre/include/lustre/lustre_idl.h	2012-03-19 11:24:42.000000000 +0800
++++ lustre-2.1.52/lustre/include/lustre/lustre_idl.h	2012-03-19 11:25:07.000000000 +0800
 @@ -1335,7 +1335,6 @@
  #define XATTR_NAME_LMV          "trusted.lmv"
  #define XATTR_NAME_LINK         "trusted.link"
@@ -80,8 +80,8 @@ Index: lustre-2.1.52/lustre/include/lustre/lustre_idl.h
  #define MAY_CREATE      (1 << 7)
 Index: lustre-2.1.52/lustre/llite/llite_internal.h
 ===================================================================
---- lustre-2.1.52.orig/lustre/llite/llite_internal.h	2012-03-14 09:17:27.000000000 +0800
-+++ lustre-2.1.52/lustre/llite/llite_internal.h	2012-03-14 09:18:37.000000000 +0800
+--- lustre-2.1.52.orig/lustre/llite/llite_internal.h	2012-03-19 11:24:42.000000000 +0800
++++ lustre-2.1.52/lustre/llite/llite_internal.h	2012-03-19 11:25:07.000000000 +0800
 @@ -126,6 +126,12 @@
  
  };
@@ -107,8 +107,8 @@ Index: lustre-2.1.52/lustre/llite/llite_internal.h
  /*
 Index: lustre-2.1.52/lustre/llite/llite_lib.c
 ===================================================================
---- lustre-2.1.52.orig/lustre/llite/llite_lib.c	2012-03-14 09:17:27.000000000 +0800
-+++ lustre-2.1.52/lustre/llite/llite_lib.c	2012-03-15 14:46:27.000000000 +0800
+--- lustre-2.1.52.orig/lustre/llite/llite_lib.c	2012-03-19 11:24:42.000000000 +0800
++++ lustre-2.1.52/lustre/llite/llite_lib.c	2012-03-19 11:25:07.000000000 +0800
 @@ -1545,6 +1545,9 @@
          cfs_up(&lli->lli_size_sem);
  }
@@ -250,8 +250,8 @@ Index: lustre-2.1.52/lustre/llite/llite_lib.c
 +#endif /* !DISABLE_HRFS_SUPPORT */
 Index: lustre-2.1.52/lustre/include/lu_object.h
 ===================================================================
---- lustre-2.1.52.orig/lustre/include/lu_object.h	2012-03-14 09:17:27.000000000 +0800
-+++ lustre-2.1.52/lustre/include/lu_object.h	2012-03-14 09:18:37.000000000 +0800
+--- lustre-2.1.52.orig/lustre/include/lu_object.h	2012-03-19 11:24:42.000000000 +0800
++++ lustre-2.1.52/lustre/include/lu_object.h	2012-03-19 11:25:07.000000000 +0800
 @@ -437,6 +437,10 @@
          __u32          la_blksize;
          /** real device */
@@ -265,8 +265,8 @@ Index: lustre-2.1.52/lustre/include/lu_object.h
           *
 Index: lustre-2.1.52/lustre/mdt/mdt_handler.c
 ===================================================================
---- lustre-2.1.52.orig/lustre/mdt/mdt_handler.c	2012-03-14 09:17:27.000000000 +0800
-+++ lustre-2.1.52/lustre/mdt/mdt_handler.c	2012-03-15 12:03:05.000000000 +0800
+--- lustre-2.1.52.orig/lustre/mdt/mdt_handler.c	2012-03-19 11:24:42.000000000 +0800
++++ lustre-2.1.52/lustre/mdt/mdt_handler.c	2012-03-19 11:25:07.000000000 +0800
 @@ -405,6 +405,11 @@
          b->blocks = ma->ma_som->msd_blocks;
  }
@@ -309,8 +309,8 @@ Index: lustre-2.1.52/lustre/mdt/mdt_handler.c
                  CERROR("getattr error for "DFID": %d\n",
 Index: lustre-2.1.52/lustre/mdd/mdd_object.c
 ===================================================================
---- lustre-2.1.52.orig/lustre/mdd/mdd_object.c	2012-03-14 09:17:27.000000000 +0800
-+++ lustre-2.1.52/lustre/mdd/mdd_object.c	2012-03-15 14:34:17.000000000 +0800
+--- lustre-2.1.52.orig/lustre/mdd/mdd_object.c	2012-03-19 11:24:42.000000000 +0800
++++ lustre-2.1.52/lustre/mdd/mdd_object.c	2012-03-19 11:25:07.000000000 +0800
 @@ -751,6 +751,50 @@
          RETURN(0);
  }
@@ -430,8 +430,8 @@ Index: lustre-2.1.52/lustre/mdd/mdd_object.c
                  rc = mdd_attr_set_changelog(env, obj, handle,
 Index: lustre-2.1.52/lustre/include/md_object.h
 ===================================================================
---- lustre-2.1.52.orig/lustre/include/md_object.h	2012-03-14 09:17:27.000000000 +0800
-+++ lustre-2.1.52/lustre/include/md_object.h	2012-03-14 09:18:37.000000000 +0800
+--- lustre-2.1.52.orig/lustre/include/md_object.h	2012-03-19 11:24:42.000000000 +0800
++++ lustre-2.1.52/lustre/include/md_object.h	2012-03-19 11:25:07.000000000 +0800
 @@ -130,7 +130,13 @@
  /* (Layout lock will used #7 here) */
          MA_HSM       = (1 << 8),
@@ -448,8 +448,8 @@ Index: lustre-2.1.52/lustre/include/md_object.h
  typedef enum {
 Index: lustre-2.1.52/lustre/include/obd.h
 ===================================================================
---- lustre-2.1.52.orig/lustre/include/obd.h	2012-03-14 09:17:27.000000000 +0800
-+++ lustre-2.1.52/lustre/include/obd.h	2012-03-14 09:18:37.000000000 +0800
+--- lustre-2.1.52.orig/lustre/include/obd.h	2012-03-19 11:24:42.000000000 +0800
++++ lustre-2.1.52/lustre/include/obd.h	2012-03-19 11:25:07.000000000 +0800
 @@ -1240,6 +1240,10 @@
  
          /* Operation type */
@@ -463,18 +463,15 @@ Index: lustre-2.1.52/lustre/include/obd.h
  struct md_enqueue_info;
 Index: lustre-2.1.52/lustre/mdc/mdc_lib.c
 ===================================================================
---- lustre-2.1.52.orig/lustre/mdc/mdc_lib.c	2012-03-14 09:17:27.000000000 +0800
-+++ lustre-2.1.52/lustre/mdc/mdc_lib.c	2012-03-15 10:55:26.000000000 +0800
-@@ -310,6 +310,17 @@
+--- lustre-2.1.52.orig/lustre/mdc/mdc_lib.c	2012-03-19 11:24:42.000000000 +0800
++++ lustre-2.1.52/lustre/mdc/mdc_lib.c	2012-03-20 09:19:04.000000000 +0800
+@@ -310,6 +310,14 @@
                  rec->sa_suppgid = op_data->op_attr.ia_gid;
          else
                  rec->sa_suppgid = op_data->op_suppgids[0];
 +
 +#ifndef DISABLE_HRFS_SUPPORT
-+        CERROR("in mdc_setattr_pack_rec %x, %u\n",
-+               op_data->op_attr.ia_valid, op_data->op_hrfs_flag);
 +        if (op_data->op_attr.ia_valid & HRFS_MDT_SET_FLAG) {
-+                CERROR("setting flag %u\n", op_data->op_hrfs_flag);
 +                rec->sa_valid |= HRFS_MDT_SET_FLAG;
 +                rec->sa_hrfs_flag = op_data->op_hrfs_flag;
 +        }
@@ -485,8 +482,8 @@ Index: lustre-2.1.52/lustre/mdc/mdc_lib.c
  static void mdc_ioepoch_pack(struct mdt_ioepoch *epoch,
 Index: lustre-2.1.52/lustre/mdt/mdt_lib.c
 ===================================================================
---- lustre-2.1.52.orig/lustre/mdt/mdt_lib.c	2012-03-14 09:17:27.000000000 +0800
-+++ lustre-2.1.52/lustre/mdt/mdt_lib.c	2012-03-15 14:14:24.000000000 +0800
+--- lustre-2.1.52.orig/lustre/mdt/mdt_lib.c	2012-03-19 11:24:42.000000000 +0800
++++ lustre-2.1.52/lustre/mdt/mdt_lib.c	2012-03-19 11:25:07.000000000 +0800
 @@ -766,6 +766,9 @@
  }
  /* unpacking */

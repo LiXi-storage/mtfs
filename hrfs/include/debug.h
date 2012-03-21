@@ -11,7 +11,7 @@
 #define HASSERT LASSERT
 #define HBUG LBUG
 
-#if 1
+#if 0
 #define HDEBUG(format, args...)     CDEBUG(D_INFO, "hrfs: "format, ##args)
 #else
 #define HDEBUG(format, args...)     CERROR("hrfs: "format, ##args)
