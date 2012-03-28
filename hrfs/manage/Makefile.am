@@ -1,7 +1,3 @@
-#
-# Copyright (C) 2011 Li Xi <pkuelelixi@163.com>
-#
-
 # Filesystem management Makefile
 SUBDIRS := .
 

@@ -1,3 +1,7 @@
+/*
+ * Copyright (C) 2011 Li Xi <pkuelelixi@gmail.com>
+ */
+
 #include <cfg.h>
 #include <debug.h>
 #include <stdlib.h>

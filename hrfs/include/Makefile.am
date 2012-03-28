@@ -1,7 +1,3 @@
-#
-# Copyright (C) 2011 Li Xi <pkuelelixi@163.com>
-#
-
 EXTRA_DIST := bitmap.h bsearch.h cmd_parser.h debug.h hrfs_build_version.h
 EXTRA_DIST += hrfs_common.h hrfs_dentry.h hrfs_file.h hrfs_inode.h hrfs_ioctl.h
 EXTRA_DIST += hrfs_junction.h hrfs_list.h hrfs_mmap.h hrfs_queue.h hrfs_random.h

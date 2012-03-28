@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011 Li Xi <pkuelelixi@163.com>
+ * Copyright (C) 2011 Li Xi <pkuelelixi@gmail.com>
  */
 
 /* Copy from linux-2.6.30/fs/stack.c */

@@ -1,7 +1,3 @@
-#
-# Copyright (C) 2011 Li Xi <pkuelelixi@163.com>
-#
-
 # Administration utilities Makefile
 SUBDIRS := libcoreutils .
 

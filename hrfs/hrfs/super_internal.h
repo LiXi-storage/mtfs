@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011 Li Xi <pkuelelixi@163.com>
+ * Copyright (C) 2011 Li Xi <pkuelelixi@gmail.com>
  */
 
 #ifndef __HRFS_SUPER_INTERNAL_H__

@@ -421,25 +421,30 @@ int main(int argc, char *argv[])
 		goto out;
 	}
 
+
 	ret = pthread_cond_init(&cond, NULL);
 	if (ret == -1) {
 		goto out;
 	}
 
+/*
 	ret = create_thread_group(&thread_groups[0], NULL);
 	if (ret == -1) {
 		goto out;
 	}
+*/
 
 	ret = create_thread_group(&thread_groups[1], NULL);
 	if (ret == -1) {
 		goto out;
 	}
 
+/*
 	ret = create_thread_group(&thread_groups[2], NULL);
 	if (ret == -1) {
 		goto out;
 	}
+*/
 
 	while(1) {
 	//for (i = 0; i < seconds / 10 + 1; i++) {

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011 Li Xi <pkuelelixi@163.com>
+ * Copyright (C) 2011 Li Xi <pkuelelixi@gmail.com>
  */
 
 #include <hrfs_support.h>
@@ -133,16 +133,27 @@ ssize_t hrfs_lustre_file_writev(struct file *file, const struct iovec *iov,
 	int ret = 0;
 	hrfs_operation_result_t result;
 	struct hrfs_operation_list *oplist = NULL;
+	struct inode *inode = NULL;
 	HENTRY();
 
-        oplist = hrfs_oplist_build_keep_order(file->f_dentry->d_inode);
+	inode = file->f_dentry->d_inode;
+        oplist = hrfs_oplist_build_keep_order(inode);
 	if (unlikely(oplist == NULL)) {
 		HERROR("failed to build operation list\n");
 		ret = -ENOMEM;
 		goto out;
 	}
 
-	hrfs_ll_file_writev(file, iov, nr_segs, ppos, oplist);
+	if (hrfs_i_wlock_down_interruptible(inode)) {
+		HERROR("Interupted by signal\n");
+		/* Never return an error like -EINTR */
+		goto out_free_oplist;
+	}
+	ret = hrfs_ll_file_writev(file, iov, nr_segs, ppos, oplist);
+	if (ret) {
+		HERROR("failed to writev, ret = %d\n", ret);
+	}
+	hrfs_i_wlock_up(inode);
 
 	hrfs_oplist_check(oplist);
 	if (oplist->success_bnum <= 0) {

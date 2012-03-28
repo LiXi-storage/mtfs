@@ -1,7 +1,3 @@
-#
-# Copyright (C) 2011 Li Xi <pkuelelixi@163.com>
-#
-
 AUTOMAKE_OPTIONS = foreign
 
 # Also update hrfs/autoconf/hrfs-core.m4 AC_CONFIG_FILES

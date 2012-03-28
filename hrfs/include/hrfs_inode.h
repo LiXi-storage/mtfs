@@ -18,6 +18,7 @@ struct hrfs_inode_branch {
 struct hrfs_inode_info {
 	struct inode vfs_inode;
 	struct rw_semaphore rwsem; /* protect barray */
+	struct semaphore write_sem;
 	hrfs_bindex_t bnum;
 	struct hrfs_inode_branch barray[HRFS_BRANCH_MAX];
 };
@@ -28,6 +29,7 @@ struct hrfs_inode_info {
 #define hrfs_i2barray(inode) (hrfs_i2info(inode)->barray)
 #define hrfs_i2branch(inode, bindex) (hrfs_i2barray(inode)[bindex].binode)
 #define hrfs_i2rwsem(inode) (hrfs_i2info(inode)->rwsem)
+#define hrfs_i2wsem(inode) (hrfs_i2info(inode)->write_sem)
 
 static inline void hrfs_i_init_lock(struct inode *inode)
 {
@@ -64,6 +66,20 @@ static inline void hrfs_i_write_unlock(struct inode *inode)
 	up_write(&hrfs_i2rwsem(inode));
 }
 
+static inline void hrfs_i_wlock_init(struct inode *inode)
+{
+	sema_init(&hrfs_i2wsem(inode), 1);
+}
+
+static inline int hrfs_i_wlock_down_interruptible(struct inode *inode)
+{
+	return down_interruptible(&hrfs_i2wsem(inode));
+}
+
+static inline void hrfs_i_wlock_up(struct inode *inode)
+{
+	up(&hrfs_i2wsem(inode));
+}
 /* The values for hrfs_interpose's flag. */
 #define INTERPOSE_DEFAULT	0
 #define INTERPOSE_LOOKUP	1

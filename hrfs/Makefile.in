@@ -1,7 +1,3 @@
-#
-# Copyright (C) 2011 Li Xi <pkuelelixi@163.com>
-#
-
 subdir-m += hrfs random
 @LUSTRE_SUPPORT_TRUE@subdir-m += lustre_support
 @SWGFS_SUPPORT_TRUE@subdir-m += swgfs_support

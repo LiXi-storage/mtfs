@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011 Li Xi <pkuelelixi@163.com>
+ * Copyright (C) 2011 Li Xi <pkuelelixi@gmail.com>
  */
 
 #include "hrfs_internal.h"
@@ -74,6 +74,7 @@ int hrfs_inode_init(struct inode *inode, struct dentry *dentry)
 	}
 	hrfs_i_init_lock(inode);
 
+        hrfs_i_wlock_init(inode);
 	HRETURN(ret);
 }
 

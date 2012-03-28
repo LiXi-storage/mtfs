@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# Copyright (C) 2011 Li Xi <pkuelelixi@163.com>
+# Copyright (C) 2011 Li Xi <pkuelelixi@gmail.com>
 #
 
 desc="tests for example"

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011 Li Xi <pkuelelixi@163.com>
+ * Copyright (C) 2011 Li Xi <pkuelelixi@gmail.com>
  */
 
 #include "hrfs_internal.h"
@@ -625,6 +625,7 @@ ssize_t hrfs_file_writev(struct file *file, const struct iovec *iov,
 	hrfs_bindex_t i = 0;
 	struct hrfs_operation_list *list = NULL;
 	hrfs_operation_result_t result = {0};
+	struct inode *inode = file->f_dentry->d_inode;
 	HENTRY();
 
 	HRFS_ALLOC(iov_new, length);
@@ -656,6 +657,10 @@ ssize_t hrfs_file_writev(struct file *file, const struct iovec *iov,
 		}
 	}
 
+	if (hrfs_i_wlock_down_interruptible(inode)) {
+		size = -EINTR;
+		goto out_free_oplist;
+	}
 	for (i = 0; i < hrfs_f2bnum(file); i++) {
 		bindex = list->op_binfo[i].bindex;
 		memcpy((char *)iov_tmp, (char *)iov_new, length);
@@ -670,11 +675,13 @@ ssize_t hrfs_file_writev(struct file *file, const struct iovec *iov,
 				if (!(hrfs_i2dev(file->f_dentry->d_inode)->no_abort)) {
 					result = hrfs_oplist_result(list);
 					size = result.size;
+					hrfs_i_wlock_up(inode);
 					goto out_free_oplist;
 				}
 			}
 		}
 	}
+	hrfs_i_wlock_up(inode);
 
 	hrfs_oplist_check(list);
 	if (list->success_bnum <= 0) {
