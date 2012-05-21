@@ -28,7 +28,6 @@
 /lustre.spec
 /lustre*.tar.gz
 /Makefile
-/missing
 /mkinstalldirs
 /Module.markers
 /Module.symvers
@@ -36,6 +35,7 @@
 /modules.order
 /Modules.symvers
 /patches
+/rebuild.sh 
 /Rules
 /series
 /stamp-h1

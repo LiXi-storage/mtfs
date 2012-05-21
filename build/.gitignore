@@ -4,3 +4,5 @@
 /.tmp_versions
 /autoMakefile
 /autoMakefile.in
+/Module.markers
+
