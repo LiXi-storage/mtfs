@@ -13,16 +13,26 @@
 #ifndef MEMORY_DEBUG
 #include <asm/atomic.h>
 
-extern atomic_t hrfs_kmemory_used;
+extern atomic64_t hrfs_kmemory_used;
+extern atomic64_t hrfs_kmemory_used_max;
 
+/*
+ * hrfs_kmemory_used_max may be not accurate 
+ * because of concurrent freeing and allocing.
+ */
 #define hrfs_kmem_inc(ptr, size)                                              \
 do {                                                                          \
-    atomic_add(size, &hrfs_kmemory_used);                                     \
+    __u64 used = atomic64_read(&hrfs_kmemory_used);                           \
+    atomic64_add(size, &hrfs_kmemory_used);                                   \
+    used += size;                                                             \
+    if (used > atomic64_read(&hrfs_kmemory_used_max)) {                       \
+        atomic64_set(&hrfs_kmemory_used_max, used);                           \
+    }                                                                         \
 } while (0)
 
 #define hrfs_kmem_dec(ptr, size)                                              \
 do {                                                                          \
-    atomic_sub(size, &hrfs_kmemory_used);                                     \
+    atomic64_sub(size, &hrfs_kmemory_used);                                   \
 } while (0)
 #else /* !MEMORY_DEBUG */
 #define hrfs_kmem_inc(ptr, size) do {} while (0)

@@ -568,17 +568,16 @@ struct hrfs_device *hrfs_newdev(struct super_block *sb, mount_option_t *mount_op
 	const char **secondary_types = NULL;
 	int secondary_number = 0;
 
-	if (bnum > 1) {
-		HRFS_ALLOC(secondary_types, sizeof(*secondary_types) * bnum);
-		if (secondary_types == NULL) {
-			goto out;
-		}
+	HRFS_ALLOC(secondary_types, sizeof(*secondary_types) * bnum);
+	if (secondary_types == NULL) {
+		ret = -ENOMEM;
+		goto out;
 	}
 
 	newdev = hrfs_device_alloc(mount_option);
 	if (newdev == NULL) {
 		ret = -ENOMEM;
-		goto out;
+		goto out_free_types;
 	}
 
 	/*
@@ -637,11 +636,9 @@ out_put_module:
 	}
 
 	hrfs_device_free(newdev);
+out_free_types:
+	HRFS_FREE(secondary_types, sizeof(char *) * bnum);
 out:
-	if (secondary_types) {
-		HRFS_FREE(secondary_types, sizeof(char *) * bnum);
-	}
-
 	if (ret) {
 		newdev = ERR_PTR(ret);
 	}
@@ -689,7 +686,6 @@ int hrfs_proc_read_devices(char *page, char **start, off_t off,
 	return ret;
 }
 
-#ifndef LIXI_20120202
 int hrfs_device_branch_errno(struct hrfs_device *device, hrfs_bindex_t bindex, __u32 emask)
 {
 	struct hrfs_device_branch *dev_branch = hrfs_dev2branch(device, bindex);
@@ -704,16 +700,4 @@ int hrfs_device_branch_errno(struct hrfs_device *device, hrfs_bindex_t bindex, _
 	}
 	return 0;
 }
-#else
-int hrfs_device_branch_errno(struct hrfs_device *device, hrfs_bindex_t bindex)
-{
-	struct hrfs_device_branch *dev_branch = hrfs_dev2branch(device, bindex);
-
-	if (dev_branch->debug.active) {
-		HASSERT(dev_branch->debug.errno < 0);
-		return dev_branch->debug.errno;
-	}
-	return 0;
-}
-#endif
 EXPORT_SYMBOL(hrfs_device_branch_errno);

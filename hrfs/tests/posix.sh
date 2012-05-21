@@ -1838,7 +1838,7 @@ run_test 51a "special situations: split htree with empty entry =="
 export NUMTEST=70000
 test_51b() {
 	NUMFREE=`df -i -P $DIR | tail -n 1 | awk '{ print $4 }'`
-	[ $NUMFREE -lt 21000 ] && \
+	[ $NUMFREE -lt $NUMTEST ] && \
 		skip "not enough free inodes ($NUMFREE)" && \
 		return
 

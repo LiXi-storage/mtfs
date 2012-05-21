@@ -1640,8 +1640,9 @@ int hrfs_rename(struct inode *old_dir, struct dentry *old_dentry, struct inode *
 			ret = PTR_ERR(hidden_old_dir);
 			HERROR("choose branch failed, ret = %d\n", ret);
 			//goto out_free_oplist;
+		} else {
+			fsstack_copy_attr_all(new_dir, hidden_old_dir, hrfs_get_nlinks);
 		}
-		fsstack_copy_attr_all(new_dir, hidden_old_dir, hrfs_get_nlinks);
 	}
 
 	/* This flag is seted: FS_RENAME_DOES_D_MOVE */

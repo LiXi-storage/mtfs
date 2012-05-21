@@ -5,8 +5,11 @@
 #include "hrfs_internal.h"
 static struct ctl_table_header *hrfs_table_header = NULL;
 
-atomic_t hrfs_kmemory_used = {0};
+atomic64_t hrfs_kmemory_used = {0};
 EXPORT_SYMBOL(hrfs_kmemory_used);
+
+atomic64_t hrfs_kmemory_used_max = {0};
+EXPORT_SYMBOL(hrfs_kmemory_used_max);
 
 static struct ctl_table hrfs_table[] = {
 	/*
@@ -24,7 +27,16 @@ static struct ctl_table hrfs_table[] = {
 	{
 		.ctl_name = HRFS_PROC_MEMUSED,
 		.procname = "memused",
-		.data     = (int *)&hrfs_kmemory_used.counter,
+		.data     = (__u64 *)&hrfs_kmemory_used.counter,
+		.maxlen   = sizeof(int),
+		.mode     = 0444,
+		.proc_handler = &proc_dointvec,
+		.strategy = &sysctl_intvec,
+	},
+	{
+		.ctl_name = HRFS_PROC_MEMUSED,
+		.procname = "memused_max",
+		.data     = (__u64 *)&hrfs_kmemory_used_max.counter,
 		.maxlen   = sizeof(int),
 		.mode     = 0444,
 		.proc_handler = &proc_dointvec,
