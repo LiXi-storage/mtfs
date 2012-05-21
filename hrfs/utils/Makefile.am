@@ -1,12 +1,11 @@
 # Administration utilities Makefile
-SUBDIRS := libcoreutils .
+SUBDIRS := .
 
 AM_CFLAGS=$(LLCFLAGS)
 AM_CPPFLAGS=$(LLCPPFLAGS) -DHRFS_UTILS=1
 AM_LDFLAGS := -lattr
 
 LIBUSER := $(top_builddir)/hrfs/libuser/libuser.a
-LIBCOREUTILS := $(top_builddir)/hrfs/utils/libcoreutils/libcoreutils.a
 
 sbin_scripts =  
 bin_scripts = 
@@ -29,8 +28,8 @@ hrfsctl_SOURCES = hctl.c
 hrfsctl_LDADD := $(LIBREADLINE) $(LIBUSER)
 hrfsctl_DEPENDENCIES := 
 
-hrfs_SOURCES = hrfs.c repair.c repair.h cp.c cp.h hide.c hide.h grouplock.c grouplock.h exit_status.h
-hrfs_LDADD := $(LIBREADLINE) libhrfsapi.a $(LIBUSER) $(LIBCOREUTILS)
+hrfs_SOURCES = hrfs.c hide.c hide.h grouplock.c grouplock.h exit_status.h
+hrfs_LDADD := $(LIBREADLINE) libhrfsapi.a $(LIBUSER)
 hrfs_DEPENDENCIES := $(LIBUSER) $(LIBCOREUTILS) libhrfsapi.a
 
 libhrfsapi_a_SOURCES = libhrfsapi.c

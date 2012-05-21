@@ -9,9 +9,7 @@
 #include <raid.h>
 #include <unistd.h>
 #include "libhrfsapi.h"
-#include "repair.h"
 #include <log.h>
-#include "cp.h"
 #include "hide.h"
 #include "grouplock.h"
 #include <signal.h>
@@ -47,10 +45,7 @@ static int hrfs_example(int argc, char **argv);
 static int hrfs_getstate(int argc, char **argv);
 static int hrfs_setbranch(int argc, char **argv);
 static int hrfs_setraid(int argc, char **argv);
-static int hrfs_repair(int argc, char **argv);
-static int hrfs_diff(int argc, char **argv);
 static int hrfs_log(int argc, char **argv);
-static int hrfs_cp(int argc, char **argv);
 static int hrfs_hide(int argc, char **argv);
 static int hrfs_grouplock(int argc, char **argv);
 static int hrfs_rmbranch(int argc, char **argv);
@@ -100,25 +95,12 @@ command_t hrfs_cmdlist[] = {
 	"                <dir> ...\n"},
 
 	/* repair commands */
-	{"repair", hrfs_repair, 0,
-	"To repair a given file or directory.\n"
-	"usage: repair [--quiet | -q] [--verbose | -v]\n"
-	"                               <dir|file> ...\n"},
-
-	{"diff", hrfs_diff, 0,
-	"To find differences between two files.\n"
-	"usage: diff [--quiet | -q] [--verbose | -v]\n"
-	"                               from-file to-file\n"},
 
 	/* test commands */
 	{"log", hrfs_log, 0,
 	"To test hrfs log system.\n"
 	"usage: log [--quiet | -q] [--verbose | -v]\n"
 	"                               log_messages ...\n"},
-	{"cp", hrfs_cp, 0,
-	"To test hrfs cp.\n"
-	"usage: cp [--quiet | -q] [--verbose | -v] \n"
-	"          [--preserve-all | -p] SOURCE DEST\n"},
 	{"grouplock", hrfs_grouplock, 0,
 	"To test hrfs group lock.\n"
 	"usage: grouplock [--quiet | -q] [--verbose | -v] \n"
@@ -506,112 +488,6 @@ out:
 	return rc;
 }
 
-static int hrfs_repair(int argc, char **argv)
-{
-	struct option long_opts[] = {
-		{"quiet", no_argument, 0, 'q'},
-		{"verbose", no_argument, 0, 'v'},
-		{"recursive", no_argument, 0, 'r'},
-		{0, 0, 0, 0}
-	};
-	char short_opts[] = "qvr";
-	int c = 0;
-	int rc = 0;
-	hrfs_param_t param = { 0 };
-	
-	optind = 0;
-	while ((c = getopt_long(argc, argv, short_opts, long_opts, NULL)) != -1) {
-		switch (c) {
-		case 'q':
- 			param.quiet++;
-			param.verbose = 0;
-			break;
-		case 'v':
-			param.verbose++;
-			param.quiet = 0;
-		case 'r':
-			param.recursive++;
-			break;
-		case '?':
-			rc = CMD_HELP;
-			goto out;
-		default:
-			fprintf(stderr, "error: %s: option '%s' unrecognized\n",
-			        argv[0], argv[optind - 1]);
-			rc = CMD_HELP;
-			goto out;
-		}
-	}
-	
-	if (optind >= argc) {
-		rc = CMD_HELP;
-		goto out;
-	}
-	
-	do {
-		rc = hrfs_api_repair(argv[optind], &param);
-	} while (++optind < argc && !rc);
-
-	if (rc) {
-		fprintf(stderr, "error: %s failed for %s, rc = %d.\n",
-		        argv[0], argv[optind - 1], rc);
-	}
-out:
-	return rc;
-}
-
-static int hrfs_diff(int argc, char **argv)
-{
-	struct option long_opts[] = {
-		{"quiet", no_argument, 0, 'q'},
-		{"verbose", no_argument, 0, 'v'},
-		{"recursive", no_argument, 0, 'r'},
-		{0, 0, 0, 0}
-	};
-	char short_opts[] = "qvr";
-	int c = 0;
-	int rc = 0;
-	hrfs_param_t param = { 0 };
-	
-	optind = 0;
-	while ((c = getopt_long(argc, argv, short_opts, long_opts, NULL)) != -1) {
-		switch (c) {
-		case 'q':
- 			param.quiet++;
-			param.verbose = 0;
-			break;
-		case 'v':
-			param.verbose++;
-			param.quiet = 0;
-			break;
-		case 'r':
-			param.recursive++;
-			break;
-		case '?':
-			rc = CMD_HELP;
-			goto out;
-		default:
-			fprintf(stderr, "error: %s: option '%s' unrecognized\n",
-			        argv[0], argv[optind - 1]);
-			rc = CMD_HELP;
-			goto out;
-		}
-	}
-	
-	if (optind >= argc) {
-		rc = CMD_HELP;
-		goto out;
-	}
-	
-	if (argc - optind != 2) {
-		rc = CMD_HELP;
-		goto out;
-	}
-	rc = hrfs_api_diff(argv[optind], argv[optind + 1], &param);
-out:
-	return rc;
-}
-
 static int hrfs_log(int argc, char **argv)
 {
 	struct option long_opts[] = {
@@ -668,85 +544,6 @@ out:
 	return rc;
 }
 
-static int hrfs_cp(int argc, char **argv)
-{
-	struct option long_opts[] = {
-		{"quiet", no_argument, 0, 'q'},
-		{"verbose", no_argument, 0, 'v'},
-		{"archive", no_argument, 0, 'a'},
-		{"recursive", no_argument, 0, 'r'},
-		{"preserve", no_argument, 0, 'p'},
-		{0, 0, 0, 0}
-	};
-	char short_opts[] = "apqrv";
-	int c = 0;
-	int rc = 0;
-	hrfs_param_t param = { 0 };
-	struct cp_options cp_options = { 0 };
-
-	cp_option_init(&cp_options);
-
-	optind = 0;
-	while ((c = getopt_long(argc, argv, short_opts, long_opts, NULL)) != -1) {
-		switch (c) {
-		case 'a':
-          /* Like -dR --preserve=all with reduced failure diagnostics.  */
-          cp_options.preserve_links = 1;
-          cp_options.preserve_ownership = 1;
-          cp_options.preserve_mode = 1;
-          cp_options.preserve_timestamps = 1;
-          cp_options.require_preserve = 1;
-          cp_options.preserve_xattr = 1;
-          cp_options.recursive = 1;
-          break;
-		case 'q':
- 			param.quiet++;
-			param.verbose = 0;
-			break;
-		case 'v':
-			param.verbose++;
-			cp_options.verbose++;
-			param.quiet = 0;
-			break;
-		case 'p':
-			cp_options.preserve_ownership = 1;
-			cp_options.preserve_mode = 1;
-			cp_options.preserve_timestamps = 1;
-			cp_options.require_preserve = 1;
-			break;
-		case 'r':
-        	cp_options.recursive = 1;
-        	break;
-		case '?':
-			rc = CMD_HELP;
-			goto out;
-		default:
-			fprintf(stderr, "error: %s: option '%s' unrecognized\n",
-			        argv[0], argv[optind - 1]);
-			rc = CMD_HELP;
-			goto out;
-		}
-	}
-	
-	if (cp_options.recursive) {
-    	cp_options.copy_as_regular = 0;
-	}
-
-	if (optind >= argc - 1) {
-		/* Should have source and dest */
-		rc = CMD_HELP;
-		goto out;
-	}
-
-	rc = hrfs_api_copy(argc - optind, argv + optind, &cp_options);
-	if (rc) {
-		fprintf(stderr, "error: %s failed for %s, rc = %d.\n",
-		        argv[0], argv[optind - 1], rc);
-	}
-out:
-	return rc;
-}
-
 static int hrfs_hide(int argc, char **argv)
 {
 	struct option long_opts[] = {
@@ -759,7 +556,6 @@ static int hrfs_hide(int argc, char **argv)
 	int c = 0;
 	int rc = 0;
 	hrfs_param_t param = { 0 };
-	struct cp_options cp_options = { 0 };
 	int unhide = 0;
 
 	optind = 0;
@@ -771,7 +567,6 @@ static int hrfs_hide(int argc, char **argv)
 			break;
 		case 'v':
 			param.verbose++;
-			cp_options.verbose++;
 			param.quiet = 0;
 			break;
 		case 'u':

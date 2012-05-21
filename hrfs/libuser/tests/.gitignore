@@ -1,0 +1,9 @@
+/.deps
+/Makefile
+/Makefile.in
+
+/err2str
+/test_branch_bitmap
+/test_cfg
+/test_parse_option
+/test_rule_tree

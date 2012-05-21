@@ -273,7 +273,7 @@ PACKAGE_VERSION='HRFS_VERSION'
 PACKAGE_STRING='hrfs HRFS_VERSION'
 PACKAGE_BUGREPORT='https://www.hrfs.org/'
 
-ac_unique_file="hrfs/random/main.c"
+ac_unique_file="hrfs/hrfs/file.c"
 ac_default_prefix=/usr
 # Factoring default headers for most tests.
 ac_includes_default="\
@@ -9598,7 +9598,7 @@ EXTRA_KCFLAGS="-include $PWD/config.h $EXTRA_KCFLAGS"
 
 
 
-                                                                                                                                                                                                                                                                                                                                                    ac_config_files="$ac_config_files hrfs/Makefile hrfs/autoMakefile hrfs/autoconf/Makefile hrfs/doc/Makefile hrfs/include/Makefile hrfs/random/Makefile hrfs/random/autoMakefile hrfs/hrfs/Makefile hrfs/hrfs/autoMakefile hrfs/libuser/Makefile hrfs/libuser/tests/Makefile hrfs/manage/Makefile hrfs/scripts/Makefile hrfs/tests/Makefile hrfs/tests/pjd_fstest/Makefile hrfs/tests/src/Makefile hrfs/utils/libcoreutils/Makefile hrfs/utils/Makefile hrfs/ext2_support/Makefile hrfs/ext2_support/autoMakefile hrfs/ext3_support/Makefile hrfs/ext3_support/autoMakefile hrfs/ext4_support/Makefile hrfs/ext4_support/autoMakefile hrfs/nfs_support/Makefile hrfs/nfs_support/autoMakefile hrfs/ntfs3g_support/Makefile hrfs/ntfs3g_support/autoMakefile hrfs/swgfs_support/Makefile hrfs/swgfs_support/autoMakefile hrfs/lustre_support/Makefile hrfs/lustre_support/autoMakefile hrfs/tmpfs_support/Makefile hrfs/tmpfs_support/autoMakefile"
+                                                                                                                                                                                                                                                                                                                      ac_config_files="$ac_config_files hrfs/Makefile hrfs/autoMakefile hrfs/autoconf/Makefile hrfs/doc/Makefile hrfs/include/Makefile hrfs/hrfs/Makefile hrfs/hrfs/autoMakefile hrfs/libuser/Makefile hrfs/libuser/tests/Makefile hrfs/manage/Makefile hrfs/scripts/Makefile hrfs/tests/Makefile hrfs/tests/pjd_fstest/Makefile hrfs/tests/src/Makefile hrfs/utils/Makefile hrfs/ext2_support/Makefile hrfs/ext2_support/autoMakefile hrfs/ext3_support/Makefile hrfs/ext3_support/autoMakefile hrfs/ext4_support/Makefile hrfs/ext4_support/autoMakefile hrfs/nfs_support/Makefile hrfs/nfs_support/autoMakefile hrfs/ntfs3g_support/Makefile hrfs/ntfs3g_support/autoMakefile hrfs/swgfs_support/Makefile hrfs/swgfs_support/autoMakefile hrfs/lustre_support/Makefile hrfs/lustre_support/autoMakefile hrfs/tmpfs_support/Makefile hrfs/tmpfs_support/autoMakefile"
 
 
 
@@ -10329,8 +10329,6 @@ do
   "hrfs/autoconf/Makefile" ) CONFIG_FILES="$CONFIG_FILES hrfs/autoconf/Makefile" ;;
   "hrfs/doc/Makefile" ) CONFIG_FILES="$CONFIG_FILES hrfs/doc/Makefile" ;;
   "hrfs/include/Makefile" ) CONFIG_FILES="$CONFIG_FILES hrfs/include/Makefile" ;;
-  "hrfs/random/Makefile" ) CONFIG_FILES="$CONFIG_FILES hrfs/random/Makefile" ;;
-  "hrfs/random/autoMakefile" ) CONFIG_FILES="$CONFIG_FILES hrfs/random/autoMakefile" ;;
   "hrfs/hrfs/Makefile" ) CONFIG_FILES="$CONFIG_FILES hrfs/hrfs/Makefile" ;;
   "hrfs/hrfs/autoMakefile" ) CONFIG_FILES="$CONFIG_FILES hrfs/hrfs/autoMakefile" ;;
   "hrfs/libuser/Makefile" ) CONFIG_FILES="$CONFIG_FILES hrfs/libuser/Makefile" ;;
@@ -10340,7 +10338,6 @@ do
   "hrfs/tests/Makefile" ) CONFIG_FILES="$CONFIG_FILES hrfs/tests/Makefile" ;;
   "hrfs/tests/pjd_fstest/Makefile" ) CONFIG_FILES="$CONFIG_FILES hrfs/tests/pjd_fstest/Makefile" ;;
   "hrfs/tests/src/Makefile" ) CONFIG_FILES="$CONFIG_FILES hrfs/tests/src/Makefile" ;;
-  "hrfs/utils/libcoreutils/Makefile" ) CONFIG_FILES="$CONFIG_FILES hrfs/utils/libcoreutils/Makefile" ;;
   "hrfs/utils/Makefile" ) CONFIG_FILES="$CONFIG_FILES hrfs/utils/Makefile" ;;
   "hrfs/ext2_support/Makefile" ) CONFIG_FILES="$CONFIG_FILES hrfs/ext2_support/Makefile" ;;
   "hrfs/ext2_support/autoMakefile" ) CONFIG_FILES="$CONFIG_FILES hrfs/ext2_support/autoMakefile" ;;

@@ -1,0 +1,8 @@
+/.deps
+/Makefile
+/Makefile.in
+
+/hrfs
+/hrfsctl
+/mount.hrfs
+

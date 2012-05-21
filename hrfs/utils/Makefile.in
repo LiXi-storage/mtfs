@@ -78,13 +78,10 @@ binPROGRAMS_INSTALL = $(INSTALL_PROGRAM)
 rootsbinPROGRAMS_INSTALL = $(INSTALL_PROGRAM)
 sbinPROGRAMS_INSTALL = $(INSTALL_PROGRAM)
 PROGRAMS = $(bin_PROGRAMS) $(rootsbin_PROGRAMS) $(sbin_PROGRAMS)
-am_hrfs_OBJECTS = hrfs.$(OBJEXT) repair.$(OBJEXT) cp.$(OBJEXT) \
-	hide.$(OBJEXT) grouplock.$(OBJEXT)
+am_hrfs_OBJECTS = hrfs.$(OBJEXT) hide.$(OBJEXT) grouplock.$(OBJEXT)
 hrfs_OBJECTS = $(am_hrfs_OBJECTS)
 am__DEPENDENCIES_1 =
 am__DEPENDENCIES_2 = $(top_builddir)/hrfs/libuser/libuser.a
-am__DEPENDENCIES_3 =  \
-	$(top_builddir)/hrfs/utils/libcoreutils/libcoreutils.a
 am_hrfsctl_OBJECTS = hctl.$(OBJEXT)
 hrfsctl_OBJECTS = $(am_hrfsctl_OBJECTS)
 am_mount_hrfs_OBJECTS = mount_hrfs.$(OBJEXT)
@@ -296,12 +293,11 @@ target_os = @target_os@
 target_vendor = @target_vendor@
 
 # Administration utilities Makefile
-SUBDIRS := libcoreutils .
+SUBDIRS := .
 AM_CFLAGS = $(LLCFLAGS)
 AM_CPPFLAGS = $(LLCPPFLAGS) -DHRFS_UTILS=1
 AM_LDFLAGS := -lattr
 LIBUSER := $(top_builddir)/hrfs/libuser/libuser.a
-LIBCOREUTILS := $(top_builddir)/hrfs/utils/libcoreutils/libcoreutils.a
 sbin_scripts = 
 bin_scripts = 
 @UTILS_TRUE@bin_SCRIPTS = $(bin_scripts)
@@ -310,8 +306,8 @@ lib_LIBRARIES = libhrfsapi.a
 hrfsctl_SOURCES = hctl.c
 hrfsctl_LDADD := $(LIBREADLINE) $(LIBUSER)
 hrfsctl_DEPENDENCIES := 
-hrfs_SOURCES = hrfs.c repair.c repair.h cp.c cp.h hide.c hide.h grouplock.c grouplock.h exit_status.h
-hrfs_LDADD := $(LIBREADLINE) libhrfsapi.a $(LIBUSER) $(LIBCOREUTILS)
+hrfs_SOURCES = hrfs.c hide.c hide.h grouplock.c grouplock.h exit_status.h
+hrfs_LDADD := $(LIBREADLINE) libhrfsapi.a $(LIBUSER)
 hrfs_DEPENDENCIES := $(LIBUSER) $(LIBCOREUTILS) libhrfsapi.a
 libhrfsapi_a_SOURCES = libhrfsapi.c
 mount_hrfs_SOURCES = mount_hrfs.c
@@ -507,14 +503,12 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/cp.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/grouplock.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/hctl.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/hide.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/hrfs.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libhrfsapi.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/mount_hrfs.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/repair.Po@am__quote@
 
 .c.o:
 @am__fastdepCC_TRUE@	if $(COMPILE) -MT $@ -MD -MP -MF "$(DEPDIR)/$*.Tpo" -c -o $@ $<; \

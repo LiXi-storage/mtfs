@@ -97,11 +97,9 @@ cat >hrfs.files <<EOF
 %attr(-, root, root) /sbin/mount.hrfs
 %attr(-, root, root) /usr/sbin/*
 %attr(-, root, root) /usr/bin/*
-%attr(-, root, root) /usr/share/hrfs
 %attr(-, root, root) %{_libdir}/libuser.a
 %attr(-, root, root) %{_libdir}/libuser.so
 %attr(-, root, root) %{_libdir}/libhrfsapi.a
-%attr(-, root, root) /usr/include/hrfs
 %attr(-, root, root) %{_mandir}/man?/*
 
 #%attr(-, root, root) %{_libexecdir}/lustre/lc_common

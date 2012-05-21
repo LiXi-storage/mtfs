@@ -1,7 +1,7 @@
 AUTOMAKE_OPTIONS = foreign
 
 # Also update hrfs/autoconf/hrfs-core.m4 AC_CONFIG_FILES
-ALWAYS_SUBDIRS := autoconf hrfs include libuser scripts tests utils random doc
+ALWAYS_SUBDIRS := autoconf hrfs include libuser scripts tests utils doc
 
 SWGFS_SUPPORT_SUBDIRS := swgfs_support
 LUSTRE_SUPPORT_SUBDIRS := lustre_support

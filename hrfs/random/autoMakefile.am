@@ -1,5 +1,0 @@
-if MODULES
-modulefs_DATA = random$(KMODEXT)
-endif
-
-MOSTLYCLEANFILES := @MOSTLYCLEANFILES@

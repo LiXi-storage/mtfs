@@ -1,0 +1,6 @@
+/.*.cmd
+/.*.d
+/*.i
+/.tmp_versions
+/autoMakefile
+/autoMakefile.in

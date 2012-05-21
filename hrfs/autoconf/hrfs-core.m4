@@ -6,7 +6,7 @@
 # Wrapper for AC_CONFIG_SUBDIR
 #
 AC_DEFUN([LC_CONFIG_SRCDIR],
-[AC_CONFIG_SRCDIR([hrfs/random/main.c])
+[AC_CONFIG_SRCDIR([hrfs/hrfs/file.c])
 libcfs_is_module=yes
 ])
 
@@ -414,8 +414,6 @@ hrfs/autoMakefile
 hrfs/autoconf/Makefile
 hrfs/doc/Makefile
 hrfs/include/Makefile
-hrfs/random/Makefile
-hrfs/random/autoMakefile
 hrfs/hrfs/Makefile
 hrfs/hrfs/autoMakefile
 hrfs/libuser/Makefile
@@ -425,7 +423,6 @@ hrfs/scripts/Makefile
 hrfs/tests/Makefile
 hrfs/tests/pjd_fstest/Makefile
 hrfs/tests/src/Makefile
-hrfs/utils/libcoreutils/Makefile
 hrfs/utils/Makefile
 hrfs/ext2_support/Makefile
 hrfs/ext2_support/autoMakefile
