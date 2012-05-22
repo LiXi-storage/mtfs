@@ -1,7 +1,0 @@
-MODULES := hrfs_lustre
-hrfs_lustre-objs := lustre_support.o
-
-EXTRA_DIST := $(hrfs_lustre-objs:.o=.c)
-EXTRA_DIST += lustre_support.h
-EXTRA_DIST += lustre_patches
-@INCLUDE_RULES@

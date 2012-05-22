@@ -1,6 +1,6 @@
-SUBDIRS := . @LIBCFS_SUBDIR@ hrfs
-DIST_SUBDIRS := @LIBCFS_SUBDIR@ hrfs
-SOURCES_SUBDIRS := hrfs
+SUBDIRS := . @LIBCFS_SUBDIR@ mtfs
+DIST_SUBDIRS := @LIBCFS_SUBDIR@ mtfs
+SOURCES_SUBDIRS := mtfs
 RPM_SUBDIRS := 
 
 @TESTS_TRUE@BUILD_TESTS = true
@@ -28,7 +28,7 @@ checkstack-clean:
 
 module-dist-hook:
 	if [ -d CVS -o -d .git ]; then \
-	    perl hrfs/scripts/tree_status.pl > $(distdir)/tree_status; \
+	    perl mtfs/scripts/tree_status.pl > $(distdir)/tree_status; \
 	elif [ -f tree_status ]; then \
 	    cp tree_status $(distdir)/tree_status; \
 	else \

@@ -1,5 +1,0 @@
-if MODULES
-modulefs_DATA = hrfs_lustre$(KMODEXT)
-endif
-
-MOSTLYCLEANFILES := @MOSTLYCLEANFILES@

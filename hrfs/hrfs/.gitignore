@@ -1,9 +1,0 @@
-/.*.cmd
-/*.ko
-/*.mod.c
-
-/.deps
-/autoMakefile
-/Makefile
-/Makefile.in
-

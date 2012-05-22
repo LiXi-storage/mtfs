@@ -1,0 +1,8 @@
+/.*.cmd
+/*.ko
+/*.mod.c
+
+/autoMakefile
+/autoMakefile.in
+/Makefile
+

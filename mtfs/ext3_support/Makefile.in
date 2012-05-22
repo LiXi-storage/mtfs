@@ -1,0 +1,6 @@
+MODULES := mtfs_ext3
+mtfs_ext3-objs := ext3_support.o
+
+EXTRA_DIST := $(mtfs_ext3-objs:.o=.c)
+EXTRA_DIST += ext3_support.h
+@INCLUDE_RULES@

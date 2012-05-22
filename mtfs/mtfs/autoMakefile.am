@@ -1,0 +1,13 @@
+SUBDIRS := 
+if LIBHRFS
+noinst_LIBRARIES = libmtfs.a
+libmtfs_a_SOURCES = rule_tree.c queue.c parse_option.c
+libmtfs_a_CPPFLAGS = $(LLCPPFLAGS)
+libmtfs_a_CFLAGS = $(LLCFLAGS)
+endif
+
+if MODULES
+modulefs_DATA = mtfs$(KMODEXT)
+endif
+
+MOSTLYCLEANFILES := @MOSTLYCLEANFILES@

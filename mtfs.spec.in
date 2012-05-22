@@ -1,0 +1,166 @@
+# mtfs.spec
+%{!?version: %define version @VERSION@}
+%{!?kversion: %define kversion @LINUXRELEASE@}
+%{!?release: %define release @RELEASE@}
+%{!?mtfs_name: %define mtfs_name mtfs}
+%{!?build_mtfs_tests: %define build_mtfs_tests 1}
+
+# for those uses that don't want the -smp/-bigsmp on the end of %kversion
+%define krequires %(bash -c "echo %{kversion} | sed -e 's/.x86_64$//' -e 's/.i586$//' -e 's/-smp$//' -e 's/-bigsmp$//' -e 's/-ppc64$//' -e 's/-default$//'")
+
+Summary: HRFS File System
+Name: %{mtfs_name}
+Version: %{version}
+Release: %{release}
+License: GPL
+Group: Utilities/System
+Source: mtfs-%{version}.tar.gz
+URL: http://code.google.com/p/mtfs
+BuildRoot: %{_tmppath}/mtfs-%{version}-root
+Obsoletes: lustre-lite, lustre-lite-utils, lustre-ldap nfs-utils-lustre
+Provides: lustre-lite = %{version}, lustre-lite-utils = %{version}
+Requires: %{name}-modules = %{version}
+# GSS requires this: BuildRequires: pkgconfig, libgssapi-devel >= 0.10
+
+%description
+Userspace tools and files for the mtfs file system.
+
+%package modules
+Summary: Kernel mtfs modules for Linux %{kversion}
+Requires: modutils >= 2.4.10, kernel = %{krequires}
+Group: Development/Kernel
+
+%description modules
+Hrfs file system, modules for Linux %{kversion}.
+
+%package source
+Summary: Object-Based Disk storage driver source
+Group: Development/Kernel
+
+%description source
+Hrfs sources for further development
+
+%package tests
+Summary: Hrfs testing framework
+Group: Development/Kernel
+Provides: %{name}-tests = %{version}
+Requires: %{name} = %{version}, %{name}-modules = %{version}
+
+%description tests
+This package contains a set of test binaries and scripts that are intended
+to be used by the Hrfs testing framework.
+
+%prep
+%setup -qn mtfs-%{version}
+ln mtfs/ChangeLog ChangeLog-mtfs
+
+%build
+# if RPM_BUILD_NCPUS unset, set it
+if [ -z "$RPM_BUILD_NCPUS" ] ; then
+    RPM_BUILD_NCPUS=$(egrep -c "^cpu[0-9]+" /proc/stat 2>/dev/null || echo 0 :)
+    if [ $RPM_BUILD_NCPUS -eq 0 ] ; then
+        RPM_BUILD_NCPUS=1
+    fi
+    if [ $RPM_BUILD_NCPUS -gt 8 ] ; then
+        RPM_BUILD_NCPUS=8
+    fi
+fi
+
+rm -rf $RPM_BUILD_ROOT
+
+# Set an explicit path to our Linux tree, if we can.
+cd $RPM_BUILD_DIR/mtfs-%{version}
+# override %optflags so that the vendor's overzealous flags don't create
+# build failures
+%define optflags -g -O2 -Werror
+CONFIGURE_ARGS=""
+%if %{build_mtfs_tests}
+CONFIGURE_ARGS="$CONFIGURE_ARGS --enable-tests"
+%else
+CONFIGURE_ARGS="$CONFIGURE_ARGS --disable-tests"
+%endif
+%configure %{?configure_args:%configure_args} $CONFIGURE_ARGS
+make -j $RPM_BUILD_NCPUS -s
+
+%install
+make install DESTDIR=$RPM_BUILD_ROOT
+
+# Create the pristine source directory.
+cd $RPM_BUILD_DIR/mtfs-%{version}
+mkdir -p $RPM_BUILD_ROOT/usr/src
+rm -f mtfs-source
+ln -s $RPM_BUILD_ROOT/usr/src mtfs-source
+make distdir distdir=mtfs-source/mtfs-%{version}
+chmod -R go-w mtfs-source/mtfs-%{version}
+
+cat >mtfs.files <<EOF
+%attr(-, root, root) /sbin/mount.mtfs
+%attr(-, root, root) /usr/sbin/*
+%attr(-, root, root) /usr/bin/*
+%attr(-, root, root) %{_libdir}/libuser.a
+%attr(-, root, root) %{_libdir}/libuser.so
+%attr(-, root, root) %{_libdir}/libmtfsapi.a
+%attr(-, root, root) %{_mandir}/man?/*
+
+#%attr(-, root, root) %{_libexecdir}/lustre/lc_common
+EOF
+
+%if %{build_mtfs_tests}
+echo '%attr(-, root, root) %{_libdir}/mtfs/tests/*' >mtfs-tests.files
+%endif
+
+pushd $RPM_BUILD_ROOT >/dev/null
+find lib/modules/%{kversion}/kernel -type f | awk "!/(ZZZZZZZZZZ$modules_excludes)/ {print \"%attr(-, root, root) /\"\$0}" >>$RPM_BUILD_DIR/mtfs-%{version}/mtfs-modules.files
+popd >/dev/null
+
+%files -f mtfs.files
+
+%files modules -f mtfs-modules.files
+%attr(-, root, root) %doc COPYING
+%attr(-, root, root) %doc ChangeLog-mtfs
+
+%files source
+%attr(-, root, root) /usr/src/mtfs-%{version}
+
+%if %{build_mtfs_tests}
+%files tests -f mtfs-tests.files
+%endif
+
+%post modules
+if [ -f /boot/System.map-%{kversion} ]; then
+	depmod -ae -F /boot/System.map-%{kversion} %{kversion} || exit 0
+else
+	depmod -ae %{kversion} || exit 0
+fi
+cat <<EOF
+Congratulations on finishing your mtfs installation!
+To find out more about support offerings please visit
+
+http://code.google.come/p/mtfs
+EOF
+
+%postun modules
+if [ -f /boot/System.map-%{kversion} ]; then
+	depmod -ae -F /boot/System.map-%{kversion} %{kversion} || exit 0
+else
+	depmod -ae %{kversion} || exit 0
+fi
+
+%if %{build_mtfs_tests}
+%post tests
+if [ -f /boot/System.map-%{kversion} ]; then
+	depmod -ae -F /boot/System.map-%{kversion} %{kversion} || exit 0
+else
+	depmod -ae %{kversion} || exit 0
+fi
+
+%postun tests
+if [ -f /boot/System.map-%{kversion} ]; then
+	depmod -ae -F /boot/System.map-%{kversion} %{kversion} || exit 0
+else
+	depmod -ae %{kversion} || exit 0
+fi
+%endif
+
+%clean
+rm -rf $RPM_BUILD_ROOT

@@ -1,0 +1,600 @@
+Index: lustre-2.1.52/lustre/include/cl_object.h
+===================================================================
+--- lustre-2.1.52.orig/lustre/include/cl_object.h	2012-03-14 09:17:32.000000000 +0800
++++ lustre-2.1.52/lustre/include/cl_object.h	2012-03-14 09:18:25.000000000 +0800
+@@ -2229,6 +2229,10 @@
+         loff_t      crw_pos;
+         size_t      crw_count;
+         int         crw_nonblock;
++#ifndef DISABLE_HRFS_SUPPORT
++        loff_t      crw_endpos;
++        int         crw_endpos_used;
++#endif /* !DISABLE_HRFS_SUPPORT */
+ };
+ 
+ 
+@@ -3132,4 +3136,8 @@
+                                 struct lu_device *next);
+ /** @} clio */
+ 
++#ifndef DISABLE_HRFS_SUPPORT
++void mtfs_lu_env_attach(struct lu_env *env);
++#endif /* !DISABLE_HRFS_SUPPORT */
++
+ #endif /* _LINUX_CL_OBJECT_H */
+Index: lustre-2.1.52/lustre/llite/file.c
+===================================================================
+--- lustre-2.1.52.orig/lustre/llite/file.c	2012-03-14 09:17:32.000000000 +0800
++++ lustre-2.1.52/lustre/llite/file.c	2012-03-28 14:18:30.000000000 +0800
+@@ -2747,3 +2747,524 @@
+                 *rcp = rc;
+         return ret;
+ }
++
++#ifndef DISABLE_HRFS_SUPPORT
++#include <mtfs/mtfs_common.h>
++#include <mtfs/mtfs_file.h>
++#include <mtfs/mtfs_oplist.h>
++
++struct mtfs_env {
++        struct lu_env *env;
++        int refcheck;
++        int inited;
++};
++
++struct mtfs_env_vector {
++        mtfs_bindex_t bnum;
++        struct mtfs_env *mtfs_env;
++};
++
++void mtfs_env_vector_free(struct mtfs_env_vector *vector)
++{
++        mtfs_bindex_t bindex;
++        HENTRY();
++
++        for (bindex = 0; bindex < vector->bnum; bindex ++) {
++                if (vector->mtfs_env[bindex].env != NULL) {
++                        cl_env_put(vector->mtfs_env[bindex].env,
++                                   &vector->mtfs_env[bindex].refcheck);
++                }
++        }
++        if (vector->mtfs_env != NULL) {
++               HRFS_FREE(vector->mtfs_env, sizeof(*vector->mtfs_env) * vector->bnum);
++        }
++        HRFS_FREE(vector, sizeof(*vector));
++        _HRETURN();
++}
++
++void mtfs_env_vector_init(struct mtfs_env_vector *vector, struct iovec *iov, unsigned long nr_segs)
++{
++        mtfs_bindex_t       bindex;
++        struct vvp_io_args *args;
++        struct lu_env      *env;
++        HENTRY();
++
++        for (bindex = 0; bindex < vector->bnum; bindex ++) {
++                env = vector->mtfs_env[bindex].env;
++                HASSERT(env);
++                args = vvp_env_args(env, IO_NORMAL);
++                args->u.normal.via_iov = iov;
++                args->u.normal.via_nrsegs = nr_segs;
++        }
++
++        _HRETURN();
++}
++
++struct mtfs_env_vector *mtfs_env_vector_alloc(mtfs_bindex_t bnum)
++{
++        struct mtfs_env_vector *vector = NULL;
++        mtfs_bindex_t           bindex = 0;
++        struct lu_env          *env = NULL;
++        int result = 0;
++        HENTRY();
++
++        HRFS_ALLOC(vector, sizeof(*vector));
++        if (vector == NULL) {
++                result = -ENOMEM;
++                goto out;
++        }
++
++        vector->bnum = bnum;
++
++        HRFS_ALLOC(vector->mtfs_env, sizeof(*vector->mtfs_env) * bnum);
++        if (vector->mtfs_env == NULL) {
++                result = -ENOMEM;
++                goto out_free_vector;
++        }
++
++        for (bindex = 0; bindex < bnum; bindex ++) {
++                env = cl_env_alloc(&vector->mtfs_env[bindex].refcheck, 0);
++                if (IS_ERR(env)) {
++                        result = PTR_ERR(env);
++                        bindex --;
++                        goto out_free_env;
++                }
++                vector->mtfs_env[bindex].env = env;
++        }
++        goto out;
++out_free_env:
++        for (; bindex >= 0; bindex--) {
++                cl_env_put(vector->mtfs_env[bindex].env,
++                           &vector->mtfs_env[bindex].refcheck);
++        }
++        HRFS_FREE(vector->mtfs_env, sizeof(*vector->mtfs_env) * vector->bnum);
++out_free_vector:
++        HRFS_FREE(vector, sizeof(*vector));
++out:
++        if (result) {
++                vector = ERR_PTR(result);
++        }
++        HRETURN(vector);
++}
++
++static int mtfs_ll_file_io_init_branch(const struct lu_env *env,
++                struct file *lustre_file,
++                enum cl_io_type iot, loff_t *ppos, size_t count)
++{
++        int                   result = 0;
++        struct cl_io         *io = NULL;
++        struct vvp_io        *vio = NULL;
++        struct ccc_io        *cio = NULL;
++        struct ll_inode_info *lli = ll_i2info(lustre_file->f_dentry->d_inode);
++        struct vvp_io_args   *args = NULL;
++        HENTRY();
++
++        HASSERT(iot == CIT_WRITE);
++        io = ccc_env_thread_io(env);
++        ll_io_init(io, lustre_file, iot == CIT_WRITE);
++        result = cl_io_rw_init(env, io, iot, *ppos, count);
++        if (result != 0) {
++                /* cl_io_rw_init() handled IO */
++                result = io->ci_result;
++        }
++        HASSERT(io->ci_type == CIT_WRITE);
++
++        args = vvp_env_args(env, IO_NORMAL);
++
++        vio = vvp_env_io(env);
++        cio = ccc_env_io(env);
++        cio->cui_fd  = LUSTRE_FPRIVATE(lustre_file);
++        vio->cui_io_subtype = args->via_io_subtype;
++        switch (vio->cui_io_subtype) {
++        case IO_NORMAL:
++                cio->cui_iov = args->u.normal.via_iov;
++                cio->cui_nrsegs = args->u.normal.via_nrsegs;
++                cio->cui_tot_nrsegs = cio->cui_nrsegs;
++#ifndef HAVE_FILE_WRITEV
++                cio->cui_iocb = args->u.normal.via_iocb;
++#endif
++                if ((iot == CIT_WRITE) &&
++                    !(cio->cui_fd->fd_flags & LL_FILE_GROUP_LOCKED)) {
++                        if(cfs_down_interruptible(&lli->lli_write_sem)) {
++                                result = -ERESTARTSYS;
++                                goto out_fini;
++                        }
++                } else if (iot == CIT_READ) {
++                        cfs_down_read(&lli->lli_trunc_sem);
++                }
++                break;
++        case IO_SENDFILE:
++                vio->u.sendfile.cui_actor = args->u.sendfile.via_actor;
++                vio->u.sendfile.cui_target = args->u.sendfile.via_target;
++                break;
++        case IO_SPLICE:
++                vio->u.splice.cui_pipe = args->u.splice.via_pipe;
++                vio->u.splice.cui_flags = args->u.splice.via_flags;
++                break;
++        default:
++                CERROR("Unknow IO type - %u\n", vio->cui_io_subtype);
++                LBUG();
++        }
++        goto out;
++out_fini:
++        cl_io_fini(env, io);
++out:
++        HRETURN(result);
++}
++
++static ssize_t mtfs_ll_file_io_fini_branch(const struct lu_env *env,
++                struct file *lustre_file,
++                enum cl_io_type iot)
++{
++        struct ll_inode_info *lli = NULL;
++        struct ccc_io        *cio = NULL;
++        struct cl_io         *io = NULL;
++        ssize_t               result = 0;
++        struct vvp_io_args   *args = NULL;
++        HENTRY();
++
++        HASSERT(iot == CIT_WRITE);
++        lli = ll_i2info(lustre_file->f_dentry->d_inode);
++        cio = ccc_env_io(env);
++        io = &ccc_env_info(env)->cti_io;;
++        args = vvp_env_args(env, IO_NORMAL);
++        if (args->via_io_subtype == IO_NORMAL) {
++                if ((iot == CIT_WRITE) &&
++                    !(cio->cui_fd->fd_flags & LL_FILE_GROUP_LOCKED)) {
++                        cfs_up(&lli->lli_write_sem);
++                } else if (iot == CIT_READ) {
++                        cfs_up_read(&lli->lli_trunc_sem);
++                }
++        }
++        if (io->ci_nob > 0) {
++                result = io->ci_nob;
++        }
++        cl_io_fini(env, io);
++        HRETURN(result);
++}
++
++static int mtfs_ll_file_io_init(struct mtfs_env_vector *env_vector,
++                struct file *mtfs_file,
++                enum cl_io_type iot, loff_t *ppos, size_t count)
++{
++        int           result = 0;
++        mtfs_bindex_t bindex = 0;
++        mtfs_bindex_t bnum = mtfs_f2bnum(mtfs_file);
++        struct file  *lustre_file = NULL;
++        const struct  lu_env *env = NULL;
++        HENTRY();
++
++        for (bindex = 0; bindex < bnum; bindex++) {
++                lustre_file = mtfs_f2branch(mtfs_file, bindex);
++                env = env_vector->mtfs_env[bindex].env;
++                if (lustre_file) {
++                        result = mtfs_ll_file_io_init_branch(env,
++                                        lustre_file, iot, ppos, count);
++                        if (result) {
++                                HERROR("failed to init io for branch[%d] of file [%*s],"
++                                       " ret = %d\n",
++                                       bindex, mtfs_file->f_dentry->d_name.len,
++                                       mtfs_file->f_dentry->d_name.name, result);
++                                bindex--;
++                                goto out_fini;
++                        }
++                } else {
++                        HERROR("branch[%d] of file [%*s] is NULL, skipping\n",
++                                bindex, mtfs_file->f_dentry->d_name.len,
++                                mtfs_file->f_dentry->d_name.name);
++                }
++        }
++        goto out;
++out_fini:
++        for (; bindex >= 0; bindex--) {
++                lustre_file = mtfs_f2branch(mtfs_file, bindex);
++                env = env_vector->mtfs_env[bindex].env;
++                mtfs_ll_file_io_fini_branch(env, lustre_file, iot);
++        }
++out:
++        HRETURN(result);
++}
++
++static int mtfs_ll_file_io_fini(struct mtfs_env_vector *env_vector,
++                struct file *mtfs_file,
++                enum cl_io_type iot,
++                struct mtfs_operation_list *oplist)
++{
++        int           result = 0;
++        ssize_t       size = 0;
++        mtfs_bindex_t bindex = 0;
++        mtfs_bindex_t bnum = mtfs_f2bnum(mtfs_file);
++        struct file  *lustre_file = NULL;
++        const struct  lu_env *env = NULL;
++        mtfs_operation_result_t op_result = {0};
++        HENTRY();
++
++        /* Should unlock backward in case of dead lock */
++        for (bindex = bnum - 1; bindex >= 0; bindex--) {
++                lustre_file = mtfs_f2branch(mtfs_file, bindex);
++                env = env_vector->mtfs_env[bindex].env;
++                if (lustre_file) {
++                        size = mtfs_ll_file_io_fini_branch(env,
++                                lustre_file, iot);
++                        op_result.size = size;
++                        mtfs_oplist_setbranch(oplist, bindex, (size >= 0 ? 1 : 0), op_result);
++                        if (size <= 0) {
++                                HERROR("failed to finish io for branch[%d] of file [%*s],"
++                                       " ret = %ld\n",
++                                       bindex, mtfs_file->f_dentry->d_name.len,
++                                       mtfs_file->f_dentry->d_name.name, size);
++                        }
++                } else {
++                        op_result.size = -ENOENT;
++                        mtfs_oplist_setbranch(oplist, bindex, 0, op_result);
++                        HERROR("branch[%d] of file [%*s] is NULL, skipping\n",
++                                bindex, mtfs_file->f_dentry->d_name.len,
++                                mtfs_file->f_dentry->d_name.name);
++                }
++        }
++
++        HRETURN(result);
++}
++
++static int mtfs_first_bindex(struct file *mtfs_file, mtfs_bindex_t *first_bindex)
++{
++        int           result = -ENOMEM;
++        mtfs_bindex_t bindex = 0;
++        mtfs_bindex_t bnum = mtfs_f2bnum(mtfs_file);
++        HENTRY();
++
++        for (bindex = 0; bindex < bnum; bindex++) {
++                if (mtfs_f2branch(mtfs_file, bindex) != NULL) {
++                        result = 0;
++                        *first_bindex = bindex;
++                        break;
++                }
++        }
++        HRETURN(result);
++}
++
++static int mtfs_cl_io_lock_secondary(struct mtfs_env_vector *env_vector,
++                                     struct file *mtfs_file,
++                                     mtfs_bindex_t first_bindex,
++                                     const struct  lu_env *first_env,
++                                     struct cl_io *first_io)
++{
++        mtfs_bindex_t  bindex = 0;
++        int            result = 0;
++        mtfs_bindex_t  bnum = mtfs_f2bnum(mtfs_file);
++        struct lu_env *env = NULL;
++        struct cl_io  *io = NULL;
++        HENTRY();
++
++        for (bindex = first_bindex + 1; bindex < bnum; bindex++) {
++                if (mtfs_f2branch(mtfs_file, bindex) != NULL) {
++                        env = env_vector->mtfs_env[bindex].env;
++
++                        mtfs_lu_env_attach((struct lu_env *)env);
++                        io = &ccc_env_info(env)->cti_io;
++                        io->u.ci_rw.crw_endpos_used = 1;
++                        io->u.ci_rw.crw_endpos = first_io->u.ci_rw.crw_pos
++                                                 + first_io->u.ci_rw.crw_count;
++                        do {
++                                result = cl_io_iter_init(env, io);
++                                if (result) {
++                                        LBUG();
++                                }
++                                result = cl_io_lock(env, io);
++                                if (result) {
++                                        LBUG();
++                                }
++                                io->u.ci_rw.crw_pos += io->u.ci_rw.crw_count;
++                        } while (result == 0 && io->ci_continue);
++                        io->u.ci_rw.crw_endpos_used = 0;
++                        cl_env_reenter();
++
++                } else {
++                        HERROR("branch[%d] of file [%*s] is NULL, skipping\n",
++                                bindex, mtfs_file->f_dentry->d_name.len,
++                                mtfs_file->f_dentry->d_name.name);
++                }
++        }
++        HRETURN(result);
++}
++
++static int mtfs_cl_io_finsh_secondary_reverse(struct mtfs_env_vector *env_vector,
++                                     struct file *mtfs_file, mtfs_bindex_t first_bindex,
++                                     const struct  lu_env *first_env,
++                                     struct cl_io *first_io)
++{
++        mtfs_bindex_t  bindex = 0;
++        int            result = 0;
++        mtfs_bindex_t  bnum = mtfs_f2bnum(mtfs_file);
++        struct lu_env *env = NULL;
++        struct cl_io  *io = NULL;
++        size_t         nob = 0;
++        HENTRY();
++
++        for (bindex = bnum - 1; bindex > first_bindex; bindex--) {
++                if (mtfs_f2branch(mtfs_file, bindex) != NULL) {
++                        env = env_vector->mtfs_env[bindex].env;
++                        mtfs_lu_env_attach((struct lu_env *)env);
++                        io = &ccc_env_info(env)->cti_io;
++                        nob = io->ci_nob;
++                        io->u.ci_wr.wr.crw_pos = first_io->u.ci_wr.wr.crw_pos;
++                        io->u.ci_wr.wr.crw_count = first_io->u.ci_wr.wr.crw_count;
++                        result = cl_io_start(env, io);
++                        if (result) {
++                                HERROR("start branch[%d] of file [%*s] failed"
++                                       ", ret = %d\n",
++                                       bindex, mtfs_file->f_dentry->d_name.len,
++                                       mtfs_file->f_dentry->d_name.name,
++                                       result);
++                        }
++                        cl_io_end(env, io);
++                        cl_io_unlock(env, io);
++                        cl_io_rw_advance(env, io, io->ci_nob - nob);
++                        cl_env_reenter();
++                } else {
++                        HERROR("branch[%d] of file [%*s] is NULL, skipping\n",
++                                bindex, mtfs_file->f_dentry->d_name.len,
++                                mtfs_file->f_dentry->d_name.name);
++                }
++        }
++        HRETURN(result);
++}
++
++static int mtfs_cl_io_loop(struct mtfs_env_vector *env_vector, struct file *mtfs_file)
++{
++        int           result = 0;
++        const struct  lu_env *first_env = NULL;
++        struct cl_io *first_io = NULL;
++        mtfs_bindex_t first_bindex = 0;
++        HENTRY();
++
++        result = mtfs_first_bindex(mtfs_file, &first_bindex);
++        if (result) {
++                HERROR("failed to choose first bindex\n");
++                goto out;
++        }
++
++        first_env = env_vector->mtfs_env[first_bindex].env;
++        first_io = &ccc_env_info(first_env)->cti_io;
++        do {
++                size_t nob;
++                first_io->ci_continue = 0;
++
++                if (cfs_signal_pending()) {
++                        cfs_sigset_t blocked_sigs =
++                                cfs_block_sigsinv(LUSTRE_FATAL_SIGS);
++                        /* In fact we only interrupt for the "fatal" signals
++                         * like SIGINT or SIGKILL. We still ignore less
++                         * important signals.
++                         */
++                        if (cfs_signal_pending()) {
++                                HERROR("fatal signal pending, breaking\n");
++                                result = -EINTR;
++                        }
++                        cfs_block_sigs(blocked_sigs);
++                        if (result) {
++                                break;
++                        }
++                }
++
++                mtfs_lu_env_attach((struct lu_env *)first_env);
++                result = cl_io_iter_init(first_env, first_io);
++                if (!result) {
++                        nob = first_io->ci_nob;
++                        result = cl_io_lock(first_env, first_io);
++                }
++                cl_env_reenter();
++
++                if (result) {
++                        break;
++                }
++
++                result = mtfs_cl_io_lock_secondary(env_vector, mtfs_file,
++                                first_bindex, first_env, first_io);
++                if (result) {
++                        mtfs_lu_env_attach((struct lu_env *)first_env);
++                        goto loop_unlock;
++                }
++                result = mtfs_cl_io_finsh_secondary_reverse(env_vector,
++                                mtfs_file, first_bindex, first_env, first_io);
++                if (result) {
++                        mtfs_lu_env_attach((struct lu_env *)first_env);
++                        goto loop_unlock;
++                }
++
++                mtfs_lu_env_attach((struct lu_env *)first_env);
++                result = cl_io_start(first_env, first_io);
++                cl_io_end(first_env, first_io);
++loop_unlock:
++                cl_io_unlock(first_env, first_io);
++                cl_io_rw_advance(first_env, first_io, first_io->ci_nob - nob);
++                cl_io_iter_fini(first_env, first_io);
++                cl_env_reenter();
++
++        } while (result == 0 && first_io->ci_continue);
++out:
++        HRETURN(result);
++}
++
++static int mtfs_ll_file_io_generic(struct mtfs_env_vector *env_vector,
++                struct file *mtfs_file, enum cl_io_type iot, loff_t *ppos,
++                size_t count, struct mtfs_operation_list *oplist)
++{
++        int result = 0;
++        HENTRY();
++
++        result = mtfs_ll_file_io_init(env_vector, mtfs_file, iot, ppos, count);
++        if (result) {
++                HERROR("failed to init io for file [%*s], ret = %d\n",
++                       mtfs_file->f_dentry->d_name.len,
++                       mtfs_file->f_dentry->d_name.name, result);
++                goto out;
++        }
++
++        mtfs_cl_io_loop(env_vector, mtfs_file);
++
++        result = mtfs_ll_file_io_fini(env_vector, mtfs_file, iot, oplist);
++        if (result) {
++                HERROR("failed to finish io for file [%*s], ret = %d\n",
++                       mtfs_file->f_dentry->d_name.len,
++                       mtfs_file->f_dentry->d_name.name, result);
++                goto out;
++        }
++out:
++        HRETURN(result);
++}
++
++int mtfs_ll_file_writev(struct file *mtfs_file, const struct iovec *iov,
++                            unsigned long nr_segs, loff_t *ppos,
++                            struct mtfs_operation_list *oplist)
++{
++        size_t                  count;
++        int                     result;
++        mtfs_bindex_t           bnum = mtfs_f2bnum(mtfs_file);
++        struct mtfs_env_vector *env_vector = NULL;
++        HENTRY();
++
++        result = ll_file_get_iov_count(iov, &nr_segs, &count);
++        if (result) {
++                HERROR("iov count is error\n");
++                goto out;
++        }
++
++        env_vector = mtfs_env_vector_alloc(bnum);
++        if (IS_ERR(env_vector)) {
++                result = PTR_ERR(env_vector);
++                HERROR("failed to alloc env vector\n");
++                goto out;
++        }
++
++        mtfs_env_vector_init(env_vector, (struct iovec *)iov, nr_segs);
++
++        result = mtfs_ll_file_io_generic(env_vector, mtfs_file, CIT_WRITE, ppos, count, oplist);
++        goto out_put;
++out_put:
++        mtfs_env_vector_free(env_vector);
++out:
++        HRETURN(result);
++}
++EXPORT_SYMBOL(mtfs_ll_file_writev);
++#endif /* !DISABLE_HRFS_SUPPORT */
+Index: lustre-2.1.52/lustre/obdclass/cl_object.c
+===================================================================
+--- lustre-2.1.52.orig/lustre/obdclass/cl_object.c	2012-03-14 09:17:32.000000000 +0800
++++ lustre-2.1.52/lustre/obdclass/cl_object.c	2012-03-14 09:18:29.000000000 +0800
+@@ -1282,3 +1282,14 @@
+         lu_kmem_fini(cl_object_caches);
+         cl_env_store_fini();
+ }
++
++#ifndef DISABLE_HRFS_SUPPORT
++void mtfs_lu_env_attach(struct lu_env *env)
++{
++        struct cl_env *cle;
++
++        cle = cl_env_container(env);
++        cl_env_attach(cle);
++}
++EXPORT_SYMBOL(mtfs_lu_env_attach);
++#endif /* !DISABLE_HRFS_SUPPORT */
+Index: lustre-2.1.52/lustre/lov/lov_io.c
+===================================================================
+--- lustre-2.1.52.orig/lustre/lov/lov_io.c	2012-03-14 09:17:32.000000000 +0800
++++ lustre-2.1.52/lustre/lov/lov_io.c	2012-03-28 14:14:51.000000000 +0800
+@@ -426,9 +426,23 @@
+                 if (next <= start * ssize)
+                         next = ~0ull;
+ 
++#ifndef DISABLE_HRFS_SUPPORT
++                if (io->u.ci_rw.crw_endpos_used) {
++                        LASSERT(io->u.ci_rw.crw_endpos <= lio->lis_io_endpos);
++
++                        io->ci_continue = next < io->u.ci_rw.crw_endpos;
++                        io->u.ci_rw.crw_count = min_t(loff_t, io->u.ci_rw.crw_endpos,
++                                                      next) - io->u.ci_rw.crw_pos;
++                } else {
++                        io->ci_continue = next < lio->lis_io_endpos;
++                        io->u.ci_rw.crw_count = min_t(loff_t, lio->lis_io_endpos,
++                                                      next) - io->u.ci_rw.crw_pos;
++                }
++#else /* !DISABLE_HRFS_SUPPORT */
+                 io->ci_continue = next < lio->lis_io_endpos;
+                 io->u.ci_rw.crw_count = min_t(loff_t, lio->lis_io_endpos,
+                                               next) - io->u.ci_rw.crw_pos;
++#endif /* DISABLE_HRFS_SUPPORT */
+                 lio->lis_pos    = io->u.ci_rw.crw_pos;
+                 lio->lis_endpos = io->u.ci_rw.crw_pos + io->u.ci_rw.crw_count;
+                 CDEBUG(D_VFSTRACE, "stripe: "LPU64" chunk: ["LPU64", "LPU64") "LPU64"\n",

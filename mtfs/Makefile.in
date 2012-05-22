@@ -1,0 +1,10 @@
+subdir-m += mtfs
+@LUSTRE_SUPPORT_TRUE@subdir-m += lustre_support
+@SWGFS_SUPPORT_TRUE@subdir-m += swgfs_support
+@EXT2_SUPPORT_TRUE@subdir-m += ext2_support
+@EXT3_SUPPORT_TRUE@subdir-m += ext3_support
+@EXT4_SUPPORT_TRUE@subdir-m += ext4_support
+@EXT4_SUPPORT_TRUE@subdir-m += nfs_support
+@TMPFS_SUPPORT_TRUE@subdir-m += tmpfs_support
+@NTFS3G_SUPPORT_TRUE@subdir-m += ntfs3g_support
+@INCLUDE_RULES@

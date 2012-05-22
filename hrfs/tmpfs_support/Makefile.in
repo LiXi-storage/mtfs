@@ -1,6 +1,0 @@
-MODULES := hrfs_tmpfs
-hrfs_tmpfs-objs := tmpfs_support.o
-
-EXTRA_DIST := $(hrfs_tmpfs-objs:.o=.c)
-EXTRA_DIST += tmpfs_support.h
-@INCLUDE_RULES@

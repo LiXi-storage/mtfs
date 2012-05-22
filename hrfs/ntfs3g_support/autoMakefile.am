@@ -1,5 +1,0 @@
-if MODULES
-modulefs_DATA = hrfs_ntfs3g$(KMODEXT)
-endif
-
-MOSTLYCLEANFILES := @MOSTLYCLEANFILES@

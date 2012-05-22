@@ -1,6 +1,0 @@
-MODULES := hrfs_ext3
-hrfs_ext3-objs := ext3_support.o
-
-EXTRA_DIST := $(hrfs_ext3-objs:.o=.c)
-EXTRA_DIST += ext3_support.h
-@INCLUDE_RULES@

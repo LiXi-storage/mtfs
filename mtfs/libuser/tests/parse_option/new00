@@ -1,0 +1,65 @@
+#!/bin/sh
+desc="tests for example"
+
+dir=`dirname $0`
+. ${dir}/../misc.sh
+
+echo "1..5"
+
+#
+# TEST FORMAT:
+# INPUT:
+# mount_option
+#
+# OUTPUT:
+# mount_option struct dumped
+#
+
+
+# test 1
+IN="
+branch_dirs=/mnt/mtfs1:/mnt/mtfs2:/mnt/mtfs3:/mnt/mtfs4:/mnt/mtfs5:/mnt/mtfs6,debug_level=0
+" OUT="
+branch_number = 6
+/mnt/mtfs1:/mnt/mtfs2:/mnt/mtfs3:/mnt/mtfs4:/mnt/mtfs5:/mnt/mtfs6
+debug_level = 0
+" expect 0
+
+#
+# test 2
+# Colon at beginning or end is allowed
+#
+IN="
+branch_dirs=:/mnt/mtfs1:/mnt/mtfs2:,debug_level=1
+" OUT="
+branch_number = 2
+/mnt/mtfs1:/mnt/mtfs2
+debug_level = 1
+" expect 0
+
+#
+# test 3
+# Debug level value is checked
+#
+IN="
+branch_dirs=:/mnt/mtfs1:/mnt/mtfs2:,debug_level=-12345
+" OUT="
+" expect -EINVAL
+
+
+#
+# test 4
+# Unkown option is checked
+#
+IN="unkown_option,branch_dirs=:/mnt/mtfs1:/mnt/mtfs2:,debug_level=1
+" OUT="
+" expect -EINVAL
+
+#
+# test 5
+# Only one branch_dirs option is allowed
+#
+IN="
+branch_dirs=:/mnt/mtfs1:/mnt/mtfs2:,debug_level=-12345,branch_dirs=:/mnt/mtfs1:/mnt/mtfs2:
+" OUT="
+" expect -EINVAL

@@ -1,0 +1,50 @@
+.TH mtfs 1 "2012 Feb 4" mtfs "user utilities"
+.SH NAME
+mtfs \- Hrfs utility to manage files in a mtfs filesystem
+.SH SYNOPSIS
+.br
+.B mtfs
+.br
+.B mtfs check <mds|osts|servers>
+.br
+.B mtfs getstate [--quiet | -q] [--verbose | -v] <dir|file>
+.br
+.B mtfs setbranch [--quiet | -q] [--verbose | -v]\n"
+        \fB[--branch | -b bindex] [--data | -d flag]"
+        \fB[--attr | -a flag] [--xattr | -x flag]"
+        \fB<dir|file>
+.br
+.B mtfs version
+.br
+.B mtfs help
+.SH DESCRIPTION
+.B mtfs
+can be used to get the state of a file, modify the state of a file. 
+.SH OPTIONS
+The various options supported by mtfs are listed and explained below:
+.TP
+.B getstate 
+Get the state of a file
+.TP
+.B setbranch
+Set the state of a file
+.TP
+.B help 
+Provides brief help on the various arguments
+.TP
+.B exit/quit 
+Quit the interactive mtfs session
+.SH EXAMPLES
+.TP
+.B $ mtfs getstate /mnt/mtfs/file1
+This gets the information of file.
+.TP
+.B $ mtfs setbranch -b 0 -d 1 /mnt/mtfs/file1
+This signs the branch[0] of file /mnt/mtfs/file1 to be data-bad.
+.SH BUGS
+Report bugs using http://code.google.com/p/mtfs.
+.SH AUTHOR
+The mtfs command is part of the mtfs filesystem. Contact http://code.google.com/p/mtfs
+Li Xi <pkuelelixi@gmail.com>
+.SH SEE ALSO
+.BR mtfsctl (8),

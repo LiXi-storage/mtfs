@@ -19,7 +19,7 @@
 /config.log
 /config.status
 /configure
-/hrfs.spec
+/mtfs.spec
 /INSTALL
 /lustre.spec
 /lustre*.tar.gz
@@ -31,10 +31,10 @@
 /modules.order
 /Modules.symvers
 /patches
-/rebuild.sh 
+/rebuild.sh
 /Rules
 /series
 /stamp-h1
 
-/hrfs*.tar.gz
+/mtfs*.tar.gz
 

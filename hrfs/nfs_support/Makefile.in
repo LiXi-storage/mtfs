@@ -1,6 +1,0 @@
-MODULES := hrfs_nfs
-hrfs_nfs-objs := nfs_support.o
-
-EXTRA_DIST := $(hrfs_nfs-objs:.o=.c)
-EXTRA_DIST += nfs_support.h
-@INCLUDE_RULES@

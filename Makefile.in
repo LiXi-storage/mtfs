@@ -1,4 +1,4 @@
 subdir-m += @LIBCFS_SUBDIR@
-subdir-m += hrfs
+subdir-m += mtfs
 
 @INCLUDE_RULES@

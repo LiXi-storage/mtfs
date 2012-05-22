@@ -1,0 +1,5 @@
+if MODULES
+modulefs_DATA = mtfs_ext4$(KMODEXT)
+endif
+
+MOSTLYCLEANFILES := @MOSTLYCLEANFILES@

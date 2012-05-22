@@ -1,6 +1,6 @@
 
-AC_INIT([hrfs], [HRFS_VERSION], [https://www.hrfs.org/], [hrfs])
-sinclude(hrfs/autoconf/hrfs-version.ac)
+AC_INIT([mtfs], [HRFS_VERSION], [https://www.mtfs.org/], [mtfs])
+sinclude(mtfs/autoconf/mtfs-version.ac)
 
 LB_CHECK_VERSION
 
