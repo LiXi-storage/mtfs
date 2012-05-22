@@ -14,17 +14,13 @@
 /autom4te.cache
 /autoMakefile
 /autoMakefile.in
-/config.guess
 /config.h
 /config.h.in
 /config.log
 /config.status
-/config.sub
 /configure
-/depcomp
 /hrfs.spec
 /INSTALL
-/install-sh
 /lustre.spec
 /lustre*.tar.gz
 /Makefile
