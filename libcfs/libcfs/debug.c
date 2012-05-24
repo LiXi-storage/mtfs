@@ -17,7 +17,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * version 2 along with this program; If not, see
- * http://www.sun.com/software/products/swgfs/docs/GPLv2.pdf
+ * http://www.sun.com/software/products/lustre/docs/GPLv2.pdf
  *
  * Please contact Sun Microsystems, Inc., 4150 Network Circle, Santa Clara,
  * CA 95054 USA or visit www.sun.com if you need additional information or
@@ -30,8 +30,8 @@
  * Use is subject to license terms.
  */
 /*
- * This file is part of Swgfs, http://www.swgfs.org/
- * Swgfs is a trademark of Sun Microsystems, Inc.
+ * This file is part of Lustre, http://www.lustre.org/
+ * Lustre is a trademark of Sun Microsystems, Inc.
  *
  * lnet/libcfs/debug.c
  *
@@ -54,13 +54,13 @@ static char debug_file_name[1024];
 #ifdef __KERNEL__
 unsigned int libcfs_subsystem_debug = ~0;
 CFS_MODULE_PARM(libcfs_subsystem_debug, "i", int, 0644,
-                "Swgfs kernel debug subsystem mask");
+                "Lustre kernel debug subsystem mask");
 EXPORT_SYMBOL(libcfs_subsystem_debug);
 
 unsigned int libcfs_debug = (D_EMERG | D_ERROR | D_WARNING | D_CONSOLE |
                              D_NETERROR | D_HA | D_CONFIG | D_IOCTL);
 CFS_MODULE_PARM(libcfs_debug, "i", int, 0644,
-                "Swgfs kernel debug mask");
+                "Lustre kernel debug mask");
 EXPORT_SYMBOL(libcfs_debug);
 
 int libcfs_debug_mb = -1;
@@ -70,27 +70,27 @@ EXPORT_SYMBOL(libcfs_debug_mb);
 
 unsigned int libcfs_printk = (D_CANTMASK | D_NETERROR);
 CFS_MODULE_PARM(libcfs_printk, "i", uint, 0644,
-                "Swgfs kernel debug console mask");
+                "Lustre kernel debug console mask");
 EXPORT_SYMBOL(libcfs_printk);
 
 unsigned int libcfs_console_ratelimit = 1;
 CFS_MODULE_PARM(libcfs_console_ratelimit, "i", uint, 0644,
-                "Swgfs kernel debug console ratelimit (0 to disable)");
+                "Lustre kernel debug console ratelimit (0 to disable)");
 EXPORT_SYMBOL(libcfs_console_ratelimit);
 
 cfs_duration_t libcfs_console_max_delay;
 CFS_MODULE_PARM(libcfs_console_max_delay, "l", ulong, 0644,
-                "Swgfs kernel debug console max delay (jiffies)");
+                "Lustre kernel debug console max delay (jiffies)");
 EXPORT_SYMBOL(libcfs_console_max_delay);
 
 cfs_duration_t libcfs_console_min_delay;
 CFS_MODULE_PARM(libcfs_console_min_delay, "l", ulong, 0644,
-                "Swgfs kernel debug console min delay (jiffies)");
+                "Lustre kernel debug console min delay (jiffies)");
 EXPORT_SYMBOL(libcfs_console_min_delay);
 
 unsigned int libcfs_console_backoff = CDEBUG_DEFAULT_BACKOFF;
 CFS_MODULE_PARM(libcfs_console_backoff, "i", uint, 0644,
-                "Swgfs kernel debug console backoff factor");
+                "Lustre kernel debug console backoff factor");
 EXPORT_SYMBOL(libcfs_console_backoff);
 
 unsigned int libcfs_debug_binary = 1;
@@ -116,7 +116,7 @@ unsigned int libcfs_panic_on_lbug = 0;
 unsigned int libcfs_panic_on_lbug = 0;
 #endif
 CFS_MODULE_PARM(libcfs_panic_on_lbug, "i", uint, 0644,
-                "Swgfs kernel panic on LBUG");
+                "Lustre kernel panic on LBUG");
 EXPORT_SYMBOL(libcfs_panic_on_lbug);
 
 atomic_t libcfs_kmemory = ATOMIC_INIT(0);
@@ -125,11 +125,11 @@ EXPORT_SYMBOL(libcfs_kmemory);
 static cfs_waitq_t debug_ctlwq;
 
 #ifdef HAVE_BGL_SUPPORT
-char debug_file_path_arr[1024] = "/bgl/ion/tmp/swgfs-log";
+char debug_file_path_arr[1024] = "/bgl/ion/tmp/lustre-log";
 #elif defined(__arch_um__)
-char debug_file_path_arr[1024] = "/r/tmp/swgfs-log";
+char debug_file_path_arr[1024] = "/r/tmp/lustre-log";
 #else
-char debug_file_path_arr[1024] = "/tmp/swgfs-log";
+char debug_file_path_arr[1024] = "/tmp/lustre-log";
 #endif
 /* We need to pass a pointer here, but elsewhere this must be a const */
 char *debug_file_path = &debug_file_path_arr[0];
@@ -433,7 +433,7 @@ libcfs_debug_str2mask(int *mask, const char *str, int is_subsys)
 }
 
 /**
- * Dump Swgfs log to ::debug_file_path by calling tracefile_dump_all_pages()
+ * Dump Lustre log to ::debug_file_path by calling tracefile_dump_all_pages()
  */
 void libcfs_debug_dumplog_internal(void *arg)
 {
@@ -445,7 +445,7 @@ void libcfs_debug_dumplog_internal(void *arg)
                 snprintf(debug_file_name, sizeof(debug_file_name) - 1,
                          "%s.%ld.%ld", debug_file_path_arr,
                          cfs_time_current_sec(), (long)arg);
-                printk(KERN_ALERT "SwgfsError: dumping log to %s\n",
+                printk(KERN_ALERT "LustreError: dumping log to %s\n",
                        debug_file_name);
 
                 tracefile_dump_all_pages(debug_file_name);
@@ -479,7 +479,7 @@ void libcfs_debug_dumplog(void)
                                (void *)(long)cfs_curproc_pid(),
                                CLONE_VM | CLONE_FS | CLONE_FILES);
         if (rc < 0)
-                printk(KERN_ERR "SwgfsError: cannot start log dump thread: "
+                printk(KERN_ERR "LustreError: cannot start log dump thread: "
                        "%d\n", rc);
         else
                 cfs_waitq_wait(&wait, CFS_TASK_INTERRUPTIBLE);
@@ -543,7 +543,7 @@ int libcfs_debug_mark_buffer(const char *text)
 
 void libcfs_debug_set_level(unsigned int debug_level)
 {
-        printk(KERN_WARNING "Swgfs: Setting portals debug level to %08x\n",
+        printk(KERN_WARNING "Lustre: Setting portals debug level to %08x\n",
                debug_level);
         libcfs_debug = debug_level;
 }
@@ -618,22 +618,22 @@ int libcfs_debug_init(unsigned long bufsize)
         snprintf(source_nid, sizeof(source_nid) - 1, "%u", _my_pnid);
         source_pid = _my_pid;
 
-        debug_console = getenv("LIBSWGFS_DEBUG_CONSOLE");
+        debug_console = getenv("LIBLUSTRE_DEBUG_CONSOLE");
         if (debug_console != NULL) {
                 toconsole = strtoul(debug_console, NULL, 0);
-                CDEBUG(D_INFO, "set libswgfs toconsole to %u\n", toconsole);
+                CDEBUG(D_INFO, "set liblustre toconsole to %u\n", toconsole);
         }
-        debug_ratelimit = getenv("LIBSWGFS_DEBUG_CONSOLE_RATELIMIT");
+        debug_ratelimit = getenv("LIBLUSTRE_DEBUG_CONSOLE_RATELIMIT");
         if (debug_ratelimit != NULL) {
                 libcfs_console_ratelimit = strtoul(debug_ratelimit, NULL, 0);
-                CDEBUG(D_INFO, "set libswgfs console ratelimit to %u\n",
+                CDEBUG(D_INFO, "set liblustre console ratelimit to %u\n",
                                 libcfs_console_ratelimit);
         }
-        debug_max_delay = getenv("LIBSWGFS_DEBUG_CONSOLE_MAX_DELAY");
+        debug_max_delay = getenv("LIBLUSTRE_DEBUG_CONSOLE_MAX_DELAY");
         if (debug_max_delay != NULL)
                 libcfs_console_max_delay =
                             cfs_time_seconds(strtoul(debug_max_delay, NULL, 0));
-        debug_min_delay = getenv("LIBSWGFS_DEBUG_CONSOLE_MIN_DELAY");
+        debug_min_delay = getenv("LIBLUSTRE_DEBUG_CONSOLE_MIN_DELAY");
         if (debug_min_delay != NULL)
                 libcfs_console_min_delay =
                             cfs_time_seconds(strtoul(debug_min_delay, NULL, 0));
@@ -642,13 +642,13 @@ int libcfs_debug_init(unsigned long bufsize)
                     libcfs_console_max_delay < libcfs_console_min_delay) {
                         libcfs_console_max_delay = CDEBUG_DEFAULT_MAX_DELAY;
                         libcfs_console_min_delay = CDEBUG_DEFAULT_MIN_DELAY;
-                        CDEBUG(D_INFO, "LIBSWGFS_DEBUG_CONSOLE_MAX_DELAY "
+                        CDEBUG(D_INFO, "LIBLUSTRE_DEBUG_CONSOLE_MAX_DELAY "
                                        "should be greater than "
-                                       "LIBSWGFS_DEBUG_CONSOLE_MIN_DELAY "
+                                       "LIBLUSTRE_DEBUG_CONSOLE_MIN_DELAY "
                                        "and both parameters should be non-null"
                                        ": restore default values\n");
                 } else {
-                        CDEBUG(D_INFO, "set libswgfs console max delay to %lus"
+                        CDEBUG(D_INFO, "set liblustre console max delay to %lus"
                                        " and min delay to %lus\n",
                                (cfs_duration_t)
                                      cfs_duration_sec(libcfs_console_max_delay),
@@ -656,15 +656,15 @@ int libcfs_debug_init(unsigned long bufsize)
                                     cfs_duration_sec(libcfs_console_min_delay));
                 }
         }
-        debug_backoff = getenv("LIBSWGFS_DEBUG_CONSOLE_BACKOFF");
+        debug_backoff = getenv("LIBLUSTRE_DEBUG_CONSOLE_BACKOFF");
         if (debug_backoff != NULL) {
                 libcfs_console_backoff = strtoul(debug_backoff, NULL, 0);
                 if (libcfs_console_backoff <= 0) {
                         libcfs_console_backoff = CDEBUG_DEFAULT_BACKOFF;
-                        CDEBUG(D_INFO, "LIBSWGFS_DEBUG_CONSOLE_BACKOFF <= 0: "
+                        CDEBUG(D_INFO, "LIBLUSTRE_DEBUG_CONSOLE_BACKOFF <= 0: "
                                        "restore default value\n");
                 } else {
-                        CDEBUG(D_INFO, "set libswgfs console backoff to %u\n",
+                        CDEBUG(D_INFO, "set liblustre console backoff to %u\n",
                                libcfs_console_backoff);
                 }
         }
@@ -676,20 +676,20 @@ int libcfs_debug_init(unsigned long bufsize)
         source_pid = getpid();
 #endif
         /* debug masks */
-        debug_mask = getenv("LIBSWGFS_DEBUG_MASK");
+        debug_mask = getenv("LIBLUSTRE_DEBUG_MASK");
         if (debug_mask)
                 libcfs_debug = (unsigned int) strtol(debug_mask, NULL, 0);
 
-        debug_subsys = getenv("LIBSWGFS_DEBUG_SUBSYS");
+        debug_subsys = getenv("LIBLUSTRE_DEBUG_SUBSYS");
         if (debug_subsys)
                 libcfs_subsystem_debug =
                                 (unsigned int) strtol(debug_subsys, NULL, 0);
 
-        debug_filename = getenv("LIBSWGFS_DEBUG_BASE");
+        debug_filename = getenv("LIBLUSTRE_DEBUG_BASE");
         if (debug_filename)
                 strncpy(debug_file_path,debug_filename,sizeof(debug_file_path));
 
-        debug_filename = getenv("LIBSWGFS_DEBUG_FILE");
+        debug_filename = getenv("LIBLUSTRE_DEBUG_FILE");
         if (debug_filename)
                 strncpy(debug_file_name,debug_filename,sizeof(debug_file_name));
 
@@ -767,7 +767,7 @@ libcfs_debug_vmsg2(cfs_debug_limit_state_t *cdls,
                                             * with linux, where message can`t
                                             * be exceed PAGE_SIZE */
         int            console = 0;
-        char *prefix = "Swgfs";
+        char *prefix = "Lustre";
 
 #ifdef HAVE_CATAMOUNT_DATA_H
         /* toconsole == 0 - all messages to debug_file_fd
@@ -782,7 +782,7 @@ libcfs_debug_vmsg2(cfs_debug_limit_state_t *cdls,
         }
 
         if (mask & (D_EMERG | D_ERROR))
-               prefix = "SwgfsError";
+               prefix = "LustreError";
 
         nob = snprintf(buf, sizeof(buf), "%s: %u-%s:(%s:%d:%s()): ", prefix,
                        source_pid, source_nid, file, line, fn);

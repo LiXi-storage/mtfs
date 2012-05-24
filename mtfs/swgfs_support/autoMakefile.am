@@ -1,5 +1,0 @@
-if MODULES
-modulefs_DATA = mtfs_swgfs$(KMODEXT)
-endif
-
-MOSTLYCLEANFILES := @MOSTLYCLEANFILES@

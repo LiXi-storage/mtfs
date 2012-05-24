@@ -104,9 +104,9 @@ int mtfs_d_revalidate(struct dentry *dentry, struct nameidata *nd)
 	}
 
 	/*
-	 * SWGFS says: Never execute intents for mount points.
+	 * Lustre says: Never execute intents for mount points.
 	 * Attributes will be fixed up in ll_inode_revalidate_it.
-	 * Our mtfs_getattr will call swgfs's, and call ll_inode_revalidate_it to fix attributes.
+	 * Our mtfs_getattr will call lustre's, and call ll_inode_revalidate_it to fix attributes.
 	 */
 	if (d_mountpoint(dentry)) {
 		goto out;

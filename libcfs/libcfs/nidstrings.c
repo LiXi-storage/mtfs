@@ -17,7 +17,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * version 2 along with this program; If not, see
- * http://www.sun.com/software/products/swgfs/docs/GPLv2.pdf
+ * http://www.sun.com/software/products/lustre/docs/GPLv2.pdf
  *
  * Please contact Sun Microsystems, Inc., 4150 Network Circle, Santa Clara,
  * CA 95054 USA or visit www.sun.com if you need additional information or
@@ -30,8 +30,8 @@
  * Use is subject to license terms.
  */
 /*
- * This file is part of Swgfs, http://www.swgfs.org/
- * Swgfs is a trademark of Sun Microsystems, Inc.
+ * This file is part of Lustre, http://www.lustre.org/
+ * Lustre is a trademark of Sun Microsystems, Inc.
  *
  * lnet/libcfs/nidstrings.c
  *
@@ -554,7 +554,7 @@ EXPORT_SYMBOL(libcfs_setnet0alias);
 void
 libcfs_setnet0alias(int lnd)
 {
-        LCONSOLE_ERROR_MSG(0x125, "Libswgfs cannot interoperate with old "
+        LCONSOLE_ERROR_MSG(0x125, "Liblustre cannot interoperate with old "
                            "Portals.\nportals_compatibility must be set to "
                            "'none'.\n");
 }

@@ -129,7 +129,7 @@ static ssize_t mtfs_proc_fops_read(struct file *f, char __user *buf, size_t size
 	if (rc <= 0)
 		goto out;
 
-	/* for swgfs proc read, the read count must be less than PAGE_SIZE */
+	/* For proc read, the read count must be less than PAGE_SIZE */
 	HASSERT(eof == 1);
 
 	if (start == NULL) {
@@ -306,7 +306,7 @@ void mtfs_proc_remove(struct proc_dir_entry **rooth)
 
 		/*
 		 * procfs won't free rm_entry->data if it isn't a LINK,
-		 * and SWGFS won't use rm_entry->data if it is a LINK
+		 * and Lustre won't use rm_entry->data if it is a LINK
 		 */
 		if (S_ISLNK(rm_entry->mode))
 			rm_entry->data = NULL;

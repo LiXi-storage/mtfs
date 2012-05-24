@@ -8,7 +8,7 @@
 #include "debug.h"
 #include "mtfs_file.h"
 /*
- * Same to macros defined in swgfs/include/swgfs_idl.h
+ * Same to macros defined in lustre/include/lustre_idl.h
  * We should keep this ture:
  * When flag is zero by default,
  * it means file data is proper and not under recovering.

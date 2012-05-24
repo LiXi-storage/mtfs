@@ -162,12 +162,6 @@ remount_lowerfs()
 		umount_lowerfs2
 	fi
 
-	if [ "$LOWERFS_NAME" = "swgfs" ]; then 
-		echo sleep 2;
-		#/bin/sleep 2
-		# BUG: if no sleep, mount may fail complaining "device already exist"
-	fi
-
 	mount_lowerfs
 	if [ "$DOING_MUTLTI" = "yes" ]; then
 		mount_lowerfs2
@@ -700,11 +694,6 @@ run_one_cleanup_setup()
 	local ret=$?
 
 	if [ "$CLEANUP_PER_TEST" = "yes" ]; then
-		if [ "$LOWERFS_NAME" = "swgfs" ]; then
-			echo sleep
-			# /bin/sleep 2
-			# BUG: if no sleep, mount may fail complaining "device already exist"
-		fi
 		cleanup_all_check
 	fi
 
@@ -940,13 +929,13 @@ do_node() {
 		# we need this because rsh does not return exit code of an executed command
 		local command_status="$TMP/cs"
 		rsh $HOST ":> $command_status"
-		rsh $HOST "(PATH=\$PATH:$RSWGFS/utils:$RSWGFS/tests:/sbin:/usr/sbin;
+		rsh $HOST "(PATH=\$PATH:$RMTFS/utils:$RMTFS/tests:/sbin:/usr/sbin;
 		cd $RPWD; sh -c \"$@\") ||
 		echo command failed >$command_status"
 		[ -n "$($myPDSH $HOST cat $command_status)" ] && return 1 || true
 		return 0
     fi
-    $myPDSH $HOST "(PATH=\$PATH:$RSWGFS/utils:$RSWGFS/tests:/sbin:/usr/sbin; cd $RPWD; sh -c \"$@\")" | sed "s/^${HOST}: //"
+    $myPDSH $HOST "(PATH=\$PATH:$RMTFS/utils:$RMTFS/tests:/sbin:/usr/sbin; cd $RPWD; sh -c \"$@\")" | sed "s/^${HOST}: //"
     return ${PIPESTATUS[0]}
 }
 
@@ -981,9 +970,9 @@ do_nodes() {
         if [[ $host = "" ]];then
                 break
         fi
-        $myPDSH $host "(PATH=\$PATH:$RSWGFS/utils:$RSWGFS/tests:/sbin:/usr/sbin; cd $RPWD; sh -c \"$@\")" | sed -re "s/\w+:\s//g"
+        $myPDSH $host "(PATH=\$PATH:$RMTFS/utils:$RMTFS/tests:/sbin:/usr/sbin; cd $RPWD; sh -c \"$@\")" | sed -re "s/\w+:\s//g"
     }
-#    $myPDSH $rnodes "(PATH=\$PATH:$RSWGFS/utils:$RSWGFS/tests:/sbin:/usr/sbin; cd $RPWD; sh -c \"$@\")" | sed -re "s/\w+:\s//g"
+#    $myPDSH $rnodes "(PATH=\$PATH:$RMTFS/utils:$RMTFS/tests:/sbin:/usr/sbin; cd $RPWD; sh -c \"$@\")" | sed -re "s/\w+:\s//g"
     return ${PIPESTATUS[0]}
 }
 

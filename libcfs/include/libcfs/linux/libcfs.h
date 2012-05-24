@@ -17,7 +17,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * version 2 along with this program; If not, see
- * http://www.sun.com/software/products/swgfs/docs/GPLv2.pdf
+ * http://www.sun.com/software/products/lustre/docs/GPLv2.pdf
  *
  * Please contact Sun Microsystems, Inc., 4150 Network Circle, Santa Clara,
  * CA 95054 USA or visit www.sun.com if you need additional information or
@@ -30,8 +30,8 @@
  * Use is subject to license terms.
  */
 /*
- * This file is part of Swgfs, http://www.swgfs.org/
- * Swgfs is a trademark of Sun Microsystems, Inc.
+ * This file is part of Lustre, http://www.lustre.org/
+ * Lustre is a trademark of Sun Microsystems, Inc.
  */
 
 #ifndef __LIBCFS_LINUX_LIBCFS_H__
@@ -136,7 +136,7 @@ struct ptldebug_header {
 # endif
 #endif
 
-#define SWGFS_TRACE_SIZE (THREAD_SIZE >> 5)
+#define LUSTRE_TRACE_SIZE (THREAD_SIZE >> 5)
 
 #if defined(__KERNEL__) && !defined(__x86_64__)
 # ifdef  __ia64__
@@ -157,7 +157,7 @@ do {                                                                    \
                 libcfs_stack = _stack;                                  \
                 libcfs_debug_msg(NULL, DEBUG_SUBSYSTEM, D_WARNING,      \
                                  file, func, line,                      \
-                                 "maximum swgfs stack %lu\n", _stack); \
+                                 "maximum lustre stack %lu\n", _stack); \
               /*panic("LBUG");*/                                        \
         }                                                               \
 } while (0)
@@ -169,7 +169,7 @@ do {                                                                    \
 #endif /* __KERNEL__ */
 
 /* initial pid  */
-#define SWGFS_LNET_PID          12345
+#define LUSTRE_LNET_PID          12345
 
 #define ENTRY_NESTING_SUPPORT (1)
 #define ENTRY_NESTING   do {;} while (0)

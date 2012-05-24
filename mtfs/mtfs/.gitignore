@@ -2,6 +2,7 @@
 /*.ko
 /*.mod.c
 
+/.deps
 /autoMakefile
 /autoMakefile.in
 /Makefile

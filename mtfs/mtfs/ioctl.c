@@ -295,27 +295,6 @@ int mtfs_ioctl(struct inode *inode, struct file *file, unsigned int cmd, unsigne
 	case HRFS_IOCTL_RULE_LIST:
 		ret = -EINVAL;
 		break;
-#ifdef LIXI_20110518
-			{
-				struct lov_user_md *lump = NULL;
-				int lumlen = 0;
-
-				lumlen = swgfs_getstripe(hidden_file->f_dentry, &lump, lumlen);
-				if (lumlen <= 0) {
-					HERROR("getstripe failed: %d\n", err);
-				}
-				HDEBUG("stripe_count: %d stripe_size: %u "
-					"stripe_offset: %d stripe_pattern: %d "
-					"\n",
-					lump->lmm_stripe_count == (__u16)-1 ? -1 :
-						lump->lmm_stripe_count,
-					lump->lmm_stripe_size,
-					lump->lmm_stripe_offset == (__u16)-1 ? -1 :
-						lump->lmm_stripe_offset,
-					lump->lmm_pattern - 1);
-				swgfs_getstripe_finished(lump, lumlen);
-			}
-#endif /* LIXI_20110518 */
 	default:
 			operations = mtfs_i2ops(inode);
 			if (operations->ioctl == NULL) {

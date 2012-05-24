@@ -455,7 +455,7 @@ struct dentry *mtfs_lookup(struct inode *dir, struct dentry *dentry, struct name
 	HASSERT(!IS_ROOT(dentry));
 
 	/*
-	 * SWGFS has follow comment, we should do this too:
+	 * Lustre has follow comment, we should do this too:
 	 * As do_lookup is called before follow_mount, root dentry may be left
 	 * not valid, revalidate it here.
 	 */

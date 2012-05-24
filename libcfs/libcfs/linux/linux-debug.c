@@ -17,7 +17,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * version 2 along with this program; If not, see
- * http://www.sun.com/software/products/swgfs/docs/GPLv2.pdf
+ * http://www.sun.com/software/products/lustre/docs/GPLv2.pdf
  *
  * Please contact Sun Microsystems, Inc., 4150 Network Circle, Santa Clara,
  * CA 95054 USA or visit www.sun.com if you need additional information or
@@ -30,8 +30,8 @@
  * Use is subject to license terms.
  */
 /*
- * This file is part of Swgfs, http://www.swgfs.org/
- * Swgfs is a trademark of Sun Microsystems, Inc.
+ * This file is part of Lustre, http://www.lustre.org/
+ * Lustre is a trademark of Sun Microsystems, Inc.
  *
  * lnet/libcfs/linux/linux-debug.c
  *
@@ -78,11 +78,11 @@
 #include <linux/kallsyms.h>
 #endif
 
-char lnet_upcall[1024] = "/usr/lib/swgfs/lnet_upcall";
-char lnet_debug_log_upcall[1024] = "/usr/lib/swgfs/lnet_debug_log_upcall";
+char lnet_upcall[1024] = "/usr/lib/lustre/lnet_upcall";
+char lnet_debug_log_upcall[1024] = "/usr/lib/lustre/lnet_debug_log_upcall";
 
 /**
- * Upcall function once a Swgfs log has been dumped.
+ * Upcall function once a Lustre log has been dumped.
  *
  * \param file  path of the dumped log
  */
@@ -256,7 +256,7 @@ void libcfs_debug_dumpstack(struct task_struct *tsk)
                       tsk->pid, UML_PID(tsk));
         //asm("int $3");
 #elif defined(HAVE_SHOW_TASK)
-        /* this is exported by swgfs kernel version 42 */
+        /* this is exported by lustre kernel version 42 */
         extern void show_task(struct task_struct *);
 
         if (tsk == NULL)
@@ -284,7 +284,7 @@ static DUMP_TRACE_CONST struct stacktrace_ops print_trace_ops = {
                    &print_trace_ops, NULL);
 	printk("\n");
 #elif defined(HAVE_SCHED_SHOW_TASK)
-        /* exported by swgfs patch on 2.6.27 kernel */
+        /* exported by lustre patch on 2.6.27 kernel */
         extern void show_task(struct task_struct *);
 
         if (tsk == NULL)

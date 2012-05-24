@@ -496,7 +496,7 @@ size_t mtfs_file_readv_branch(struct file *file, const struct iovec *iov,
 		ret = hidden_file->f_op->readv(hidden_file, iov, nr_segs, ppos);
 		if (ret > 0) {
 			/*
-			 * Swgfs update inode size whenever read/write.
+			 * Lustre update inode size whenever read/write.
 			 * TODO: Do not update unless file growes bigger.
 			 */
 			inode = file->f_dentry->d_inode;
@@ -593,7 +593,7 @@ static ssize_t mtfs_file_writev_branch(struct file *file, const struct iovec *io
 		ret = hidden_file->f_op->writev(hidden_file, iov, nr_segs, ppos);
 		if (ret > 0) {
 			/*
-			 * Swgfs update inode size whenever read/write.
+			 * Lustre update inode size whenever read/write.
 			 * TODO: Do not update unless file growes bigger.
 			 */
 			inode = file->f_dentry->d_inode;
@@ -749,7 +749,7 @@ static ssize_t mtfs_file_write_nonwritev_branch(struct file *file, const char __
 		ret = hidden_file->f_op->write(hidden_file, buf, len, ppos);
 		if (ret > 0) {
 			/*
-			 * Swgfs update inode size whenever read/write.
+			 * Lustre update inode size whenever read/write.
 			 * TODO: Do not update unless file growes bigger.
 			 */
 			inode = file->f_dentry->d_inode;
@@ -815,7 +815,7 @@ static ssize_t mtfs_file_read_nonreadv_branch(struct file *file, char __user *bu
 		ret = hidden_file->f_op->read(hidden_file, buf, len, ppos);
 		if (ret > 0) {
 			/*
-			 * Swgfs update inode size whenever read/write.
+			 * Lustree update inode size whenever read/write.
 			 * TODO: Do not update unless file growes bigger.
 			 */
 			inode = file->f_dentry->d_inode;
@@ -912,7 +912,7 @@ int mtfs_file_mmap(struct file *file, struct vm_area_struct * vma)
 		vma->vm_ops = &mtfs_file_vm_ops;
 	}
 
-	/* Swgfs will update the inode's size and mtime */
+	/* Lusre will update the inode's size and mtime */
 out:
 	HRETURN(ret);
 }
@@ -942,7 +942,7 @@ int mtfs_file_mmap_nowrite(struct file *file, struct vm_area_struct * vma)
 		vma->vm_ops = &mtfs_file_vm_ops;
 	}
 
-	/* Swgfs will update the inode's size and mtime */
+	/* Lustre will update the inode's size and mtime */
 out:
 	HRETURN(ret);
 }

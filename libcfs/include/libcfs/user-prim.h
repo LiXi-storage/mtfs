@@ -17,7 +17,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * version 2 along with this program; If not, see
- * http://www.sun.com/software/products/swgfs/docs/GPLv2.pdf
+ * http://www.sun.com/software/products/lustre/docs/GPLv2.pdf
  *
  * Please contact Sun Microsystems, Inc., 4150 Network Circle, Santa Clara,
  * CA 95054 USA or visit www.sun.com if you need additional information or
@@ -30,8 +30,8 @@
  * Use is subject to license terms.
  */
 /*
- * This file is part of Swgfs, http://www.swgfs.org/
- * Swgfs is a trademark of Sun Microsystems, Inc.
+ * This file is part of Lustre, http://www.lustre.org/
+ * Lustre is a trademark of Sun Microsystems, Inc.
  *
  * lnet/include/libcfs/user-prim.h
  *
@@ -45,10 +45,10 @@
 #error Do not #include this file directly. #include <libcfs/libcfs.h> instead
 #endif
 
-/* Implementations of portable APIs for libswgfs */
+/* Implementations of portable APIs for liblustre */
 
 /*
- * libswgfs is single-threaded, so most "synchronization" APIs are trivial.
+ * liblustre is single-threaded, so most "synchronization" APIs are trivial.
  */
 
 #ifndef __KERNEL__
@@ -108,7 +108,7 @@ int64_t cfs_waitq_timedwait(struct cfs_waitlink *link, int state, int64_t timeou
 /* XXX
  * for this moment, liblusre will not rely OST for non-page-aligned write
  */
-#define LIBSWGFS_HANDLE_UNALIGNED_PAGE
+#define LIBLUSTRE_HANDLE_UNALIGNED_PAGE
 
 struct page {
         void   *addr;
@@ -116,10 +116,10 @@ struct page {
         struct list_head list;
         unsigned long private;
 
-        /* internally used by libswgfs file i/o */
+        /* internally used by liblustre file i/o */
         int     _offset;
         int     _count;
-#ifdef LIBSWGFS_HANDLE_UNALIGNED_PAGE
+#ifdef LIBLUSTRE_HANDLE_UNALIGNED_PAGE
         int     _managed;
 #endif
         struct list_head _node;

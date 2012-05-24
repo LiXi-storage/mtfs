@@ -1129,7 +1129,7 @@ test_32q() {
 	ls $DIR/d32q/under_the_mount && error || true
 	umount $DIR/d32q || error
 }
-run_test 32q "stat follows mountpoints in Swgfs (should return error)"
+run_test 32q "stat follows mountpoints (should return error)"
 
 test_32r() {
 	[ -e $DIR/d32r ] && rm -fr $DIR/d32r
@@ -1139,7 +1139,7 @@ test_32r() {
 	ls $DIR/d32r | grep -q under_the_mount && error || true
 	umount $DIR/d32r || error
 }
-run_test 32r "opendir follows mountpoints in Swgfs (should return error)"
+run_test 32r "opendir follows mountpoints (should return error)"
 
 test_32s() {
 	[ -e $DIR/d32s ] && rm -fr $DIR/d32s
@@ -2104,7 +2104,7 @@ run_test 102a "user xattr test =================================="
 test_105a() {
 	# doesn't work on 2.4 kernels
 	touch $DIR/$tfile
-	if [ "$LOWERFS_NAME" = "swgfs" ]; then
+	if [ "$LOWERFS_NAME" = "lustre" ]; then
 		if [ -n "`mount | grep \"$LOWERFS_MNT1.*flock\" | grep -v noflock`" ];
 		then
 			$FLOCKS_TEST 1 on -f $DIR/$tfile || error "unexpted flock failure with flock option on"
@@ -2123,7 +2123,7 @@ run_test 105a "flock test ========"
 
 test_105b() {
 	touch $DIR/$tfile
-	if [ "$LOWERFS_NAME" = "swgfs" ]; then
+	if [ "$LOWERFS_NAME" = "lustre" ]; then
 		if [ -n "`mount | grep \"$LOWERFS_MNT1.*flock\" | grep -v noflock`" ];
 		then
 			$FLOCKS_TEST 1 on -c $DIR/$tfile || error "unexpted fcntl failure with flock option on"
@@ -2142,7 +2142,7 @@ run_test 105b "fcntl test ========"
 
 test_105c() {
 	touch $DIR/$tfile
-	if [ "$LOWERFS_NAME" = "swgfs" ]; then
+	if [ "$LOWERFS_NAME" = "lustre" ]; then
 		if [ -n "`mount | grep \"$LOWERFS_MNT1.*flock\" | grep -v noflock`" ];
 		then
 			$FLOCKS_TEST 1 on -l $DIR/$tfile || error "unexpted lockf failure with flock option on"

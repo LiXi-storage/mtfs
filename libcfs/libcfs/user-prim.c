@@ -17,7 +17,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * version 2 along with this program; If not, see
- * http://www.sun.com/software/products/swgfs/docs/GPLv2.pdf
+ * http://www.sun.com/software/products/lustre/docs/GPLv2.pdf
  *
  * Please contact Sun Microsystems, Inc., 4150 Network Circle, Santa Clara,
  * CA 95054 USA or visit www.sun.com if you need additional information or
@@ -30,19 +30,19 @@
  * Use is subject to license terms.
  */
 /*
- * This file is part of Swgfs, http://www.swgfs.org/
- * Swgfs is a trademark of Sun Microsystems, Inc.
+ * This file is part of Lustre, http://www.lustre.org/
+ * Lustre is a trademark of Sun Microsystems, Inc.
  *
  * lnet/libcfs/user-prim.c
  *
- * Implementations of portable APIs for libswgfs
+ * Implementations of portable APIs for liblustre
  *
  * Author: Nikita Danilov <nikita@clusterfs.com>
  */
 
 
 /*
- * libswgfs is single-threaded, so most "synchronization" APIs are trivial.
+ * liblustre is single-threaded, so most "synchronization" APIs are trivial.
  */
 
 #ifndef __KERNEL__
@@ -163,13 +163,13 @@ int64_t cfs_waitq_timedwait(struct cfs_waitlink *link, int state, int64_t timeou
  * Threads
  */
 
-struct swgfs_thread_arg {
+struct lustre_thread_arg {
         cfs_thread_t f; 
         void *arg;
 };
 static void *cfs_thread_helper(void *data)
 {
-        struct swgfs_thread_arg *targ = data;
+        struct lustre_thread_arg *targ = data;
         cfs_thread_t f  = targ->f;
         void *arg = targ->arg;
 
@@ -183,7 +183,7 @@ int cfs_create_thread(cfs_thread_t func, void *arg)
         pthread_t tid;
         pthread_attr_t tattr;
         int rc;
-        struct swgfs_thread_arg *targ_p = malloc(sizeof(struct swgfs_thread_arg));
+        struct lustre_thread_arg *targ_p = malloc(sizeof(struct lustre_thread_arg));
 
         if ( targ_p == NULL )
                 return -ENOMEM;

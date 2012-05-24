@@ -17,7 +17,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * version 2 along with this program; If not, see
- * http://www.sun.com/software/products/swgfs/docs/GPLv2.pdf
+ * http://www.sun.com/software/products/lustre/docs/GPLv2.pdf
  *
  * Please contact Sun Microsystems, Inc., 4150 Network Circle, Santa Clara,
  * CA 95054 USA or visit www.sun.com if you need additional information or
@@ -30,8 +30,8 @@
  * Use is subject to license terms.
  */
 /*
- * This file is part of Swgfs, http://www.swgfs.org/
- * Swgfs is a trademark of Sun Microsystems, Inc.
+ * This file is part of Lustre, http://www.lustre.org/
+ * Lustre is a trademark of Sun Microsystems, Inc.
  */
 
 #ifndef EXPORT_SYMTAB
@@ -374,7 +374,7 @@ static int init_libcfs_module(void)
 
         rc = libcfs_debug_init(5 * 1024 * 1024);
         if (rc < 0) {
-                printk(KERN_ERR "SwgfsError: libcfs_debug_init: %d\n", rc);
+                printk(KERN_ERR "LustreError: libcfs_debug_init: %d\n", rc);
                 return (rc);
         }
 
@@ -434,7 +434,7 @@ static void exit_libcfs_module(void)
 
         rc = libcfs_debug_cleanup();
         if (rc)
-                printk(KERN_ERR "SwgfsError: libcfs_debug_cleanup: %d\n", rc);
+                printk(KERN_ERR "LustreError: libcfs_debug_cleanup: %d\n", rc);
         libcfs_arch_cleanup();
 }
 

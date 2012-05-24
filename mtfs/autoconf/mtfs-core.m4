@@ -66,19 +66,6 @@ AC_DEFUN([LC_PROG_LINUX],
 ])
 
 #
-# LC_CONFIG_BACKEDN_SWGFS
-#
-# whether to build swgfs backend support
-#
-AC_DEFUN([LC_CONFIG_BACKEDN_SWGFS],
-[AC_MSG_CHECKING([whether to build swgfs backend support])
-AC_ARG_ENABLE([swgfs-support],
-        AC_HELP_STRING([--disable-swgfs-support],
-                        [disable swgfs backend support]),
-        [],[enable_swgfs_support='yes'])
-AC_MSG_RESULT([$enable_swgfs_support])])
-
-#
 # LC_CONFIG_BACKEDN_LUSTRE
 #
 # whether to build lustre backend support
@@ -219,45 +206,6 @@ AC_MSG_RESULT([$enable_libmtfs_tests])
 
 #
 #
-# LC_CONFIG_SWGFS_PATH
-#
-# Find paths for swgfs
-#
-AC_DEFUN([LC_CONFIG_SWGFS_PATH],
-[AC_MSG_CHECKING([for Swgfs sources])
-AC_ARG_WITH([swgfs],
-        AC_HELP_STRING([--with-swgfs=path],
-                       [set path to Swgfs source (default=/usr/src/swgfs)]),
-        [LB_ARG_CANON_PATH([swgfs], [SWGFS])],
-        [SWGFS=/usr/src/swgfs])
-AC_MSG_RESULT([$SWGFS])
-AC_SUBST(SWGFS)
-
-# -------- check for swgfs --------
-LB_CHECK_FILE([$SWGFS],[],
-        [AC_MSG_ERROR([Swgfs source $SWGFS could not be found.])])
-
-# -------- check for version --------
-LB_CHECK_FILE([$SWGFS/swgfs/include/mtfs_version.h], [],[
-        AC_MSG_WARN([Unpatched swgfs source code detected.])
-        AC_MSG_WARN([Swgfs backend support cannot be built with an unpatched swgfs source code;])
-        AC_MSG_WARN([disabling swgfs support])
-        enable_swgfs_support='no'
-])
-
-# -------- check for head directory --------
-LB_CHECK_FILE([$SWGFS/swgfs/include],[],
-	[AC_MSG_ERROR([Swgfs head directory $SWGFS/swgfs/include could not be found.])])
-	
-# -------- define swgfs dir --------
-	SWGFS_INCLUDE_DIR="$SWGFS/swgfs/include"
-	#CPPFLAGS="$CPPFLAGS -I$SWGFS_INCLUDE_DIR"
-	EXTRA_KCFLAGS="$EXTRA_KCFLAGS -I$SWGFS_INCLUDE_DIR"
-
-]) # end of LC_CONFIG_SWGFS_PATH
-
-#
-#
 # LC_CONFIG_LUSTRE_PATH
 #
 # Find paths for lustre
@@ -365,10 +313,6 @@ if test $target_cpu == "i686" -o $target_cpu == "x86_64"; then
         CFLAGS="$CFLAGS -Werror"
 fi
 
-if test x$enable_swgfs_support = xyes ; then
-	LC_CONFIG_SWGFS_PATH
-fi
-
 if test x$enable_lustre_support = xyes ; then
 	LC_CONFIG_LUSTRE_PATH
 fi
@@ -391,7 +335,6 @@ AC_DEFUN([LC_CONDITIONALS],
 AM_CONDITIONAL(LIBHRFS, test x$enable_libmtfs = xyes)
 AM_CONDITIONAL(LIBHRFS_TESTS, test x$enable_libmtfs_tests = xyes)
 AM_CONDITIONAL(LUSTRE_SUPPORT, test x$enable_lustre_support = xyes)
-AM_CONDITIONAL(SWGFS_SUPPORT, test x$enable_swgfs_support = xyes)
 AM_CONDITIONAL(EXT2_SUPPORT, test x$enable_ext2_support = xyes)
 AM_CONDITIONAL(EXT3_SUPPORT, test x$enable_ext3_support = xyes)
 AM_CONDITIONAL(EXT4_SUPPORT, test x$enable_ext4_support = xyes)
@@ -434,8 +377,6 @@ mtfs/nfs_support/Makefile
 mtfs/nfs_support/autoMakefile
 mtfs/ntfs3g_support/Makefile
 mtfs/ntfs3g_support/autoMakefile
-mtfs/swgfs_support/Makefile
-mtfs/swgfs_support/autoMakefile
 mtfs/lustre_support/Makefile
 mtfs/lustre_support/autoMakefile
 mtfs/tmpfs_support/Makefile

@@ -17,7 +17,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * version 2 along with this program; If not, see
- * http://www.sun.com/software/products/swgfs/docs/GPLv2.pdf
+ * http://www.sun.com/software/products/lustre/docs/GPLv2.pdf
  *
  * Please contact Sun Microsystems, Inc., 4150 Network Circle, Santa Clara,
  * CA 95054 USA or visit www.sun.com if you need additional information or
@@ -30,12 +30,12 @@
  * Use is subject to license terms.
  */
 /*
- * This file is part of Swgfs, http://www.swgfs.org/
- * Swgfs is a trademark of Sun Microsystems, Inc.
+ * This file is part of Lustre, http://www.lustre.org/
+ * Lustre is a trademark of Sun Microsystems, Inc.
  */
 
 #define DEBUG_SUBSYSTEM S_LNET
-#define SWGFS_TRACEFILE_PRIVATE
+#define LUSTRE_TRACEFILE_PRIVATE
 
 #include <libcfs/libcfs.h>
 #include <libcfs/kp30.h>
@@ -247,19 +247,19 @@ set_ptldebug_header(struct ptldebug_header *header, int subsys, int mask,
 void print_to_console(struct ptldebug_header *hdr, int mask, const char *buf,
 			     int len, const char *file, const char *fn)
 {
-	char *prefix = "Swgfs", *ptype = NULL;
+	char *prefix = "Lustre", *ptype = NULL;
 
 	if ((mask & D_EMERG) != 0) {
-		prefix = "SwgfsError";
+		prefix = "LustreError";
 		ptype = KERN_EMERG;
 	} else if ((mask & D_ERROR) != 0) {
-		prefix = "SwgfsError";
+		prefix = "LustreError";
 		ptype = KERN_ERR;
 	} else if ((mask & D_WARNING) != 0) {
-		prefix = "Swgfs";
+		prefix = "Lustre";
 		ptype = KERN_WARNING;
 	} else if ((mask & (D_CONSOLE | libcfs_printk)) != 0) {
-		prefix = "Swgfs";
+		prefix = "Lustre";
 		ptype = KERN_INFO;
 	}
 

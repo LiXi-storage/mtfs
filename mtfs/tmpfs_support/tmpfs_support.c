@@ -26,7 +26,7 @@ size_t mtfs_tmpfs_file_read_branch(struct file *file, char __user *buf, size_t l
 		ret = hidden_file->f_op->read(hidden_file, buf, len, ppos);
 		if (ret > 0) {
 			/*
-			 * Swgfs update inode size whenever read/write.
+			 * Lustre update inode size whenever read/write.
 			 * TODO: Do not update unless file growes bigger.
 			 */
 			inode = file->f_dentry->d_inode;
@@ -82,7 +82,7 @@ static ssize_t mtfs_tmpfs_file_write_branch(struct file *file, const char __user
 		ret = hidden_file->f_op->write(hidden_file, buf, len, ppos);
 		if (ret > 0) {
 			/*
-			 * Swgfs update inode size whenever read/write.
+			 * Lustre update inode size whenever read/write.
 			 * TODO: Do not update unless file growes bigger.
 			 */
 			inode = file->f_dentry->d_inode;

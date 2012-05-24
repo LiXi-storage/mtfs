@@ -3,7 +3,7 @@
 
 CONFIGS=$1
 if [ "$CONFIGS" = "" ]; then
-	CONFIGS="swgfs"
+	CONFIGS="lustre"
 fi
 
 TESTS_DIR=${TESTS_DIR:-$(cd $(dirname $0); echo $PWD)}

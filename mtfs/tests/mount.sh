@@ -29,7 +29,7 @@ test_0a()
 	mount_lowerfs
 	insert_mtfs_module
 	insert_support_module
-	#BUG: origin mtfs will not report error, and swgfs will not be able to umount
+	#BUG: origin mtfs will not report error, and lustre will not be able to umount
 	$MOUNT_HRFS -o device=$HRFS_DIR1:$HRFS_DIR2 -o device=$HRFS_DIR1/not_exist1:$HRFS_DIR2/not_exist1 -o debug=$HRFS_DEBUG $HRFS_DEV $HRFS_MOUNT && error "unexpected mount success"
 	cleanup_and_setup
 	return 0

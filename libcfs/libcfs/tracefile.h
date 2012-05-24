@@ -17,7 +17,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * version 2 along with this program; If not, see
- * http://www.sun.com/software/products/swgfs/docs/GPLv2.pdf
+ * http://www.sun.com/software/products/lustre/docs/GPLv2.pdf
  *
  * Please contact Sun Microsystems, Inc., 4150 Network Circle, Santa Clara,
  * CA 95054 USA or visit www.sun.com if you need additional information or
@@ -30,8 +30,8 @@
  * Use is subject to license terms.
  */
 /*
- * This file is part of Swgfs, http://www.swgfs.org/
- * Swgfs is a trademark of Sun Microsystems, Inc.
+ * This file is part of Lustre, http://www.lustre.org/
+ * Lustre is a trademark of Sun Microsystems, Inc.
  */
 
 #ifndef __LIBCFS_TRACEFILE_H__
@@ -88,7 +88,7 @@ extern int  trace_max_debug_mb(void);
 #define TCD_STOCK_PAGES (TCD_MAX_PAGES)
 #define TRACEFILE_SIZE (500 << 20)
 
-#ifdef SWGFS_TRACEFILE_PRIVATE
+#ifdef LUSTRE_TRACEFILE_PRIVATE
 
 /*
  * Private declare for tracefile
@@ -289,6 +289,6 @@ extern void trace_assertion_failed(const char *str, const char *fn,
         __LASSERT(cfs_page_count(tage->page) > 0);	\
 })
 
-#endif	/* SWGFS_TRACEFILE_PRIVATE */
+#endif	/* LUSTRE_TRACEFILE_PRIVATE */
 
 #endif /* __LIBCFS_TRACEFILE_H__ */

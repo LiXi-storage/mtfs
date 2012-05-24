@@ -17,7 +17,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * version 2 along with this program; If not, see
- * http://www.sun.com/software/products/swgfs/docs/GPLv2.pdf
+ * http://www.sun.com/software/products/lustre/docs/GPLv2.pdf
  *
  * Please contact Sun Microsystems, Inc., 4150 Network Circle, Santa Clara,
  * CA 95054 USA or visit www.sun.com if you need additional information or
@@ -30,8 +30,8 @@
  * Use is subject to license terms.
  */
 /*
- * This file is part of Swgfs, http://www.swgfs.org/
- * Swgfs is a trademark of Sun Microsystems, Inc.
+ * This file is part of Lustre, http://www.lustre.org/
+ * Lustre is a trademark of Sun Microsystems, Inc.
  */
 
 #ifndef __LIBCFS_KP30_H__
@@ -307,7 +307,7 @@ int libcfs_debug_cleanup(void);
  */
 #define CLASSERT(cond) ({ switch(42) { case (cond): case 0: break; } })
 
-/* support decl needed both by kernel and libswgfs */
+/* support decl needed both by kernel and liblustre */
 int         libcfs_isknown_lnd(int type);
 char       *libcfs_lnd2modname(int type);
 char       *libcfs_lnd2str(int type);
@@ -466,7 +466,7 @@ do {                                                    \
         data.ioc_len = sizeof(data);                    \
 } while (0)
 
-/* FIXME check conflict with swgfs_lib.h */
+/* FIXME check conflict with lustre_lib.h */
 #define LIBCFS_IOC_DEBUG_MASK             _IOWR('f', 250, long)
 
 static inline int libcfs_ioctl_packlen(struct libcfs_ioctl_data *data)
@@ -641,12 +641,12 @@ enum {
 
 enum cfg_record_type {
         PORTALS_CFG_TYPE = 1,
-        SWGFS_CFG_TYPE = 123,
+        LUSTRE_CFG_TYPE = 123,
 };
 
 typedef int (*cfg_record_cb_t)(enum cfg_record_type, int len, void *data);
 
-/* swgfs_id output helper macros */
+/* lustre_id output helper macros */
 #define DLID4   "%lu/%lu/%lu/%lu"
 
 #define OLID4(id)                              \

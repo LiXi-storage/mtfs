@@ -17,7 +17,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * version 2 along with this program; If not, see
- * http://www.sun.com/software/products/swgfs/docs/GPLv2.pdf
+ * http://www.sun.com/software/products/lustre/docs/GPLv2.pdf
  *
  * Please contact Sun Microsystems, Inc., 4150 Network Circle, Santa Clara,
  * CA 95054 USA or visit www.sun.com if you need additional information or
@@ -30,8 +30,8 @@
  * Use is subject to license terms.
  */
 /*
- * This file is part of Swgfs, http://www.swgfs.org/
- * Swgfs is a trademark of Sun Microsystems, Inc.
+ * This file is part of Lustre, http://www.lustre.org/
+ * Lustre is a trademark of Sun Microsystems, Inc.
  */
 
 /* -*- mode: c; c-basic-offset: 8; indent-tabs-mode: nil; -*-
@@ -219,7 +219,7 @@ typedef struct {
 /* Controlled via configure key */
 /* #define CDEBUG_ENABLED */
 
-#if defined(__KERNEL__) || (defined(__arch_lib__) && !defined(SWGFS_UTILS))
+#if defined(__KERNEL__) || (defined(__arch_lib__) && !defined(LUSTRE_UTILS))
 
 #ifdef CDEBUG_ENABLED
 #define __CDEBUG(cdls, mask, format, a...)                              \
@@ -263,7 +263,7 @@ do {                                                                    \
 #endif /* !__KERNEL__ */
 
 /*
- * Swgfs Error Checksum: calculates checksum
+ * Lustre Error Checksum: calculates checksum
  * of Hex number by XORing each bit.
  */
 #define LERRCHKSUM(hexnum) (((hexnum) & 0xf) ^ ((hexnum) >> 4 & 0xf) ^ \
@@ -341,7 +341,7 @@ do {                                                                    \
 
 /*
  * Some (nomina odiosa sunt) platforms define NULL as naked 0. This confuses
- * Swgfs RETURN(NULL) macro.
+ * Lustre RETURN(NULL) macro.
  */
 #if defined(NULL)
 #undef NULL
@@ -349,7 +349,7 @@ do {                                                                    \
 
 #define NULL ((void *)0)
 
-#define SWGFS_SRV_LNET_PID      SWGFS_LNET_PID
+#define LUSTRE_SRV_LNET_PID      LUSTRE_LNET_PID
 
 #ifdef __KERNEL__
 

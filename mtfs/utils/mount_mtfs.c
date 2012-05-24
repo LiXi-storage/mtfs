@@ -37,7 +37,7 @@ void usage(FILE *out)
 	        progname);
 	fprintf(out,
 	        "\t<device>: the disk device, or for a client:\n"
-	        "\t<mountpt>: filesystem mountpoint (e.g. /mnt/swgfs)\n"
+	        "\t<mountpt>: filesystem mountpoint (e.g. /mnt/mtfs)\n"
 	        "\t-f|--fake: fake mount (updates /etc/mtab)\n"
 	        "\t-o force|--force: force mount even if already in /etc/mtab\n"
 	        "\t-h|--help: print this usage message\n"

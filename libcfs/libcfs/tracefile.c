@@ -17,7 +17,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * version 2 along with this program; If not, see
- * http://www.sun.com/software/products/swgfs/docs/GPLv2.pdf
+ * http://www.sun.com/software/products/lustre/docs/GPLv2.pdf
  *
  * Please contact Sun Microsystems, Inc., 4150 Network Circle, Santa Clara,
  * CA 95054 USA or visit www.sun.com if you need additional information or
@@ -30,8 +30,8 @@
  * Use is subject to license terms.
  */
 /*
- * This file is part of Swgfs, http://www.swgfs.org/
- * Swgfs is a trademark of Sun Microsystems, Inc.
+ * This file is part of Lustre, http://www.lustre.org/
+ * Lustre is a trademark of Sun Microsystems, Inc.
  *
  * lnet/libcfs/tracefile.c
  *
@@ -41,7 +41,7 @@
 
 
 #define DEBUG_SUBSYSTEM S_LNET
-#define SWGFS_TRACEFILE_PRIVATE
+#define LUSTRE_TRACEFILE_PRIVATE
 #include "tracefile.h"
 
 #include <libcfs/kp30.h>
@@ -468,7 +468,7 @@ trace_assertion_failed(const char *str,
 
         print_to_console(&hdr, D_EMERG, str, strlen(str), file, fn);
 
-        LIBCFS_PANIC("Swgfs debug assertion failure\n");
+        LIBCFS_PANIC("Lustre debug assertion failure\n");
 
         /* not reached */
 }
@@ -664,7 +664,7 @@ int tracefile_dump_all_pages(char *filename)
                              O_CREAT|O_EXCL|O_WRONLY|O_LARGEFILE, 0600, &rc);
         if (!filp) {
                 if (rc != -EEXIST)
-                        printk(KERN_ERR "SwgfsError: can't open %s for dump: rc %d\n",
+                        printk(KERN_ERR "LustreError: can't open %s for dump: rc %d\n",
                                filename, rc);
                 goto out;
         }
@@ -849,7 +849,7 @@ int trace_daemon_command(char *str)
         } else {
                 strcpy(tracefile, str);
 
-                printk(KERN_INFO "Swgfs: debug daemon will attempt to start writing "
+                printk(KERN_INFO "Lustre: debug daemon will attempt to start writing "
                        "to %s (%lukB max)\n", tracefile,
                        (long)(tracefile_size >> 10));
 
@@ -891,7 +891,7 @@ int trace_set_debug_mb(int mb)
                 return -EINVAL;
 
         if (mb > limit) {
-                printk(KERN_ERR "Swgfs: Refusing to set debug buffer size to "
+                printk(KERN_ERR "Lustre: Refusing to set debug buffer size to "
                        "%dMB - limit is %d\n", mb, limit);
                 return -EINVAL;
         }
@@ -1018,7 +1018,7 @@ static int tracefiled(void *arg)
                 if (!list_empty(&pc.pc_pages)) {
                         int i;
 
-                        printk(KERN_ALERT "Swgfs: trace pages aren't empty\n");
+                        printk(KERN_ALERT "Lustre: trace pages aren't empty\n");
                         printk(KERN_ALERT "total cpus(%d): ", num_possible_cpus());
                         for (i = 0; i < num_possible_cpus(); i++)
                                 if (cpu_online(i))
@@ -1087,7 +1087,7 @@ void trace_stop_thread(void)
 
         mutex_down(&trace_thread_sem);
         if (thread_running) {
-                printk(KERN_INFO "Swgfs: shutting down debug daemon thread...\n");
+                printk(KERN_INFO "Lustre: shutting down debug daemon thread...\n");
                 atomic_set(&tctl->tctl_shutdown, 1);
                 wait_for_completion(&tctl->tctl_stop);
                 thread_running = 0;
