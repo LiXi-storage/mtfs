@@ -2,7 +2,7 @@
 # Copyright (C) 2011 Li Xi <pkuelelixi@gmail.com>
 #
 
-# Hrfs user lib Makefile
+# MTFS user lib Makefile
 SUBDIRS := . tests
 
 AM_CFLAGS = $(LLCFLAGS)
@@ -11,7 +11,7 @@ AM_LDFLAGS :=
 
 USER_LIBS = $(top_builddir)/mtfs/mtfs/libmtfs.a $(top_builddir)/libcfs/libcfs/libcfs.a libuser_local.a
 
-if LIBHRFS
+if LIBMTFS
 lib_LIBRARIES = libuser.a
 noinst_LIBRARIES = libuser_local.a
 
@@ -25,9 +25,9 @@ install-exec-hook: libuser.so
 			$(libLIBRARIES_INSTALL) $$p $(DESTDIR)$(libdir)/$$f; \
 		else :; fi; \
 	done
-else #!LIBHRFS
+else #!LIBMTFS
 install-exec-hook:
-endif #!LIBHRFS
+endif #!LIBMTFS
 
 libuser_a_SOURCES = 
 libuser_local_a_SOURCES = parser.c cmd_parser.c log.c multithread.c cfg.c

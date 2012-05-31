@@ -2,8 +2,8 @@
  * Copyright (C) 2011 Li Xi <pkuelelixi@gmail.com>
  */
 
-#ifndef __HRFS_MEMORY_H__
-#define __HRFS_MEMORY_H__
+#ifndef __MTFS_MEMORY_H__
+#define __MTFS_MEMORY_H__
 #include "debug.h"
 
 #define POISON(ptr, c, s) memset(ptr, c, s)
@@ -39,7 +39,7 @@ do {                                                                          \
 #define mtfs_kmem_dec(ptr, size) do {} while (0)
 #endif /* !MEMORY_DEBUG */
 
-#define HRFS_ALLOC_GFP(ptr, size, gfp_mask)                                   \
+#define MTFS_ALLOC_GFP(ptr, size, gfp_mask)                                   \
 do {                                                                          \
     (ptr) = kmalloc(size, (gfp_mask));                                        \
     if (likely((ptr) != NULL)) {                                              \
@@ -50,10 +50,10 @@ do {                                                                          \
     }                                                                         \
 } while (0)
 
-#define HRFS_ALLOC(ptr, size) HRFS_ALLOC_GFP(ptr, size, GFP_KERNEL)
-#define HRFS_ALLOC_PTR(ptr) HRFS_ALLOC(ptr, sizeof *(ptr))
+#define MTFS_ALLOC(ptr, size) MTFS_ALLOC_GFP(ptr, size, GFP_KERNEL)
+#define MTFS_ALLOC_PTR(ptr) MTFS_ALLOC(ptr, sizeof *(ptr))
 
-#define HRFS_FREE(ptr, size)                                                  \
+#define MTFS_FREE(ptr, size)                                                  \
 do {                                                                          \
     HASSERT(ptr);                                                             \
     HDEBUG_MEM("mtfs_kfreed '" #ptr "': %d at %p.\n",                         \
@@ -64,9 +64,9 @@ do {                                                                          \
     (ptr) = NULL;                                                             \
 } while (0)
 
-#define HRFS_FREE_PTR(ptr) HRFS_FREE(ptr, sizeof *(ptr))
+#define MTFS_FREE_PTR(ptr) MTFS_FREE(ptr, sizeof *(ptr))
 
-#define HRFS_SLAB_ALLOC_GFP(ptr, slab, size, gfp_mask)                        \
+#define MTFS_SLAB_ALLOC_GFP(ptr, slab, size, gfp_mask)                        \
 do {                                                                          \
     HASSERT(!in_interrupt());                                                 \
     (ptr) = kmem_cache_alloc(slab, (gfp_mask));                               \
@@ -78,10 +78,10 @@ do {                                                                          \
     }                                                                         \
 } while (0)
 
-#define HRFS_SLAB_ALLOC(ptr, slab, size) HRFS_SLAB_ALLOC_GFP(ptr, slab, size, GFP_KERNEL)
-#define HRFS_SLAB_ALLOC_PTR(ptr, slab) HRFS_SLAB_ALLOC(ptr, slab, sizeof *(ptr))
+#define MTFS_SLAB_ALLOC(ptr, slab, size) MTFS_SLAB_ALLOC_GFP(ptr, slab, size, GFP_KERNEL)
+#define MTFS_SLAB_ALLOC_PTR(ptr, slab) MTFS_SLAB_ALLOC(ptr, slab, sizeof *(ptr))
 
-#define HRFS_SLAB_FREE(ptr, slab, size)                                       \
+#define MTFS_SLAB_FREE(ptr, slab, size)                                       \
 do {                                                                          \
     HASSERT(ptr);                                                             \
     HDEBUG_MEM("mtfs_slab-freed '" #ptr "': %d at %p.\n",                     \
@@ -92,14 +92,14 @@ do {                                                                          \
     (ptr) = NULL;                                                             \
 } while (0)
 
-#define HRFS_SLAB_FREE_PTR(ptr, slab) HRFS_SLAB_FREE(ptr, slab, sizeof *(ptr))
+#define MTFS_SLAB_FREE_PTR(ptr, slab) MTFS_SLAB_FREE(ptr, slab, sizeof *(ptr))
 #else /* !((__linux__) && defined(__KERNEL__)) */
 
 #include <stdlib.h>
 #include <string.h> /* For memset */
 /* No need to detect memory_leak, since we have valgrind, yeah! */
 
-#define HRFS_ALLOC(ptr, size)                                                 \
+#define MTFS_ALLOC(ptr, size)                                                 \
 do {                                                                          \
     (ptr) = malloc(size);                                                     \
     if ((ptr) != NULL) {                                                      \
@@ -107,9 +107,9 @@ do {                                                                          \
     }                                                                         \
 } while (0)
 
-#define HRFS_ALLOC_PTR(ptr) HRFS_ALLOC(ptr, sizeof *(ptr))
+#define MTFS_ALLOC_PTR(ptr) MTFS_ALLOC(ptr, sizeof *(ptr))
 
-#define HRFS_FREE(ptr, size)                                                  \
+#define MTFS_FREE(ptr, size)                                                  \
 do {                                                                          \
     HASSERT(ptr);                                                             \
     POISON(ptr, 0x5a, size);                                                  \
@@ -117,17 +117,17 @@ do {                                                                          \
     (ptr) = NULL;                                                             \
 } while (0)
 
-#define HRFS_FREE_PTR(ptr) HRFS_FREE(ptr, sizeof *(ptr))
+#define MTFS_FREE_PTR(ptr) MTFS_FREE(ptr, sizeof *(ptr))
 
-#define HRFS_STRDUP(buff, str)                                                \
+#define MTFS_STRDUP(buff, str)                                                \
 do {                                                                          \
     buff = strdup(str);                                                       \
 } while (0)
 
-#define HRFS_FREE_STR(str)                                                    \
+#define MTFS_FREE_STR(str)                                                    \
 do {                                                                          \
     free(str);                                                                \
 } while (0)
 
 #endif /* !((__linux__) && defined(__KERNEL__)) */
-#endif /* __HRFS_MEMORY_H__ */
+#endif /* __MTFS_MEMORY_H__ */

@@ -15,12 +15,12 @@ int component_types_init()
 	int ret = 0;
 	HENTRY();
 
-	HRFS_STRDUP(component_types.name, "types");
+	MTFS_STRDUP(component_types.name, "types");
 	component_types.is_graph = 1;
 	component_types.mode = COMPONENT_READ_MODE;
 	component_types.ref = 1;
 
-	HRFS_INIT_LIST_HEAD(&component_types.this_graph.subcomponents);
+	MTFS_INIT_LIST_HEAD(&component_types.this_graph.subcomponents);
 	ret = component_insert(&component_root, &component_types);
 	if (ret) {
 		HERROR("failed to insert component types\n");
@@ -28,7 +28,7 @@ int component_types_init()
 	}
 	goto out;
 out_free_name:
-	HRFS_FREE_STR(component_types.name);
+	MTFS_FREE_STR(component_types.name);
 out:
 	HRETURN(ret);
 }
@@ -164,7 +164,7 @@ static struct pin *component_alloc_pins(int pin_num)
 	struct pin *pins = NULL;
 	HENTRY();
 
-	HRFS_ALLOC(pins, sizeof(*pins) * pin_num);
+	MTFS_ALLOC(pins, sizeof(*pins) * pin_num);
 	if (pins == NULL) {
 		HERROR("not enough memory\n");
 		goto out;
@@ -178,7 +178,7 @@ struct component *component_alloc(int pin_num)
 	struct component *component = NULL;
 	HENTRY();
 
-	HRFS_ALLOC_PTR(component);
+	MTFS_ALLOC_PTR(component);
 	if (component == NULL) {
 		HERROR("not enough memory\n");
 		goto out;
@@ -192,9 +192,9 @@ struct component *component_alloc(int pin_num)
 	}
 
 	goto out;
-	HRFS_FREE(component->pins, sizeof(*component->pins) * component->pin_num);
+	MTFS_FREE(component->pins, sizeof(*component->pins) * component->pin_num);
 out_free_instance:
-	HRFS_FREE_PTR(component);
+	MTFS_FREE_PTR(component);
 	component = NULL;
 out:
 	HRETURN(component);
@@ -206,19 +206,19 @@ void component_free(struct component *component)
 	HENTRY();
 
 	if (component->name) {
-		HRFS_FREE_STR(component->name);
+		MTFS_FREE_STR(component->name);
 	}
 
 	if (component->pins) {
 		for (i = 0; i < component->pin_num; i++) {
 			if (component->pins[i].name) {
-				HRFS_FREE_STR(component->pins[i].name);
+				MTFS_FREE_STR(component->pins[i].name);
 			}
 		}
-		HRFS_FREE(component->pins, sizeof(*component->pins) * component->pin_num);
+		MTFS_FREE(component->pins, sizeof(*component->pins) * component->pin_num);
 	}
 
-	HRFS_FREE_PTR(component);
+	MTFS_FREE_PTR(component);
 	_HRETURN();
 }
 
@@ -238,7 +238,7 @@ struct component *component_instance_new(struct component *type, const char *ins
 	instance->ref = 1;
 
 	/* Init instance fields */
-	HRFS_STRDUP(instance->name, instance_name);
+	MTFS_STRDUP(instance->name, instance_name);
 	if (instance->name == NULL) {
 		ret = -ENOMEM;
 		goto out_free_component;
@@ -246,20 +246,20 @@ struct component *component_instance_new(struct component *type, const char *ins
 
 	/* Init common fields */
 	for(i = 0; i < instance->pin_num; i++) {
-		HRFS_STRDUP(instance->pins[i].name, type->pins[i].name);
+		MTFS_STRDUP(instance->pins[i].name, type->pins[i].name);
 		if (instance->pins[i].name == NULL) {
 			ret = -ENOMEM;
 			goto out_free_component;
 		}
 		instance->pins[i].is_input = type->pins[i].is_input;
 		instance->pins[i].parent = instance;
-		HRFS_INIT_LIST_HEAD(&instance->pins[i].prevs);
+		MTFS_INIT_LIST_HEAD(&instance->pins[i].prevs);
 	}
 
 	instance->is_graph = type->is_graph;
 	/* TODO: copy this_graph */
 	if (instance->is_graph) {
-		HRFS_INIT_LIST_HEAD(&instance->this_graph.subcomponents);
+		MTFS_INIT_LIST_HEAD(&instance->this_graph.subcomponents);
 		ret = component_copy_subs(type, instance);
 		if (ret) {
 			goto out_remove_subs;
@@ -286,9 +286,9 @@ int component_rename(struct component *component, const char *name)
 	int ret = 0;
 	HENTRY();
 
-	HRFS_STRDUP(component->name, name);
+	MTFS_STRDUP(component->name, name);
 	if (component->name) {
-		HRFS_FREE_STR(old_name);
+		MTFS_FREE_STR(old_name);
 	} else {
 		component->name = old_name;
 		ret = -ENOMEM;
@@ -304,7 +304,7 @@ struct component *component_new_notype(struct component *parent, const char *nam
 	int ret = 0;
 	HENTRY();
 
-	HRFS_ALLOC_PTR(component);
+	MTFS_ALLOC_PTR(component);
 	if (component == NULL) {
 		ret = -ENOMEM;
 		goto out;
@@ -312,14 +312,14 @@ struct component *component_new_notype(struct component *parent, const char *nam
 	component->ref = 1;
 	graph = &component->this_graph;
 
-	HRFS_STRDUP(component->name, name);
+	MTFS_STRDUP(component->name, name);
 	if (component->name == NULL) {
 		ret = -ENOMEM;
 		goto out_free_component;
 	}
 	component->is_graph = 1;
 
-	HRFS_INIT_LIST_HEAD(&graph->subcomponents);
+	MTFS_INIT_LIST_HEAD(&graph->subcomponents);
 	ret = component_insert(parent, component);
 	if (ret) {
 		goto out_free_name;
@@ -327,9 +327,9 @@ struct component *component_new_notype(struct component *parent, const char *nam
 	component->parent = parent;
 	goto out;
 out_free_name:
-	HRFS_FREE_STR(component->name);
+	MTFS_FREE_STR(component->name);
 out_free_component:
-	HRFS_FREE_PTR(component);
+	MTFS_FREE_PTR(component);
 out:
 	if (ret) {
 		component = ERR_PTR(ret);
@@ -427,21 +427,21 @@ int component_declare_filter(const char *type_name, const char *inpin_name, int 
 		goto out;
 	}
 
-	HRFS_STRDUP(type->pins[0].name, inpin_name);
+	MTFS_STRDUP(type->pins[0].name, inpin_name);
 	if (type->pins[0].name == NULL) {
 		goto out_free_type;
 	}
 	type->pins[0].is_input = 1;
 
 	for(i = 1; i < type->pin_num; i++) {
-		HRFS_STRDUP(type->pins[i].name, outpin_names[i - 1]);
+		MTFS_STRDUP(type->pins[i].name, outpin_names[i - 1]);
 		if (type->pins[i].name == NULL) {
 			goto out_free_type;
 		}
 		type->pins[i].is_input = 0;
 	}
 
-	HRFS_STRDUP(type->name, type_name);
+	MTFS_STRDUP(type->name, type_name);
 	if (type->name == NULL) {
 		goto out_free_type;
 	}
@@ -562,10 +562,10 @@ static void component_free_pins(struct component *component)
 
 	for (i = 0; i < component->pin_num; i++) {
 		if (component->pins[i].name) {
-			HRFS_FREE_STR(component->pins[i].name);
+			MTFS_FREE_STR(component->pins[i].name);
 		}
 	}
-	HRFS_FREE(component->pins, sizeof(*component->pins) * component->pin_num);
+	MTFS_FREE(component->pins, sizeof(*component->pins) * component->pin_num);
 	component->pin_num = 0;
 
 	_HRETURN();
@@ -583,14 +583,14 @@ int component_copy_pins(struct component *old_component, struct component *new_c
 	new_component->pin_num = old_component->pin_num;
 	new_component->pins = component_alloc_pins(new_component->pin_num);
 	for(i = 0; i < new_component->pin_num; i ++) {
-		HRFS_STRDUP(new_component->pins[i].name, old_component->pins[i].name);
+		MTFS_STRDUP(new_component->pins[i].name, old_component->pins[i].name);
 		if (new_component->pins[i].name == NULL) {
 			ret = -ENOMEM;
 			goto out_free_pins;
 		}
 		new_component->pins[i].is_input = old_component->pins[i].is_input;
 		new_component->pins[i].parent = new_component;
-		HRFS_INIT_LIST_HEAD(&new_component->pins[i].prevs);
+		MTFS_INIT_LIST_HEAD(&new_component->pins[i].prevs);
 	}
 	goto out;
 out_free_pins:
@@ -961,14 +961,14 @@ int component_pack(struct component *component, int table_number, struct pin_map
 			goto out_free_pins;
 		}
 
-		HRFS_STRDUP(component->pins[i].name, tables[i].pin_name);
+		MTFS_STRDUP(component->pins[i].name, tables[i].pin_name);
 		if (component->pins[i].name == NULL) {
 			ret = -ENOMEM;
 			goto out_free_pins;
 		}
 		component->pins[i].is_input = pin->is_input;
 		component->pins[i].parent = component;
-		HRFS_INIT_LIST_HEAD(&component->pins[i].prevs);
+		MTFS_INIT_LIST_HEAD(&component->pins[i].prevs);
 	}
 	goto out;
 out_free_pins:

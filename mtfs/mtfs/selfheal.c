@@ -166,7 +166,7 @@ static inline void mtfs_dentry_list_cleanup(mtfs_list_t *dentry_list)
 
 	mtfs_list_for_each_entry_safe(tmp_entry, n, dentry_list, list) {
 		dput(tmp_entry->dentry);
-		HRFS_FREE_PTR(tmp_entry);
+		MTFS_FREE_PTR(tmp_entry);
 	}
 }
 
@@ -282,7 +282,7 @@ struct dentry *_mtfs_dchild_add_ino(struct dentry *dparent, struct dentry *dchil
 	HASSERT(dparent);
 	HASSERT(dparent->d_inode);
 	HASSERT(inode_is_locked(dparent->d_inode));
-	HRFS_ALLOC(name_new, PATH_MAX);
+	MTFS_ALLOC(name_new, PATH_MAX);
 	if (unlikely(name_new == NULL)) {
 		dchild_new = ERR_PTR(-ENOMEM);
 		goto out;
@@ -292,7 +292,7 @@ struct dentry *_mtfs_dchild_add_ino(struct dentry *dparent, struct dentry *dchil
 	sprintf(name_new, "%s:%lx", name_new, dchild_old->d_inode->i_ino);
 	dchild_new = mtfs_dchild_rename2new(dparent, dchild_old, name_new, strlen(name_new));
 
-	HRFS_FREE(name_new, PATH_MAX);
+	MTFS_FREE(name_new, PATH_MAX);
 out:
 	HRETURN(dchild_new);
 }
@@ -345,7 +345,7 @@ struct dentry *mtfs_dchild_add_ino(struct dentry *dparent, const char *name)
 	char *name_new = NULL;
 	HENTRY();
 
-	HRFS_ALLOC(name_new, PATH_MAX);
+	MTFS_ALLOC(name_new, PATH_MAX);
 	if (unlikely(name_new == NULL)) {
 		ret = -ENOMEM;
 		goto out;
@@ -411,7 +411,7 @@ out_dput_old:
 out_unlock:
 	mutex_unlock(&dparent->d_inode->i_mutex);
 	dput(dparent);
-	HRFS_FREE(name_new, PATH_MAX);
+	MTFS_FREE(name_new, PATH_MAX);
 out:
 	if (ret) {
 		dchild_new = ERR_PTR(ret);
@@ -484,7 +484,7 @@ int mtfs_backup_branch(struct dentry *dentry, mtfs_bindex_t bindex)
 	struct dentry *hidden_d_root = NULL;
 	struct dentry *hidden_d_new = NULL;
 	struct mtfs_dentry_list *tmp_entry = NULL;
-	HRFS_LIST_HEAD(dentry_list);
+	MTFS_LIST_HEAD(dentry_list);
 	struct mtfs_dentry_list *n = NULL;
 	int ret = 0;
 	struct dentry *hidden_d_parent_new = NULL;
@@ -530,7 +530,7 @@ int mtfs_backup_branch(struct dentry *dentry, mtfs_bindex_t bindex)
 			goto out_free_list;
 		}
 
-		HRFS_ALLOC_PTR(tmp_entry);
+		MTFS_ALLOC_PTR(tmp_entry);
 		if (tmp_entry == NULL) {
 			ret = -ENOMEM;
 			dput(hidden_d_tmp);

@@ -15,7 +15,7 @@
 
 ifeq ($(PATCHLEVEL),)
 
-ifeq ($(HRFS_LINUX_CONFIG),)
+ifeq ($(MTFS_LINUX_CONFIG),)
 
 # case #1
 include autoMakefile
@@ -23,22 +23,22 @@ include autoMakefile
 else
 
 # case #2
-# Note that this comes from make -C $LINUX -f $HRFS/build/Makefile
+# Note that this comes from make -C $LINUX -f $MTFS/build/Makefile
 # so "include Makefile" below includes $LINUX/Makefile, not this file
-include $(HRFS_LINUX_CONFIG)
+include $(MTFS_LINUX_CONFIG)
 include Makefile
 
-endif # HRFS_LINUX_CONFIG
+endif # MTFS_LINUX_CONFIG
 
 else # PATCHLEVEL
 
 # case 3
 
-ifneq ($(HRFS_KERNEL_TEST),)
+ifneq ($(MTFS_KERNEL_TEST),)
 ifeq ($(PATCHLEVEL),4)
-all: $(HRFS_KERNEL_TEST)
+all: $(MTFS_KERNEL_TEST)
 else
-extra-y = $(HRFS_KERNEL_TEST)
+extra-y = $(MTFS_KERNEL_TEST)
 endif
 endif
 

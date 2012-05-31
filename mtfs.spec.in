@@ -8,7 +8,7 @@
 # for those uses that don't want the -smp/-bigsmp on the end of %kversion
 %define krequires %(bash -c "echo %{kversion} | sed -e 's/.x86_64$//' -e 's/.i586$//' -e 's/-smp$//' -e 's/-bigsmp$//' -e 's/-ppc64$//' -e 's/-default$//'")
 
-Summary: HRFS File System
+Summary: MTFS File System
 Name: %{mtfs_name}
 Version: %{version}
 Release: %{release}
@@ -31,24 +31,24 @@ Requires: modutils >= 2.4.10, kernel = %{krequires}
 Group: Development/Kernel
 
 %description modules
-Hrfs file system, modules for Linux %{kversion}.
+MTFS file system, modules for Linux %{kversion}.
 
 %package source
 Summary: Object-Based Disk storage driver source
 Group: Development/Kernel
 
 %description source
-Hrfs sources for further development
+MTFS sources for further development
 
 %package tests
-Summary: Hrfs testing framework
+Summary: MTFS testing framework
 Group: Development/Kernel
 Provides: %{name}-tests = %{version}
 Requires: %{name} = %{version}, %{name}-modules = %{version}
 
 %description tests
 This package contains a set of test binaries and scripts that are intended
-to be used by the Hrfs testing framework.
+to be used by the MTFS testing framework.
 
 %prep
 %setup -qn mtfs-%{version}

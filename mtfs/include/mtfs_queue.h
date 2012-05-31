@@ -2,8 +2,8 @@
  * Copyright (C) 2011 Li Xi <pkuelelixi@gmail.com>
  */
 
-#ifndef __HRFS_QUEUE_H__
-#define __HRFS_QUEUE_H__
+#ifndef __MTFS_QUEUE_H__
+#define __MTFS_QUEUE_H__
 #include <mtfs_list.h>
 #include <mtfs_types.h>
 
@@ -73,4 +73,4 @@ void queue_remove_all_target(queue_t *queue);
  * Returns : 0 if not found
  */
 int queue_remove_data(queue_t *queue, void *data);
-#endif /* __HRFS_QUEUE_H__ */
+#endif /* __MTFS_QUEUE_H__ */

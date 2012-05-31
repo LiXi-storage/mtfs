@@ -2,8 +2,8 @@
  * Copyright (C) 2011 Li Xi <pkuelelixi@gmail.com>
  */
 
-#ifndef __HRFS_OPLIST_H__
-#define __HRFS_OPLIST_H__
+#ifndef __MTFS_OPLIST_H__
+#define __MTFS_OPLIST_H__
 #include "mtfs_common.h"
 #include "debug.h"
 #if defined (__linux__) && defined(__KERNEL__)
@@ -24,7 +24,7 @@ struct mtfs_operation_list {
 	mtfs_bindex_t bnum;                     /* Branch number */
 	mtfs_bindex_t checked_bnum;             /* Number of nonlatest branches failed */
 	mtfs_bindex_t latest_bnum;              /* Number of latest branches */
-	struct mtfs_operation_binfo op_binfo[HRFS_BRANCH_MAX];  /* Global bindex */
+	struct mtfs_operation_binfo op_binfo[MTFS_BRANCH_MAX];  /* Global bindex */
 	mtfs_bindex_t valid_bnum;               /* Number of valid branches */
 	mtfs_bindex_t success_bnum;             /* Number of branches succeeded */
 	mtfs_bindex_t success_latest_bnum;      /* Number of latest branches succeeded */
@@ -53,4 +53,4 @@ mtfs_operation_result_t mtfs_oplist_result(struct mtfs_operation_list *list);
 int mtfs_oplist_update(struct inode *inode, struct mtfs_operation_list *list);
 int mtfs_oplist_check(struct mtfs_operation_list *list);
 #endif /* defined (__linux__) && defined(__KERNEL__) */
-#endif /* __HRFS_FLAG_H__ */
+#endif /* __MTFS_FLAG_H__ */

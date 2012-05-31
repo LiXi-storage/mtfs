@@ -2,8 +2,8 @@
  * Copyright (C) 2011 Li Xi <pkuelelixi@gmail.com>
  */
 
-#ifndef __HRFS_FILE_H__
-#define __HRFS_FILE_H__
+#ifndef __MTFS_FILE_H__
+#define __MTFS_FILE_H__
 
 #if defined (__linux__) && defined(__KERNEL__)
 #include "mtfs_common.h"
@@ -59,7 +59,7 @@ struct mtfs_file_branch {
 /* file private data. */
 struct mtfs_file_info {
 	mtfs_bindex_t bnum;
-	struct mtfs_file_branch barray[HRFS_BRANCH_MAX];
+	struct mtfs_file_branch barray[MTFS_BRANCH_MAX];
 };
 
 /* DO NOT access mtfs_*_info_t directly, use following macros */
@@ -70,4 +70,4 @@ struct mtfs_file_info {
 #define mtfs_f2branch(file, bindex) (mtfs_f2barray(file)[bindex].bfile)
 #define mtfs_f2bvalid(file, bindex) (mtfs_f2barray(file)[bindex].is_valid)
 #endif /* defined (__linux__) && defined(__KERNEL__) */
-#endif /* __HRFS_FILE_H__ */
+#endif /* __MTFS_FILE_H__ */

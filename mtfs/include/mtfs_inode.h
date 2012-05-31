@@ -2,8 +2,8 @@
  * Copyright (C) 2011 Li Xi <pkuelelixi@gmail.com>
  */
 
-#ifndef __HRFS_INODE_H__
-#define __HRFS_INODE_H__
+#ifndef __MTFS_INODE_H__
+#define __MTFS_INODE_H__
 #if defined (__linux__) && defined(__KERNEL__)
 #include "debug.h"
 #include <linux/fs.h>
@@ -20,7 +20,7 @@ struct mtfs_inode_info {
 	struct rw_semaphore rwsem; /* protect barray */
 	struct semaphore write_sem;
 	mtfs_bindex_t bnum;
-	struct mtfs_inode_branch barray[HRFS_BRANCH_MAX];
+	struct mtfs_inode_branch barray[MTFS_BRANCH_MAX];
 };
 
 /* DO NOT access mtfs_*_info_t directly, use following macros */
@@ -141,4 +141,4 @@ static inline const char *mtfs_mode2type(umode_t mode)
 	}
 }
 #endif /* defined (__linux__) && defined(__KERNEL__) */
-#endif /* __HRFS_INODE_H__ */
+#endif /* __MTFS_INODE_H__ */

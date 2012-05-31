@@ -17,10 +17,9 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 
-#define HRFS_UTILS_VERSION "2.0.0"
 int mtfs_get_version(int argc, char **argv)
 {
-	printf("version: %s\n", HRFS_UTILS_VERSION);
+	printf("version: %s\n", MTFS_UTILS_VERSION);
 	return 0;
 }
 
@@ -118,7 +117,7 @@ static int mtfs_getstate(int argc, char **argv)
 	char short_opts[] = "qv";
 	int c = 0;
 	int rc = 0;
-	mtfs_param_t param = { 0 };
+	struct mtfs_param param = { 0 };
 	
 	optind = 0;
 	while ((c = getopt_long(argc, argv, short_opts, long_opts, NULL)) != -1) {
@@ -170,7 +169,7 @@ static int mtfs_setraid(int argc, char **argv)
 	char short_opts[] = "qvr:";
 	int c = 0;
 	int rc = 0;
-	mtfs_param_t param = { 0 };
+	struct mtfs_param param = { 0 };
 	raid_type_t raid_type = 0;
 	char *raid_type_arg = NULL;
 	char *end = NULL;
@@ -250,14 +249,14 @@ static int mtfs_setbranch(int argc, char **argv)
 	char short_opts[] = "qvb:d:a:x:";
 	int c = 0;
 	int rc = 0;
-	mtfs_param_t param = { 0 };
+	struct mtfs_param param = { 0 };
 	char *end = NULL;
 	char *branch_arg = NULL;
 	char *data_arg = NULL;
 	char *attr_arg = NULL;
 	char *xattr_arg = NULL;
-	struct mtfs_branch_valid valid = {HRFS_BSTATE_UNSETTED, HRFS_BSTATE_UNSETTED, HRFS_BSTATE_UNSETTED};
-	int is_valid = HRFS_BSTATE_UNSETTED;
+	struct mtfs_branch_valid valid = {MTFS_BSTATE_UNSETTED, MTFS_BSTATE_UNSETTED, MTFS_BSTATE_UNSETTED};
+	int is_valid = MTFS_BSTATE_UNSETTED;
 	mtfs_bindex_t bindex = 0;
 
 	optind = 0;
@@ -375,7 +374,7 @@ static int mtfs_rmbranch(int argc, char **argv)
 	char short_opts[] = "qvb:d:a:x:";
 	int c = 0;
 	int rc = 0;
-	mtfs_param_t param = { 0 };
+	struct mtfs_param param = { 0 };
 	char *end = NULL;
 	char *branch_arg = NULL;
 	mtfs_bindex_t bindex = 0;
@@ -446,7 +445,7 @@ static int mtfs_example(int argc, char **argv)
 	char short_opts[] = "qv";
 	int c = 0;
 	int rc = 0;
-	mtfs_param_t param = { 0 };
+	struct mtfs_param param = { 0 };
 	
 	optind = 0;
 	while ((c = getopt_long(argc, argv, short_opts, long_opts, NULL)) != -1) {
@@ -498,7 +497,7 @@ static int mtfs_log(int argc, char **argv)
 	char short_opts[] = "qv";
 	int c = 0;
 	int rc = 0;
-	mtfs_param_t param = { 0 };
+	struct mtfs_param param = { 0 };
 	
 	optind = 0;
 	while ((c = getopt_long(argc, argv, short_opts, long_opts, NULL)) != -1) {
@@ -527,7 +526,7 @@ static int mtfs_log(int argc, char **argv)
 		goto out;
 	}
 
-	mtfs_log_init(HRFS_LOG_FILENAME, HRFS_LOGLEVEL_DEBUG);
+	mtfs_log_init(MTFS_LOG_FILENAME, MTFS_LOGLEVEL_DEBUG);
 	HLOG_DEBUG("Here is log test\n");
 	do {
 		HLOG_DEBUG("arg[%d] = %s\n", optind, argv[optind]);
@@ -555,7 +554,7 @@ static int mtfs_hide(int argc, char **argv)
 	char short_opts[] = "qvu";
 	int c = 0;
 	int rc = 0;
-	mtfs_param_t param = { 0 };
+	struct mtfs_param param = { 0 };
 	int unhide = 0;
 
 	optind = 0;
@@ -635,7 +634,7 @@ static int mtfs_grouplock(int argc, char **argv)
 	char short_opts[] = "qvg:l";
 	int c = 0;
 	int rc = 0;
-	mtfs_param_t param = { 0 };
+	struct mtfs_param param = { 0 };
 	int group_id = DEFAULT_GROUP_ID;
 	char *endptr = NULL;
 	struct grouplock_file *file;

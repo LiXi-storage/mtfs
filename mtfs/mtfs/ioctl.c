@@ -19,7 +19,7 @@ static int mtfs_user_get_state(struct inode *inode, struct file *file, struct mt
 	HASSERT(bnum <= max_bnum);
 
 	state_size = mtfs_user_flag_size(bnum);
-	HRFS_ALLOC(state, state_size);
+	MTFS_ALLOC(state, state_size);
 	if (state == NULL) {
 		ret = -ENOMEM;
 		goto out;
@@ -44,7 +44,7 @@ static int mtfs_user_get_state(struct inode *inode, struct file *file, struct mt
 	ret = copy_to_user(user_state, state, state_size);
 
 free_state:	
-	HRFS_FREE(state, state_size);
+	MTFS_FREE(state, state_size);
 out:
 	HRETURN(ret);	
 }
@@ -61,7 +61,7 @@ static int mtfs_user_set_state(struct inode *inode, struct file *file, struct mt
 	HENTRY();
 
 	state_size = mtfs_user_flag_size(bnum);
-	HRFS_ALLOC(state, state_size);
+	MTFS_ALLOC(state, state_size);
 	if (state == NULL) {
 		ret = -ENOMEM;
 		goto out;
@@ -114,7 +114,7 @@ recover:
 	/* TODO: If fail, we should recover */
 	HBUG();
 free_state:	
-	HRFS_FREE(state, state_size);
+	MTFS_FREE(state, state_size);
 out:
 	HRETURN(ret);
 }
@@ -154,7 +154,7 @@ static int mtfs_user_remove_branch(struct inode *parent_inode, struct file *pare
 	struct mtfs_remove_branch_info *remove_info = NULL;
 	HENTRY();
 
-	HRFS_ALLOC_PTR(remove_info);
+	MTFS_ALLOC_PTR(remove_info);
 	if (remove_info == NULL) {
 		goto out;
 	}
@@ -167,7 +167,7 @@ static int mtfs_user_remove_branch(struct inode *parent_inode, struct file *pare
 
 	ret = mtfs_remove_branch(parent_file->f_dentry, remove_info->name, remove_info->bindex);
 out_free_info:
-	HRFS_FREE_PTR(remove_info);
+	MTFS_FREE_PTR(remove_info);
 out:
 	HRETURN(ret);
 }
@@ -277,22 +277,22 @@ int mtfs_ioctl(struct inode *inode, struct file *file, unsigned int cmd, unsigne
 	HENTRY();
 
 	switch (cmd) {
-	case HRFS_IOCTL_GET_FLAG:
-		ret = mtfs_user_get_state(inode, file, (struct mtfs_user_flag __user *)arg, HRFS_BRANCH_MAX);
+	case MTFS_IOCTL_GET_FLAG:
+		ret = mtfs_user_get_state(inode, file, (struct mtfs_user_flag __user *)arg, MTFS_BRANCH_MAX);
 		break;
-	case HRFS_IOCTL_SET_FLAG:
+	case MTFS_IOCTL_SET_FLAG:
 		ret = mtfs_user_set_state(inode,  file, (struct mtfs_user_flag __user *)arg);
 		break;
-	case HRFS_IOCTL_REMOVE_BRANCH:
+	case MTFS_IOCTL_REMOVE_BRANCH:
 		ret = mtfs_user_remove_branch(inode, file, (struct mtfs_remove_branch_info __user *)arg);
 		break;
-	case HRFS_IOCTL_RULE_ADD:
+	case MTFS_IOCTL_RULE_ADD:
 		ret = -EINVAL;
 		break;
-	case HRFS_IOCTL_RULE_DEL:
+	case MTFS_IOCTL_RULE_DEL:
 		ret = -EINVAL;
 		break;
-	case HRFS_IOCTL_RULE_LIST:
+	case MTFS_IOCTL_RULE_LIST:
 		ret = -EINVAL;
 		break;
 	default:

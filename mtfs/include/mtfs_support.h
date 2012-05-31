@@ -2,8 +2,8 @@
  * Copyright (C) 2011 Li Xi <pkuelelixi@gmail.com>
  */
 
-#ifndef __HRFS_SUPPORT_H__
-#define __HRFS_SUPPORT_H__
+#ifndef __MTFS_SUPPORT_H__
+#define __MTFS_SUPPORT_H__
 
 #if defined (__linux__) && defined(__KERNEL__)
 #include <linux/list.h>
@@ -29,4 +29,4 @@ struct lowerfs_operations {
 extern int lowerfs_register_ops(struct lowerfs_operations *fs_ops);
 extern void lowerfs_unregister_ops(struct lowerfs_operations *fs_ops);
 #endif /* defined (__linux__) && defined(__KERNEL__) */
-#endif /* __HRFS_SUPPORT_H__ */
+#endif /* __MTFS_SUPPORT_H__ */

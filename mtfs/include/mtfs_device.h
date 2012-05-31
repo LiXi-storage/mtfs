@@ -2,8 +2,8 @@
  * Copyright (C) 2011 Li Xi <pkuelelixi@gmail.com>
  */
 
-#ifndef __HRFS_DEVICE_H__
-#define __HRFS_DEVICE_H__
+#ifndef __MTFS_DEVICE_H__
+#define __MTFS_DEVICE_H__
 #if defined (__linux__) && defined(__KERNEL__)
 #include <linux/list.h>
 #include <parse_option.h>
@@ -33,7 +33,7 @@ struct mtfs_device {
 	struct proc_dir_entry *proc_entry;   /* Proc entry for this device */
 	int no_abort;                        /* Do not abort when no latest branch success */
 	mtfs_bindex_t bnum;                  /* Branch number */
-	struct mtfs_device_branch branch[HRFS_BRANCH_MAX];   /* Info for each branch */
+	struct mtfs_device_branch branch[MTFS_BRANCH_MAX];   /* Info for each branch */
 };
 
 #define mtfs_dev2bops(device, bindex) (device->branch[bindex].ops)
@@ -68,4 +68,4 @@ static inline struct mtfs_device *mtfs_f2dev(struct file *file)
 
 extern int mtfs_device_branch_errno(struct mtfs_device *device, mtfs_bindex_t bindex, __u32 emask);
 #endif /* defined (__linux__) && defined(__KERNEL__) */
-#endif /* __HRFS_DEVICE_H__ */
+#endif /* __MTFS_DEVICE_H__ */

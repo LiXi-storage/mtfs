@@ -12,17 +12,17 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-#if HRFS_IS_LUSTRE
+#if MTFS_IS_LUSTRE
 #include <liblustre.h>
 #include <lnet/lnetctl.h>
 #include <obd.h>
 #include <lustre_lib.h>
 #include <obd_lov.h>
 #include <lustre/liblustreapi.h>
-#else /* HRFS_IS_LUSTRE */
+#else /* MTFS_IS_LUSTRE */
 #include <string.h>
 #define GOTO(label, rc)   do { rc; goto label; } while (0)
-#endif /* HRFS_IS_LUSTRE */
+#endif /* MTFS_IS_LUSTRE */
 
 #define ACT_NONE        0
 #define ACT_READ        1
@@ -110,11 +110,11 @@ int main(int argc, char** argv)
                 case 'a':
                         flags |= O_APPEND;
                         break;
-#if HRFS_IS_LUSTRE
+#if MTFS_IS_LUSTRE
                 case 'd':
                         flags |= O_LOV_DELAY_CREATE;
                         break;
-#endif /* HRFS_IS_LUSTRE */
+#endif /* MTFS_IS_LUSTRE */
                 case 'z':
                         pad = 0;
                         act |= ACT_READHOLE;

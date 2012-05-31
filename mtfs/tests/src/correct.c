@@ -20,12 +20,12 @@ static inline block_t *alloc_block(int block_size)
 	
 	HASSERT(block_size > 0);
 	
-	HRFS_ALLOC_PTR(block);
+	MTFS_ALLOC_PTR(block);
 	if (block == NULL) {
 		goto out;
 	}
 	
-	HRFS_ALLOC(block->data, block_size);
+	MTFS_ALLOC(block->data, block_size);
 	if (block->data == NULL) {
 		goto free_block;
 	}
@@ -34,15 +34,15 @@ static inline block_t *alloc_block(int block_size)
 	goto out;
 
 free_block:
-	HRFS_FREE_PTR(block);
+	MTFS_FREE_PTR(block);
 out:
 	return block;
 }
 
 static inline int free_block(block_t *block)
 {
-	HRFS_FREE(block->data, block->block_size);
-	HRFS_FREE_PTR(block);
+	MTFS_FREE(block->data, block->block_size);
+	MTFS_FREE_PTR(block);
 	return 0;
 }
 
@@ -135,7 +135,7 @@ void *rw_test_init(char *file_path)
 {
 	rw_test_info_t *rw_info = NULL;
 	
-	HRFS_ALLOC_PTR(rw_info);
+	MTFS_ALLOC_PTR(rw_info);
 	if (rw_info == NULL) {
 		HERROR("Not enough memory\n");
 		goto out;
@@ -150,7 +150,7 @@ void *rw_test_init(char *file_path)
 	rw_info->file_path = strdup(file_path);
 	goto out;
 free_info:
-	HRFS_FREE_PTR(rw_info);
+	MTFS_FREE_PTR(rw_info);
 out:
 	return (void *)rw_info;
 }
@@ -202,7 +202,7 @@ int rw_test_finit(rw_test_info_t *rw_info)
 {
 	close(rw_info->fd);
 	free(rw_info->file_path);
-	HRFS_FREE_PTR(rw_info);
+	MTFS_FREE_PTR(rw_info);
 
 	return 0;
 }

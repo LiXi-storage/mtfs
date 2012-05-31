@@ -2,8 +2,8 @@
  * Copied from Lustre-2.1
  */
 
-#ifndef __HRFS_LIST_H__
-#define __HRFS_LIST_H__
+#ifndef __MTFS_LIST_H__
+#define __MTFS_LIST_H__
 
 #if defined (__linux__) && defined(__KERNEL__)
 
@@ -48,9 +48,9 @@ typedef struct list_head mtfs_list_t;
 #define mtfs_list_for_each_entry_continue(pos, head, member) \
         list_for_each_entry_continue(pos, head, member)
 
-#define HRFS_LIST_HEAD_INIT(n)		     LIST_HEAD_INIT(n)
-#define HRFS_LIST_HEAD(n)		     LIST_HEAD(n)
-#define HRFS_INIT_LIST_HEAD(p)		     INIT_LIST_HEAD(p)
+#define MTFS_LIST_HEAD_INIT(n)		     LIST_HEAD_INIT(n)
+#define MTFS_LIST_HEAD(n)		     LIST_HEAD(n)
+#define MTFS_INIT_LIST_HEAD(p)		     INIT_LIST_HEAD(p)
 
 typedef struct hlist_head mtfs_hlist_head_t;
 typedef struct hlist_node mtfs_hlist_node_t;
@@ -80,10 +80,10 @@ typedef struct hlist_node mtfs_hlist_node_t;
 #define mtfs_hlist_for_each_entry_safe(tpos, pos, n, head, member) \
         hlist_for_each_entry_safe(tpos, pos, n, head, member)
 
-#define HRFS_HLIST_HEAD_INIT		   HLIST_HEAD_INIT
-#define HRFS_HLIST_HEAD(n)		   HLIST_HEAD(n)
-#define HRFS_INIT_HLIST_HEAD(p)		   INIT_HLIST_HEAD(p)
-#define HRFS_INIT_HLIST_NODE(p)		   INIT_HLIST_NODE(p)
+#define MTFS_HLIST_HEAD_INIT		   HLIST_HEAD_INIT
+#define MTFS_HLIST_HEAD(n)		   HLIST_HEAD(n)
+#define MTFS_INIT_HLIST_HEAD(p)		   INIT_HLIST_HEAD(p)
+#define MTFS_INIT_HLIST_NODE(p)		   INIT_HLIST_NODE(p)
 
 #else /* !defined (__linux__) || !defined(__KERNEL__) */
 
@@ -105,12 +105,12 @@ struct mtfs_list_head {
 
 typedef struct mtfs_list_head mtfs_list_t;
 
-#define HRFS_LIST_HEAD_INIT(name) { &(name), &(name) }
+#define MTFS_LIST_HEAD_INIT(name) { &(name), &(name) }
 
-#define HRFS_LIST_HEAD(name) \
-	mtfs_list_t name = HRFS_LIST_HEAD_INIT(name)
+#define MTFS_LIST_HEAD(name) \
+	mtfs_list_t name = MTFS_LIST_HEAD_INIT(name)
 
-#define HRFS_INIT_LIST_HEAD(ptr) do { \
+#define MTFS_INIT_LIST_HEAD(ptr) do { \
 	(ptr)->next = (ptr); (ptr)->prev = (ptr); \
 } while (0)
 
@@ -190,7 +190,7 @@ static inline void mtfs_list_del(mtfs_list_t *entry)
 static inline void mtfs_list_del_init(mtfs_list_t *entry)
 {
 	__mtfs_list_del(entry->prev, entry->next);
-	HRFS_INIT_LIST_HEAD(entry);
+	MTFS_INIT_LIST_HEAD(entry);
 }
 
 /**
@@ -288,7 +288,7 @@ static inline void mtfs_list_splice_init(mtfs_list_t *list,
 {
 	if (!mtfs_list_empty(list)) {
 		__mtfs_list_splice(list, head);
-		HRFS_INIT_LIST_HEAD(list);
+		MTFS_INIT_LIST_HEAD(list);
 	}
 }
 
@@ -359,9 +359,9 @@ typedef struct mtfs_hlist_head {
  * "NULL" might not be defined at this point
  */
 #ifdef NULL
-#define HRFS_NULL_P NULL
+#define MTFS_NULL_P NULL
 #else
-#define HRFS_NULL_P ((void *)0)
+#define MTFS_NULL_P ((void *)0)
 #endif
 
 /**
@@ -369,10 +369,10 @@ typedef struct mtfs_hlist_head {
  * @{
  */
 
-#define HRFS_HLIST_HEAD_INIT { HRFS_NULL_P }
-#define HRFS_HLIST_HEAD(name) mtfs_hlist_head_t name = { HRFS_NULL_P }
-#define HRFS_INIT_HLIST_HEAD(ptr) ((ptr)->first = HRFS_NULL_P)
-#define HRFS_INIT_HLIST_NODE(ptr) ((ptr)->next = HRFS_NULL_P, (ptr)->pprev = HRFS_NULL_P)
+#define MTFS_HLIST_HEAD_INIT { MTFS_NULL_P }
+#define MTFS_HLIST_HEAD(name) mtfs_hlist_head_t name = { MTFS_NULL_P }
+#define MTFS_INIT_HLIST_HEAD(ptr) ((ptr)->first = MTFS_NULL_P)
+#define MTFS_INIT_HLIST_NODE(ptr) ((ptr)->next = MTFS_NULL_P, (ptr)->pprev = MTFS_NULL_P)
 
 static inline int mtfs_hlist_unhashed(const mtfs_hlist_node_t *h)
 {
@@ -402,7 +402,7 @@ static inline void mtfs_hlist_del_init(mtfs_hlist_node_t *n)
 {
 	if (n->pprev)  {
 		__mtfs_hlist_del(n);
-		HRFS_INIT_HLIST_NODE(n);
+		MTFS_INIT_HLIST_NODE(n);
 	}
 }
 
@@ -620,4 +620,4 @@ static inline void mtfs_hlist_add_after(mtfs_hlist_node_t *n,
 		(tpos = mtfs_hlist_entry(pos, type, member), 1);               \
 	     pos = n)
 
-#endif /* __HRFS_LIST_H__ */
+#endif /* __MTFS_LIST_H__ */

@@ -2,8 +2,8 @@
  * Copyright (C) 2011 Li Xi <pkuelelixi@gmail.com>
  */
 
-#ifndef __HRFS_PARSE_OPTION_H__
-#define __HRFS_PARSE_OPTION_H__
+#ifndef __MTFS_PARSE_OPTION_H__
+#define __MTFS_PARSE_OPTION_H__
 #include <memory.h>
 #include <debug.h>
 
@@ -28,7 +28,7 @@ static inline int mount_option_init(mount_option_t *mount_option, int bnum)
 	memset(mount_option, 0, sizeof(*mount_option));
 	mount_option->bnum = bnum;
 
-	HRFS_ALLOC(mount_option->branch, sizeof(*mount_option->branch) * bnum);
+	MTFS_ALLOC(mount_option->branch, sizeof(*mount_option->branch) * bnum);
 	if (mount_option->branch == NULL) {
 		goto out;
 	}
@@ -47,10 +47,10 @@ static inline int mount_option_finit(struct mount_option *option)
 	if (option->branch) {
 		for(i = 0; i < option->bnum; i++) {
 			if (option->branch[i].path) {
-				HRFS_FREE(option->branch[i].path, option->branch[i].length);
+				MTFS_FREE(option->branch[i].path, option->branch[i].length);
 			}
 		}
-		HRFS_FREE(option->branch, sizeof(*option->branch) * option->bnum);
+		MTFS_FREE(option->branch, sizeof(*option->branch) * option->bnum);
 	}
 	memset(option, 0, sizeof(*option));
 
@@ -61,7 +61,7 @@ static inline struct mount_option *mount_option_alloc(void)
 {
 	struct mount_option *option = NULL;
 	
-	HRFS_ALLOC_PTR(option);
+	MTFS_ALLOC_PTR(option);
 	if (option == NULL) {
 		goto out;
 	}
@@ -76,7 +76,7 @@ static inline void mount_option_free(struct mount_option *option)
 {
 	HASSERT(option);
 	mount_option_finit(option);
-	HRFS_FREE_PTR(option);
+	MTFS_FREE_PTR(option);
 	HASSERT(!option);
 }
 
@@ -109,4 +109,4 @@ static inline void append_dir(char *dirs, const char *one)
 /* Parse options from mount. Returns 0 on success */
 int mtfs_parse_options(char *input, mount_option_t *mount_option);
 int parse_dir_option(char *dir_option, mount_option_t *mount_option);
-#endif /* __HRFS_PARSE_OPTION_H__ */
+#endif /* __MTFS_PARSE_OPTION_H__ */

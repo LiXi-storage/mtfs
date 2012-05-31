@@ -2,8 +2,8 @@
  * Copyright (C) 2011 Li Xi <pkuelelixi@gmail.com>
  */
 
-#ifndef __HRFS_INTERNAL_H__
-#define __HRFS_INTERNAL_H__
+#ifndef __MTFS_INTERNAL_H__
+#define __MTFS_INTERNAL_H__
 
 #include <linux/version.h>
 #include <linux/sched.h>
@@ -95,4 +95,4 @@ static inline int global_write_trylock(void)
 #include "device_internal.h"
 #include "ioctl_internal.h"
 #include <mtfs_stack.h>
-#endif	/* __HRFS_INTERNAL_H__ */
+#endif	/* __MTFS_INTERNAL_H__ */

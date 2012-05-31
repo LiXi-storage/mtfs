@@ -2,8 +2,8 @@
  * Copyright (C) 2011 Li Xi <pkuelelixi@gmail.com>
  */
 
-#ifndef __HRFS_FSML_INTERNAL_H__
-#define __HRFS_FSML_INTERNAL_H__
+#ifndef __MTFS_FSML_INTERNAL_H__
+#define __MTFS_FSML_INTERNAL_H__
 
 /* For lua_stdin_is_tty() */
 #define lua_c
@@ -28,4 +28,4 @@ struct fsmL_lib {
 };
 
 char *fsmL_field_getstring(lua_State *L, int index, const char *name);
-#endif /* __HRFS_FSML_INTERNAL_H__ */
+#endif /* __MTFS_FSML_INTERNAL_H__ */

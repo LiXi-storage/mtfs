@@ -2,7 +2,7 @@
 SUBDIRS := .
 
 AM_CFLAGS=$(LLCFLAGS)
-AM_CPPFLAGS=$(LLCPPFLAGS) -DHRFS_UTILS=1
+AM_CPPFLAGS=$(LLCPPFLAGS) -DMTFS_UTILS=1
 AM_LDFLAGS := -lattr
 
 LIBUSER := $(top_builddir)/mtfs/libuser/libuser.a
@@ -24,13 +24,13 @@ endif # UTILS
 
 lib_LIBRARIES = libmtfsapi.a
 
-mtfsctl_SOURCES = hctl.c
-mtfsctl_LDADD := $(LIBREADLINE) $(LIBUSER)
-mtfsctl_DEPENDENCIES := 
+mtfsctl_SOURCES = mtfsctl.c
+mtfsctl_LDADD := $(LIBREADLINE) $(LIBUSER) libmtfsapi.a
+mtfsctl_DEPENDENCIES := $(LIBUSER) libmtfsapi.a
 
 mtfs_SOURCES = mtfs.c hide.c hide.h grouplock.c grouplock.h exit_status.h
 mtfs_LDADD := $(LIBREADLINE) libmtfsapi.a $(LIBUSER)
-mtfs_DEPENDENCIES := $(LIBUSER) $(LIBCOREUTILS) libmtfsapi.a
+mtfs_DEPENDENCIES := $(LIBUSER) libmtfsapi.a
 
 libmtfsapi_a_SOURCES = libmtfsapi.c
 

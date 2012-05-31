@@ -232,7 +232,7 @@ void mtfs_kill_block_super(struct super_block *sb)
 
 static struct file_system_type mtfs_fs_type = {
 	owner:     THIS_MODULE,
-	name:      HRFS_FS_TYPE,
+	name:      MTFS_FS_TYPE,
 	get_sb:    mtfs_get_sb,
 	kill_sb:   mtfs_kill_block_super,
 	fs_flags:  FS_RENAME_DOES_D_MOVE,

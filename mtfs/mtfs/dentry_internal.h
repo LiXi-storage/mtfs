@@ -2,8 +2,8 @@
  * Copyright (C) 2011 Li Xi <pkuelelixi@gmail.com>
  */
 
-#ifndef __HRFS_DENTRY_INTERNAL_H__
-#define __HRFS_DENTRY_INTERNAL_H__
+#ifndef __MTFS_DENTRY_INTERNAL_H__
+#define __MTFS_DENTRY_INTERNAL_H__
 #include <mtfs_dentry.h>
 #include "inode_internal.h"
 #include "super_internal.h"
@@ -18,8 +18,8 @@ static inline int mtfs_d_alloc(struct dentry *dentry, mtfs_bindex_t bnum)
 	int ret = 0;
 	
 	HASSERT(dentry);
-	HASSERT(bnum > 0 && bnum <= HRFS_BRANCH_MAX);
-	HRFS_SLAB_ALLOC_PTR(d_info, mtfs_dentry_info_cache);
+	HASSERT(bnum > 0 && bnum <= MTFS_BRANCH_MAX);
+	MTFS_SLAB_ALLOC_PTR(d_info, mtfs_dentry_info_cache);
 	if (unlikely(d_info == NULL)) {
 		ret = -ENOMEM;
 		goto out;
@@ -40,7 +40,7 @@ static inline int mtfs_d_free(struct dentry *dentry)
 	d_info = mtfs_d2info(dentry);
 	HASSERT(d_info);
 	
-	HRFS_SLAB_FREE_PTR(d_info, mtfs_dentry_info_cache);
+	MTFS_SLAB_FREE_PTR(d_info, mtfs_dentry_info_cache);
 	_mtfs_d2info(dentry) = NULL;
 	HASSERT(_mtfs_d2info(dentry) == NULL);
 	return ret;
@@ -105,4 +105,4 @@ static inline struct dentry *mtfs_d_recover_branch(struct dentry *dentry, mtfs_b
 {
 	return mtfs_s2brecover(dentry->d_sb, bindex);
 }
-#endif /* __HRFS_DENTRY_INTERNAL_H__ */
+#endif /* __MTFS_DENTRY_INTERNAL_H__ */

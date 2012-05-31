@@ -2,8 +2,8 @@
  * Copyright (C) 2011 Li Xi <pkuelelixi@gmail.com>
  */
 
-#ifndef __HRFS_SUPER_H__
-#define __HRFS_SUPER_H__
+#ifndef __MTFS_SUPER_H__
+#define __MTFS_SUPER_H__
 #if defined (__linux__) && defined(__KERNEL__)
 #include <mtfs_common.h>
 
@@ -17,7 +17,7 @@ struct mtfs_sb_branch {
 struct mtfs_sb_info {
 	struct        mtfs_device *device;
 	mtfs_bindex_t bnum; /* branch number */
-	struct        mtfs_sb_branch barray[HRFS_BRANCH_MAX];
+	struct        mtfs_sb_branch barray[MTFS_BRANCH_MAX];
 };
 
 /* DO NOT access mtfs_*_info_t directly, use following macros */
@@ -37,4 +37,4 @@ extern int mtfs_statfs(struct dentry *dentry, struct kstatfs *buf);
 extern void mtfs_clear_inode(struct inode *inode);
 extern int mtfs_show_options(struct seq_file *m, struct vfsmount *mnt);
 #endif /* defined (__linux__) && defined(__KERNEL__) */
-#endif /* __HRFS_SUPER_H__ */
+#endif /* __MTFS_SUPER_H__ */

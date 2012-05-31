@@ -2,8 +2,8 @@
  * Copyright (C) 2011 Li Xi <pkuelelixi@gmail.com>
  */
 
-#ifndef __HRFS_MMAP_H__
-#define __HRFS_MMAP_H__
+#ifndef __MTFS_MMAP_H__
+#define __MTFS_MMAP_H__
 
 extern int mtfs_writepage(struct page *page, struct writeback_control *wbc);
 extern int mtfs_readpage(struct file *file, struct page *page);
@@ -14,4 +14,4 @@ extern ssize_t mtfs_direct_IO(int rw, struct kiocb *kiocb,
 						      unsigned long nr_segs);
 extern struct page *mtfs_nopage(struct vm_area_struct *vma, unsigned long address,
                          int *type);
-#endif /* __HRFS_MMAP_H__ */
+#endif /* __MTFS_MMAP_H__ */

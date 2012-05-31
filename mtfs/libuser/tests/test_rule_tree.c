@@ -47,14 +47,14 @@ int main()
 
 	
 	fscanf(stdin, "%d", &str_num);
-	HRFS_ALLOC(rule_array, sizeof(*rule_array) * str_num);
+	MTFS_ALLOC(rule_array, sizeof(*rule_array) * str_num);
 	if (rule_array == NULL) {
 		ret = -ENOMEM;
 		goto free_all;
 	}
 	
 	for (i = 0; i < str_num; i ++) {
-		HRFS_ALLOC(rule_array[i].string, MAX_RULE_LEN * 2);
+		MTFS_ALLOC(rule_array[i].string, MAX_RULE_LEN * 2);
 		if (rule_array[i].string == NULL) {
 			ret = -ENOMEM;
 			goto free_all;
@@ -90,10 +90,10 @@ free_all:
 	if (rule_array != NULL) {
 		for (i = 0; i < str_num; i ++) {
 			if (rule_array[i].string != NULL) {
-				HRFS_FREE(rule_array[i].string, MAX_RULE_LEN * 2);
+				MTFS_FREE(rule_array[i].string, MAX_RULE_LEN * 2);
 			}			
 		}	
-		HRFS_FREE(rule_array, sizeof(*rule_array) * str_num);
+		MTFS_FREE(rule_array, sizeof(*rule_array) * str_num);
 	}
 	return ret;
 }

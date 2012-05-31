@@ -92,7 +92,7 @@ struct page *mtfs_lustre_nopage_branch(struct vm_area_struct *vma, unsigned long
 
 	file = vma->vm_file;
 	HASSERT(file);
-	hidden_file = mtfs_f_choose_branch(file, HRFS_DATA_VALID);
+	hidden_file = mtfs_f_choose_branch(file, MTFS_DATA_VALID);
 	if (IS_ERR(hidden_file)) {
 		ret = PTR_ERR(hidden_file);
 		HERROR("choose branch failed, ret = %d\n", ret);
@@ -223,7 +223,7 @@ static int mtfs_lustre_getflags(struct inode *inode, struct file *file, unsigned
 	mm_segment_t old_fs;
 	HENTRY();
 
-	ret = mtfs_i_choose_bindex(inode, HRFS_ATTR_VALID, &bindex);
+	ret = mtfs_i_choose_bindex(inode, MTFS_ATTR_VALID, &bindex);
 	if (ret) {
 		HERROR("choose bindex failed, ret = %d\n", ret);
 		goto out;

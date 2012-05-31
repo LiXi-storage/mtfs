@@ -60,7 +60,7 @@ BUILD_VER_H=$(top_builddir)/mtfs/include/mtfs_build_version.h
 
 mtfs_build_version:
 	perl $(top_builddir)/mtfs/scripts/version_tag.pl $(top_srcdir) $(top_builddir) > tmpver
-	echo "#define HRFS_RELEASE @RELEASE@" >> tmpver
+	echo "#define MTFS_RELEASE @RELEASE@" >> tmpver
 	cmp -s $(BUILD_VER_H) tmpver > tmpdiff 2> /dev/null &&          \
 		$(RM) tmpver tmpdiff ||                                 \
 		mv -f tmpver $(BUILD_VER_H)

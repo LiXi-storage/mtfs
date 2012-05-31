@@ -94,7 +94,7 @@ int mtfs_d_revalidate(struct dentry *dentry, struct nameidata *nd)
 
 	/* Do we need to update attr? */
 	if (dentry->d_inode) {
-		struct inode *hidden_inode = mtfs_i_choose_branch(dentry->d_inode, HRFS_ATTR_VALID);
+		struct inode *hidden_inode = mtfs_i_choose_branch(dentry->d_inode, MTFS_ATTR_VALID);
 		if (IS_ERR(hidden_inode)) {
 			ret = PTR_ERR(hidden_inode);
 			HERROR("choose branch failed, ret = %d\n", ret);

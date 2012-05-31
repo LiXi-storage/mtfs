@@ -2,21 +2,21 @@
  * Copyright (C) 2011 Li Xi <pkuelelixi@gmail.com>
  */
 
-#ifndef __HRFS_PROC_INTERNAL_H__
-#define __HRFS_PROC_INTERNAL_H__
+#ifndef __MTFS_PROC_INTERNAL_H__
+#define __MTFS_PROC_INTERNAL_H__
 int mtfs_insert_proc(void);
 void mtfs_remove_proc(void);
 void mtfs_proc_remove(struct proc_dir_entry **rooth);
 
 #ifdef HAVE_SYSCTL_UNNUMBERED
-#define CTL_HRFS          CTL_UNNUMBERED
-#define HRFS_PROC_DEBUG   CTL_UNNUMBERED
-#define HRFS_PROC_MEMUSED CTL_UNNUMBERED
+#define CTL_MTFS          CTL_UNNUMBERED
+#define MTFS_PROC_DEBUG   CTL_UNNUMBERED
+#define MTFS_PROC_MEMUSED CTL_UNNUMBERED
 #else /* !define(HAVE_SYSCTL_UNNUMBERED) */
-#define CTL_HRFS         (0x100)
+#define CTL_MTFS         (0x100)
 enum {
-	HRFS_PROC_DEBUG = 1, /* control debugging */
-	HRFS_PROC_MEMUSED,   /* bytes currently allocated */
+	MTFS_PROC_DEBUG = 1, /* control debugging */
+	MTFS_PROC_MEMUSED,   /* bytes currently allocated */
 };
 #endif /* !define(HAVE_SYSCTL_UNNUMBERED) */
 
@@ -37,4 +37,4 @@ struct proc_dir_entry *mtfs_proc_register(const char *name,
                                             struct mtfs_proc_vars *list, void *data);
 extern struct proc_dir_entry *mtfs_proc_root;
 extern struct proc_dir_entry *mtfs_proc_device;
-#endif /* __HRFS_PROC_INTERNAL_H__ */
+#endif /* __MTFS_PROC_INTERNAL_H__ */

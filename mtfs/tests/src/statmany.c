@@ -47,11 +47,11 @@
 #include <limits.h>
 #include <sys/ioctl.h>
 
-#if HRFS_IS_LUSTRE
+#if MTFS_IS_LUSTRE
 #include <liblustre.h>
 #include <lustre_lib.h>
 #include <obd.h>
-#endif /* HRFS_IS_LUSTRE */
+#endif /* MTFS_IS_LUSTRE */
 
 struct option longopts[] = {
 	{"ea", 0, 0, 'e'},
@@ -207,7 +207,7 @@ int main(int argc, char ** argv)
                                 break;
                         }
 		} else if (mode == 'l') {
-#ifdef HRFS_IS_LUSTRE
+#ifdef MTFS_IS_LUSTRE
                         struct obd_ioctl_data data;
                         char rawbuf[8192];
                         char *buf = rawbuf;
@@ -233,7 +233,7 @@ int main(int argc, char ** argv)
                                        strerror(errno));
                                 break;
                         }
-#endif /* HRFS_IS_LUSTRE */
+#endif /* MTFS_IS_LUSTRE */
                 }
                 if ((i % 10000) == 0) {
                         printf(" - stat %lu (time %ld ; total %ld ; last %ld)\n",

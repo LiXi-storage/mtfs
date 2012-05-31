@@ -194,7 +194,7 @@ static int mtfs_readpage_nounlock(struct file *file, struct page *page)
 	void *page_data = NULL;
 	HENTRY();
 
-	ret = mtfs_i_choose_bindex(page->mapping->host, HRFS_DATA_VALID, &bindex);
+	ret = mtfs_i_choose_bindex(page->mapping->host, MTFS_DATA_VALID, &bindex);
 	if (ret) {
 		HERROR("choose bindex failed, ret = %d\n", ret);
 		goto out;
@@ -292,13 +292,13 @@ ssize_t mtfs_direct_IO(int rw, struct kiocb *kiocb,
 	struct kiocb new_kiocb;
 	HENTRY();
 	
-	HRFS_ALLOC(iov_new, length);
+	MTFS_ALLOC(iov_new, length);
 	if (!iov_new) {
 		ret = -ENOMEM;
 		goto out;
 	}
 	
-	HRFS_ALLOC(iov_tmp, length);
+	MTFS_ALLOC(iov_tmp, length);
 	if (!iov_tmp) {
 		ret = -ENOMEM;
 		goto out_new_alloced;
@@ -330,9 +330,9 @@ ssize_t mtfs_direct_IO(int rw, struct kiocb *kiocb,
 	}
 
 //tmp_alloced_err:
-	HRFS_FREE(iov_tmp, length);
+	MTFS_FREE(iov_tmp, length);
 out_new_alloced:
-	HRFS_FREE(iov_new, length);
+	MTFS_FREE(iov_new, length);
 out:
 	HRETURN(ret);
 }

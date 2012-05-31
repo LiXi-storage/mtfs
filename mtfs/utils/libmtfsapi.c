@@ -26,7 +26,7 @@ void mtfs_dump_state(struct mtfs_user_flag *state)
 	return;
 }
 
-int mtfs_api_getstate(char *path, mtfs_param_t *param)
+int mtfs_api_getstate(char *path, struct mtfs_param *param)
 {
 	int ret = 0;
 	int len = strlen(path);
@@ -40,8 +40,8 @@ int mtfs_api_getstate(char *path, mtfs_param_t *param)
 		goto out;
 	}
 	
-	state_size = mtfs_user_flag_size(HRFS_BRANCH_MAX);
-	HRFS_ALLOC(state, state_size);
+	state_size = mtfs_user_flag_size(MTFS_BRANCH_MAX);
+	MTFS_ALLOC(state, state_size);
 	if (state == NULL) {
 		ret = -ENOMEM;
 		goto out;
@@ -54,7 +54,7 @@ int mtfs_api_getstate(char *path, mtfs_param_t *param)
 		goto free_state;
 	}
 	
-	ret = ioctl(fd, HRFS_IOCTL_GET_FLAG, (void *)state);
+	ret = ioctl(fd, MTFS_IOCTL_GET_FLAG, (void *)state);
 	if (ret) {
 		HERROR("Fail to getstate '%s'\n", path);
 		goto free_state;
@@ -64,12 +64,12 @@ int mtfs_api_getstate(char *path, mtfs_param_t *param)
 	mtfs_dump_state(state);
 	HPRINT("\n");
 free_state:
-	HRFS_FREE(state, state_size);
+	MTFS_FREE(state, state_size);
 out:
 	return ret;
 }
 
-int mtfs_api_setraid(char *path, raid_type_t raid_type, mtfs_param_t *param)
+int mtfs_api_setraid(char *path, raid_type_t raid_type, struct mtfs_param *param)
 {
 	int ret = 0;
 	int len = strlen(path);
@@ -90,8 +90,8 @@ int mtfs_api_setraid(char *path, raid_type_t raid_type, mtfs_param_t *param)
 		goto out;
 	}
 
-	state_size = mtfs_user_flag_size(HRFS_BRANCH_MAX);
-	HRFS_ALLOC(state, state_size);
+	state_size = mtfs_user_flag_size(MTFS_BRANCH_MAX);
+	MTFS_ALLOC(state, state_size);
 	if (state == NULL) {
 		ret = -ENOMEM;
 		goto out;
@@ -104,7 +104,7 @@ int mtfs_api_setraid(char *path, raid_type_t raid_type, mtfs_param_t *param)
 		goto free_state;
 	}
 
-	ret = ioctl(fd, HRFS_IOCTL_GET_FLAG, (void *)state);
+	ret = ioctl(fd, MTFS_IOCTL_GET_FLAG, (void *)state);
 	if (ret) {
 		HERROR("fail to getstate '%s', ret = %d\n", path, ret);
 		goto free_state;
@@ -115,12 +115,12 @@ int mtfs_api_setraid(char *path, raid_type_t raid_type, mtfs_param_t *param)
 	mtfs_dump_state(state);
 
 	for (bindex = 0; bindex < state->bnum; bindex++) {
-		state->state[bindex].flag &= ~(HRFS_FLAG_RAID_MASK);
-		state->state[bindex].flag |= (raid_type & HRFS_FLAG_RAID_MASK);
-		state->state[bindex].flag |= HRFS_FLAG_SETED;
+		state->state[bindex].flag &= ~(MTFS_FLAG_RAID_MASK);
+		state->state[bindex].flag |= (raid_type & MTFS_FLAG_RAID_MASK);
+		state->state[bindex].flag |= MTFS_FLAG_SETED;
 	}
 
-	ret = ioctl(fd, HRFS_IOCTL_SET_FLAG, (void *)state);
+	ret = ioctl(fd, MTFS_IOCTL_SET_FLAG, (void *)state);
 	if (ret) {
 		HERROR("fail to setstate '%s', ret = %d\n", path, ret);
 		goto free_state;
@@ -130,12 +130,12 @@ int mtfs_api_setraid(char *path, raid_type_t raid_type, mtfs_param_t *param)
 	mtfs_dump_state(state);	
 	HPRINT("\n");
 free_state:
-	HRFS_FREE(state, state_size);
+	MTFS_FREE(state, state_size);
 out:
 	return ret;
 }
 
-int mtfs_api_setbranch(const char *path, mtfs_bindex_t bindex, struct mtfs_branch_valid *valid, mtfs_param_t *param)
+int mtfs_api_setbranch(const char *path, mtfs_bindex_t bindex, struct mtfs_branch_valid *valid, struct mtfs_param *param)
 {
 	int ret = 0;
 	int len = strlen(path);
@@ -149,8 +149,8 @@ int mtfs_api_setbranch(const char *path, mtfs_bindex_t bindex, struct mtfs_branc
 		goto out;
 	}
 
-	state_size = mtfs_user_flag_size(HRFS_BRANCH_MAX);
-	HRFS_ALLOC(state, state_size);
+	state_size = mtfs_user_flag_size(MTFS_BRANCH_MAX);
+	MTFS_ALLOC(state, state_size);
 	if (state == NULL) {
 		ret = -ENOMEM;
 		goto out;
@@ -163,7 +163,7 @@ int mtfs_api_setbranch(const char *path, mtfs_bindex_t bindex, struct mtfs_branc
 		goto free_state;
 	}
 
-	ret = ioctl(fd, HRFS_IOCTL_GET_FLAG, (void *)state);
+	ret = ioctl(fd, MTFS_IOCTL_GET_FLAG, (void *)state);
 	if (ret) {
 		HERROR("fail to setbranch %d of '%s', ret = %d\n",
 		       bindex, path, ret);
@@ -181,11 +181,11 @@ int mtfs_api_setbranch(const char *path, mtfs_bindex_t bindex, struct mtfs_branc
 		goto free_state;
 	}
 
-	if (valid->data_valid != HRFS_BSTATE_UNSETTED) {
-		if (valid->data_valid == HRFS_BSTATE_VALID) {
-			state->state[bindex].flag &= ~(HRFS_FLAG_DATABAD);
-		} else if (valid->data_valid == HRFS_BSTATE_INVALID) {
-			state->state[bindex].flag |= HRFS_FLAG_DATABAD;
+	if (valid->data_valid != MTFS_BSTATE_UNSETTED) {
+		if (valid->data_valid == MTFS_BSTATE_VALID) {
+			state->state[bindex].flag &= ~(MTFS_FLAG_DATABAD);
+		} else if (valid->data_valid == MTFS_BSTATE_INVALID) {
+			state->state[bindex].flag |= MTFS_FLAG_DATABAD;
 		} else {
 			HERROR("Invalid data_valid\n");
 			ret = -EINVAL;
@@ -194,11 +194,11 @@ int mtfs_api_setbranch(const char *path, mtfs_bindex_t bindex, struct mtfs_branc
 	}
 
 	/* TODO: attr valid bit */
-	if (valid->attr_valid != HRFS_BSTATE_UNSETTED) {
-		if (valid->attr_valid == HRFS_BSTATE_VALID) {
-			state->state[bindex].flag &= ~(HRFS_FLAG_DATABAD);
-		} else if (valid->attr_valid == HRFS_BSTATE_INVALID) {
-			state->state[bindex].flag |= HRFS_FLAG_DATABAD;
+	if (valid->attr_valid != MTFS_BSTATE_UNSETTED) {
+		if (valid->attr_valid == MTFS_BSTATE_VALID) {
+			state->state[bindex].flag &= ~(MTFS_FLAG_DATABAD);
+		} else if (valid->attr_valid == MTFS_BSTATE_INVALID) {
+			state->state[bindex].flag |= MTFS_FLAG_DATABAD;
 		} else {
 			HERROR("Invalid data_valid\n");
 			ret = -EINVAL;
@@ -207,11 +207,11 @@ int mtfs_api_setbranch(const char *path, mtfs_bindex_t bindex, struct mtfs_branc
 	}
 
 	/* TODO: xattr valid bit */
-	if (valid->xattr_valid != HRFS_BSTATE_UNSETTED) {
-		if (valid->xattr_valid == HRFS_BSTATE_VALID) {
-			state->state[bindex].flag &= ~(HRFS_FLAG_DATABAD);
-		} else if (valid->xattr_valid == HRFS_BSTATE_INVALID) {
-			state->state[bindex].flag |= HRFS_FLAG_DATABAD;
+	if (valid->xattr_valid != MTFS_BSTATE_UNSETTED) {
+		if (valid->xattr_valid == MTFS_BSTATE_VALID) {
+			state->state[bindex].flag &= ~(MTFS_FLAG_DATABAD);
+		} else if (valid->xattr_valid == MTFS_BSTATE_INVALID) {
+			state->state[bindex].flag |= MTFS_FLAG_DATABAD;
 		} else {
 			HERROR("Invalid data_valid\n");
 			ret = -EINVAL;
@@ -219,8 +219,8 @@ int mtfs_api_setbranch(const char *path, mtfs_bindex_t bindex, struct mtfs_branc
 		}
 	}
 
-        state->state[bindex].flag |= HRFS_FLAG_SETED;
-	ret = ioctl(fd, HRFS_IOCTL_SET_FLAG, (void *)state);
+        state->state[bindex].flag |= MTFS_FLAG_SETED;
+	ret = ioctl(fd, MTFS_IOCTL_SET_FLAG, (void *)state);
 	if (ret) {
 		HERROR("fail to setstate '%s', ret = %d\n", path, ret);
 		goto free_state;
@@ -230,7 +230,7 @@ int mtfs_api_setbranch(const char *path, mtfs_bindex_t bindex, struct mtfs_branc
 	mtfs_dump_state(state);	
 	HPRINT("\n");
 free_state:
-	HRFS_FREE(state, state_size);
+	MTFS_FREE(state, state_size);
 out:
 	return ret;
 }
@@ -264,7 +264,7 @@ static char *get_entry_name(char *path)
 	return entry_name;
 }
 
-int mtfs_api_rmbranch(const char *path, mtfs_bindex_t bindex, mtfs_param_t *param)
+int mtfs_api_rmbranch(const char *path, mtfs_bindex_t bindex, struct mtfs_param *param)
 {
 	int ret = 0;
 	int len = strlen(path);
@@ -279,13 +279,13 @@ int mtfs_api_rmbranch(const char *path, mtfs_bindex_t bindex, mtfs_param_t *para
 		goto out;
 	}
 
-	HRFS_ALLOC_PTR(remove_info);
+	MTFS_ALLOC_PTR(remove_info);
 	if (remove_info == NULL) {
 		ret = -ENOMEM;
 		goto out;
 	}
 
-	HRFS_ALLOC(buff, PATH_MAX + 1);
+	MTFS_ALLOC(buff, PATH_MAX + 1);
 	if (buff == NULL) {
 		ret = -ENOMEM;
 		goto out_free_info;
@@ -303,14 +303,21 @@ int mtfs_api_rmbranch(const char *path, mtfs_bindex_t bindex, mtfs_param_t *para
 	strncpy(remove_info->name, entry_name, strlen(entry_name));
 	remove_info->bindex = bindex;
 
-	ret = ioctl(dirfd(dir), HRFS_IOCTL_REMOVE_BRANCH,
+	ret = ioctl(dirfd(dir), MTFS_IOCTL_REMOVE_BRANCH,
 	            (void *)remove_info);
 
 	closedir(dir);
 out_free_dir:
-	HRFS_FREE(buff, PATH_MAX + 1);
+	MTFS_FREE(buff, PATH_MAX + 1);
 out_free_info:
-	HRFS_FREE_PTR(remove_info);
+	MTFS_FREE_PTR(remove_info);
 out:
+	return ret;
+}
+
+int mtfsctl_api_debug_kernel(const char *filename, struct mtfs_param *param)
+{
+	int ret = 0;
+
 	return ret;
 }

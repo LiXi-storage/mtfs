@@ -12,8 +12,8 @@ TESTS_DIR=${TESTS_DIR:-$(cd $(dirname $0); echo $PWD)}
 init_test_env
 
 echo "==== $0: started ===="
-BRANCH_0="$HRFS_DIR1/test"
-BRANCH_1="$HRFS_DIR2/test"
+BRANCH_0="$MTFS_DIR1/test"
+BRANCH_1="$MTFS_DIR2/test"
 
 check_nonexist()
 {
@@ -56,8 +56,8 @@ check_exist()
 liberate_file()
 {
 	local FILE=$1
-	$UTIL_HRFS setbranch -b 0 -d 0 $FILE 2>&1 > /dev/null || error "set flag failed"
-	$UTIL_HRFS setbranch -b 1 -d 0 $FILE 2>&1 > /dev/null || error "set flag failed"
+	$UTIL_MTFS setbranch -b 0 -d 0 $FILE 2>&1 > /dev/null || error "set flag failed"
+	$UTIL_MTFS setbranch -b 1 -d 0 $FILE 2>&1 > /dev/null || error "set flag failed"
 }
 
 # Dentry should be alright if the bad branch is removed.
@@ -78,7 +78,7 @@ remove_bad_branch()
 	liberate_file $DIR
 	check_exist $DIR/$tfile || error "not exist $?"
 
-	$UTIL_HRFS setbranch -b $BRANCH_NUM -d 1 $DIR 2>&1 > /dev/null || error "set flag failed"
+	$UTIL_MTFS setbranch -b $BRANCH_NUM -d 1 $DIR 2>&1 > /dev/null || error "set flag failed"
 	rm $BRANCH_DIR/$tfile -f || error "rm branch[$BRANCH_NUM] failed"
 
 	if [ "$LOWERFS_DIR_INVALID_WHEN_REMOVED" = "no" ]; then
@@ -117,7 +117,7 @@ remove_good_branch()
 	liberate_file $DIR
 	check_exist $DIR/$tfile || error "not exist $?"
 
-	$UTIL_HRFS setbranch -b $BAD_BRANCH_NUM -d 1 $DIR 2>&1 > /dev/null || error "set flag failed"
+	$UTIL_MTFS setbranch -b $BAD_BRANCH_NUM -d 1 $DIR 2>&1 > /dev/null || error "set flag failed"
 	rm $BRANCH_DIR/$tfile -f || error "rm branch[$BRANCH_NUM] failed"
 
 	if [ "$LOWERFS_DIR_INVALID_WHEN_REMOVED" = "no" ]; then
@@ -153,14 +153,14 @@ run_test 0b "removing good branches"
 
 test_1a()
 {
-	$UTIL_HRFS setbranch -b 0 -d 1 $HRFS_MNT1
-	$UTIL_HRFS getstate $HRFS_MNT1
-	$UTIL_HRFS setbranch -b 0 -d 0 $HRFS_MNT1
-	$UTIL_HRFS getstate $HRFS_MNT1
-	$UTIL_HRFS setbranch -b 1 -d 1 $HRFS_MNT1
-	$UTIL_HRFS getstate $HRFS_MNT1
-	$UTIL_HRFS setbranch -b 1 -d 0 $HRFS_MNT1
-	$UTIL_HRFS getstate $HRFS_MNT1
+	$UTIL_MTFS setbranch -b 0 -d 1 $MTFS_MNT1
+	$UTIL_MTFS getstate $MTFS_MNT1
+	$UTIL_MTFS setbranch -b 0 -d 0 $MTFS_MNT1
+	$UTIL_MTFS getstate $MTFS_MNT1
+	$UTIL_MTFS setbranch -b 1 -d 1 $MTFS_MNT1
+	$UTIL_MTFS getstate $MTFS_MNT1
+	$UTIL_MTFS setbranch -b 1 -d 0 $MTFS_MNT1
+	$UTIL_MTFS getstate $MTFS_MNT1
 }
 run_test 1a "set and get state of mount point"
 
@@ -168,7 +168,7 @@ check_isolate()
 {
 	local ENTRY="$1"
 	local BINDEX="$2"
-	FAILED_BINDEX=$($UTIL_HRFS getstate $ENTRY | grep ffff | awk '{print $1}')
+	FAILED_BINDEX=$($UTIL_MTFS getstate $ENTRY | grep ffff | awk '{print $1}')
 	if [ "$FAILED_BINDEX" = "$BINDEX" ]; then
 		return 0
 	fi
@@ -192,11 +192,11 @@ isolate_long_path()
 	}
 	touch ./$ENTRY
 
-	$UTIL_HRFS rmbranch -b $BINDEX $ENTRY  || error "failed to rmbranch";
+	$UTIL_MTFS rmbranch -b $BINDEX $ENTRY  || error "failed to rmbranch";
 	check_isolate $ENTRY $BINDEX || error "failed to isolate";
 	local OPPOSITE_BINDEX=$(get_opposite_bindex $BINDEX)
-	echo "$UTIL_HRFS setbranch -b $OPPOSITE_BINDEX -d 1 $ENTRY"
-	$UTIL_HRFS setbranch -b $OPPOSITE_BINDEX -d 1 ./ 2>&1 > /dev/null || error "set flag failed"
+	echo "$UTIL_MTFS setbranch -b $OPPOSITE_BINDEX -d 1 $ENTRY"
+	$UTIL_MTFS setbranch -b $OPPOSITE_BINDEX -d 1 ./ 2>&1 > /dev/null || error "set flag failed"
 	check_nonexist $ENTRY || error "$ENTRY exist $?"
 
 	cd $PWD

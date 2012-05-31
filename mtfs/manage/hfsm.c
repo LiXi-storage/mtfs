@@ -495,7 +495,7 @@ char *fsmL_field_getstring(lua_State *L, int index, const char *name)
 		       name, luaL_typename(L, -1));
 		goto out;
 	}
-	HRFS_STRDUP(value, lua_tostring(L, -1));
+	MTFS_STRDUP(value, lua_tostring(L, -1));
 	lua_remove(L, -1);
 out:
 	return value;	

@@ -8,11 +8,11 @@ init_test_env
 
 cleanup_abandon()
 {
-	rm $HRFS_DIR1/test/* -fr
-	rm $HRFS_DIR2/test/* -fr
+	rm $MTFS_DIR1/test/* -fr
+	rm $MTFS_DIR2/test/* -fr
 	cleanup_and_setup
-	$UTIL_HRFS setbranch -b 0 -d 0 $HRFS_MNT1/test/
-	$UTIL_HRFS setbranch -b 1 -d 0 $HRFS_MNT1/test/
+	$UTIL_MTFS setbranch -b 0 -d 0 $MTFS_MNT1/test/
+	$UTIL_MTFS setbranch -b 1 -d 0 $MTFS_MNT1/test/
 }
 
 cleanup_abandon
@@ -26,8 +26,8 @@ rm $ABANDON_DIR -fr
 mkdir $ABANDON_DIR || error "mkdir $ABANDON_DIR failed"
 
 export DIR=$ABANDON_DIR
-export DIR1=$HRFS_MNT1/$DIR_SUB/abandon_tests
-export DIR2=$HRFS_MNT2/$DIR_SUB/abandon_tests
+export DIR1=$MTFS_MNT1/$DIR_SUB/abandon_tests
+export DIR2=$MTFS_MNT2/$DIR_SUB/abandon_tests
 
 export ABANDON_BINDEX="0"
 bash posix.sh

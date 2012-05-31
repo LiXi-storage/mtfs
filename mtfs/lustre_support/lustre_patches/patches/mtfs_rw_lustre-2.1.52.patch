@@ -6,10 +6,10 @@ Index: lustre-2.1.52/lustre/include/cl_object.h
          loff_t      crw_pos;
          size_t      crw_count;
          int         crw_nonblock;
-+#ifndef DISABLE_HRFS_SUPPORT
++#ifndef DISABLE_MTFS_SUPPORT
 +        loff_t      crw_endpos;
 +        int         crw_endpos_used;
-+#endif /* !DISABLE_HRFS_SUPPORT */
++#endif /* !DISABLE_MTFS_SUPPORT */
  };
  
  
@@ -17,9 +17,9 @@ Index: lustre-2.1.52/lustre/include/cl_object.h
                                  struct lu_device *next);
  /** @} clio */
  
-+#ifndef DISABLE_HRFS_SUPPORT
++#ifndef DISABLE_MTFS_SUPPORT
 +void mtfs_lu_env_attach(struct lu_env *env);
-+#endif /* !DISABLE_HRFS_SUPPORT */
++#endif /* !DISABLE_MTFS_SUPPORT */
 +
  #endif /* _LINUX_CL_OBJECT_H */
 Index: lustre-2.1.52/lustre/llite/file.c
@@ -31,7 +31,7 @@ Index: lustre-2.1.52/lustre/llite/file.c
          return ret;
  }
 +
-+#ifndef DISABLE_HRFS_SUPPORT
++#ifndef DISABLE_MTFS_SUPPORT
 +#include <mtfs/mtfs_common.h>
 +#include <mtfs/mtfs_file.h>
 +#include <mtfs/mtfs_oplist.h>
@@ -59,9 +59,9 @@ Index: lustre-2.1.52/lustre/llite/file.c
 +                }
 +        }
 +        if (vector->mtfs_env != NULL) {
-+               HRFS_FREE(vector->mtfs_env, sizeof(*vector->mtfs_env) * vector->bnum);
++               MTFS_FREE(vector->mtfs_env, sizeof(*vector->mtfs_env) * vector->bnum);
 +        }
-+        HRFS_FREE(vector, sizeof(*vector));
++        MTFS_FREE(vector, sizeof(*vector));
 +        _HRETURN();
 +}
 +
@@ -91,7 +91,7 @@ Index: lustre-2.1.52/lustre/llite/file.c
 +        int result = 0;
 +        HENTRY();
 +
-+        HRFS_ALLOC(vector, sizeof(*vector));
++        MTFS_ALLOC(vector, sizeof(*vector));
 +        if (vector == NULL) {
 +                result = -ENOMEM;
 +                goto out;
@@ -99,7 +99,7 @@ Index: lustre-2.1.52/lustre/llite/file.c
 +
 +        vector->bnum = bnum;
 +
-+        HRFS_ALLOC(vector->mtfs_env, sizeof(*vector->mtfs_env) * bnum);
++        MTFS_ALLOC(vector->mtfs_env, sizeof(*vector->mtfs_env) * bnum);
 +        if (vector->mtfs_env == NULL) {
 +                result = -ENOMEM;
 +                goto out_free_vector;
@@ -120,9 +120,9 @@ Index: lustre-2.1.52/lustre/llite/file.c
 +                cl_env_put(vector->mtfs_env[bindex].env,
 +                           &vector->mtfs_env[bindex].refcheck);
 +        }
-+        HRFS_FREE(vector->mtfs_env, sizeof(*vector->mtfs_env) * vector->bnum);
++        MTFS_FREE(vector->mtfs_env, sizeof(*vector->mtfs_env) * vector->bnum);
 +out_free_vector:
-+        HRFS_FREE(vector, sizeof(*vector));
++        MTFS_FREE(vector, sizeof(*vector));
 +out:
 +        if (result) {
 +                vector = ERR_PTR(result);
@@ -550,7 +550,7 @@ Index: lustre-2.1.52/lustre/llite/file.c
 +        HRETURN(result);
 +}
 +EXPORT_SYMBOL(mtfs_ll_file_writev);
-+#endif /* !DISABLE_HRFS_SUPPORT */
++#endif /* !DISABLE_MTFS_SUPPORT */
 Index: lustre-2.1.52/lustre/obdclass/cl_object.c
 ===================================================================
 --- lustre-2.1.52.orig/lustre/obdclass/cl_object.c	2012-03-14 09:17:32.000000000 +0800
@@ -560,7 +560,7 @@ Index: lustre-2.1.52/lustre/obdclass/cl_object.c
          cl_env_store_fini();
  }
 +
-+#ifndef DISABLE_HRFS_SUPPORT
++#ifndef DISABLE_MTFS_SUPPORT
 +void mtfs_lu_env_attach(struct lu_env *env)
 +{
 +        struct cl_env *cle;
@@ -569,7 +569,7 @@ Index: lustre-2.1.52/lustre/obdclass/cl_object.c
 +        cl_env_attach(cle);
 +}
 +EXPORT_SYMBOL(mtfs_lu_env_attach);
-+#endif /* !DISABLE_HRFS_SUPPORT */
++#endif /* !DISABLE_MTFS_SUPPORT */
 Index: lustre-2.1.52/lustre/lov/lov_io.c
 ===================================================================
 --- lustre-2.1.52.orig/lustre/lov/lov_io.c	2012-03-14 09:17:32.000000000 +0800
@@ -578,7 +578,7 @@ Index: lustre-2.1.52/lustre/lov/lov_io.c
                  if (next <= start * ssize)
                          next = ~0ull;
  
-+#ifndef DISABLE_HRFS_SUPPORT
++#ifndef DISABLE_MTFS_SUPPORT
 +                if (io->u.ci_rw.crw_endpos_used) {
 +                        LASSERT(io->u.ci_rw.crw_endpos <= lio->lis_io_endpos);
 +
@@ -590,11 +590,11 @@ Index: lustre-2.1.52/lustre/lov/lov_io.c
 +                        io->u.ci_rw.crw_count = min_t(loff_t, lio->lis_io_endpos,
 +                                                      next) - io->u.ci_rw.crw_pos;
 +                }
-+#else /* !DISABLE_HRFS_SUPPORT */
++#else /* !DISABLE_MTFS_SUPPORT */
                  io->ci_continue = next < lio->lis_io_endpos;
                  io->u.ci_rw.crw_count = min_t(loff_t, lio->lis_io_endpos,
                                                next) - io->u.ci_rw.crw_pos;
-+#endif /* DISABLE_HRFS_SUPPORT */
++#endif /* DISABLE_MTFS_SUPPORT */
                  lio->lis_pos    = io->u.ci_rw.crw_pos;
                  lio->lis_endpos = io->u.ci_rw.crw_pos + io->u.ci_rw.crw_count;
                  CDEBUG(D_VFSTRACE, "stripe: "LPU64" chunk: ["LPU64", "LPU64") "LPU64"\n",

@@ -2,8 +2,8 @@
  * Copyright (C) 2011 Li Xi <pkuelelixi@gmail.com>
  */
 
-#ifndef __HRFS_RANDOM_H__
-#define __HRFS_RANDOM_H__
+#ifndef __MTFS_RANDOM_H__
+#define __MTFS_RANDOM_H__
 #if defined (__linux__) && defined(__KERNEL__)
 
 #else /* !(defined (__linux__) && defined(__KERNEL__)) */
@@ -43,4 +43,4 @@ static inline int mtfs_rand_range(int lower_bound, int upper_bound)
 }
 
 #endif /* !defined (__linux__) && defined(__KERNEL__) */
-#endif /* __HRFS_RANDOM_H__ */
+#endif /* __MTFS_RANDOM_H__ */

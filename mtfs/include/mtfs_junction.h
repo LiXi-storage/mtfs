@@ -2,8 +2,8 @@
  * Copyright (C) 2011 Li Xi <pkuelelixi@gmail.com>
  */
 
-#ifndef __HRFS_JUNCTION_H__
-#define __HRFS_JUNCTION_H__
+#ifndef __MTFS_JUNCTION_H__
+#define __MTFS_JUNCTION_H__
 
 #if defined (__linux__) && defined(__KERNEL__)
 #include <linux/list.h>
@@ -36,4 +36,4 @@ struct mtfs_junction {
 extern int junction_register(struct mtfs_junction *junction);
 extern void junction_unregister(struct mtfs_junction *junction);
 #endif /* defined (__linux__) && defined(__KERNEL__) */
-#endif /* __HRFS_JUNCTION_H__ */
+#endif /* __MTFS_JUNCTION_H__ */

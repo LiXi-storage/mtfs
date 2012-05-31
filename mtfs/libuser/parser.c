@@ -134,7 +134,7 @@ static int match_number(substring_t *s, int *result, int base)
 #if 0
 	buf = kmalloc(s->to - s->from + 1, GFP_KERNEL);
 #else
-	HRFS_ALLOC(buf, s->to - s->from + 1);
+	MTFS_ALLOC(buf, s->to - s->from + 1);
 #endif
 	if (!buf)
 		return -ENOMEM;
@@ -147,7 +147,7 @@ static int match_number(substring_t *s, int *result, int base)
 #if 0
 	kfree(buf);
 #else
-	HRFS_FREE(buf, s->to - s->from + 1);
+	MTFS_FREE(buf, s->to - s->from + 1);
 #endif
 	return ret;
 }

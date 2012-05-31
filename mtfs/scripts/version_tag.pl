@@ -211,7 +211,7 @@ sub generate_ver($$$)
 
     #print "localtime: " . localtime($mtime) . "\n";
 
-    my $mtfs_vers = $ENV{HRFS_VERS};
+    my $mtfs_vers = $ENV{MTFS_VERS};
 
     print "#define BUILD_VERSION \"";
 
@@ -251,7 +251,7 @@ if ($ARGV[0]) {
 }
 my $tag = get_tag();
 my $mtime = get_latest_mtime()
-    if (!defined($ENV{HRFS_VERS}));
+    if (!defined($ENV{MTFS_VERS}));
 
 if ($progname eq "version_tag.pl") {
     my $linuxdir = get_linuxdir();

@@ -2,8 +2,8 @@
  * Copyright (C) 2011 Li Xi <pkuelelixi@gmail.com>
  */
 
-#ifndef __HRFS_MMAP_INTERNAL_H__
-#define __HRFS_MMAP_INTERNAL_H__
+#ifndef __MTFS_MMAP_INTERNAL_H__
+#define __MTFS_MMAP_INTERNAL_H__
 #include <mtfs_mmap.h>
 extern struct address_space_operations mtfs_aops;
 extern struct vm_operations_struct mtfs_file_vm_ops;
@@ -37,4 +37,4 @@ static inline int copy_page_data(void *broken_page_data, struct page *correct_pa
 	
 	return ret;
 }
-#endif /* __HRFS_MMAP_INTERNAL_H__ */
+#endif /* __MTFS_MMAP_INTERNAL_H__ */

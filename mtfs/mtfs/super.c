@@ -67,16 +67,16 @@ int mtfs_statfs(struct dentry *dentry, struct kstatfs *buf)
 	struct super_block *sb = dentry->d_sb;
 	HENTRY();
 
-	HRFS_ALLOC(hidden_s_dev, sizeof(*hidden_s_dev) * mtfs_s2bnum(sb));
+	MTFS_ALLOC(hidden_s_dev, sizeof(*hidden_s_dev) * mtfs_s2bnum(sb));
 	if (!hidden_s_dev) {
 		err = -ENOMEM;
 		goto out;
 	}
 
-	/* HRFS_ALLOC will do this */
+	/* MTFS_ALLOC will do this */
 	// memset(buf, 0, sizeof(struct kstatfs));
 
-	buf->f_type = HRFS_SUPER_MAGIC;
+	buf->f_type = MTFS_SUPER_MAGIC;
 
 	bnum = mtfs_s2bnum(sb);
 	for (global_bindex = 0; global_bindex < bnum; global_bindex++) {
@@ -111,7 +111,7 @@ int mtfs_statfs(struct dentry *dentry, struct kstatfs *buf)
 		buf->f_ffree += rsb.f_ffree;
 	}
 
-	HRFS_FREE(hidden_s_dev, sizeof(*hidden_s_dev) * mtfs_s2bnum(sb));
+	MTFS_FREE(hidden_s_dev, sizeof(*hidden_s_dev) * mtfs_s2bnum(sb));
 
 out:
 	HRETURN(err);

@@ -2,8 +2,8 @@
  * Copyright (C) 2011 Li Xi <pkuelelixi@gmail.com>
  */
 
-#ifndef __HRFS_RAID_H__
-#define __HRFS_RAID_H__
+#ifndef __MTFS_RAID_H__
+#define __MTFS_RAID_H__
 
 #define RAID_TYPE_NONE 0x0fff
 #define RAID_TYPE_RAID0 0
@@ -47,4 +47,4 @@ static inline int raid_type_is_valid(raid_type_t raid_type)
 	return ret;	
 }
 
-#endif /* __HRFS_RAID_H__ */
+#endif /* __MTFS_RAID_H__ */

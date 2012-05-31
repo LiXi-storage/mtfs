@@ -1,8 +1,8 @@
 /*
  * Copyright (C) 2011 Li Xi <pkuelelixi@gmail.com>
  */
-#ifndef __HRFS_MULTITHREAD_H__
-#define __HRFS_MULTITHREAD_H__
+#ifndef __MTFS_MULTITHREAD_H__
+#define __MTFS_MULTITHREAD_H__
 #if defined (__linux__) && defined(__KERNEL__)
 #error This head is only for userspace use
 #else /* defined (__linux__) && defined(__KERNEL__) */
@@ -43,4 +43,4 @@ int create_thread_group(const thread_group_t *thread_group, thread_data_t *threa
 int create_thread_groups(const thread_group_t *thread_groups, const int group_number);
 int thread_setaffinity(pthread_t thread, int cpu);
 #endif /* ! defined (__linux__) && defined(__KERNEL__) */
-#endif /*__HRFS_MULTITHREAD_H__ */
+#endif /*__MTFS_MULTITHREAD_H__ */

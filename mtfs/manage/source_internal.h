@@ -2,8 +2,8 @@
  * Copyright (C) 2011 Li Xi <pkuelelixi@gmail.com>
  */
 
-#ifndef __HRFS_SOURCE_INTERNAL_H__
-#define __HRFS_SOURCE_INTERNAL_H__
+#ifndef __MTFS_SOURCE_INTERNAL_H__
+#define __MTFS_SOURCE_INTERNAL_H__
 #include "fsmL_internal.h"
 #include "component_internal.h"
 
@@ -21,4 +21,4 @@ struct source {
 
 };
 
-#endif /* __HRFS_SOURCE_INTERNAL_H__ */
+#endif /* __MTFS_SOURCE_INTERNAL_H__ */

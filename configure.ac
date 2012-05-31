@@ -1,5 +1,5 @@
 
-AC_INIT([mtfs], [HRFS_VERSION], [https://www.mtfs.org/], [mtfs])
+AC_INIT([mtfs], [MTFS_VERSION], [https://www.mtfs.org/], [mtfs])
 sinclude(mtfs/autoconf/mtfs-version.ac)
 
 LB_CHECK_VERSION

@@ -536,13 +536,13 @@ ssize_t mtfs_file_readv(struct file *file, const struct iovec *iov,
 		goto out;
 	}
 	
-	HRFS_ALLOC(iov_new, length);
+	MTFS_ALLOC(iov_new, length);
 	if (!iov_new) {
 		ret = -ENOMEM;
 		goto out;
 	}
 
-	HRFS_ALLOC(iov_tmp, length);
+	MTFS_ALLOC(iov_tmp, length);
 	if (!iov_tmp) {
 		ret = -ENOMEM;
 		goto new_alloced_err;
@@ -564,9 +564,9 @@ ssize_t mtfs_file_readv(struct file *file, const struct iovec *iov,
 	}
 
 //tmp_alloced_err:
-	HRFS_FREE(iov_tmp, length);
+	MTFS_FREE(iov_tmp, length);
 new_alloced_err:
-	HRFS_FREE(iov_new, length);
+	MTFS_FREE(iov_new, length);
 out:
 	HRETURN(ret);
 }
@@ -628,13 +628,13 @@ ssize_t mtfs_file_writev(struct file *file, const struct iovec *iov,
 	struct inode *inode = file->f_dentry->d_inode;
 	HENTRY();
 
-	HRFS_ALLOC(iov_new, length);
+	MTFS_ALLOC(iov_new, length);
 	if (!iov_new) {
 		size = -ENOMEM;
 		goto out;
 	}
 	
-	HRFS_ALLOC(iov_tmp, length);
+	MTFS_ALLOC(iov_tmp, length);
 	if (!iov_tmp) {
 		size = -ENOMEM;
 		goto out_new_alloced;
@@ -704,9 +704,9 @@ ssize_t mtfs_file_writev(struct file *file, const struct iovec *iov,
 out_free_oplist:
 	mtfs_oplist_free(list);
 out_tmp_alloced:
-	HRFS_FREE(iov_tmp, length);
+	MTFS_FREE(iov_tmp, length);
 out_new_alloced:
-	HRFS_FREE(iov_new, length);
+	MTFS_FREE(iov_new, length);
 out:
 	HRETURN(size);
 }

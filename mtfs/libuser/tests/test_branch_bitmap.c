@@ -71,12 +71,12 @@ int main()
 		goto out;
 	}
 	
-	HRFS_ALLOC(array, MAX_BRANCH_NUMBER * sizeof(*array));
+	MTFS_ALLOC(array, MAX_BRANCH_NUMBER * sizeof(*array));
 	if (array == NULL) {
 		ret = -ENOMEM;
 		goto out;
 	}
-	/* HRFS_ALLOC will do this for us */
+	/* MTFS_ALLOC will do this for us */
 	//memset(array, 0, MAX_BRANCH_NUMBER * sizeof(*array));
 
 	mtfs_random_init(0);
@@ -96,7 +96,7 @@ out:
 		cfs_bitmap_freee(bitmap);
 	}
 	if (array) {
-		HRFS_FREE(array, MAX_BRANCH_NUMBER * sizeof(*array));
+		MTFS_FREE(array, MAX_BRANCH_NUMBER * sizeof(*array));
 	}
 	return ret;
 }

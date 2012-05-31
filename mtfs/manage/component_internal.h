@@ -2,8 +2,8 @@
  * Copyright (C) 2011 Li Xi <pkuelelixi@gmail.com>
  */
 
-#ifndef __HRFS_COMPONENT_INTERNAL_H__
-#define __HRFS_COMPONENT_INTERNAL_H__
+#ifndef __MTFS_COMPONENT_INTERNAL_H__
+#define __MTFS_COMPONENT_INTERNAL_H__
 #include "fsmL_internal.h"
 #include <mtfs_list.h>
 
@@ -99,4 +99,4 @@ int component_pack(struct component *component,
                    int table_number, struct pin_map_table *tables);
 int component_declare_graph(struct component *component, const char *type_name);
 int component_types_init();
-#endif /* __HRFS_COMPONENT_INTERNAL_H__ */
+#endif /* __MTFS_COMPONENT_INTERNAL_H__ */

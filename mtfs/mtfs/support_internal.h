@@ -2,8 +2,8 @@
  * Copyright (C) 2011 Li Xi <pkuelelixi@gmail.com>
  */
 
-#ifndef __HRFS_SUPPORT_INTERNAL_H__
-#define __HRFS_SUPPORT_INTERNAL_H__
+#ifndef __MTFS_SUPPORT_INTERNAL_H__
+#define __MTFS_SUPPORT_INTERNAL_H__
 #include <raid.h>
 #include <mtfs_common.h>
 #include <mtfs_support.h>
@@ -50,7 +50,7 @@ static inline int lowerfs_inode_invalidate_data(struct lowerfs_operations *fs_op
 	if (ret) {
 		goto out;
 	}
-	mtfs_flag |= HRFS_FLAG_DATABAD | HRFS_FLAG_SETED;
+	mtfs_flag |= MTFS_FLAG_DATABAD | MTFS_FLAG_SETED;
 
 	ret = fs_ops->lowerfs_inode_set_flag(inode, mtfs_flag);
 out:
@@ -69,8 +69,8 @@ static inline int lowerfs_inode_get_raid_type(struct lowerfs_operations *fs_ops,
 		}
 	}
 
-	if (mtfs_flag & HRFS_FLAG_SETED) {
-		*raid_type = mtfs_flag & HRFS_FLAG_RAID_MASK;
+	if (mtfs_flag & MTFS_FLAG_SETED) {
+		*raid_type = mtfs_flag & MTFS_FLAG_RAID_MASK;
 	} else {
 		*raid_type = -1;
 	}
@@ -141,4 +141,4 @@ static inline struct mtfs_operations *mtfs_f2ops(struct file *file)
 	struct dentry *dentry = file->f_dentry;
 	return mtfs_d2ops(dentry);
 }
-#endif /* __HRFS_SUPPORT_INTERNAL_H__ */
+#endif /* __MTFS_SUPPORT_INTERNAL_H__ */

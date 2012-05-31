@@ -15,8 +15,8 @@ rm $SINGLE_DIR -fr
 mkdir $SINGLE_DIR
 
 export DIR=$SINGLE_DIR
-export DIR1=$HRFS_MNT1/$DIR_SUB/single_tests
-export DIR2=$HRFS_MNT2/$DIR_SUB/single_tests
+export DIR1=$MTFS_MNT1/$DIR_SUB/single_tests
+export DIR2=$MTFS_MNT2/$DIR_SUB/single_tests
 
 bash posix.sh
 bash multi_mnt.sh

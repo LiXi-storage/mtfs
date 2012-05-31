@@ -50,9 +50,9 @@
 #include <unistd.h>
 #include <semaphore.h>
 #include <libcfs/libcfs.h>
-#if HRFS_IS_LUSTRE
+#if MTFS_IS_LUSTRE
 #include <lustre/liblustreapi.h>
-#endif /* HRFS_IS_LUSTRE */
+#endif /* MTFS_IS_LUSTRE */
 
 #define T1 "write data before unlink\n"
 #define T2 "write data after unlink\n"
@@ -228,7 +228,7 @@ int main(int argc, char **argv)
                         fd = -1;
                         break;
                 case 'C':
-#if HRFS_IS_LUSTRE
+#if MTFS_IS_LUSTRE
                         len = atoi(commands+1);
                         fd = llapi_file_open(fname, O_CREAT | O_WRONLY, 0644,
                                              0, 0, len, 0);
@@ -237,11 +237,11 @@ int main(int argc, char **argv)
                                 perror("create stripe file");
                                 exit(save_errno);
                         }
-#else /* HRFS_IS_LUSTRE */
+#else /* MTFS_IS_LUSTRE */
                         fprintf(stderr, "unknown command \"%c\"\n", *commands);
                         fprintf(stderr, usage, argv[0]);
                         exit(1);
-#endif /* HRFS_IS_LUSTRE */
+#endif /* MTFS_IS_LUSTRE */
                         break;
                 case 'd':
                         if (mkdir(fname, 0755) == -1) {

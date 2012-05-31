@@ -30,7 +30,7 @@ char         *progname = NULL;
 
 void usage(FILE *out)
 {
-	fprintf(out, "%s v"HRFS_VERSION_STRING"\n", progname);
+	fprintf(out, "%s v"MTFS_VERSION_STRING"\n", progname);
 	fprintf(out, "\nThis mount helper should only be invoked via the "
 	        "mount (8) command,\ne.g. mount -t mtfs dev dir\n\n");
 	fprintf(out, "usage: %s [-fhnv] [-o <mntopt>] <device> <mountpt>\n",

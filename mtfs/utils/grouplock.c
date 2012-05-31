@@ -7,7 +7,7 @@
 #define LL_IOC_GROUP_LOCK               _IOW ('f', 158, long)
 #define LL_IOC_GROUP_UNLOCK             _IOW ('f', 159, long)
 
-int mtfs_api_group_lock(const char *filename, int fd, int group_id, const mtfs_param_t *param)
+int mtfs_api_group_lock(const char *filename, int fd, int group_id, const struct mtfs_param *param)
 {
 	int ret = 0;
 
@@ -21,7 +21,7 @@ int mtfs_api_group_lock(const char *filename, int fd, int group_id, const mtfs_p
 	return ret;
 }
 
-int mtfs_api_group_unlock(const char *filename, int fd, int group_id, const mtfs_param_t *param)
+int mtfs_api_group_unlock(const char *filename, int fd, int group_id, const struct mtfs_param *param)
 {
 	int ret = 0;
 

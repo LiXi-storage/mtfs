@@ -12,8 +12,8 @@ static struct mtfs_device *mtfs_device_alloc(mount_option_t *mount_option)
 	mtfs_bindex_t bindex = 0;
 	mtfs_bindex_t bnum = mount_option->bnum;
 
-	HASSERT(bnum > 0 && bnum <= HRFS_BRANCH_MAX);
-	HRFS_SLAB_ALLOC_PTR(device, mtfs_device_cache);
+	HASSERT(bnum > 0 && bnum <= MTFS_BRANCH_MAX);
+	MTFS_SLAB_ALLOC_PTR(device, mtfs_device_cache);
 	if (device == NULL) {
 		goto out;
 	}
@@ -25,7 +25,7 @@ static struct mtfs_device *mtfs_device_alloc(mount_option_t *mount_option)
 
 		mtfs_dev2blength(device, bindex) = length;
 		device->name_length += length;
-		HRFS_ALLOC(mtfs_dev2bpath(device, bindex), length);
+		MTFS_ALLOC(mtfs_dev2bpath(device, bindex), length);
 		if (mtfs_dev2bpath(device, bindex) == NULL) {
 			bindex --;
 			goto out_free_path;
@@ -33,7 +33,7 @@ static struct mtfs_device *mtfs_device_alloc(mount_option_t *mount_option)
 		memcpy(mtfs_dev2bpath(device, bindex), mount_option->branch[bindex].path, length - 1);
 	}
 
-	HRFS_ALLOC(device->device_name, device->name_length);
+	MTFS_ALLOC(device->device_name, device->name_length);
 	if (device->device_name == NULL) {
 		goto out_free_path;
 	}
@@ -44,13 +44,13 @@ static struct mtfs_device *mtfs_device_alloc(mount_option_t *mount_option)
 
 	goto out;
 //out_free_name:
-	HRFS_FREE(device->device_name, device->name_length);
+	MTFS_FREE(device->device_name, device->name_length);
 out_free_path:
 	for(; bindex >= 0; bindex--) {
-		HRFS_FREE(mtfs_dev2bpath(device, bindex), mtfs_dev2blength(device, bindex));
+		MTFS_FREE(mtfs_dev2bpath(device, bindex), mtfs_dev2blength(device, bindex));
 	}
 //out_free_branch:
-	HRFS_SLAB_FREE_PTR(device, mtfs_device_cache);
+	MTFS_SLAB_FREE_PTR(device, mtfs_device_cache);
 	HASSERT(device == NULL);
 out:
 	return device;
@@ -63,10 +63,10 @@ static void mtfs_device_free(struct mtfs_device *device)
 	HASSERT(device != NULL);
 
 	for(bindex = 0; bindex < bnum; bindex++) {
-		HRFS_FREE(mtfs_dev2bpath(device, bindex), mtfs_dev2blength(device, bindex));
+		MTFS_FREE(mtfs_dev2bpath(device, bindex), mtfs_dev2blength(device, bindex));
 	}
-	HRFS_FREE(device->device_name, device->name_length);
-	HRFS_SLAB_FREE_PTR(device, mtfs_device_cache);
+	MTFS_FREE(device->device_name, device->name_length);
+	MTFS_SLAB_FREE_PTR(device, mtfs_device_cache);
 }
 
 spinlock_t mtfs_device_lock = SPIN_LOCK_UNLOCKED;
@@ -199,7 +199,7 @@ struct mtfs_proc_vars mtfs_proc_vars_device[] = {
 	{ 0 }
 };
 
-#define HRFS_ERRNO_INACTIVE "inactive"
+#define MTFS_ERRNO_INACTIVE "inactive"
 int mtfs_device_branch_proc_read_errno(char *page, char **start, off_t off, int count,
                                        int *eof, void *data)
 {
@@ -211,7 +211,7 @@ int mtfs_device_branch_proc_read_errno(char *page, char **start, off_t off, int 
 	if (dev_branch->debug.active) {
 		ret = snprintf(ptr, count, "%d\n", dev_branch->debug.errno);
 	} else {
-		ret = snprintf(ptr, count, HRFS_ERRNO_INACTIVE"\n");
+		ret = snprintf(ptr, count, MTFS_ERRNO_INACTIVE"\n");
 	}
 	ptr += ret;
 	return ret;
@@ -241,7 +241,7 @@ static int mtfs_device_branch_proc_write_errno(struct file *file, const char *bu
 	}
 	kern_buf[count] = '\0';
 
-	if (strncmp(HRFS_ERRNO_INACTIVE, kern_buf, strlen(HRFS_ERRNO_INACTIVE)) == 0) {
+	if (strncmp(MTFS_ERRNO_INACTIVE, kern_buf, strlen(MTFS_ERRNO_INACTIVE)) == 0) {
 		dev_branch->debug.active = 0;
 		goto out;
 	}
@@ -441,7 +441,7 @@ static int mtfs_device_proc_bops_emask_write(struct file *file, const char *buff
 	struct mtfs_device_branch *dev_branch = (struct mtfs_device_branch *)data;
 	HENTRY();
 
-	HRFS_ALLOC(kern_buf, count + 1);
+	MTFS_ALLOC(kern_buf, count + 1);
 	if (kern_buf == NULL) {
 		ret = -ENOMEM;
 		goto out;
@@ -455,7 +455,7 @@ static int mtfs_device_proc_bops_emask_write(struct file *file, const char *buff
 
 	ret = mtfs_bops_str2mask(kern_buf, &(dev_branch->debug.bops_emask));
 out_free_buf:
-	HRFS_FREE(kern_buf, count + 1);
+	MTFS_FREE(kern_buf, count + 1);
 out:
 	if (ret) {
 		HRETURN(ret);
@@ -568,7 +568,7 @@ struct mtfs_device *mtfs_newdev(struct super_block *sb, mount_option_t *mount_op
 	const char **secondary_types = NULL;
 	int secondary_number = 0;
 
-	HRFS_ALLOC(secondary_types, sizeof(*secondary_types) * bnum);
+	MTFS_ALLOC(secondary_types, sizeof(*secondary_types) * bnum);
 	if (secondary_types == NULL) {
 		ret = -ENOMEM;
 		goto out;
@@ -587,7 +587,7 @@ struct mtfs_device *mtfs_newdev(struct super_block *sb, mount_option_t *mount_op
 	 */
 	for (bindex = 0; bindex < bnum; bindex++) {
 		hidden_sb = mtfs_s2branch(sb, bindex);
-		if (bindex == HRFS_DEFAULT_PRIMARY_BRANCH) {
+		if (bindex == MTFS_DEFAULT_PRIMARY_BRANCH) {
 			primary_type = hidden_sb->s_type->name;
 		} else {
 			/* TODO: judge equation to speed up junction search */
@@ -638,7 +638,7 @@ out_put_module:
 
 	mtfs_device_free(newdev);
 out_free_types:
-	HRFS_FREE(secondary_types, sizeof(*secondary_types) * bnum);
+	MTFS_FREE(secondary_types, sizeof(*secondary_types) * bnum);
 out:
 	if (ret) {
 		newdev = ERR_PTR(ret);

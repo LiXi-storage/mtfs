@@ -17,7 +17,7 @@ static struct ctl_table mtfs_table[] = {
 	 * to go via /proc for portability.
 	 */
 	{
-		.ctl_name = HRFS_PROC_DEBUG,
+		.ctl_name = MTFS_PROC_DEBUG,
 		.procname = "mtfs_debug",
 		.data     = &mtfs_debug_level,
 		.maxlen   = sizeof(int),
@@ -25,7 +25,7 @@ static struct ctl_table mtfs_table[] = {
 		.proc_handler = &proc_dointvec,
 	},
 	{
-		.ctl_name = HRFS_PROC_MEMUSED,
+		.ctl_name = MTFS_PROC_MEMUSED,
 		.procname = "memused",
 		.data     = (__u64 *)&mtfs_kmemory_used.counter,
 		.maxlen   = sizeof(int),
@@ -34,7 +34,7 @@ static struct ctl_table mtfs_table[] = {
 		.strategy = &sysctl_intvec,
 	},
 	{
-		.ctl_name = HRFS_PROC_MEMUSED,
+		.ctl_name = MTFS_PROC_MEMUSED,
 		.procname = "memused_max",
 		.data     = (__u64 *)&mtfs_kmemory_used_max.counter,
 		.maxlen   = sizeof(int),
@@ -46,7 +46,7 @@ static struct ctl_table mtfs_table[] = {
 };
 static struct ctl_table mtfs_top_table[] = {
 	{
-		.ctl_name = CTL_HRFS,
+		.ctl_name = CTL_MTFS,
 		.procname = "mtfs",
 		.mode     = 0555,
 		.data     = NULL,
@@ -69,17 +69,17 @@ DECLARE_RWSEM(mtfs_proc_lock);
  */
 #ifndef HAVE_PROCFS_USERS
 
-#define HRFS_PROC_ENTRY()           do {  \
+#define MTFS_PROC_ENTRY()           do {  \
         down_read(&mtfs_proc_lock);      \
 } while(0)
-#define HRFS_PROC_EXIT()            do {  \
+#define MTFS_PROC_EXIT()            do {  \
         up_read(&mtfs_proc_lock);        \
 } while(0)
 
 #else
 
-#define HRFS_PROC_ENTRY()
-#define HRFS_PROC_EXIT()
+#define MTFS_PROC_ENTRY()
+#define MTFS_PROC_EXIT()
 #endif
 
 #ifdef HAVE_PROCFS_DELETED
@@ -88,12 +88,12 @@ DECLARE_RWSEM(mtfs_proc_lock);
 #error proc_dir_entry->deleted is conflicted with proc_dir_entry->pde_users
 #endif /* HAVE_PROCFS_USERS */
 
-#define HRFS_PROC_CHECK_DELETED(dp) ((dp)->deleted)
+#define MTFS_PROC_CHECK_DELETED(dp) ((dp)->deleted)
 
 #else /* !HAVE_PROCFS_DELETED */
 #ifdef HAVE_PROCFS_USERS
 
-#define HRFS_PROC_CHECK_DELETED(dp) ({            \
+#define MTFS_PROC_CHECK_DELETED(dp) ({            \
         int deleted = 0;                        \
         spin_lock(&(dp)->pde_unload_lock);      \
         if (dp->proc_fops == NULL)              \
@@ -103,7 +103,7 @@ DECLARE_RWSEM(mtfs_proc_lock);
 })
 
 #else /* !HAVE_PROCFS_USERS */
-#define HRFS_PROC_CHECK_DELETED(dp) (0)
+#define MTFS_PROC_CHECK_DELETED(dp) (0)
 #endif /* !HAVE_PROCFS_USERS */
 #endif /* HAVE_PROCFS_DELETED */
 
@@ -121,11 +121,11 @@ static ssize_t mtfs_proc_fops_read(struct file *f, char __user *buf, size_t size
 	if (page == NULL)
 		return -ENOMEM;
 
-	HRFS_PROC_ENTRY();
-	if (!HRFS_PROC_CHECK_DELETED(dp) && dp->read_proc)
+	MTFS_PROC_ENTRY();
+	if (!MTFS_PROC_CHECK_DELETED(dp) && dp->read_proc)
 		rc = dp->read_proc(page, &start, *ppos, PAGE_SIZE,
 		&eof, dp->data);
-	HRFS_PROC_EXIT();
+	MTFS_PROC_EXIT();
 	if (rc <= 0)
 		goto out;
 
@@ -161,10 +161,10 @@ static ssize_t mtfs_proc_fops_write(struct file *f, const char __user *buf,
 	struct proc_dir_entry *dp = PDE(f->f_dentry->d_inode);
 	int rc = -EIO;
 
-	HRFS_PROC_ENTRY();
-	if (!HRFS_PROC_CHECK_DELETED(dp) && dp->write_proc)
+	MTFS_PROC_ENTRY();
+	if (!MTFS_PROC_CHECK_DELETED(dp) && dp->write_proc)
 		rc = dp->write_proc(f, buf, size, dp->data);
-	HRFS_PROC_EXIT();
+	MTFS_PROC_EXIT();
 	return rc;
 }
 
@@ -212,7 +212,7 @@ int mtfs_proc_add_vars(struct proc_dir_entry *root, struct mtfs_proc_vars *list,
 
 		/* need copy of path for strsep */
 		if (strlen(list->name) > sizeof(pathbuf) - 1) {
-			HRFS_ALLOC(pathcopy, pathsize);
+			MTFS_ALLOC(pathcopy, pathsize);
 			if (pathcopy == NULL)
 				return -ENOMEM;
 		} else {
@@ -247,7 +247,7 @@ int mtfs_proc_add_vars(struct proc_dir_entry *root, struct mtfs_proc_vars *list,
 		}
 
 		if (pathcopy != pathbuf)
-			HRFS_FREE(pathcopy, pathsize);
+			MTFS_FREE(pathcopy, pathsize);
 
 		if (cur_root == NULL || proc == NULL) {
 			HERROR("No memory to create /proc entry %s",
@@ -357,7 +357,7 @@ struct mtfs_proc_vars mtfs_proc_vars_base[] = {
 	{ 0 }
 };
 
-#define HRFS_PROC_DEVICE_NAME "devices"
+#define MTFS_PROC_DEVICE_NAME "devices"
 
 int mtfs_insert_proc(void)
 {
@@ -377,10 +377,10 @@ int mtfs_insert_proc(void)
 		goto out;
 	}
 
-	mtfs_proc_device = mtfs_proc_register(HRFS_PROC_DEVICE_NAME, mtfs_proc_root,
+	mtfs_proc_device = mtfs_proc_register(MTFS_PROC_DEVICE_NAME, mtfs_proc_root,
                                         NULL, NULL);
 	if (unlikely(mtfs_proc_device == NULL)) {
-		HERROR("failed to register /proc/fs/mtfs"HRFS_PROC_DEVICE_NAME"\n");
+		HERROR("failed to register /proc/fs/mtfs"MTFS_PROC_DEVICE_NAME"\n");
 		ret = -ENOMEM;
 		goto out;
 	}

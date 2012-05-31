@@ -2,8 +2,8 @@
  * Copyright (C) 2011 Li Xi <pkuelelixi@gmail.com>
  */
 
-#ifndef __HRFS_LOCK_H__
-#define __HRFS_LOCK_H__
+#ifndef __MTFS_LOCK_H__
+#define __MTFS_LOCK_H__
 #include <libcfs/linux-lock.h>
 #include "mtfs_internal.h"
 static inline void d_info_rwlock_init(dentry_t *dentry)
@@ -42,4 +42,4 @@ static inline void d_info_write_unlock(dentry_t *dentry)
 }
 
 
-#endif /* __HRFS_LOCK_H__ */
+#endif /* __MTFS_LOCK_H__ */

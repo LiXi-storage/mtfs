@@ -1,5 +1,5 @@
 SUBDIRS := 
-if LIBHRFS
+if LIBMTFS
 noinst_LIBRARIES = libmtfs.a
 libmtfs_a_SOURCES = rule_tree.c queue.c parse_option.c
 libmtfs_a_CPPFLAGS = $(LLCPPFLAGS)

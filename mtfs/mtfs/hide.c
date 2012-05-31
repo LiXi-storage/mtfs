@@ -4,7 +4,7 @@
 
 #include "mtfs_internal.h"
 
-#define HRFS_HIDDEN_SUPER_MAGIC 0xbadc0ffee
+#define MTFS_HIDDEN_SUPER_MAGIC 0xbadc0ffee
 
 static void mtfs_hideen_put_super(struct super_block *sb)
 {
@@ -27,7 +27,7 @@ static int mtfs_hideen_read_super(struct super_block *sb, void *input, int silen
 
 	sb->s_blocksize = 4096;
 	sb->s_blocksize_bits = 12;
-	sb->s_magic = HRFS_HIDDEN_SUPER_MAGIC;
+	sb->s_magic = MTFS_HIDDEN_SUPER_MAGIC;
 	sb->s_maxbytes = 0; //PAGE_CACHE_MAXBYTES;
 	sb->s_flags |= MS_RDONLY;
 	sb->s_op = &mtfs_hidden_sops;
@@ -64,7 +64,7 @@ static int mtfs_hideen_get_sb(struct file_system_type *fs_type,
 
 struct file_system_type mtfs_hidden_fs_type = {
 	owner:     THIS_MODULE,
-	name:      HRFS_HIDDEN_FS_TYPE,
+	name:      MTFS_HIDDEN_FS_TYPE,
 	get_sb:    mtfs_hideen_get_sb,
 	kill_sb:   generic_shutdown_super,
 };

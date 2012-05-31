@@ -30,6 +30,6 @@ libcfs-all-objs := debug.o nidstrings.o lwt.o module.o tracefile.o watchdog.o
 
 libcfs-objs := $(libcfs-linux-objs) $(libcfs-all-objs)
 
-EXTRA_PRE_CFLAGS := -I@HRFS@/../libcfs/libcfs
+EXTRA_PRE_CFLAGS := -I@MTFS@/../libcfs/libcfs
 
 @INCLUDE_RULES@

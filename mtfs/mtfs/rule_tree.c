@@ -134,12 +134,12 @@ void rule_tree_node_free(rule_tree_t *node)
 {
 		HASSERT(node);
 		if (node->list != NULL) {
-			HRFS_FREE(node->list, sizeof(*node->list) * node->list_length);
+			MTFS_FREE(node->list, sizeof(*node->list) * node->list_length);
 		}
 		if (node->key_list != NULL) {
-			HRFS_FREE(node->key_list, sizeof(*node->key_list) * node->list_length);
+			MTFS_FREE(node->key_list, sizeof(*node->key_list) * node->list_length);
 		}
-		HRFS_FREE_PTR(node);
+		MTFS_FREE_PTR(node);
 }
 
 /*
@@ -217,7 +217,7 @@ rule_tree_t *__rule_tree_construct(const rule_t *rule_array, unsigned int rule_n
 		goto free_queue;
 	}	
 
-	HRFS_ALLOC_PTR(root);
+	MTFS_ALLOC_PTR(root);
 	if (root == NULL) {
 		ret = -ENOMEM;
 		goto free_queue;
@@ -241,7 +241,7 @@ rule_tree_t *__rule_tree_construct(const rule_t *rule_array, unsigned int rule_n
 		for(i = tmp_root->start; i <= tmp_root->end; i ++) {
 			char key = rule_array[i].string[tmp_root->depth];
 			
-			HRFS_ALLOC_PTR(new);		
+			MTFS_ALLOC_PTR(new);		
 			if (!new) {
 				ret = -ENOMEM;
 				goto free_all;
@@ -265,7 +265,7 @@ rule_tree_t *__rule_tree_construct(const rule_t *rule_array, unsigned int rule_n
 			ret = __queue_add(&tmp_queue, (void *)new, 0);
 			if (ret) {
 					HERROR("queue full\n");
-					HRFS_FREE_PTR(new);
+					MTFS_FREE_PTR(new);
 					goto free_all;
 			}
 			if (new->key != '\0') {
@@ -279,8 +279,8 @@ rule_tree_t *__rule_tree_construct(const rule_t *rule_array, unsigned int rule_n
 		
 		if (list_length > 0) {
 			tmp_root->list_length = list_length;
-			HRFS_ALLOC(tmp_root->list, sizeof(*tmp_root->list) * list_length);
-			HRFS_ALLOC(tmp_root->key_list, sizeof(*tmp_root->key_list) * list_length);
+			MTFS_ALLOC(tmp_root->list, sizeof(*tmp_root->list) * list_length);
+			MTFS_ALLOC(tmp_root->key_list, sizeof(*tmp_root->key_list) * list_length);
 		}
 			
 		i = 0;
@@ -292,13 +292,13 @@ rule_tree_t *__rule_tree_construct(const rule_t *rule_array, unsigned int rule_n
 				ret = __queue_add(&queue, (void *)new, 0);
 				if (ret) {
 						HERROR("queue full\n");
-						HRFS_FREE_PTR(new);
+						MTFS_FREE_PTR(new);
 						goto free_all;
 				}
 			} else {
 				tmp_root->rule = new->rule;
 				HDEBUG("rule set\n");
-				HRFS_FREE_PTR(new);
+				MTFS_FREE_PTR(new);
 			}
 		}
 		HASSERT(i == list_length);

@@ -2,8 +2,8 @@
  * Copyright (C) 2011 Li Xi <pkuelelixi@gmail.com>
  */
 
-#ifndef __HRFS_STACK_H__
-#define __HRFS_STACK_H__
+#ifndef __MTFS_STACK_H__
+#define __MTFS_STACK_H__
 
 #if 1 /* TODO: HAVE_STACK */
 #include <linux/fs_stack.h>
@@ -37,4 +37,4 @@ static inline void fsstack_copy_attr_times(struct inode *dest,
 	dest->i_ctime = src->i_ctime;
 }
 #endif
-#endif /* __HRFS_STACK_H__ */
+#endif /* __MTFS_STACK_H__ */

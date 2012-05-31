@@ -37,7 +37,7 @@ int mtfs_inode_init(struct inode *inode, struct dentry *dentry)
 	struct mtfs_operations *operations = NULL;
 	HENTRY();
 
-	HASSERT(bnum > 0 && bnum < HRFS_BRANCH_MAX);
+	HASSERT(bnum > 0 && bnum < MTFS_BRANCH_MAX);
 	mtfs_i2bnum(inode) = bnum;
 
 	for (bindex = 0; bindex < bnum; bindex++) {
@@ -129,7 +129,7 @@ int mtfs_inherit_raid_type(struct dentry *dentry, raid_type_t *raid_type)
 	HASSERT(dentry->d_parent);
 	i_parent = dentry->d_parent->d_inode;
 	HASSERT(i_parent);
-	ret = mtfs_i_choose_bindex(i_parent, HRFS_ATTR_VALID, &bindex);
+	ret = mtfs_i_choose_bindex(i_parent, MTFS_ATTR_VALID, &bindex);
 	if (ret) {
 		HERROR("choose bindex failed, ret = %d\n", ret);
 		goto out;
@@ -194,7 +194,7 @@ int mtfs_interpose(struct dentry *dentry, struct super_block *sb, int flag)
 	}
 
 	/* TODO: change to mtfs_d2branch(dentry, bindex)->d_inode */
-	inode = iget5_locked(sb, iunique(sb, HRFS_ROOT_INO),
+	inode = iget5_locked(sb, iunique(sb, MTFS_ROOT_INO),
 		     mtfs_inode_test, mtfs_inode_set, (void *)dentry);
 	if (inode == NULL) {
 		/* should be impossible? */
@@ -213,7 +213,7 @@ int mtfs_interpose(struct dentry *dentry, struct super_block *sb, int flag)
 		goto out_iput;
 	}
 
-	hidden_inode = mtfs_i_choose_branch(inode, HRFS_ATTR_VALID);
+	hidden_inode = mtfs_i_choose_branch(inode, MTFS_ATTR_VALID);
 	if (IS_ERR(hidden_inode)) {
 		HERROR("choose branch failed, ret = %ld\n", PTR_ERR(hidden_inode));
 		ret = PTR_ERR(hidden_inode);
@@ -414,7 +414,7 @@ int mtfs_lookup_backend(struct inode *dir, struct dentry *dentry, int interpose_
 		}
 
 	
-		hidden_dir = mtfs_i_choose_branch(dir, HRFS_ATTR_VALID);
+		hidden_dir = mtfs_i_choose_branch(dir, MTFS_ATTR_VALID);
 		if (IS_ERR(hidden_dir)) {
 			ret = PTR_ERR(hidden_dir);
 			HERROR("choose branch failed, ret = %d\n", ret);
@@ -631,7 +631,7 @@ int mtfs_create(struct inode *dir, struct dentry *dentry, int mode, struct namei
 	}
 
 	/* Update parent dir */
-	hidden_dir = mtfs_i_choose_branch(dir, HRFS_ATTR_VALID);
+	hidden_dir = mtfs_i_choose_branch(dir, MTFS_ATTR_VALID);
 	if (IS_ERR(hidden_dir)) {
 		ret = PTR_ERR(hidden_dir);
 		HERROR("choose branch failed, ret = %d\n", ret);
@@ -767,7 +767,7 @@ int mtfs_link(struct dentry *old_dentry, struct inode *dir, struct dentry *new_d
 	}
 
 	/* Update parent dir */
-	hidden_dir = mtfs_i_choose_branch(dir, HRFS_ATTR_VALID);
+	hidden_dir = mtfs_i_choose_branch(dir, MTFS_ATTR_VALID);
 	if (IS_ERR(hidden_dir)) {
 		ret = PTR_ERR(hidden_dir);
 		HERROR("choose branch failed, ret = %d\n", ret);
@@ -917,7 +917,7 @@ int mtfs_unlink(struct inode *dir, struct dentry *dentry)
 		HBUG();
 	}
 
-	hidden_dir = mtfs_i_choose_branch(dir, HRFS_ATTR_VALID);
+	hidden_dir = mtfs_i_choose_branch(dir, MTFS_ATTR_VALID);
 	if (IS_ERR(hidden_dir)) {
 		ret = PTR_ERR(hidden_dir);
 		HERROR("choose branch failed, ret = %d\n", ret);
@@ -1071,7 +1071,7 @@ int mtfs_rmdir(struct inode *dir, struct dentry *dentry)
 		HBUG();
 	}
 
-	hidden_dir = mtfs_i_choose_branch(dir, HRFS_ATTR_VALID);
+	hidden_dir = mtfs_i_choose_branch(dir, MTFS_ATTR_VALID);
 	if (IS_ERR(hidden_dir)) {
 		ret = PTR_ERR(hidden_dir);
 		HERROR("choose branch failed, ret = %d\n", ret);
@@ -1201,7 +1201,7 @@ int mtfs_symlink(struct inode *dir, struct dentry *dentry, const char *symname)
 		goto out_free_oplist;
 	}
 
-	hidden_dir = mtfs_i_choose_branch(dir, HRFS_ATTR_VALID);
+	hidden_dir = mtfs_i_choose_branch(dir, MTFS_ATTR_VALID);
 	if (IS_ERR(hidden_dir)) {
 		ret = PTR_ERR(hidden_dir);
 		HERROR("choose branch failed, ret = %d\n", ret);
@@ -1331,7 +1331,7 @@ int mtfs_mkdir(struct inode *dir, struct dentry *dentry, int mode)
 		goto out_free_oplist;
 	}
 
-	hidden_dir = mtfs_i_choose_branch(dir, HRFS_ATTR_VALID);
+	hidden_dir = mtfs_i_choose_branch(dir, MTFS_ATTR_VALID);
 	if (IS_ERR(hidden_dir)) {
 		ret = PTR_ERR(hidden_dir);
 		HERROR("choose branch failed, ret = %d\n", ret);
@@ -1466,7 +1466,7 @@ int mtfs_mknod(struct inode *dir, struct dentry *dentry, int mode, dev_t dev)
 		goto out_free_oplist;
 	}
 
-	hidden_dir = mtfs_i_choose_branch(dir, HRFS_ATTR_VALID);
+	hidden_dir = mtfs_i_choose_branch(dir, MTFS_ATTR_VALID);
 	if (IS_ERR(hidden_dir)) {
 		ret = PTR_ERR(hidden_dir);
 		HERROR("choose branch failed, ret = %d\n", ret);
@@ -1626,7 +1626,7 @@ int mtfs_rename(struct inode *old_dir, struct dentry *old_dentry, struct inode *
 	ret = 0;
 
 	/* Update parent dir */
-	hidden_new_dir = mtfs_i_choose_branch(new_dir, HRFS_ATTR_VALID);
+	hidden_new_dir = mtfs_i_choose_branch(new_dir, MTFS_ATTR_VALID);
 	if (IS_ERR(hidden_new_dir)) {
 		ret = PTR_ERR(hidden_new_dir);
 		HERROR("choose branch failed, ret = %d\n", ret);
@@ -1635,7 +1635,7 @@ int mtfs_rename(struct inode *old_dir, struct dentry *old_dentry, struct inode *
 	fsstack_copy_attr_all(new_dir, hidden_new_dir, mtfs_get_nlinks);
 
 	if (new_dir != old_dir) {
-		hidden_old_dir = mtfs_i_choose_branch(old_dir, HRFS_ATTR_VALID);
+		hidden_old_dir = mtfs_i_choose_branch(old_dir, MTFS_ATTR_VALID);
 		if (IS_ERR(hidden_old_dir)) {
 			ret = PTR_ERR(hidden_old_dir);
 			HERROR("choose branch failed, ret = %d\n", ret);
@@ -1662,7 +1662,7 @@ int mtfs_readlink(struct dentry *dentry, char __user *buf, int bufsiz)
 	HENTRY();
 
 	HDEBUG("readlink [%*s]\n", dentry->d_name.len, dentry->d_name.name);
-	hidden_dentry = mtfs_d_choose_branch(dentry, HRFS_ATTR_VALID);
+	hidden_dentry = mtfs_d_choose_branch(dentry, MTFS_ATTR_VALID);
 	if (IS_ERR(hidden_dentry)) {
 		ret = PTR_ERR(hidden_dentry);
 		goto out;
@@ -1683,17 +1683,17 @@ out:
 }
 EXPORT_SYMBOL(mtfs_readlink);
 
-#define HRFS_MAX_LINKNAME PAGE_SIZE
+#define MTFS_MAX_LINKNAME PAGE_SIZE
 void *mtfs_follow_link(struct dentry *dentry, struct nameidata *nd)
 {
 	char *buf = NULL;
 	int ret = 0;
-	int len = HRFS_MAX_LINKNAME;
+	int len = MTFS_MAX_LINKNAME;
 	mm_segment_t old_fs;
 	HENTRY();
 
 	HDEBUG("follow_link [%*s]\n", dentry->d_name.len, dentry->d_name.name);
-	HRFS_ALLOC(buf, len);
+	MTFS_ALLOC(buf, len);
 	if (unlikely(buf == NULL)) {
 		ret = -ENOMEM;
 		goto out;
@@ -1712,7 +1712,7 @@ void *mtfs_follow_link(struct dentry *dentry, struct nameidata *nd)
 	nd_set_link(nd, buf);
 	goto out;
 out_free:
-	HRFS_FREE(buf, len);
+	MTFS_FREE(buf, len);
 out:
 	HRETURN(ERR_PTR(ret));
 }
@@ -1720,14 +1720,14 @@ EXPORT_SYMBOL(mtfs_follow_link);
 
 void mtfs_put_link(struct dentry *dentry, struct nameidata *nd, void *ptr)
 {
-	int len = HRFS_MAX_LINKNAME;
+	int len = MTFS_MAX_LINKNAME;
 	char *buf = nd_get_link(nd);
 	HENTRY();
 
 	HDEBUG("put_link [%*s]\n", dentry->d_name.len, dentry->d_name.name);
 	HASSERT(buf);
 	/* Free the char* */
-	HRFS_FREE(buf, len);
+	MTFS_FREE(buf, len);
 	_HRETURN();
 }
 EXPORT_SYMBOL(mtfs_put_link);
@@ -1738,7 +1738,7 @@ int mtfs_permission(struct inode *inode, int mask, struct nameidata *nd)
 	int ret = 0;
 	HENTRY();
 
-	hidden_inode = mtfs_i_choose_branch(inode, HRFS_BRANCH_VALID);
+	hidden_inode = mtfs_i_choose_branch(inode, MTFS_BRANCH_VALID);
 	if (IS_ERR(hidden_inode)) {
 		ret = PTR_ERR(hidden_inode);
 		HERROR("choose branch failed, ret = %d\n", ret);
@@ -1829,7 +1829,7 @@ int mtfs_setattr(struct dentry *dentry, struct iattr *ia)
 	result = mtfs_oplist_result(list);
 	ret = result.ret;
 
-	hidden_inode = mtfs_i_choose_branch(inode, HRFS_BRANCH_VALID);
+	hidden_inode = mtfs_i_choose_branch(inode, MTFS_BRANCH_VALID);
 	if (IS_ERR(hidden_inode)) {
 		ret = PTR_ERR(hidden_inode);
 		HERROR("choose branch failed, ret = %d\n", ret);
@@ -1859,7 +1859,7 @@ int mtfs_getattr(struct vfsmount *mnt, struct dentry *dentry, struct kstat *stat
 
 	HDEBUG("getattr [%*s]\n", dentry->d_name.len, dentry->d_name.name);
 
-	ret = mtfs_i_choose_bindex(inode, HRFS_BRANCH_VALID, &bindex);
+	ret = mtfs_i_choose_bindex(inode, MTFS_BRANCH_VALID, &bindex);
 	if (ret) {
 		HERROR("choose bindex failed, ret = %d\n", ret);
 		goto out;
@@ -1892,7 +1892,7 @@ ssize_t mtfs_getxattr(struct dentry *dentry, const char *name, void *value, size
 
 	HDEBUG("getxattr [%*s]\n", dentry->d_name.len, dentry->d_name.name);
 	HASSERT(dentry->d_inode);
-	hidden_dentry = mtfs_d_choose_branch(dentry, HRFS_ATTR_VALID);
+	hidden_dentry = mtfs_d_choose_branch(dentry, MTFS_ATTR_VALID);
 	if (IS_ERR(hidden_dentry)) {
 		ret = PTR_ERR(hidden_dentry);
 		goto out;
@@ -2106,7 +2106,7 @@ ssize_t mtfs_listxattr(struct dentry *dentry, char *list, size_t size)
 	HENTRY();
 
 	HDEBUG("listxattr [%*s]\n", dentry->d_name.len, dentry->d_name.name);
-	hidden_dentry = mtfs_d_choose_branch(dentry, HRFS_ATTR_VALID);
+	hidden_dentry = mtfs_d_choose_branch(dentry, MTFS_ATTR_VALID);
 	if (IS_ERR(hidden_dentry)) {
 		ret = PTR_ERR(hidden_dentry);
 		goto out;
@@ -2133,7 +2133,7 @@ int mtfs_update_inode_size(struct inode *inode)
 
 	HASSERT(inode);
 	if (S_ISREG(inode->i_mode)) {
-		hidden_inode = mtfs_i_choose_branch(inode, HRFS_DATA_VALID);
+		hidden_inode = mtfs_i_choose_branch(inode, MTFS_DATA_VALID);
 		if(IS_ERR(hidden_inode)) {
 			ret = PTR_ERR(hidden_inode);
 			goto out;
@@ -2155,7 +2155,7 @@ int mtfs_update_inode_attr(struct inode *inode)
 	HENTRY();
 
 	HASSERT(inode);
-	hidden_inode = mtfs_i_choose_branch(inode, HRFS_ATTR_VALID);
+	hidden_inode = mtfs_i_choose_branch(inode, MTFS_ATTR_VALID);
 	if(IS_ERR(hidden_inode)) {
 		ret = PTR_ERR(hidden_inode);
 		goto out;

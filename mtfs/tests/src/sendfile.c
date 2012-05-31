@@ -44,17 +44,17 @@
 #include <sys/stat.h>
 #include <sys/socket.h>
 
-#if HRFS_IS_LUSTRE
+#if MTFS_IS_LUSTRE
 #include <liblustre.h>
 #include <lnet/lnetctl.h>
 #include <obd.h>
 #include <lustre_lib.h>
 #include <obd_lov.h>
 #include <lustre/liblustreapi.h>
-#else /* HRFS_IS_LUSTRE */
+#else /* MTFS_IS_LUSTRE */
 #include <errno.h>
 #include <time.h>
-#endif /* HRFS_IS_LUSTRE */
+#endif /* MTFS_IS_LUSTRE */
 
 #define syserr(str) { perror(str); exit(-1); }
 
@@ -82,13 +82,13 @@ int main(int argc, char *argv[])
         if (stat(sfile, &stbuf) < 0) {
                 if (errno == ENOENT) {
                         /* assume doing non-object file testing */
-#if HRFS_IS_LUSTRE
+#if MTFS_IS_LUSTRE
                         infd = open(sfile, O_LOV_DELAY_CREATE|O_CREAT|O_RDWR,
                                     0644);
-#else /* HRFS_IS_LUSTRE */
+#else /* MTFS_IS_LUSTRE */
                         infd = open(sfile, O_CREAT|O_RDWR,
                                     0644);
-#endif /* HRFS_IS_LUSTRE */
+#endif /* MTFS_IS_LUSTRE */
                         if (infd < 0)
                                 syserr("open source file:");
 

@@ -2,8 +2,8 @@
  * Copyright (C) 2011 Li Xi <pkuelelixi@gmail.com>
  */
 
-#ifndef __HRFS_DENTRY_H__
-#define __HRFS_DENTRY_H__
+#ifndef __MTFS_DENTRY_H__
+#define __MTFS_DENTRY_H__
 #include "mtfs_common.h"
 #include <linux/dcache.h>
 
@@ -15,7 +15,7 @@ struct mtfs_dentry_branch {
 /* mtfs dentry data in memory */
 struct mtfs_dentry_info {
 	mtfs_bindex_t bnum;
-	struct mtfs_dentry_branch barray[HRFS_BRANCH_MAX];
+	struct mtfs_dentry_branch barray[MTFS_BRANCH_MAX];
 };
 
 /* DO NOT access mtfs_*_dentry_t directly, use following macros */
@@ -28,4 +28,4 @@ struct mtfs_dentry_info {
 
 extern int mtfs_d_revalidate(struct dentry *dentry, struct nameidata *nd);
 extern void mtfs_d_release(struct dentry *dentry);
-#endif /* __HRFS_DENTRY_H__ */
+#endif /* __MTFS_DENTRY_H__ */

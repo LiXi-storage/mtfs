@@ -64,7 +64,7 @@ dep: .depend
 
 .depend: all-sources
 	$(MAKE) $(ARCH_UM) CC="$(CC)" -C $(LINUX_OBJ)		     \
-	-f $(PWD)/build/Makefile HRFS_LINUX_CONFIG=$(LINUX_CONFIG) \
+	-f $(PWD)/build/Makefile MTFS_LINUX_CONFIG=$(LINUX_CONFIG) \
 	-o scripts -o include/config/MARKER _sfdep_$(PWD)	     \
 	_FASTDEP_ALL_SUB_DIRS="$(PWD)"
 
@@ -73,7 +73,7 @@ endif # !LINUX25
 
 modules: $(DEP) all-sources
 	$(MAKE) $(ARCH_UM) CC="$(CC)" -C $(LINUX_OBJ)		     \
-	-f $(PWD)/build/Makefile HRFS_LINUX_CONFIG=$(LINUX_CONFIG) \
+	-f $(PWD)/build/Makefile MTFS_LINUX_CONFIG=$(LINUX_CONFIG) \
         LINUXINCLUDE='$(EXTRA_LNET_INCLUDE) -I$$(srctree)/arch/$$(SRCARCH)/include -Iinclude $$(if $$(KBUILD_SRC),-Iinclude2 -I$$(srctree)/include) -include include/linux/autoconf.h' \
 	$(MODULE_TARGET)=$(PWD) -o tmp_include_depends -o scripts -o \
 	include/config/MARKER $@
@@ -133,7 +133,7 @@ srpm:
 # In the debs target, first make sure what's in the changelog reflects
 # the software version.  Here's how we could dig the version out of the
 # autoconf version file directly:
-# lversion=$$(sed -ne 's/m4_define(\[HRFS_[A-Z][A-Z]*\],\[\([0-9][0-9]*\)\])$$/\1/p'
+# lversion=$$(sed -ne 's/m4_define(\[MTFS_[A-Z][A-Z]*\],\[\([0-9][0-9]*\)\])$$/\1/p'
 #	lustre/autoconf/lustre-version.ac | tr '\n' '.' | sed -e 's/.$//');
 #
 # However, one cannot really run "make debs" without having done a

@@ -50,7 +50,7 @@ int mtfs_branch_is_valid(struct inode *inode, mtfs_bindex_t bindex, __u32 valid_
 		goto out;
 	}
 	
-	if (valid_flags == HRFS_BRANCH_VALID) {
+	if (valid_flags == MTFS_BRANCH_VALID) {
 		is_valid = 1;
 		HDEBUG("branch[%d] is not null, return valid\n", bindex);
 		goto out;
@@ -63,8 +63,8 @@ int mtfs_branch_is_valid(struct inode *inode, mtfs_bindex_t bindex, __u32 valid_
 		goto out;
 	}
 
-	if ((valid_flags & HRFS_DATA_VALID) != 0 &&
-	    (mtfs_flag & HRFS_FLAG_DATABAD) != 0) {
+	if ((valid_flags & MTFS_DATA_VALID) != 0 &&
+	    (mtfs_flag & MTFS_FLAG_DATABAD) != 0) {
 		HDEBUG("data of branch[%d] is not valid\n", bindex); 
 		is_valid = 0;
 	}
@@ -99,18 +99,18 @@ int mtfs_invalid_branch(struct inode *inode, mtfs_bindex_t bindex, __u32 valid_f
 		goto out;
 	}
 
-	if ((valid_flags & HRFS_DATA_VALID) == 0) {
+	if ((valid_flags & MTFS_DATA_VALID) == 0) {
 		HERROR("nothing to set\n");
 		goto out;
 	}
 
-	if ((mtfs_flag & HRFS_FLAG_DATABAD) != 0) {
+	if ((mtfs_flag & MTFS_FLAG_DATABAD) != 0) {
 		HERROR("already set\n");
 		goto out;
 	}
 
-	mtfs_flag |= HRFS_FLAG_DATABAD;
-	mtfs_flag |= HRFS_FLAG_SETED;
+	mtfs_flag |= MTFS_FLAG_DATABAD;
+	mtfs_flag |= MTFS_FLAG_SETED;
 	HDEBUG("mtfs_flag = %x\n", mtfs_flag);
 	HASSERT(mtfs_flag_is_valid(mtfs_flag));
 	ret = lowerfs_ops->lowerfs_inode_get_flag(hidden_inode, &mtfs_flag);	
@@ -163,7 +163,7 @@ int lowerfs_inode_get_flag_xattr(struct inode *inode, __u32 *mtfs_flag, const ch
 		ret = -EINVAL;
 		goto out;
 	}
-	*mtfs_flag = disk_flag & HRFS_FLAG_DISK_MASK;
+	*mtfs_flag = disk_flag & MTFS_FLAG_DISK_MASK;
 	HDEBUG("ret = %d, mtfs_flag = 0x%x\n", ret, *mtfs_flag);
 out_succeeded:
 	ret = 0;
@@ -178,7 +178,7 @@ EXPORT_SYMBOL(lowerfs_inode_get_flag_xattr);
 int lowerfs_inode_get_flag_default(struct inode *inode, __u32 *mtfs_flag)
 {
 	int ret = 0;
-	ret = lowerfs_inode_get_flag_xattr(inode, mtfs_flag, XATTR_NAME_HRFS_FLAG);
+	ret = lowerfs_inode_get_flag_xattr(inode, mtfs_flag, XATTR_NAME_MTFS_FLAG);
 	HRETURN(ret);
 }
 EXPORT_SYMBOL(lowerfs_inode_get_flag_default);
@@ -204,7 +204,7 @@ int lowerfs_inode_set_flag_xattr(struct inode *inode, __u32 mtfs_flag, const cha
 		goto out;
 	}
 
-	disk_flag = mtfs_flag | HRFS_FLAG_DISK_SYMBOL;
+	disk_flag = mtfs_flag | MTFS_FLAG_DISK_SYMBOL;
 	if (unlikely(!inode->i_op || !inode->i_op->setxattr)) {
 		ret = -EPERM;
 		goto out;
@@ -228,7 +228,7 @@ EXPORT_SYMBOL(lowerfs_inode_set_flag_xattr);
 int lowerfs_inode_set_flag_default(struct inode *inode, __u32 mtfs_flag)
 {
 	int ret = 0;
-	ret = lowerfs_inode_set_flag_xattr(inode, mtfs_flag, XATTR_NAME_HRFS_FLAG);
+	ret = lowerfs_inode_set_flag_xattr(inode, mtfs_flag, XATTR_NAME_MTFS_FLAG);
 	HRETURN(ret);
 }
 EXPORT_SYMBOL(lowerfs_inode_set_flag_default);

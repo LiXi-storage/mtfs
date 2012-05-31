@@ -17,7 +17,7 @@ test_0()
 	mount_lowerfs
 	insert_mtfs_module
 	insert_support_module
-	$MOUNT_HRFS -o debug=$HRFS_DEBUG $HRFS_MOUNT && error "unexpected mount success"
+	$MOUNT_MTFS -o debug=$MTFS_DEBUG $MTFS_MOUNT && error "unexpected mount success"
 	cleanup_and_setup
 	return 0
 }
@@ -30,7 +30,7 @@ test_0a()
 	insert_mtfs_module
 	insert_support_module
 	#BUG: origin mtfs will not report error, and lustre will not be able to umount
-	$MOUNT_HRFS -o device=$HRFS_DIR1:$HRFS_DIR2 -o device=$HRFS_DIR1/not_exist1:$HRFS_DIR2/not_exist1 -o debug=$HRFS_DEBUG $HRFS_DEV $HRFS_MOUNT && error "unexpected mount success"
+	$MOUNT_MTFS -o device=$MTFS_DIR1:$MTFS_DIR2 -o device=$MTFS_DIR1/not_exist1:$MTFS_DIR2/not_exist1 -o debug=$MTFS_DEBUG $MTFS_DEV $MTFS_MOUNT && error "unexpected mount success"
 	cleanup_and_setup
 	return 0
 }
@@ -81,9 +81,9 @@ run_test 0e "mount mtfs without lowerfs support module should fail"
 
 test_1() #BUG226
 {
-	local HRFS_STATICS=$(stat -f $HRFS_MNT1 -c "%s %S %b %c")
+	local MTFS_STATICS=$(stat -f $MTFS_MNT1 -c "%s %S %b %c")
 	local LOWERFS_STATICS=$(stat -f $LOWERFS_MNT1 -c "%s %S %b %c")
-	[ "$HRFS_STATICS" = "$LOWERFS_STATICS" ] || error "mtfs $HRFS_STATICS != lowerfs $LOWERFS_STATICS"	
+	[ "$MTFS_STATICS" = "$LOWERFS_STATICS" ] || error "mtfs $MTFS_STATICS != lowerfs $LOWERFS_STATICS"	
 }
 run_test 1 "mtfs statics is same to lowerfs statics"
 

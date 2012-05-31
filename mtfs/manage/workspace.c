@@ -17,7 +17,7 @@ int component_root_init()
 	int ret = 0;
 	HENTRY();
 
-	HRFS_STRDUP(component_root.name, "/");
+	MTFS_STRDUP(component_root.name, "/");
 	if (component_root.name == NULL) {
 		ret = -ENOMEM;
 		goto out;
@@ -26,7 +26,7 @@ int component_root_init()
 	component_root.is_graph = 1;
 	component_root.parent = &component_root;
 
-	HRFS_INIT_LIST_HEAD(&component_root.this_graph.subcomponents);
+	MTFS_INIT_LIST_HEAD(&component_root.this_graph.subcomponents);
 	component_workspace = &component_root;
 out:
 	HRETURN(ret);
@@ -35,7 +35,7 @@ out:
 int component_root_finit()
 {
 	HENTRY();
-	HRFS_FREE_STR(component_root.name);
+	MTFS_FREE_STR(component_root.name);
 	HRETURN(0);
 }
 
@@ -308,7 +308,7 @@ static int workspace_declare_graph(lua_State *L, const char *name)
 
 	ret = component_declare_graph(component, type);
 out_free_type:
-	HRFS_FREE_STR(type);
+	MTFS_FREE_STR(type);
 out:
 	HRETURN(ret);
 }
@@ -332,11 +332,11 @@ static int workspace_declare_filter(lua_State *L)
 
 	lua_getfield(L, 1, "inpin_name");
 	if (lua_isstring(L, -1)) {
-		HRFS_STRDUP(inpin_name, lua_tostring(L, -1));
+		MTFS_STRDUP(inpin_name, lua_tostring(L, -1));
 		lua_remove(L, -1);
 	} else if(lua_isnil(L, -1)) {
 		HDEBUG("inpin_name not given, using in_0\n");
-		HRFS_STRDUP(inpin_name, "in_0");
+		MTFS_STRDUP(inpin_name, "in_0");
 		lua_remove(L, -1);
 	} else {
 		HERROR("argument error: inpin_name is expected to be a string, got %s\n", luaL_typename(L, -1));
@@ -358,7 +358,7 @@ static int workspace_declare_filter(lua_State *L)
 		goto out_free_inpin;
 	}
 
-	HRFS_ALLOC(outpin_names, sizeof(*outpin_names) * out_num);
+	MTFS_ALLOC(outpin_names, sizeof(*outpin_names) * out_num);
 	if (outpin_names == NULL) {
 		HERROR("not enough memory\n");
 		goto out_free_inpin;
@@ -378,7 +378,7 @@ static int workspace_declare_filter(lua_State *L)
 			int j = 0;
 			lua_rawgeti(L, -1, i + 1);
 			if (lua_isstring(L, -1)) {
-				HRFS_STRDUP(outpin_names[i], lua_tostring(L, -1));
+				MTFS_STRDUP(outpin_names[i], lua_tostring(L, -1));
 				lua_remove(L, -1);
 			} else {
 				HERROR("argument error: outpin_names[%d] is expected to be a string, got %s\n", i, luaL_typename(L, -1));
@@ -471,16 +471,16 @@ out_free_outpin:
 	/* Free outpin_name[i] */
 	for(i = 0; i < out_num; i++) {
 		if (outpin_names[i]) {
-			HRFS_FREE_STR(outpin_names[i]);
+			MTFS_FREE_STR(outpin_names[i]);
 		}
 	}
 out_free_outpin_names:
 	/* Free outpin_names */
-	HRFS_FREE(outpin_names, sizeof(*outpin_names) * out_num);
+	MTFS_FREE(outpin_names, sizeof(*outpin_names) * out_num);
 out_free_inpin:
-	HRFS_FREE_STR(inpin_name);
+	MTFS_FREE_STR(inpin_name);
 out_free_type:
-	HRFS_FREE_STR(type);
+	MTFS_FREE_STR(type);
 out:
 	HRETURN(0);
 }
@@ -768,7 +768,7 @@ static int component_instance_dump2graphviz(struct component *component)
 	int ret = 0;
 	HENTRY();
 
-	HRFS_ALLOC(buff, MAX_BUFF_SIZE);
+	MTFS_ALLOC(buff, MAX_BUFF_SIZE);
 	if (buff == NULL) {
 		ret = -ENOMEM;
 		goto out;
@@ -777,7 +777,7 @@ static int component_instance_dump2graphviz(struct component *component)
 	snprintf(buff, MAX_BUFF_SIZE, "%s [label= \"%s\"];",
 	         component->name, component->name);
 	code_line_print(buff);
-	HRFS_FREE(buff, MAX_BUFF_SIZE);
+	MTFS_FREE(buff, MAX_BUFF_SIZE);
 out:
 	HRETURN(ret);
 }
@@ -788,7 +788,7 @@ static int component_outlinks2brother_dump2graphviz(struct component *component)
 	int ret = 0;
 	HENTRY();
 
-	HRFS_ALLOC(buff, MAX_BUFF_SIZE);
+	MTFS_ALLOC(buff, MAX_BUFF_SIZE);
 	if (buff == NULL) {
 		ret = -ENOMEM;
 		goto out;
@@ -818,7 +818,7 @@ static int component_outlinks2brother_dump2graphviz(struct component *component)
 		}
 	}
 
-	HRFS_FREE(buff, MAX_BUFF_SIZE);
+	MTFS_FREE(buff, MAX_BUFF_SIZE);
 out:
 	HRETURN(ret);
 }
@@ -904,7 +904,7 @@ static int workspace_pack_wrap(lua_State *L)
 	}
 
 	HDEBUG("pin_tables: %d\n", pin_num);
-	HRFS_ALLOC(pin_tables, sizeof(*pin_tables) * pin_num);
+	MTFS_ALLOC(pin_tables, sizeof(*pin_tables) * pin_num);
 	if (pin_tables == NULL) {
 		HERROR("not enough memory\n");
 		/* Pop pin_tables */
@@ -978,18 +978,18 @@ static int workspace_pack_wrap(lua_State *L)
 out_free_tables:
 	for(i = 0; i < pin_num; i++) {
 		if (pin_tables[i].sub_component_name) {
-			HRFS_FREE_STR(pin_tables[i].sub_component_name);
+			MTFS_FREE_STR(pin_tables[i].sub_component_name);
 		}
 		if (pin_tables[i].sub_pin_name) {
-			HRFS_FREE_STR(pin_tables[i].sub_pin_name);
+			MTFS_FREE_STR(pin_tables[i].sub_pin_name);
 		}
 		if (pin_tables[i].pin_name) {
-			HRFS_FREE_STR(pin_tables[i].pin_name);
+			MTFS_FREE_STR(pin_tables[i].pin_name);
 		}
 	}
-	HRFS_FREE(pin_tables, sizeof(*pin_tables) * pin_num);
+	MTFS_FREE(pin_tables, sizeof(*pin_tables) * pin_num);
 out_free_name:
-	HRFS_FREE_STR(name);
+	MTFS_FREE_STR(name);
 out:
 	HRETURN(0);
 }

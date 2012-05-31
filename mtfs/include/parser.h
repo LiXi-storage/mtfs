@@ -2,8 +2,8 @@
  * Copyright (C) 2011 Li Xi <pkuelelixi@gmail.com>
  */
 
-#ifndef __HRFS_PARSER_H__
-#define __HRFS_PARSER_H__
+#ifndef __MTFS_PARSER_H__
+#define __MTFS_PARSER_H__
 #if defined (__linux__) && defined(__KERNEL__)
 #include <linux/parser.h>
 #else /* !(defined (__linux__) && defined(__KERNEL__)) */
@@ -42,4 +42,4 @@ int match_hex(substring_t *, int *result);
 void match_strcpy(char *, substring_t *);
 char *match_strdup(substring_t *);
 #endif /* !(defined (__linux__) && defined(__KERNEL__)) */
-#endif /* __HRFS_PARSER_H__ */
+#endif /* __MTFS_PARSER_H__ */

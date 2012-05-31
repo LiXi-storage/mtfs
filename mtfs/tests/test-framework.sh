@@ -239,9 +239,19 @@ reinsert_module()
 	return
 }
 
+insert_libcfs_module()
+{
+	modinfo libcfs > /dev/null 2>&1
+	if "$?" = "0" ; then
+		modprobe libcfs
+	else
+		insert_module libcfs ../../libcfs/libcfs/libcfs.ko
+	fi
+}
+
 insert_mtfs_module()
 {
-	insert_module $HRFS_MODULE $HRFS_MODULE_PATH
+	insert_module $MTFS_MODULE $MTFS_MODULE_PATH
 }
 
 insert_support_module()
@@ -257,29 +267,29 @@ mounted_mtfs_filesystems()
 
 mount_mtfs()
 {
-	mount_filesystem $MOUNT_HRFS mtfs $HRFS_DEV $HRFS_MNT1
+	mount_filesystem $MOUNT_MTFS mtfs $MTFS_DEV $MTFS_MNT1
 }
 
 mount_mtfs_noexit()
 {
-	mount_filesystem_noexit $MOUNT_HRFS mtfs $HRFS_DEV $HRFS_MNT1
+	mount_filesystem_noexit $MOUNT_MTFS mtfs $MTFS_DEV $MTFS_MNT1
 	return $?
 }
 
 mount_mtfs2()
 {
-	mount_filesystem $MOUNT_HRFS mtfs $HRFS2_DEV $HRFS_MNT2
+	mount_filesystem $MOUNT_MTFS mtfs $MTFS2_DEV $MTFS_MNT2
 }
 
 umount_mtfs()
 {
-	umount_filesystem mtfs $HRFS_MNT1
+	umount_filesystem mtfs $MTFS_MNT1
 	return $?
 }
 
 umount_mtfs2()
 {
-	umount_filesystem mtfs $HRFS_MNT2
+	umount_filesystem mtfs $MTFS_MNT2
 	return $?
 }
 
@@ -300,17 +310,23 @@ remount_mtfs()
 init_leak_log()
 {
 	if ! $(libcfs_module_is_inserted); then
-		modprobe libcfs
+		insert_libcfs_module	
 	fi
+
+	if ! $(libcfs_module_is_inserted); then
+		echo "failed to insert libcfs"
+		return
+	fi
+
 	echo "super" > /proc/sys/lnet/debug
-	echo > $HRFS_LOG
+	echo > $MTFS_LOG
 	lctl debug_kernel > /dev/null
 }
 
 check_leak_log()
 {
-	lctl debug_kernel > $HRFS_LOG
-	$LEAK_FINDER $HRFS_LOG 2>&1 | egrep '*** Leak:' && error "memory leak detected, see log $HRFS_LOG" || true
+	lctl debug_kernel > $MTFS_LOG
+	$LEAK_FINDER $MTFS_LOG 2>&1 | egrep '*** Leak:' && error "memory leak detected, see log $MTFS_LOG" || true
 }
 
 leak_detect_state_push()
@@ -353,9 +369,9 @@ abandon_branch()
 abandon_branches()
 {
 	if [ "$ABANDON_BINDEX" != "-1" ]; then
-		abandon_branch $HRFS_DEV $ABANDON_BINDEX
+		abandon_branch $MTFS_DEV $ABANDON_BINDEX
 		if [ "$DOING_MUTLTI" = "yes" ]; then
-			abandon_branch $HRFS2_DEV $ABANDON_BINDEX
+			abandon_branch $MTFS2_DEV $ABANDON_BINDEX
 		fi
 	fi
 }
@@ -378,9 +394,9 @@ undo_abandon_branch()
 undo_abandon_branches()
 {
 	if [ "$ABANDON_BINDEX" != "-1" ]; then
-		undo_abandon_branch $HRFS_DEV $ABANDON_BINDEX
+		undo_abandon_branch $MTFS_DEV $ABANDON_BINDEX
 		if [ "$DOING_MUTLTI" = "yes" ]; then
-			undo_abandon_branch $HRFS2_DEV $ABANDON_BINDEX
+			undo_abandon_branch $MTFS2_DEV $ABANDON_BINDEX
 		fi
 	fi
 }
@@ -403,7 +419,7 @@ setup_all()
 		init_leak_log
 	fi
 
-	insert_module $HRFS_MODULE $HRFS_MODULE_PATH
+	insert_module $MTFS_MODULE $MTFS_MODULE_PATH
 	insert_module $SUPPORT_MODULE $SUPPORT_MODULE_PATH
 	mount_mtfs
 	if [ "$DOING_MUTLTI" = "yes" ]; then
@@ -436,7 +452,7 @@ cleanup_all()
 	fi
 
 	remove_module $SUPPORT_MODULE
-	remove_module $HRFS_MODULE
+	remove_module $MTFS_MODULE
 
 	if [ "$MOUNT_LOWERFS" = "yes" ]; then
 		umount_lowerfs
@@ -556,12 +572,12 @@ init_test_env()
 	export TESTSUITE=`basename $0 .sh`
 	export TESTS_DIR=${TESTS_DIR:-$(cd $(dirname $0); echo $PWD)}
 	export TMP=${TMP:-/tmp}
-	export DIR=${DIR:-$HRFS_MNT1/test}
+	export DIR=${DIR:-$MTFS_MNT1/test}
 	export ABANDON_BINDEX=${ABANDON_BINDEX:-"-1"}
 
 	if [ "$DOING_MUTLTI" = "yes" ]; then
-		export DIR1=${DIR1:-$HRFS_MNT1/$DIR_SUB}
-		export DIR2=${DIR2:-$HRFS_MNT2/$DIR_SUB}
+		export DIR1=${DIR1:-$MTFS_MNT1/$DIR_SUB}
+		export DIR2=${DIR2:-$MTFS_MNT2/$DIR_SUB}
 	fi
 	assert_DIR
 
@@ -653,11 +669,11 @@ init_test_env()
 	export CORRECT=${CORRECT:-$TESTS_DIR/src/correct}
 	check_command $CORRECT
 
-	export MOUNT_HRFS=${MOUNT_HRFS:-$UTILS_DIR/mount.mtfs}
-	check_command $MOUNT_HRFS
+	export MOUNT_MTFS=${MOUNT_MTFS:-$UTILS_DIR/mount.mtfs}
+	check_command $MOUNT_MTFS
 	
-	export UTIL_HRFS=${UTIL_HRFS:-$UTILS_DIR/mtfs}
-	check_command $UTIL_HRFS
+	export UTIL_MTFS=${UTIL_MTFS:-$UTILS_DIR/mtfs}
+	check_command $UTIL_MTFS
 	cleanup_and_setup
 
 	if [ -d $DIR ]; then
@@ -831,13 +847,13 @@ skip()
 
 assert_DIR () {
 	local failed=""
-	[[ $DIR/ = $HRFS_MNT1/* ]] || \
-		{ failed=1 && echo "DIR=$DIR not in $HRFS_MNT1. Aborting."; }
+	[[ $DIR/ = $MTFS_MNT1/* ]] || \
+		{ failed=1 && echo "DIR=$DIR not in $MTFS_MNT1. Aborting."; }
 	if [ "$DOING_MUTLTI" = "yes" ]; then
-		[[ $DIR1/ = $HRFS_MNT1/* ]] || \
-			{ failed=1 && echo "DIR1=$DIR1 not in $HRFS_MNT1. Aborting."; }
-		[[ $DIR2/ = $HRFS_MNT2/* ]] || \
-			{ failed=1 && echo "DIR2=$DIR2 not in $HRFS_MNT2. Aborting"; }
+		[[ $DIR1/ = $MTFS_MNT1/* ]] || \
+			{ failed=1 && echo "DIR1=$DIR1 not in $MTFS_MNT1. Aborting."; }
+		[[ $DIR2/ = $MTFS_MNT2/* ]] || \
+			{ failed=1 && echo "DIR2=$DIR2 not in $MTFS_MNT2. Aborting"; }
 		[ $DIR1 = $DIR2 ] && \
 			{ failed=1 && echo "DIR1=$DIR1 is equal to DIR2=$DIR2 Aborting"; }
 	fi

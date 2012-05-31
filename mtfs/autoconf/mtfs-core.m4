@@ -32,8 +32,8 @@ esac
 # mtfs specific paths
 #
 AC_DEFUN([LC_PATH_DEFAULTS],
-[HRFS="$PWD/mtfs"
-AC_SUBST(HRFS)
+[MTFS="$PWD/mtfs"
+AC_SUBST(MTFS)
 
 # mount.mtfs
 rootsbindir='/sbin'
@@ -42,24 +42,24 @@ AC_SUBST(rootsbindir)
 ])
 
 #
-# HRFS_TAG is temporary, until backend fs check is in place
+# MTFS_TAG is temporary, until backend fs check is in place
 #
-AC_DEFUN([LC_CONFIG_HRFS_TAG],
-[AC_MSG_CHECKING([whether to enable HRFS_TAG])
+AC_DEFUN([LC_CONFIG_MTFS_TAG],
+[AC_MSG_CHECKING([whether to enable MTFS_TAG])
 AC_ARG_ENABLE([mtfs_tag],
         AC_HELP_STRING([--disable-libcfs-cdebug],
-                        [disable HRFS_TAG]),
+                        [disable MTFS_TAG]),
         [],[enable_mtfs_tag='yes'])
 AC_MSG_RESULT([$enable_mtfs_tag])
 if test x$enable_mtfs_tag = xyes; then
-        AC_DEFINE(HRFS_TAG, 1, [enable HRFS_TAG])
+        AC_DEFINE(MTFS_TAG, 1, [enable MTFS_TAG])
 fi
 ])
 
 #
 # LC_PROG_LINUX
 #
-# Hrfs linux kernel checks
+# MTFS linux kernel checks
 #
 AC_DEFUN([LC_PROG_LINUX],
 [
@@ -181,12 +181,12 @@ AC_MSG_RESULT([$enable_manage_tests])
 ])
 
 #
-# LC_CONFIG_LIBHRFS
+# LC_CONFIG_LIBMTFS
 #
 # whether to build libmtfs
 #
-AC_DEFUN([LC_CONFIG_LIBHRFS],
-[AC_MSG_CHECKING([whether to build Hrfs library])
+AC_DEFUN([LC_CONFIG_LIBMTFS],
+[AC_MSG_CHECKING([whether to build MTFS library])
 AC_ARG_ENABLE([libmtfs],
         AC_HELP_STRING([--disable-libmtfs],
                         [disable building of mtfs library]),
@@ -317,7 +317,7 @@ if test x$enable_lustre_support = xyes ; then
 	LC_CONFIG_LUSTRE_PATH
 fi
 
-LC_CONFIG_HRFS_TAG
+LC_CONFIG_MTFS_TAG
 LC_CONFIG_READLINE
 LC_CONFIG_LUA
 
@@ -332,8 +332,8 @@ EXTRA_KCFLAGS="$EXTRA_KCFLAGS -I$PWD/mtfs/include"
 #
 AC_DEFUN([LC_CONDITIONALS],
 [
-AM_CONDITIONAL(LIBHRFS, test x$enable_libmtfs = xyes)
-AM_CONDITIONAL(LIBHRFS_TESTS, test x$enable_libmtfs_tests = xyes)
+AM_CONDITIONAL(LIBMTFS, test x$enable_libmtfs = xyes)
+AM_CONDITIONAL(LIBMTFS_TESTS, test x$enable_libmtfs_tests = xyes)
 AM_CONDITIONAL(LUSTRE_SUPPORT, test x$enable_lustre_support = xyes)
 AM_CONDITIONAL(EXT2_SUPPORT, test x$enable_ext2_support = xyes)
 AM_CONDITIONAL(EXT3_SUPPORT, test x$enable_ext3_support = xyes)

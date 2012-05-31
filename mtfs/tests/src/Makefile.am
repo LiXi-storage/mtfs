@@ -1,8 +1,8 @@
 AM_CPPFLAGS = $(LLCPPFLAGS)
 AM_CFLAGS = $(LLCFLAGS)
-LIBHRFS_LIBS = $(top_builddir)/mtfs/libuser/libuser.a
-LDADD = -lpthread $(LIBHRFS_LIBS)
-DEPENDENCIES = $(LIBHRFS_LIBS)
+LIBMTFS_LIBS = $(top_builddir)/mtfs/libuser/libuser.a
+LDADD = -lpthread $(LIBMTFS_LIBS)
+DEPENDENCIES = $(LIBMTFS_LIBS)
 # LDADD = -lldap
 # LDADD := -lreadline -ltermcap # -lefence
 

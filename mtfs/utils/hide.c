@@ -30,7 +30,7 @@ int hide_dirs(char *source, int unhide)
 		if (unhide) {
 			ret = umount(name);
 		} else {
-			ret = mount(HRFS_HIDDEN_FS_DEV, name, HRFS_HIDDEN_FS_TYPE, flags, (void *)option);
+			ret = mount(MTFS_HIDDEN_FS_DEV, name, MTFS_HIDDEN_FS_TYPE, flags, (void *)option);
 		}
 		if (ret) {
 			HERROR("%s branch[%d] at %s failed: %s\n",
@@ -47,16 +47,16 @@ out:
 /* Is this a mtfs fs? */
 int mtfsapi_is_mtfs_mnt(struct mntent *mnt)
 {
-	return (strcmp(mnt->mnt_type, HRFS_FS_TYPE) == 0);
+	return (strcmp(mnt->mnt_type, MTFS_FS_TYPE) == 0);
 }
 
 /* Is this a mtfs-hidden fs? */
 int mtfsapi_is_mtfs_hidden_mnt(struct mntent *mnt)
 {
-	return (strcmp(mnt->mnt_type, HRFS_HIDDEN_FS_TYPE) == 0);
+	return (strcmp(mnt->mnt_type, MTFS_HIDDEN_FS_TYPE) == 0);
 }
 
-int mtfs_api_hide(const char *path, int unhide, mtfs_param_t *param)
+int mtfs_api_hide(const char *path, int unhide, struct mtfs_param *param)
 {
 	FILE *fp = NULL;
 	int ret = 0;
@@ -79,7 +79,7 @@ int mtfs_api_hide(const char *path, int unhide, mtfs_param_t *param)
 		goto end_mnt;
 	}
 	
-	HRFS_ALLOC(device, PATH_MAX);
+	MTFS_ALLOC(device, PATH_MAX);
 	if (device == NULL) {
 		HERROR("Not enough memory\n");
 		ret = -ENOMEM;
@@ -108,7 +108,7 @@ int mtfs_api_hide(const char *path, int unhide, mtfs_param_t *param)
 
 	ret = hide_dirs(device, unhide);
 free_device:
-	HRFS_FREE(device, PATH_MAX);	
+	MTFS_FREE(device, PATH_MAX);	
 end_mnt:
 	endmntent(fp);
 out:

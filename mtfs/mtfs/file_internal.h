@@ -2,8 +2,8 @@
  * Copyright (C) 2011 Li Xi <pkuelelixi@gmail.com>
  */
 
-#ifndef __HRFS_FILE_INTERNAL_H__
-#define __HRFS_FILE_INTERNAL_H__
+#ifndef __MTFS_FILE_INTERNAL_H__
+#define __MTFS_FILE_INTERNAL_H__
 #include <mtfs_file.h>
 
 static inline int mtfs_f_alloc(struct file *file, int bnum)
@@ -12,9 +12,9 @@ static inline int mtfs_f_alloc(struct file *file, int bnum)
 	int ret = 0;
 	
 	HASSERT(file);
-	HASSERT(bnum > 0 && bnum <= HRFS_BRANCH_MAX);
+	HASSERT(bnum > 0 && bnum <= MTFS_BRANCH_MAX);
 
-	HRFS_SLAB_ALLOC_PTR(f_info, mtfs_file_info_cache);
+	MTFS_SLAB_ALLOC_PTR(f_info, mtfs_file_info_cache);
 	if (unlikely(f_info == NULL)) {
 		ret = -ENOMEM;
 		goto out;
@@ -35,9 +35,9 @@ static inline int mtfs_f_free(struct file *file)
 	f_info = mtfs_f2info(file);
 	HASSERT(f_info);
 
-	HRFS_SLAB_FREE_PTR(f_info, mtfs_file_info_cache);
+	MTFS_SLAB_FREE_PTR(f_info, mtfs_file_info_cache);
 	_mtfs_f2info(file) = NULL;
 	HASSERT(_mtfs_f2info(file) == NULL);
 	return ret;
 }
-#endif /* __HRFS_FILE_INTERNAL_H__ */
+#endif /* __MTFS_FILE_INTERNAL_H__ */

@@ -23,9 +23,9 @@ int queue_initialise(queue_t *queue, unsigned int size)
 	unsigned int nqueues = MAX_QUEUE;
 	node_t *node;
 	int ret = 0;
-	HRFS_INIT_LIST_HEAD(&queue->head);
+	MTFS_INIT_LIST_HEAD(&queue->head);
 
-	HRFS_INIT_LIST_HEAD(&queue->free);
+	MTFS_INIT_LIST_HEAD(&queue->free);
 
 	if (!size) {
 		nqueues = MAX_QUEUE;
@@ -33,7 +33,7 @@ int queue_initialise(queue_t *queue, unsigned int size)
 		nqueues = size;
 	}
 
-	HRFS_ALLOC(queue->alloc, sizeof(*node) * nqueues);
+	MTFS_ALLOC(queue->alloc, sizeof(*node) * nqueues);
 	if (!queue->alloc) {
 		ret = -ENOMEM;
 		goto out;
@@ -59,7 +59,7 @@ void queue_free(queue_t *queue)
 		HWARN("freeing non-empty queue %p\n", queue);
 	}
 
-	HRFS_FREE(queue->alloc, queue->size);
+	MTFS_FREE(queue->alloc, queue->size);
 }
 
 /*

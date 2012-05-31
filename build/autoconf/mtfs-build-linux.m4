@@ -21,7 +21,7 @@ if test $linux25 = "yes" ; then
 	AC_MSG_CHECKING([for external module build support])
 	rm -f build/conftest.i
 	LB_LINUX_TRY_MAKE([],[],
-		[$makerule HRFS_KERNEL_TEST=conftest.i],
+		[$makerule MTFS_KERNEL_TEST=conftest.i],
 		[test -s build/conftest.i],
 		[
 			AC_MSG_RESULT([no])
@@ -29,7 +29,7 @@ if test $linux25 = "yes" ; then
 			makerule="_module_$makerule"
 			MODULE_TARGET="M"
 			LB_LINUX_TRY_MAKE([],[],
-				[$makerule HRFS_KERNEL_TEST=conftest.i],
+				[$makerule MTFS_KERNEL_TEST=conftest.i],
 				[test -s build/conftest.i],
 				[
 					AC_MSG_RESULT([yes])
@@ -66,7 +66,7 @@ LB_LINUX_TRY_MAKE([
 	char *LINUXRELEASE;
 	LINUXRELEASE=UTS_RELEASE;
 ],[
-	$makerule HRFS_KERNEL_TEST=conftest.i
+	$makerule MTFS_KERNEL_TEST=conftest.i
 ],[
 	test -s build/conftest.i
 ],[
@@ -94,7 +94,7 @@ modulenetdir='$(moduledir)/net/$(PACKAGE)'
 AC_SUBST(modulenetdir)
 
 # ------------ RELEASE --------------------------------
-AC_MSG_CHECKING([for Hrfs release])
+AC_MSG_CHECKING([for MTFS release])
 RELEASE="`echo ${LINUXRELEASE} | tr '-' '_'`_`date +%Y%m%d%H%M`"
 AC_MSG_RESULT($RELEASE)
 AC_SUBST(RELEASE)
@@ -367,7 +367,7 @@ $2
 AC_DEFUN([LB_LINUX_COMPILE_IFELSE],
 [m4_ifvaln([$1], [LB_LINUX_CONFTEST([$1])])dnl
 rm -f build/conftest.o build/conftest.mod.c build/conftest.ko
-AS_IF([AC_TRY_COMMAND(cp conftest.c build && make -d [$2] ${LD:+"LD=$LD"} CC="$CC" -f $PWD/build/Makefile HRFS_LINUX_CONFIG=$LINUX_CONFIG LINUXINCLUDE="$EXTRA_LNET_INCLUDE -I$LINUX/arch/`uname -m|sed -e 's/ppc.*/powerpc/' -e 's/x86_64/x86/' -e 's/i.86/x86/'`/include -I$LINUX/include -I$LINUX_OBJ/include -I$LINUX_OBJ/include2 -include include/linux/autoconf.h" -o tmp_include_depends -o scripts -o include/config/MARKER -C $LINUX_OBJ EXTRA_CFLAGS="-Werror-implicit-function-declaration $EXTRA_KCFLAGS" $ARCH_UM $MODULE_TARGET=$PWD/build) >/dev/null && AC_TRY_COMMAND([$3])],
+AS_IF([AC_TRY_COMMAND(cp conftest.c build && make -d [$2] ${LD:+"LD=$LD"} CC="$CC" -f $PWD/build/Makefile MTFS_LINUX_CONFIG=$LINUX_CONFIG LINUXINCLUDE="$EXTRA_LNET_INCLUDE -I$LINUX/arch/`uname -m|sed -e 's/ppc.*/powerpc/' -e 's/x86_64/x86/' -e 's/i.86/x86/'`/include -I$LINUX/include -I$LINUX_OBJ/include -I$LINUX_OBJ/include2 -include include/linux/autoconf.h" -o tmp_include_depends -o scripts -o include/config/MARKER -C $LINUX_OBJ EXTRA_CFLAGS="-Werror-implicit-function-declaration $EXTRA_KCFLAGS" $ARCH_UM $MODULE_TARGET=$PWD/build) >/dev/null && AC_TRY_COMMAND([$3])],
 	[$4],
 	[_AC_MSG_LOG_CONFTEST
 m4_ifvaln([$5],[$5])dnl])
@@ -383,7 +383,7 @@ AC_DEFUN([LB_LINUX_ARCH],
          [AC_MSG_CHECKING([Linux kernel architecture])
           AS_IF([rm -f $PWD/build/arch
                  make -s --no-print-directory echoarch -f $PWD/build/Makefile \
-                     HRFS_LINUX_CONFIG=$LINUX_CONFIG -C $LINUX $ARCH_UM \
+                     MTFS_LINUX_CONFIG=$LINUX_CONFIG -C $LINUX $ARCH_UM \
                      ARCHFILE=$PWD/build/arch && LINUX_ARCH=`cat $PWD/build/arch`],
                 [AC_MSG_RESULT([$LINUX_ARCH])],
                 [AC_MSG_ERROR([Could not determine the kernel architecture.])])
@@ -465,7 +465,7 @@ AC_DEFUN([LB_LINUX_CONFIG_BIG_STACK],
 			LB_LINUX_CONFIG([STACK_SIZE_16KB],[],[
 				LB_LINUX_CONFIG([STACK_SIZE_32KB],[],[
 					LB_LINUX_CONFIG([STACK_SIZE_64KB],[],[
-						AC_MSG_ERROR([Hrfs requires that Linux is configured with at least a 16KB stack.])
+						AC_MSG_ERROR([MTFS requires that Linux is configured with at least a 16KB stack.])
 					])
 				])
 			])
@@ -550,7 +550,7 @@ LB_LINUX_TRY_MAKE([
         int myretval=ENOSYS ;
         return myretval;
 ],[
-        $makerule HRFS_KERNEL_TEST=conftest.i
+        $makerule MTFS_KERNEL_TEST=conftest.i
 ],[
         grep request_module build/conftest.i | grep -v `grep "int myretval=" build/conftest.i | cut -d= -f2 | cut -d" "  -f1` >/dev/null
 ],[
@@ -576,7 +576,7 @@ LB_LINUX_TRY_MAKE([
         int myretval=ENOSYS ;
         return myretval;
 ],[
-        $makerule HRFS_KERNEL_TEST=conftest.i
+        $makerule MTFS_KERNEL_TEST=conftest.i
 ],[
         grep request_module build/conftest.i | grep -v `grep "int myretval=" build/conftest.i | cut -d= -f2 | cut -d" "  -f1` >/dev/null
 ],[
@@ -603,14 +603,14 @@ LB_LINUX_SYMVERFILE
 
 
 LB_LINUX_CONFIG([MODULES],[],[
-	AC_MSG_ERROR([module support is required to build Hrfs kernel modules.])
+	AC_MSG_ERROR([module support is required to build MTFS kernel modules.])
 ])
 
 LB_LINUX_CONFIG([MODVERSIONS])
 
 LB_LINUX_CONFIG([KALLSYMS],[],[
 if test "x$ARCH_UM" = "x" ; then
-	AC_MSG_ERROR([Hrfs requires that CONFIG_KALLSYMS is enabled in your kernel.])
+	AC_MSG_ERROR([MTFS requires that CONFIG_KALLSYMS is enabled in your kernel.])
 fi
 ])
 

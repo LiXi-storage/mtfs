@@ -2,8 +2,8 @@
  * Copyright (C) 2011 Li Xi <pkuelelixi@gmail.com>
  */
 
-#ifndef __HRFS_RULE_TREE_H__
-#define __HRFS_RULE_TREE_H__
+#ifndef __MTFS_RULE_TREE_H__
+#define __MTFS_RULE_TREE_H__
 #include <raid.h>	
 
 typedef struct rule {
@@ -30,4 +30,4 @@ rule_tree_t *rule_tree_construct(rule_t *rule_array, unsigned int rule_number);
 int rule_tree_dump(rule_tree_t *root);
 raid_type_t rule_tree_search(rule_tree_t *root, const char *string);
 int rule_tree_destruct(rule_tree_t *root);
-#endif /* __HRFS_RULE_TREE_H__ */
+#endif /* __MTFS_RULE_TREE_H__ */

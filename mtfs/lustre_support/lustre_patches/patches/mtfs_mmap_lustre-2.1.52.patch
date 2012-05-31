@@ -7,10 +7,10 @@ Index: lustre-2.1.52/lustre/llite/llite_mmap.c
          RETURN(rc);
  }
 +
-+#ifndef DISABLE_HRFS_SUPPORT
++#ifndef DISABLE_MTFS_SUPPORT
 +struct vm_operations_struct *mtfs_ll_get_vm_ops(void)
 +{
 +        return &ll_file_vm_ops;
 +}
 +EXPORT_SYMBOL(mtfs_ll_get_vm_ops);
-+#endif /* !DISABLE_HRFS_SUPPORT */
++#endif /* !DISABLE_MTFS_SUPPORT */

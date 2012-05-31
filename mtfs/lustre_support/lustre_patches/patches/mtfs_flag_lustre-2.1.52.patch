@@ -14,22 +14,22 @@ Index: lustre-2.1.52/lustre/include/lustre/lustre_idl.h
  #define OBD_MD_FLRMTRSETFACL (0x0004000000000000ULL) /* lfs rsetfacl case */
  #define OBD_MD_FLRMTRGETFACL (0x0008000000000000ULL) /* lfs rgetfacl case */
  
-+#ifndef DISABLE_HRFS_SUPPORT
-+#define OBD_MD_FLHRFSFLAG    (0x0010000000000000ULL) /* mtfs flag */
++#ifndef DISABLE_MTFS_SUPPORT
++#define OBD_MD_FLMTFSFLAG    (0x0010000000000000ULL) /* mtfs flag */
 +/* d_revalidate should update mtfs flag */
 +#define OBD_MD_FLGETATTR (OBD_MD_FLID    | OBD_MD_FLATIME | OBD_MD_FLMTIME | \
 +                          OBD_MD_FLCTIME | OBD_MD_FLSIZE  | OBD_MD_FLBLKSZ | \
 +                          OBD_MD_FLMODE  | OBD_MD_FLTYPE  | OBD_MD_FLUID   | \
 +                          OBD_MD_FLGID   | OBD_MD_FLFLAGS | OBD_MD_FLNLINK | \
 +                          OBD_MD_FLGENER | OBD_MD_FLRDEV  | OBD_MD_FLGROUP | \
-+                          OBD_MD_FLHRFSFLAG)
-+#else /* !DISABLE_HRFS_SUPPORT */
++                          OBD_MD_FLMTFSFLAG)
++#else /* !DISABLE_MTFS_SUPPORT */
  #define OBD_MD_FLGETATTR (OBD_MD_FLID    | OBD_MD_FLATIME | OBD_MD_FLMTIME | \
                            OBD_MD_FLCTIME | OBD_MD_FLSIZE  | OBD_MD_FLBLKSZ | \
                            OBD_MD_FLMODE  | OBD_MD_FLTYPE  | OBD_MD_FLUID   | \
                            OBD_MD_FLGID   | OBD_MD_FLFLAGS | OBD_MD_FLNLINK | \
                            OBD_MD_FLGENER | OBD_MD_FLRDEV  | OBD_MD_FLGROUP)
-+#endif /* DISABLE_HRFS_SUPPORT */
++#endif /* DISABLE_MTFS_SUPPORT */
  
  /* don't forget obdo_fid which is way down at the bottom so it can
   * come after the definition of llog_cookie */
@@ -37,13 +37,13 @@ Index: lustre-2.1.52/lustre/include/lustre/lustre_idl.h
          __u64          padding_10;
  }; /* 216 */
  
-+#ifndef DISABLE_HRFS_SUPPORT
++#ifndef DISABLE_MTFS_SUPPORT
 +/*
 + * Use field padding_5 of struct mdt_body,
 + * without breaking wirecheck.
 + */
-+#define HRFS_MDT_BODY_FLAG padding_5
-+#endif /* !DISABLE_HRFS_SUPPORT */
++#define MTFS_MDT_BODY_FLAG padding_5
++#endif /* !DISABLE_MTFS_SUPPORT */
 +
  extern void lustre_swab_mdt_body (struct mdt_body *b);
  
@@ -52,13 +52,13 @@ Index: lustre-2.1.52/lustre/include/lustre/lustre_idl.h
          __u32           sa_padding_5;
  };
  
-+#ifndef DISABLE_HRFS_SUPPORT
++#ifndef DISABLE_MTFS_SUPPORT
 +/*
 + * Use field sa_padding_2 of struct mdt_rec_setattr,
 + * without breaking wirecheck.
 + */
 +#define sa_mtfs_flag sa_padding_2
-+#endif /* !DISABLE_HRFS_SUPPORT */
++#endif /* !DISABLE_MTFS_SUPPORT */
 +
  extern void lustre_swab_mdt_rec_setattr (struct mdt_rec_setattr *sa);
  
@@ -67,14 +67,14 @@ Index: lustre-2.1.52/lustre/include/lustre/lustre_idl.h
  #define MDS_OPEN_NORESTORE  0100000000000ULL /* Do not restore file at open */
  #define MDS_OPEN_NEWSTRIPE  0200000000000ULL /* New stripe needed (restripe or
                                                * hsm restore) */
-+#ifndef DISABLE_HRFS_SUPPORT
++#ifndef DISABLE_MTFS_SUPPORT
 +/*
 + * All 32th bits exhausted, use an unused bit.
 + */
 +
 +/* set when modifying dir's mtfs_flag at mds */
-+#define HRFS_MDT_SET_FLAG	MDS_OPEN_JOIN_FILE
-+#endif /* !DISABLE_HRFS_SUPPORT */
++#define MTFS_MDT_SET_FLAG	MDS_OPEN_JOIN_FILE
++#endif /* !DISABLE_MTFS_SUPPORT */
  
  /* permission for create non-directory file */
  #define MAY_CREATE      (1 << 7)
@@ -86,11 +86,11 @@ Index: lustre-2.1.52/lustre/llite/llite_internal.h
  
  };
  
-+#ifndef DISABLE_HRFS_SUPPORT
++#ifndef DISABLE_MTFS_SUPPORT
 +struct mtfs_ll_inode_info {
 +        __u32 mtfs_flag;
 +};
-+#endif /* !DISABLE_HRFS_SUPPORT */
++#endif /* !DISABLE_MTFS_SUPPORT */
 +
  struct ll_inode_info {
          int                     lli_inode_magic;
@@ -99,9 +99,9 @@ Index: lustre-2.1.52/lustre/llite/llite_internal.h
           * serialize normal readdir and statahead-readdir
           */
          cfs_semaphore_t         lli_readdir_sem;
-+#ifndef DISABLE_HRFS_SUPPORT
++#ifndef DISABLE_MTFS_SUPPORT
 +        struct mtfs_ll_inode_info lli_mtfs_info;
-+#endif /* !DISABLE_HRFS_SUPPORT */
++#endif /* !DISABLE_MTFS_SUPPORT */
  };
  
  /*
@@ -113,9 +113,9 @@ Index: lustre-2.1.52/lustre/llite/llite_lib.c
          cfs_up(&lli->lli_size_sem);
  }
  
-+#ifndef DISABLE_HRFS_SUPPORT
++#ifndef DISABLE_MTFS_SUPPORT
 +#include <mtfs/mtfs_flag.h>
-+#endif /* !DISABLE_HRFS_SUPPORT */
++#endif /* !DISABLE_MTFS_SUPPORT */
  void ll_update_inode(struct inode *inode, struct lustre_md *md)
  {
          struct ll_inode_info *lli = ll_i2info(inode);
@@ -123,9 +123,9 @@ Index: lustre-2.1.52/lustre/llite/llite_lib.c
                  LASSERT(md->oss_capa);
                  ll_add_capa(inode, md->oss_capa);
          }
-+#ifndef DISABLE_HRFS_SUPPORT
-+        if (body->valid & OBD_MD_FLHRFSFLAG) {
-+                __u32 mtfs_flag = body->HRFS_MDT_BODY_FLAG;
++#ifndef DISABLE_MTFS_SUPPORT
++        if (body->valid & OBD_MD_FLMTFSFLAG) {
++                __u32 mtfs_flag = body->MTFS_MDT_BODY_FLAG;
 +                struct ll_inode_info *lli = ll_i2info(inode);
 +                struct mtfs_ll_inode_info *mtfs_info = &(lli->lli_mtfs_info);
 +
@@ -135,7 +135,7 @@ Index: lustre-2.1.52/lustre/llite/llite_lib.c
 +                mtfs_info->mtfs_flag = mtfs_flag;
 +                HDEBUG("updating inode's mtfs_flag to 0x%x\n", mtfs_flag);
 +        }
-+#endif /* !DISABLE_HRFS_SUPPORT */
++#endif /* !DISABLE_MTFS_SUPPORT */
  }
  
  void ll_read_inode2(struct inode *inode, void *opaque)
@@ -144,7 +144,7 @@ Index: lustre-2.1.52/lustre/llite/llite_lib.c
          RETURN(0);
  }
 +
-+#ifndef DISABLE_HRFS_SUPPORT
++#ifndef DISABLE_MTFS_SUPPORT
 +int mtfs_ll_inode_get_flag(struct inode *inode, __u32 *mtfs_flag)
 +{
 +        int rc = 0;
@@ -162,7 +162,7 @@ Index: lustre-2.1.52/lustre/llite/llite_lib.c
 +                goto out;
 +        }
 +
-+        op_data->op_valid = OBD_MD_FLHRFSFLAG;
++        op_data->op_valid = OBD_MD_FLMTFSFLAG;
 +
 +        rc = md_getattr(sbi->ll_md_exp, op_data, &req);
 +        ll_finish_md_op_data(op_data);
@@ -175,8 +175,8 @@ Index: lustre-2.1.52/lustre/llite/llite_lib.c
 +        body = req_capsule_server_get(&req->rq_pill, &RMF_MDT_BODY);
 +        LASSERT(body != NULL);
 +
-+        if (body->valid & OBD_MD_FLHRFSFLAG) {
-+                flag = body->HRFS_MDT_BODY_FLAG;
++        if (body->valid & OBD_MD_FLMTFSFLAG) {
++                flag = body->MTFS_MDT_BODY_FLAG;
 +                if (unlikely(!mtfs_flag_is_valid(flag))) {
 +                        HERROR("get an error flag of inode %lu\n",
 +                               inode->i_ino);
@@ -226,7 +226,7 @@ Index: lustre-2.1.52/lustre/llite/llite_lib.c
 +
 +        /* Seems no need to lock lli->lli_trunc_sem */
 +
-+        op_data->op_attr.ia_valid |= HRFS_MDT_SET_FLAG;
++        op_data->op_attr.ia_valid |= MTFS_MDT_SET_FLAG;
 +        op_data->op_mtfs_flag = mtfs_flag;
 +
 +        CERROR("in %x, %u\n",
@@ -247,7 +247,7 @@ Index: lustre-2.1.52/lustre/llite/llite_lib.c
 +        HRETURN(rc);
 +}
 +EXPORT_SYMBOL(mtfs_ll_inode_set_flag);
-+#endif /* !DISABLE_HRFS_SUPPORT */
++#endif /* !DISABLE_MTFS_SUPPORT */
 Index: lustre-2.1.52/lustre/include/lu_object.h
 ===================================================================
 --- lustre-2.1.52.orig/lustre/include/lu_object.h	2012-03-28 14:18:57.000000000 +0800
@@ -256,10 +256,10 @@ Index: lustre-2.1.52/lustre/include/lu_object.h
          __u32          la_blksize;
          /** real device */
          __u32          la_rdev;
-+#ifndef DISABLE_HRFS_SUPPORT
++#ifndef DISABLE_MTFS_SUPPORT
 +        /** mtfs flag */
 +        __u32          la_mtfs_disk_flag;
-+#endif /* !DISABLE_HRFS_SUPPORT */
++#endif /* !DISABLE_MTFS_SUPPORT */
          /**
           * valid bits
           *
@@ -271,10 +271,10 @@ Index: lustre-2.1.52/lustre/mdt/mdt_handler.c
          b->blocks = ma->ma_som->msd_blocks;
  }
  
-+#ifndef DISABLE_HRFS_SUPPORT
++#ifndef DISABLE_MTFS_SUPPORT
 +#include <mtfs/debug.h>
 +#include <mtfs/mtfs_flag.h>
-+#endif /* !DISABLE_HRFS_SUPPORT */
++#endif /* !DISABLE_MTFS_SUPPORT */
 +
  void mdt_pack_attr2body(struct mdt_thread_info *info, struct mdt_body *b,
                          const struct lu_attr *attr, const struct lu_fid *fid)
@@ -283,13 +283,13 @@ Index: lustre-2.1.52/lustre/mdt/mdt_handler.c
          if (b->valid & OBD_MD_FLSIZE)
                  CDEBUG(D_VFSTRACE, DFID": returning size %llu\n",
                         PFID(fid), (unsigned long long)b->size);
-+#ifndef DISABLE_HRFS_SUPPORT
++#ifndef DISABLE_MTFS_SUPPORT
 +        if (attr->la_mtfs_disk_flag != 0) {
 +                HASSERT(mtfs_disk_flag_is_valid(attr->la_mtfs_disk_flag));
-+                b->HRFS_MDT_BODY_FLAG = attr->la_mtfs_disk_flag & HRFS_FLAG_DISK_MASK;
-+                b->valid |= OBD_MD_FLHRFSFLAG;
++                b->MTFS_MDT_BODY_FLAG = attr->la_mtfs_disk_flag & MTFS_FLAG_DISK_MASK;
++                b->valid |= OBD_MD_FLMTFSFLAG;
 +        }
-+#endif /* !DISABLE_HRFS_SUPPORT */
++#endif /* !DISABLE_MTFS_SUPPORT */
  }
  
  static inline int mdt_body_has_lov(const struct lu_attr *la,
@@ -297,12 +297,12 @@ Index: lustre-2.1.52/lustre/mdt/mdt_handler.c
          if (ma->ma_need & MA_SOM)
                  ma->ma_som = &info->mti_u.som.data;
  
-+#ifndef DISABLE_HRFS_SUPPORT
-+        if (reqbody->valid & OBD_MD_FLHRFSFLAG) {
++#ifndef DISABLE_MTFS_SUPPORT
++        if (reqbody->valid & OBD_MD_FLMTFSFLAG) {
 +                HDEBUG("getting flag\n");
-+                ma->ma_need |= MA_HRFS;
++                ma->ma_need |= MA_MTFS;
 +        }
-+#endif /* DISABLE_HRFS_SUPPORT */
++#endif /* DISABLE_MTFS_SUPPORT */
 +
          rc = mo_attr_get(env, next, ma);
          if (unlikely(rc)) {
@@ -315,7 +315,7 @@ Index: lustre-2.1.52/lustre/mdd/mdd_object.c
          RETURN(0);
  }
  
-+#ifndef DISABLE_HRFS_SUPPORT
++#ifndef DISABLE_MTFS_SUPPORT
 +#include <mtfs/debug.h>
 +#include <mtfs/mtfs_flag.h>
 +
@@ -328,7 +328,7 @@ Index: lustre-2.1.52/lustre/mdd/mdd_object.c
 +        HENTRY();
 +
 +        rc = mdd_get_md(env, mdd_obj, &disk_flag, &flag_size,
-+                        XATTR_NAME_HRFS_FLAG);
++                        XATTR_NAME_MTFS_FLAG);
 +        if (unlikely(rc < 0)) {
 +                HERROR("failed to get mtfs flag, rc = %d, "
 +                "flag_size = %d\n", rc, flag_size);
@@ -336,7 +336,7 @@ Index: lustre-2.1.52/lustre/mdd/mdd_object.c
 +                goto out;
 +        } else if (rc == 0) {
 +        	HDEBUG("flag is not set\n");
-+        	ma->ma_attr.la_mtfs_disk_flag = HRFS_FLAG_DISK_SYMBOL;
++        	ma->ma_attr.la_mtfs_disk_flag = MTFS_FLAG_DISK_SYMBOL;
 +        	goto out;
 +        } else if (flag_size != sizeof(disk_flag)) {
 +        	HDEBUG("got an invalid size of disk flag,"
@@ -357,7 +357,7 @@ Index: lustre-2.1.52/lustre/mdd/mdd_object.c
 +        rc = 0;
 +        HRETURN(rc);
 +}
-+#endif /* !DISABLE_HRFS_SUPPORT */
++#endif /* !DISABLE_MTFS_SUPPORT */
 +
  int mdd_attr_get_internal(const struct lu_env *env, struct mdd_object *mdd_obj,
                                   struct md_attr *ma)
@@ -367,11 +367,11 @@ Index: lustre-2.1.52/lustre/mdd/mdd_object.c
          }
  #endif
 +
-+#ifndef DISABLE_HRFS_SUPPORT
-+        if (rc == 0 && ma->ma_need & MA_HRFS) {
++#ifndef DISABLE_MTFS_SUPPORT
++        if (rc == 0 && ma->ma_need & MA_MTFS) {
 +                rc = mtfs_mdd_get_flag(env, mdd_obj, ma);
 +        }
-+#endif /* DISABLE_HRFS_SUPPORT */
++#endif /* DISABLE_MTFS_SUPPORT */
          CDEBUG(D_INODE, "after getattr rc = %d, ma_valid = "LPX64" ma_lmm=%p\n",
                 rc, ma->ma_valid, ma->ma_lmm);
          RETURN(rc);
@@ -379,9 +379,9 @@ Index: lustre-2.1.52/lustre/mdd/mdd_object.c
                                   struct mdd_object *mdd_obj, struct md_attr *ma)
  {
          int rc;
-+#ifndef DISABLE_HRFS_SUPPORT
++#ifndef DISABLE_MTFS_SUPPORT
 +        int needlock = ma->ma_need &
-+                       (MA_LOV | MA_LMV | MA_ACL_DEF | MA_HSM | MA_SOM | MA_PFID | MA_HRFS);
++                       (MA_LOV | MA_LMV | MA_ACL_DEF | MA_HSM | MA_SOM | MA_PFID | MA_MTFS);
 +#else
          int needlock = ma->ma_need &
                         (MA_LOV | MA_LMV | MA_ACL_DEF | MA_HSM | MA_SOM | MA_PFID);
@@ -393,7 +393,7 @@ Index: lustre-2.1.52/lustre/mdd/mdd_object.c
                                          md2mdd_obj(obj), handle);
  }
  
-+#ifndef DISABLE_HRFS_SUPPORT
++#ifndef DISABLE_MTFS_SUPPORT
 +static int mtfs_mdd_flag_set_md(const struct lu_env *env,
 +                                struct mdd_object *mdd_obj,
 +                                const struct md_attr *ma,
@@ -406,10 +406,10 @@ Index: lustre-2.1.52/lustre/mdd/mdd_object.c
 +
 +        HASSERT(mtfs_disk_flag_is_valid(la->la_mtfs_disk_flag));
 +        buf = mdd_buf_get(env, &la->la_mtfs_disk_flag, sizeof(la->la_mtfs_disk_flag));
-+        rc = mdd_xattr_set_txn(env, mdd_obj, buf, XATTR_NAME_HRFS_FLAG, 0, handle);
++        rc = mdd_xattr_set_txn(env, mdd_obj, buf, XATTR_NAME_MTFS_FLAG, 0, handle);
 +        HRETURN(rc);
 +}
-+#endif /* !DISABLE_HRFS_SUPPORT */
++#endif /* !DISABLE_MTFS_SUPPORT */
 +
  /* set attr and LOV EA at once, return updated attr */
  static int mdd_attr_set(const struct lu_env *env, struct md_object *obj,
@@ -419,11 +419,11 @@ Index: lustre-2.1.52/lustre/mdd/mdd_object.c
  
          }
 +
-+#ifndef DISABLE_HRFS_SUPPORT
-+        if (rc == 0 && ma->ma_valid & MA_HRFS) {
++#ifndef DISABLE_MTFS_SUPPORT
++        if (rc == 0 && ma->ma_valid & MA_MTFS) {
 +                rc = mtfs_mdd_flag_set_md(env, mdd_obj, ma, handle);
 +        }
-+#endif /* !DISABLE_HRFS_SUPPORT */
++#endif /* !DISABLE_MTFS_SUPPORT */
 +
  cleanup:
          if (rc == 0)
@@ -436,13 +436,13 @@ Index: lustre-2.1.52/lustre/include/md_object.h
  /* (Layout lock will used #7 here) */
          MA_HSM       = (1 << 8),
          MA_SOM       = (1 << 9),
-+#ifndef DISABLE_HRFS_SUPPORT
++#ifndef DISABLE_MTFS_SUPPORT
 +        MA_PFID      = (1 << 10),
 +        /* Need mtfs flag */
-+        MA_HRFS      = (1 << 11)
-+#else /* !DISABLE_HRFS_SUPPORT */
++        MA_MTFS      = (1 << 11)
++#else /* !DISABLE_MTFS_SUPPORT */
          MA_PFID      = (1 << 10)
-+#endif /* DISABLE_HRFS_SUPPORT */
++#endif /* DISABLE_MTFS_SUPPORT */
  };
  
  typedef enum {
@@ -454,10 +454,10 @@ Index: lustre-2.1.52/lustre/include/obd.h
  
          /* Operation type */
          __u32                   op_opc;
-+#ifndef DISABLE_HRFS_SUPPORT
-+        /* Hrfs flag seting */
++#ifndef DISABLE_MTFS_SUPPORT
++        /* MTFS flag seting */
 +        __u32                   op_mtfs_flag;
-+#endif /* !DISABLE_HRFS_SUPPORT */
++#endif /* !DISABLE_MTFS_SUPPORT */
  };
  
  struct md_enqueue_info;
@@ -470,12 +470,12 @@ Index: lustre-2.1.52/lustre/mdc/mdc_lib.c
          else
                  rec->sa_suppgid = op_data->op_suppgids[0];
 +
-+#ifndef DISABLE_HRFS_SUPPORT
-+        if (op_data->op_attr.ia_valid & HRFS_MDT_SET_FLAG) {
-+                rec->sa_valid |= HRFS_MDT_SET_FLAG;
++#ifndef DISABLE_MTFS_SUPPORT
++        if (op_data->op_attr.ia_valid & MTFS_MDT_SET_FLAG) {
++                rec->sa_valid |= MTFS_MDT_SET_FLAG;
 +                rec->sa_mtfs_flag = op_data->op_mtfs_flag;
 +        }
-+#endif /* !DISABLE_HRFS_SUPPORT */
++#endif /* !DISABLE_MTFS_SUPPORT */
 +
  }
  
@@ -488,9 +488,9 @@ Index: lustre-2.1.52/lustre/mdt/mdt_lib.c
  }
  /* unpacking */
  
-+#ifndef DISABLE_HRFS_SUPPORT
++#ifndef DISABLE_MTFS_SUPPORT
 +#include <mtfs/mtfs_flag.h>
-+#endif /* !DISABLE_HRFS_SUPPORT */
++#endif /* !DISABLE_MTFS_SUPPORT */
  static int mdt_setattr_unpack_rec(struct mdt_thread_info *info)
  {
          struct md_ucred         *uc  = mdt_ucred(info);
@@ -498,14 +498,14 @@ Index: lustre-2.1.52/lustre/mdt/mdt_lib.c
          la->la_mtime = rec->sa_mtime;
          ma->ma_valid = MA_INODE;
  
-+#ifndef DISABLE_HRFS_SUPPORT
-+        if (rec->sa_valid & HRFS_MDT_SET_FLAG) {
++#ifndef DISABLE_MTFS_SUPPORT
++        if (rec->sa_valid & MTFS_MDT_SET_FLAG) {
 +                CERROR("setting mtfs flag %u\n", rec->sa_mtfs_flag);
 +                HASSERT(mtfs_flag_is_valid(rec->sa_mtfs_flag));
-+                la->la_mtfs_disk_flag = rec->sa_mtfs_flag | HRFS_FLAG_DISK_SYMBOL;
-+                ma->ma_valid |= MA_HRFS;
++                la->la_mtfs_disk_flag = rec->sa_mtfs_flag | MTFS_FLAG_DISK_SYMBOL;
++                ma->ma_valid |= MA_MTFS;
 +        }
-+#endif /* !DISABLE_HRFS_SUPPORT */
++#endif /* !DISABLE_MTFS_SUPPORT */
 +
          if (req_capsule_get_size(pill, &RMF_CAPA1, RCL_CLIENT))
                  mdt_set_capainfo(info, 0, rr->rr_fid1,

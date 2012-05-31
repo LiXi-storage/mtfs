@@ -669,7 +669,7 @@ run_test 24u "do nothing"
 test_24v() {
 	local NRFILES=100000
 #	local FREE_INODES=`lfs df -i|grep "filesystem summary" | awk '{print $5}'`
-	local FREE_INODES=`df -i | grep $HRFS_MNT1 | awk {'print $4'}`
+	local FREE_INODES=`df -i | grep $MTFS_MNT1 | awk {'print $4'}`
 	[ $FREE_INODES -lt $NRFILES ] && \
 		skip "not enough free inodes $FREE_INODES required $NRFILES" && \
 		return
@@ -1181,7 +1181,7 @@ test_33b() {
 run_test 33b "test open file with malformed flags (No panic)"
 
 setup_all
-FREE=$(filesystem_free $HRFS_MNT1)
+FREE=$(filesystem_free $MTFS_MNT1)
 TEST_34_SIZE=${TEST_34_SIZE:-2000000000000}
 if [ $TEST_34_SIZE -ge $FREE ]; then
 	TEST_34_SIZE=$FREE;
@@ -2319,7 +2319,7 @@ test_150() {
 	#remount_client $MOUNT
 	cleanup_and_setup
 	#df -P $MOUNT
-	df -P $HRFS_MNT1
+	df -P $MTFS_MNT1
 	cmp $TF $DIR/$tfile || error "$TF $DIR/$tfile differ (remount)"
 
 	$TRUNCATE $TF 6000

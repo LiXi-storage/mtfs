@@ -11,8 +11,8 @@ struct mtfs_operation_list *mtfs_oplist_alloc(mtfs_bindex_t bnum)
 {
 	struct mtfs_operation_list *list = NULL;
 
-	HASSERT(bnum > 0 && bnum <= HRFS_BRANCH_MAX);
-	HRFS_SLAB_ALLOC_PTR(list, mtfs_oplist_cache);	
+	HASSERT(bnum > 0 && bnum <= MTFS_BRANCH_MAX);
+	MTFS_SLAB_ALLOC_PTR(list, mtfs_oplist_cache);	
 	if (unlikely(list == NULL)) {
 		goto out;
 	}
@@ -25,7 +25,7 @@ EXPORT_SYMBOL(mtfs_oplist_alloc);
 
 void mtfs_oplist_free(struct mtfs_operation_list *list)
 {
-	HRFS_SLAB_FREE_PTR(list, mtfs_oplist_cache);
+	MTFS_SLAB_FREE_PTR(list, mtfs_oplist_cache);
 }
 EXPORT_SYMBOL(mtfs_oplist_free);
 
@@ -77,7 +77,7 @@ struct mtfs_operation_list *mtfs_oplist_build(struct inode *inode)
 
 	/* NOT a good implementation, change me */
 	for (bindex = 0; bindex < bnum; bindex++) {
-		is_valid = mtfs_branch_is_valid(inode, bindex, HRFS_DATA_VALID);
+		is_valid = mtfs_branch_is_valid(inode, bindex, MTFS_DATA_VALID);
 		if (is_valid) {
 			binfo = &(list->op_binfo[bfirst]);
 			bfirst++;
@@ -181,7 +181,7 @@ int mtfs_oplist_update(struct inode *inode, struct mtfs_operation_list *list)
 				continue;
 			}
 
-			ret = mtfs_invalid_branch(inode, bindex, HRFS_DATA_VALID);
+			ret = mtfs_invalid_branch(inode, bindex, MTFS_DATA_VALID);
 			if (ret) {
 				HERROR("invalid inode failed, ret = %d\n", ret);
 				HBUG();

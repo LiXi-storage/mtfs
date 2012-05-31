@@ -52,9 +52,9 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <libcfs/libcfs.h>
-#if HRFS_IS_LUSTRE
+#if MTFS_IS_LUSTRE
 #include <lustre/lustre_user.h>
-#endif /* HRFS_IS_LUSTRE */
+#endif /* MTFS_IS_LUSTRE */
 
 typedef struct flag_mapping {
        const char *string;
@@ -79,9 +79,9 @@ FLAG_MAPPING flag_table[] = {
        {"O_LARGEFILE", O_LARGEFILE},
        {"O_DIRECTORY", O_DIRECTORY},
        {"O_NOFOLLOW", O_NOFOLLOW},
-#if HRFS_IS_LUSTRE
+#if MTFS_IS_LUSTRE
        {"O_LOV_DELAY_CREATE", O_LOV_DELAY_CREATE},
-#endif /* HRFS_IS_LUSTRE */
+#endif /* MTFS_IS_LUSTRE */
        {"", -1}
 };
 

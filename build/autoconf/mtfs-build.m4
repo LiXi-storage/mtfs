@@ -1,10 +1,10 @@
 #
 # LB_CHECK_VERSION
 #
-# Verify that HRFS_VERSION was defined properly
+# Verify that MTFS_VERSION was defined properly
 #
 AC_DEFUN([LB_CHECK_VERSION],
-[if test "HRFS_VERSION" = "HRFS""_VERSION" ; then
+[if test "MTFS_VERSION" = "MTFS""_VERSION" ; then
 	AC_MSG_ERROR([This script was not built with a version number.])
 fi
 ])
@@ -124,7 +124,7 @@ AC_DEFUN([LB_DEFINE_CDEBUG_PREFIX],
 [AC_ARG_WITH([cdebug_prefix],
 	AC_HELP_STRING([--with-cdebug_prefix],
 		[set prefix of message printed by CDEBUG/CERROR]),
-        [],[CDEBUG_PREFIX="Hrfs"])
+        [],[CDEBUG_PREFIX="MTFS"])
 	AC_DEFINE_UNQUOTED(CDEBUG_PREFIX, "$CDEBUG_PREFIX", [Prefix of message printed by CDEBUG/CERROR])
 ])
 
@@ -137,7 +137,7 @@ AC_DEFUN([LB_CONFIG_MODULES],
 [AC_MSG_CHECKING([whether to build kernel modules])
 AC_ARG_ENABLE([modules],
 	AC_HELP_STRING([--disable-modules],
-			[disable building of Hrfs kernel modules]),
+			[disable building of MTFS kernel modules]),
 	[],[
 		LC_TARGET_SUPPORTED([
 			enable_modules='yes'
@@ -160,7 +160,7 @@ if test x$enable_modules = xyes ; then
 			LIBCFS_PROG_DARWIN
 			;;
 		*)
-			# This is strange - Hrfs supports a target we don't
+			# This is strange - MTFS supports a target we don't
 			AC_MSG_ERROR([Modules are not supported on $target_os])
 			;;
 	esac
@@ -176,7 +176,7 @@ AC_DEFUN([LB_CONFIG_UTILS],
 [AC_MSG_CHECKING([whether to build utilities])
 AC_ARG_ENABLE([utils],
 	AC_HELP_STRING([--disable-utils],
-			[disable building of Hrfs utility programs]),
+			[disable building of MTFS utility programs]),
 	[],[enable_utils='yes'])
 AC_MSG_RESULT([$enable_utils])
 if test x$enable_utils = xyes ; then 
@@ -190,10 +190,10 @@ fi
 # Build tests?
 #
 AC_DEFUN([LB_CONFIG_TESTS],
-[AC_MSG_CHECKING([whether to build Hrfs tests])
+[AC_MSG_CHECKING([whether to build MTFS tests])
 AC_ARG_ENABLE([tests],
 	AC_HELP_STRING([--disable-tests],
-			[disable building of Hrfs tests]),
+			[disable building of MTFS tests]),
 	[],
 	[
 		enable_tests='yes'
@@ -428,7 +428,7 @@ LN_CONFIG_CDEBUG
 
 LB_CONFIG_MODULES
 
-LC_CONFIG_LIBHRFS
+LC_CONFIG_LIBMTFS
 LIBCFS_CONFIGURE
 
 LC_CONFIGURE
@@ -458,6 +458,6 @@ CFLAGS:        $CFLAGS
 EXTRA_KCFLAGS: $EXTRA_KCFLAGS
 LLCFLAGS:      $LLCFLAGS
 
-Type 'make' to build Hrfs.
+Type 'make' to build MTFS.
 _ACEOF
 ])

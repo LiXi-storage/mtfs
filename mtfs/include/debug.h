@@ -2,8 +2,8 @@
  * Copyright (C) 2011 Li Xi <pkuelelixi@gmail.com>
  */
 
-#ifndef __HRFS_DEBUG_H__
-#define __HRFS_DEBUG_H__
+#ifndef __MTFS_DEBUG_H__
+#define __MTFS_DEBUG_H__
 #include <libcfs/libcfs.h>
 #ifdef LUSTRE_IS_NOT_2_0
 #else
@@ -66,4 +66,4 @@ do {                                                                    \
 # error "Unkown compiler"
 #endif /* __GNUC__ */
 
-#endif /* __HRFS_DEBUG_H__ */
+#endif /* __MTFS_DEBUG_H__ */

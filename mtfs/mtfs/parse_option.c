@@ -71,7 +71,7 @@ int parse_dir_option(char *dir_option, mount_option_t *mount_option)
 		*tmp = '\0';
 
 		mount_option->branch[tmp_branch_number].length = strlen(start) + 1;
-		HRFS_ALLOC(mount_option->branch[tmp_branch_number].path, mount_option->branch[tmp_branch_number].length);
+		MTFS_ALLOC(mount_option->branch[tmp_branch_number].path, mount_option->branch[tmp_branch_number].length);
 		if (mount_option->branch[tmp_branch_number].path == NULL) {
 			HERROR("unable to strdup dir name [%s] when parsing [%d]th dir", start, tmp_branch_number);
 			tmp_branch_number--;
@@ -88,9 +88,9 @@ free_array:
 	HASSERT(mount_option->branch);
 	for(; tmp_branch_number >= 0; tmp_branch_number++) {
 		HASSERT(mount_option->branch[tmp_branch_number].path);
-		HRFS_FREE(mount_option->branch[tmp_branch_number].path, mount_option->branch[tmp_branch_number].length);
+		MTFS_FREE(mount_option->branch[tmp_branch_number].path, mount_option->branch[tmp_branch_number].length);
 	}
-	HRFS_FREE(mount_option->branch, sizeof(*mount_option->branch) * mount_option->bnum);
+	MTFS_FREE(mount_option->branch, sizeof(*mount_option->branch) * mount_option->bnum);
 out:
 	return ret;
 }

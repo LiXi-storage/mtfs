@@ -1,4 +1,4 @@
-# Hrfs test Makefile
+# MTFS test Makefile
 AM_CFLAGS=$(LLCFLAGS)
 AM_CPPFLAGS=$(LLCPPFLAGS)
 AM_LDFLAGS :=

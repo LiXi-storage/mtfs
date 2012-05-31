@@ -35,12 +35,12 @@ static inline block_t *alloc_block(int block_size)
 	
 	HASSERT(block_size > 0);
 	
-	HRFS_ALLOC_PTR(block);
+	MTFS_ALLOC_PTR(block);
 	if (block == NULL) {
 		goto out;
 	}
 	
-	HRFS_ALLOC(block->data, block_size);
+	MTFS_ALLOC(block->data, block_size);
 	if (block->data == NULL) {
 		goto free_block;
 	}
@@ -49,15 +49,15 @@ static inline block_t *alloc_block(int block_size)
 	goto out;
 
 free_block:
-	HRFS_FREE_PTR(block);
+	MTFS_FREE_PTR(block);
 out:
 	return block;
 }
 
 static inline int free_block(block_t *block)
 {
-	HRFS_FREE(block->data, block->block_size);
-	HRFS_FREE_PTR(block);
+	MTFS_FREE(block->data, block->block_size);
+	MTFS_FREE_PTR(block);
 	return 0;
 }
 
@@ -256,25 +256,25 @@ void *check_proc(thread_info_t *thread_info)
 		goto out;
 	}	
 
-	HRFS_ALLOC(buf, count);
+	MTFS_ALLOC(buf, count);
 	if (buf == NULL) {
 		HERROR("not enough memory\n");
 		goto out;
 	}
 
-	HRFS_ALLOC(first_buf, count);
+	MTFS_ALLOC(first_buf, count);
 	if (first_buf == NULL) {
 		HERROR("not enough memory\n");
 		goto out;
 	}
 
-	HRFS_ALLOC_PTR(stat_buf);
+	MTFS_ALLOC_PTR(stat_buf);
 	if (stat_buf == NULL) {
 		HERROR("not enough memory\n");
 		goto out;
 	}
 
-	HRFS_ALLOC_PTR(first_stat_buf);
+	MTFS_ALLOC_PTR(first_stat_buf);
 	if (first_stat_buf == NULL) {
 		HERROR("not enough memory\n");
 		goto out;
@@ -350,16 +350,16 @@ void *check_proc(thread_info_t *thread_info)
 	}
 out:
 	if (first_buf != NULL) {
-		HRFS_FREE(first_buf, count);
+		MTFS_FREE(first_buf, count);
 	}
 	if (buf != NULL) {
-		HRFS_FREE(buf, count);
+		MTFS_FREE(buf, count);
 	}
 	if (stat_buf != NULL) {
-		HRFS_FREE_PTR(stat_buf);
+		MTFS_FREE_PTR(stat_buf);
 	}	
 	if (first_stat_buf != NULL) {
-		HRFS_FREE_PTR(first_stat_buf);
+		MTFS_FREE_PTR(first_stat_buf);
 	}
 	exit(1);
 	return NULL;

@@ -2,8 +2,8 @@
  * Copyright (C) 2011 Li Xi <pkuelelixi@gmail.com>
  */
 
-#ifndef __HRFS_BSEARCH_H__
-#define __HRFS_BSEARCH_H__
+#ifndef __MTFS_BSEARCH_H__
+#define __MTFS_BSEARCH_H__
 
 #if defined (__linux__) && defined(__KERNEL__)
 
@@ -69,4 +69,4 @@ static inline int compare_char_pointer(const void *p1, const void *p2)
 }
 
 
-#endif /* __HRFS_BSEARCH_H__ */
+#endif /* __MTFS_BSEARCH_H__ */

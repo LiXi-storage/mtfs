@@ -2,8 +2,8 @@
  * Copyright (C) 2011 Li Xi <pkuelelixi@gmail.com>
  */
 
-#ifndef __HRFS_BITMAP_H__
-#define __HRFS_BITMAP_H__
+#ifndef __MTFS_BITMAP_H__
+#define __MTFS_BITMAP_H__
 #include <libcfs/user-bitops.h>
 #include <libcfs/bitmap.h>
 
@@ -20,7 +20,7 @@ static inline bitmap_t *cfs_bitmap_allocate(int size)
 {
 	bitmap_t *ptr = NULL;
 
-	HRFS_ALLOC(ptr, CFS_BITMAP_SIZE(size));
+	MTFS_ALLOC(ptr, CFS_BITMAP_SIZE(size));
 	if (ptr == NULL) {
 		return (ptr);
 	}
@@ -32,6 +32,6 @@ static inline bitmap_t *cfs_bitmap_allocate(int size)
 	return (ptr);
 }
 
-#define cfs_bitmap_freee(ptr) HRFS_FREE(ptr, CFS_BITMAP_SIZE(ptr->size));
-#endif /* __HRFS_BITMAP_H__ */
+#define cfs_bitmap_freee(ptr) MTFS_FREE(ptr, CFS_BITMAP_SIZE(ptr->size));
+#endif /* __MTFS_BITMAP_H__ */
 
