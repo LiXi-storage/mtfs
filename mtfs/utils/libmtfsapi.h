@@ -28,8 +28,10 @@ struct mtfs_param {
 };
 
 int mtfs_api_getstate(char *path, struct mtfs_param *param);
-int mtfs_api_setbranch(const char *path, mtfs_bindex_t bindex, struct mtfs_branch_valid *valid, struct mtfs_param *param);
+int mtfs_api_setbranch(const char *path, mtfs_bindex_t bindex,
+                       struct mtfs_branch_valid *valid, struct mtfs_param *param);
 int mtfs_api_setraid(char *path, raid_type_t raid_pattern, struct mtfs_param *param);
 int mtfs_api_rmbranch(const char *path, mtfs_bindex_t bindex, struct mtfs_param *param);
 int mtfsctl_api_debug_kernel(const char *filename, struct mtfs_param *param);
+int mtfsctl_api_debug_kernel(const char *out_file, struct mtfs_param *param);
 #endif /* __MTFS_LIBMTFSAPI_H__ */

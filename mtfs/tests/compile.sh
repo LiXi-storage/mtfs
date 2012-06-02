@@ -43,13 +43,17 @@ test_0()
 	make -C $DIR/$BASE_NAME || error "make failed"
 	make distclean -C $DIR/$BASE_NAME  || error "make distclean failed"
 }
+leak_detect_state_push "no"
 run_test 0 "compile mtfs source code"
+leak_detect_state_pop
 
 test_1()
 {
 	compile $LINUX_DIR
 }
+leak_detect_state_push "no"
 run_test 1 "compile kernel source code"
+leak_detect_state_pop
 
 cleanup_all
 echo "=== $0: completed ==="

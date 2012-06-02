@@ -320,12 +320,12 @@ init_leak_log()
 
 	echo "super" > /proc/sys/lnet/debug
 	echo > $MTFS_LOG
-	lctl debug_kernel > /dev/null
+	../utils/mtfsctl debug_kernel > /dev/null
 }
 
 check_leak_log()
 {
-	lctl debug_kernel > $MTFS_LOG
+	../utils/mtfsctl debug_kernel > $MTFS_LOG
 	$LEAK_FINDER $MTFS_LOG 2>&1 | egrep '*** Leak:' && error "memory leak detected, see log $MTFS_LOG" || true
 }
 
@@ -341,7 +341,7 @@ leak_detect_state_push()
 leak_detect_state_pop()
 {
 	# Recover back to old state
-	lctl debug_kernel > /dev/null
+	../utils/mtfsctl debug_kernel > /dev/null
 	DETECT_LEAK="$FORMER_DETECT_LEAK"
 }
 

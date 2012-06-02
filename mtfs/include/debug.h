@@ -14,11 +14,10 @@
 #define HASSERT LASSERT
 #define HBUG LBUG
 
-#if 0
+#if 1
 #define HDEBUG(format, args...)     CDEBUG(D_INFO, "mtfs: "format, ##args)
 #else
 #define HDEBUG(format, args...)     CERROR("mtfs: "format, ##args)
-//#define HDEBUG(format, args...)   CDEBUG(D_SUPER, "mtfs: "format, ##args)
 #endif
 #define HDEBUG_MEM(format, args...) CDEBUG(D_SUPER, format, ##args)
 #define HERROR(format, args...)     CERROR("mtfs: "format, ##args)

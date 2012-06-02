@@ -32,7 +32,7 @@ mtfs_SOURCES = mtfs.c hide.c hide.h grouplock.c grouplock.h exit_status.h
 mtfs_LDADD := $(LIBREADLINE) libmtfsapi.a $(LIBUSER)
 mtfs_DEPENDENCIES := $(LIBUSER) libmtfsapi.a
 
-libmtfsapi_a_SOURCES = libmtfsapi.c
+libmtfsapi_a_SOURCES = libmtfsapi.c libcfs_debug.h libcfs_debug.c
 
 mount_mtfs_SOURCES = mount_mtfs.c
 mount_mtfs_LDADD := $(LIBUSER)

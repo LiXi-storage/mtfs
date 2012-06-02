@@ -100,7 +100,7 @@ int mtfsctl_debug_kernel(int argc, char **argv)
 		goto out;
 	}
 
-	//rc = mtfs_api_debug_kernel(filename, &param);
+	rc = mtfsctl_api_debug_kernel(filename, &param);
 out:
 	return rc;
 }
