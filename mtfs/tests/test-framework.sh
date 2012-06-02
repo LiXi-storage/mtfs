@@ -58,10 +58,10 @@ mount_filesystem_noexit()
 	local OPTION=$5
 
 	echo -n "mounting $FS_TYPE to $MOUNT_POINT..."
-	if ! $(filesystem_is_mounted $FS_TYPE $MOUNT_POINT); then
+	if ! filesystem_is_mounted $FS_TYPE $MOUNT_POINT; then
 		$MOUNT_CMD $DEV $MOUNT_POINT $OPTION
 
-		if ! $(filesystem_is_mounted $FS_TYPE $MOUNT_POINT); then
+		if ! filesystem_is_mounted $FS_TYPE $MOUNT_POINT; then
 			echo "failed"
 			echo "fs_type: $FS_TYPE"
 			/bin/grep -w $MOUNT_POINT /proc/mounts | awk '{ print $3 }' | grep $FS_TYPE
@@ -116,10 +116,10 @@ umount_filesystem_noexit()
 		return -1;
 	fi
 
-	if $(filesystem_is_mounted $FS_TYPE $MOUNT_POINT); then
+	if filesystem_is_mounted $FS_TYPE $MOUNT_POINT; then
 		/bin/umount $MOUNT_POINT
 
-		if $(filesystem_is_mounted $FS_TYPE $MOUNT_POINT); then
+		if filesystem_is_mounted $FS_TYPE $MOUNT_POINT; then
 			echo "failed"
 			echo "CMD: /bin/umount $MOUNT_POINT"
 			return -1
@@ -239,10 +239,19 @@ reinsert_module()
 	return
 }
 
+module_is_installed()
+{
+	MODULE=$1
+	MODINFO=$(modinfo $MODULE 2>&1 | grep -w "could not find")
+	if "$MODINFO" = ""; then
+		return 0
+	fi
+	return 1
+}
+
 insert_libcfs_module()
 {
-	modinfo libcfs > /dev/null 2>&1
-	if "$?" = "0" ; then
+	if libcfs_is_installed libcfs; then
 		modprobe libcfs
 	else
 		insert_module libcfs ../../libcfs/libcfs/libcfs.ko
@@ -309,11 +318,11 @@ remount_mtfs()
 
 init_leak_log()
 {
-	if ! $(libcfs_module_is_inserted); then
+	if ! libcfs_module_is_inserted; then
 		insert_libcfs_module	
 	fi
 
-	if ! $(libcfs_module_is_inserted); then
+	if ! libcfs_module_is_inserted; then
 		echo "failed to insert libcfs"
 		return
 	fi
