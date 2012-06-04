@@ -5,10 +5,12 @@
 #ifndef __MTFS_FILE_H__
 #define __MTFS_FILE_H__
 
-#if defined (__linux__) && defined(__KERNEL__)
+#if defined(__linux__) && defined(__KERNEL__)
 #include "mtfs_common.h"
 #include "memory.h"
 #include "debug.h"
+#include <linux/file.h>
+#include <linux/poll.h>
 
 extern int mtfs_readdir(struct file *file, void *dirent, filldir_t filldir);
 extern unsigned int mtfs_poll(struct file *file, poll_table *wait);

@@ -4,25 +4,38 @@
 
 #ifndef __MTFS_DEBUG_H__
 #define __MTFS_DEBUG_H__
-#include <libcfs/libcfs.h>
-#ifdef LUSTRE_IS_NOT_2_0
-#else
-#include <libcfs/kp30.h>
-#endif
-#if defined (__linux__) && defined(__KERNEL__)
 
+#if LIBCFS_ENABLED
+#include <libcfs/libcfs.h>
+#ifndef LUSTRE_IS_NOT_2_0
+#include <libcfs/kp30.h>
+#endif /* LUSTRE_IS_NOT_2_0 */
+#endif /* LIBCFS_ENABLED */
+
+#if defined (__linux__) && defined(__KERNEL__) 
+#if LIBCFS_ENABLED
 #define HASSERT LASSERT
 #define HBUG LBUG
-
-#if 1
 #define HDEBUG(format, args...)     CDEBUG(D_INFO, "mtfs: "format, ##args)
-#else
-#define HDEBUG(format, args...)     CERROR("mtfs: "format, ##args)
-#endif
 #define HDEBUG_MEM(format, args...) CDEBUG(D_SUPER, format, ##args)
 #define HERROR(format, args...)     CERROR("mtfs: "format, ##args)
 #define HWARN(format, args...)      CERROR("mtfs: "format, ##args)
 #define HPRINT(format, args...)     CERROR("mtfs: "format, ##args)
+#else /* !LIBCFS_ENABLED */
+#define HASSERT(cond)        \
+do {                         \
+    if (!cond) {             \
+        HBUG();              \
+    }                        \
+} while(0)
+
+#define HBUG()                      panic("MTFS BUG");
+#define HDEBUG(format, args...)     printk("mtfs: "format, ##args)
+#define HDEBUG_MEM(format, args...) printk(format, ##args)
+#define HERROR(format, args...)     printk("mtfs: "format, ##args)
+#define HWARN(format, args...)      printk("mtfs: "format, ##args)
+#define HPRINT(format, args...)     printk("mtfs: "format, ##args)
+#endif /* !LIBCFS_ENABLED */
 
 #else /* !(defined (__linux__) && defined(__KERNEL__)) */
 #include <errno.h>

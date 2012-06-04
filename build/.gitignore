@@ -4,6 +4,7 @@
 /.tmp_versions
 /autoMakefile
 /autoMakefile.in
+/modules.order
 /Module.markers
 /Module.symvers
 

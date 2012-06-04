@@ -58,7 +58,7 @@ AC_MSG_CHECKING([for Linux release])
 if test -s $LINUX_OBJ/include/linux/utsrelease.h ; then
 	LINUXRELEASEHEADER=utsrelease.h
 else
-	LINUXRELEASEHEADER=version.h
+	LINUXRELEASEHEADER=vermagic.h
 fi
 LB_LINUX_TRY_MAKE([
 	#include <linux/$LINUXRELEASEHEADER>
@@ -208,8 +208,13 @@ LB_CHECK_FILE([$LINUX_CONFIG],[],
 # at 2.6.19 # $LINUX/include/linux/config.h is removed
 # and at more old has only one line
 # include <autoconf.h>
-LB_CHECK_FILE([$LINUX_OBJ/include/linux/autoconf.h],[],
-	[AC_MSG_ERROR([Run make config in $LINUX.])])
+LB_CHECK_FILE([$LINUX_OBJ/include/linux/autoconf.h],
+	[LINUXCONFIGHEADER=autoconf.h],
+	[LB_CHECK_FILE([$LINUX_OBJ/include/linux/kconfig.h],
+		[LINUXCONFIGHEADER=kconfig.h],
+		[AC_MSG_ERROR([Run make config in $LINUX.])])])
+AC_SUBST(LINUXCONFIGHEADER)
+
 LB_CHECK_FILE([$LINUX_OBJ/include/linux/version.h],[],
 	[AC_MSG_ERROR([Run make config in $LINUX.])])
 
@@ -367,7 +372,7 @@ $2
 AC_DEFUN([LB_LINUX_COMPILE_IFELSE],
 [m4_ifvaln([$1], [LB_LINUX_CONFTEST([$1])])dnl
 rm -f build/conftest.o build/conftest.mod.c build/conftest.ko
-AS_IF([AC_TRY_COMMAND(cp conftest.c build && make -d [$2] ${LD:+"LD=$LD"} CC="$CC" -f $PWD/build/Makefile MTFS_LINUX_CONFIG=$LINUX_CONFIG LINUXINCLUDE="$EXTRA_LNET_INCLUDE -I$LINUX/arch/`uname -m|sed -e 's/ppc.*/powerpc/' -e 's/x86_64/x86/' -e 's/i.86/x86/'`/include -I$LINUX/include -I$LINUX_OBJ/include -I$LINUX_OBJ/include2 -include include/linux/autoconf.h" -o tmp_include_depends -o scripts -o include/config/MARKER -C $LINUX_OBJ EXTRA_CFLAGS="-Werror-implicit-function-declaration $EXTRA_KCFLAGS" $ARCH_UM $MODULE_TARGET=$PWD/build) >/dev/null && AC_TRY_COMMAND([$3])],
+AS_IF([AC_TRY_COMMAND(cp conftest.c build && make -d [$2] ${LD:+"LD=$LD"} CC="$CC" -f $PWD/build/Makefile MTFS_LINUX_CONFIG=$LINUX_CONFIG LINUXINCLUDE="$EXTRA_LNET_INCLUDE -I$LINUX/arch/`uname -m|sed -e 's/ppc.*/powerpc/' -e 's/x86_64/x86/' -e 's/i.86/x86/'`/include -I$LINUX/include -I$LINUX_OBJ/include -I$LINUX_OBJ/include2 -include include/linux/$LINUXCONFIGHEADER" -o tmp_include_depends -o scripts -o include/config/MARKER -C $LINUX_OBJ EXTRA_CFLAGS="-Werror-implicit-function-declaration $EXTRA_KCFLAGS" $ARCH_UM $MODULE_TARGET=$PWD/build) >/dev/null && AC_TRY_COMMAND([$3])],
 	[$4],
 	[_AC_MSG_LOG_CONFTEST
 m4_ifvaln([$5],[$5])dnl])
@@ -409,7 +414,7 @@ AC_DEFUN([LB_LINUX_TRY_COMPILE],
 AC_DEFUN([LB_LINUX_CONFIG],
 [AC_MSG_CHECKING([if Linux was built with CONFIG_$1])
 LB_LINUX_TRY_COMPILE([
-#include <linux/autoconf.h>
+#include <linux/$LINUXCONFIGHEADER>
 ],[
 #ifndef CONFIG_$1
 #error CONFIG_$1 not #defined
@@ -431,7 +436,7 @@ $3
 AC_DEFUN([LB_LINUX_CONFIG_IM],
 [AC_MSG_CHECKING([if Linux was built with CONFIG_$1 in or as module])
 LB_LINUX_TRY_COMPILE([
-#include <linux/autoconf.h>
+#include <linux/$LINUXCONFIGHEADER>
 ],[
 #if !(defined(CONFIG_$1) || defined(CONFIG_$1_MODULE))
 #error CONFIG_$1 and CONFIG_$1_MODULE not #defined

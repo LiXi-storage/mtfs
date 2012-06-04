@@ -10,7 +10,7 @@
 
 #if defined (__linux__) && defined(__KERNEL__)
 
-#ifndef MEMORY_DEBUG
+#ifdef MEMORY_DEBUG
 #include <asm/atomic.h>
 
 extern atomic64_t mtfs_kmemory_used;

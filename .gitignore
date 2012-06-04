@@ -9,6 +9,7 @@
 #
 # Top level generated files specific to this top level dir
 #
+/.built-in.o.cmd
 /.tmp_versions
 /aclocal.m4
 /autom4te.cache

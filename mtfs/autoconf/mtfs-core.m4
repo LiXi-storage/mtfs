@@ -47,12 +47,27 @@ AC_SUBST(rootsbindir)
 AC_DEFUN([LC_CONFIG_MTFS_TAG],
 [AC_MSG_CHECKING([whether to enable MTFS_TAG])
 AC_ARG_ENABLE([mtfs_tag],
-        AC_HELP_STRING([--disable-libcfs-cdebug],
+        AC_HELP_STRING([--disable-mtfs-tag],
                         [disable MTFS_TAG]),
         [],[enable_mtfs_tag='yes'])
 AC_MSG_RESULT([$enable_mtfs_tag])
 if test x$enable_mtfs_tag = xyes; then
         AC_DEFINE(MTFS_TAG, 1, [enable MTFS_TAG])
+fi
+])
+
+#
+# whether to enable memory debug
+#
+AC_DEFUN([LC_CONFIG_MEMORY_DEBUG],
+[AC_MSG_CHECKING([whether to enable MTFS_TAG])
+AC_ARG_ENABLE([memory_debug],
+        AC_HELP_STRING([--disable-memory-debug],
+                        [disable MEMORY_DEBUG]),
+        [],[enable_memory_debug='yes'])
+AC_MSG_RESULT([$enable_memory_debug])
+if test x$enable_memory_debug = xyes; then
+        AC_DEFINE(MEMORY_DEBUG, 1, [enable MEMORY_DEBUG])
 fi
 ])
 
@@ -317,6 +332,7 @@ if test x$enable_lustre_support = xyes ; then
 	LC_CONFIG_LUSTRE_PATH
 fi
 
+LC_CONFIG_MEMORY_DEBUG
 LC_CONFIG_MTFS_TAG
 LC_CONFIG_READLINE
 LC_CONFIG_LUA

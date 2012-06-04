@@ -226,6 +226,24 @@ AC_SUBST(ENABLE_DOC)
 ])
 
 #
+# LB_CONFIG_LIBCFS
+#
+# Build libcfs?
+#
+AC_DEFUN([LB_CONFIG_LIBCFS],
+[AC_MSG_CHECKING([whether to build libcfs])
+AC_ARG_ENABLE([libcfs],
+        AC_HELP_STRING([--disable-libcfs],
+                        [skip creation of libcfs]),
+        [],[enable_libcfs='yes'])
+if test x$enable_libcfs = xyes; then
+   AC_DEFINE(LIBCFS_ENABLED, 1, [enable libcfs])
+else
+   AC_DEFINE(LIBCFS_ENABLED, 0, [disable libcfs])
+fi
+AC_MSG_RESULT([$enable_libcfs])])
+
+#
 # LB_CONFIG_INIT_SCRIPTS
 #
 # our init scripts only work on red hat linux
@@ -367,6 +385,7 @@ AM_CONDITIONAL(LINUX, test x$lb_target_os = "xlinux")
 AM_CONDITIONAL(DARWIN, test x$lb_target_os = "xdarwin")
 AM_CONDITIONAL(CRAY_XT3, test x$enable_cray_xt3 = "xyes")
 AM_CONDITIONAL(SUNOS, test x$lb_target_os = "xSunOS")
+AM_CONDITIONAL(LIBCFS, test x$enable_libcfs = xyes)
 
 LB_LINUX_CONDITIONALS
 LB_DARWIN_CONDITIONALS
@@ -410,6 +429,7 @@ LB_PROG_CC
 LB_CONFIG_DOCS
 LB_CONFIG_UTILS
 LB_CONFIG_TESTS
+LB_CONFIG_LIBCFS
 
 LC_CONFIG_BACKEDN_LUSTRE
 LC_CONFIG_BACKEDN_EXT2
