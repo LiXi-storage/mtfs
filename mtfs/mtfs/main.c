@@ -5,6 +5,7 @@
 #include "mtfs_internal.h"
 #include <linux/module.h>
 #include <parse_option.h>
+#include <compat.h>
 
 int mtfs_debug_level = 11;
 
@@ -235,7 +236,7 @@ static struct file_system_type mtfs_fs_type = {
 	name:      MTFS_FS_TYPE,
 	get_sb:    mtfs_get_sb,
 	kill_sb:   mtfs_kill_block_super,
-	fs_flags:  FS_RENAME_DOES_D_MOVE,
+	fs_flags:  MTFS_RENAME_DOES_D_MOVE,
 };
 
 static void mtfs_inode_info_init_once(void *vptr)

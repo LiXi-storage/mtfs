@@ -2,8 +2,6 @@
  * Copyright (C) 2011 Li Xi <pkuelelixi@gmail.com>
  */
 
-#include <linux/magic.h>
-
 #include <mtfs_support.h>
 #include <mtfs_super.h>
 #include <mtfs_dentry.h>

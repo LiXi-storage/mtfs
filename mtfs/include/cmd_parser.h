@@ -2,8 +2,8 @@
  * Copyright (C) 2011 Li Xi <pkuelelixi@gmail.com>
  */
 
-#ifndef _ULIB_PARSER_H_
-#define _ULIB_PARSER_H_
+#ifndef _MTFS_PARSER_H_
+#define _MTFS_PARSER_H_
 #include <unistd.h>
 
 #ifdef HAVE_LIBREADLINE
@@ -92,4 +92,4 @@ int Parser_size(int *sizep, char *str);
 /* Convert a string boolean to an int; "enable" -> 1 */
 int Parser_bool(int *b, char *str);
 
-#endif
+#endif /* _MTFS_PARSER_H_ */

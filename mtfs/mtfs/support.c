@@ -3,7 +3,6 @@
  */
 
 #include "support_internal.h"
-#include <linux/magic.h> /* For XXX_SUPER_MAGIC */
 #include <debug.h>
 
 spinlock_t mtfs_lowerfs_lock = SPIN_LOCK_UNLOCKED;

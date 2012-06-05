@@ -1,5 +1,5 @@
-#ifndef _ULIB_CFG_H_
-#define _ULIB_CFG_H_
+#ifndef __MTFS_CFG_H__
+#define __MTFS_CFG_H__
 
 #include <inttypes.h>
 
@@ -19,4 +19,4 @@ _CONFIG_MAKE_PROTOTYPE(uint64,uint64_t);
 _CONFIG_MAKE_PROTOTYPE(int64,int64_t);
 _CONFIG_MAKE_PROTOTYPE(double,double);
 
-#endif
+#endif /* __MTFS_CFG_H__ */

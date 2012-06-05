@@ -7,7 +7,6 @@
 #include <mtfs_dentry.h>
 #include <mtfs_inode.h>
 #include <mtfs_file.h>
-#include <linux/magic.h>
 #include <mtfs_junction.h>
 #include "ntfs3g_support.h"
 

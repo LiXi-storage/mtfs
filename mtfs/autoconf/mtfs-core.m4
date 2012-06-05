@@ -71,6 +71,54 @@ if test x$enable_memory_debug = xyes; then
 fi
 ])
 
+# 2.6.18-53 does not have fs_stack.h yet
+AC_DEFUN([LC_FS_STACK],
+[LB_CHECK_FILE([$LINUX/include/linux/fs_stack.h],[
+	AC_MSG_CHECKING([if fs_stack.h can be compiled])
+	LB_LINUX_TRY_COMPILE([
+		#include <linux/fs_stack.h>
+	],[],[
+		AC_MSG_RESULT([yes])
+		AC_DEFINE(HAVE_FS_STACK, 1, [Kernel has fs_stack])
+	],[
+		AC_MSG_RESULT([no])
+	])
+],
+[])
+])
+
+#
+# 2.6.18-53 does not have FS_RENAME_DOES_D_MOVE flag
+#
+AC_DEFUN([LC_FS_RENAME_DOES_D_MOVE],
+[AC_MSG_CHECKING([if kernel has FS_RENAME_DOES_D_MOVE flag])
+LB_LINUX_TRY_COMPILE([
+        #include <linux/fs.h>
+],[
+        int v = FS_RENAME_DOES_D_MOVE;
+],[
+        AC_MSG_RESULT([yes])
+        AC_DEFINE(HAVE_FS_RENAME_DOES_D_MOVE, 1, [kernel has FS_RENAME_DOES_D_MOVE flag])
+],[
+        AC_MSG_RESULT([no])
+])
+])
+
+# 2.6.18-92 does not have strcasecmp or strncasecmp yet
+AC_DEFUN([LC_STRCASECMP],
+[AC_MSG_CHECKING([if kernel defines strcasecmp])
+LB_LINUX_TRY_COMPILE([
+        #include <linux/string.h>
+],[
+	int i = strcasecmp(NULL, NULL);
+],[
+	AC_MSG_RESULT([yes])
+	AC_DEFINE(HAVE_STRCASECMP, 1, [strcasecmp found])
+],[
+        AC_MSG_RESULT([no])
+])
+])
+
 #
 # LC_PROG_LINUX
 #
@@ -78,6 +126,9 @@ fi
 #
 AC_DEFUN([LC_PROG_LINUX],
 [
+	LC_STRCASECMP
+	LC_FS_STACK
+	LC_FS_RENAME_DOES_D_MOVE
 ])
 
 #

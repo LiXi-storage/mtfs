@@ -4,11 +4,9 @@
 
 /* Copy from linux-2.6.30/fs/stack.c */
 
+#ifndef HAVE_FS_STACK
 #include <linux/module.h>
 #include <linux/fs.h>
-#if 1 /* TODO: HAVE_STACK */
-#include <linux/fs_stack.h>
-#else
 #include <mtfs_stack.h>
 
 /* does _NOT_ require i_mutex to be held.
@@ -49,4 +47,4 @@ void fsstack_copy_attr_all(struct inode *dest, const struct inode *src,
 		dest->i_nlink = (*get_nlinks)(dest);
 }
 EXPORT_SYMBOL_GPL(fsstack_copy_attr_all);
-#endif
+#endif  /* !HAVE_FS_STACK */

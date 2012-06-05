@@ -5,9 +5,9 @@
 #ifndef __MTFS_STACK_H__
 #define __MTFS_STACK_H__
 
-#if 1 /* TODO: HAVE_STACK */
+#ifdef HAVE_FS_STACK
 #include <linux/fs_stack.h>
-#else
+#else /* !HAVE_FS_STACK */
 /* COPY from linux-2.6.30/include/linux/fs_stack.h */
 
 /* This file defines generic functions used primarily by stackable
@@ -36,5 +36,5 @@ static inline void fsstack_copy_attr_times(struct inode *dest,
 	dest->i_mtime = src->i_mtime;
 	dest->i_ctime = src->i_ctime;
 }
-#endif
+#endif /* !HAVE_FS_STACK */
 #endif /* __MTFS_STACK_H__ */
