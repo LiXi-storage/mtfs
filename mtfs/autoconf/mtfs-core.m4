@@ -120,6 +120,218 @@ LB_LINUX_TRY_COMPILE([
 ])
 
 #
+# 2.6.27
+#
+AC_DEFUN([LC_INODE_PERMISION_2ARGS],
+[AC_MSG_CHECKING([inode_operations->permission has two args])
+LB_LINUX_TRY_COMPILE([
+	#include <linux/fs.h>
+],[
+	struct inode *inode;
+	inode->i_op->permission(NULL, 0);
+],[
+	AC_DEFINE(HAVE_INODE_PERMISION_2ARGS, 1,
+		[inode_operations->permission has two args])
+	AC_MSG_RESULT([yes])
+],[
+	AC_MSG_RESULT([no])
+])
+])
+
+# LC_FILE_WRITEV
+# 2.6.19 replaced writev with aio_write
+AC_DEFUN([LC_FILE_WRITEV],
+[AC_MSG_CHECKING([writev in fops])
+LB_LINUX_TRY_COMPILE([
+	#include <linux/fs.h>
+],[
+	struct file_operations *fops = NULL;
+	fops->writev = NULL;
+],[
+	AC_MSG_RESULT(yes)
+	AC_DEFINE(HAVE_FILE_WRITEV, 1,
+		[use fops->writev])
+],[
+	AC_MSG_RESULT(no)
+])
+])
+
+# LC_FILE_READV
+# 2.6.19 replaced readv with aio_read
+AC_DEFUN([LC_FILE_READV],
+[AC_MSG_CHECKING([readv in fops])
+LB_LINUX_TRY_COMPILE([
+	#include <linux/fs.h>
+],[
+	struct file_operations *fops = NULL;
+	fops->readv = NULL;
+],[
+	AC_MSG_RESULT(yes)
+	AC_DEFINE(HAVE_FILE_READV, 1,
+		[use fops->readv])
+],[
+	AC_MSG_RESULT(no)
+])
+])
+
+# 2.6.23 change .sendfile to .splice_read
+AC_DEFUN([LC_KERNEL_SPLICE_READ],
+[AC_MSG_CHECKING([if kernel has .splice_read])
+LB_LINUX_TRY_COMPILE([
+	#include <linux/fs.h>
+],[
+	struct file_operations file;
+
+	file.splice_read = NULL;
+], [
+	AC_MSG_RESULT([yes])
+	AC_DEFINE(HAVE_KERNEL_SPLICE_READ, 1,
+		[kernel has .slice_read])
+],[
+	AC_MSG_RESULT([no])
+])
+])
+
+# 2.6.23 change .sendfile to .splice_read
+# RHEL4 (-92 kernel) have both sendfile and .splice_read API
+AC_DEFUN([LC_KERNEL_SENDFILE],
+[AC_MSG_CHECKING([if kernel has .sendfile])
+LB_LINUX_TRY_COMPILE([
+	#include <linux/fs.h>
+],[
+	struct file_operations file;
+
+	file.sendfile = NULL;
+], [
+	AC_MSG_RESULT([yes])
+	AC_DEFINE(HAVE_KERNEL_SENDFILE, 1,
+		[kernel has .sendfile])
+],[
+	AC_MSG_RESULT([no])
+])
+])
+
+# 2.6.29 dentry_open has 4 arguments
+AC_DEFUN([LC_DENTRY_OPEN_4ARGS],
+[AC_MSG_CHECKING([dentry_open wants 4 parameters])
+LB_LINUX_TRY_COMPILE([
+	#include <linux/fs.h>
+],[
+ 	dentry_open(NULL, NULL, 0, NULL);
+],[
+	AC_DEFINE(HAVE_DENTRY_OPEN_4ARGS, 1,
+		[dentry_open wants 4 paramters])
+	AC_MSG_RESULT([yes])
+],[
+	AC_MSG_RESULT([no])
+])
+])
+
+# 2.6.23 has new page fault handling API
+AC_DEFUN([LC_VM_OP_FAULT],
+[AC_MSG_CHECKING([kernel has .fault in vm_operation_struct])
+LB_LINUX_TRY_COMPILE([
+	#include <linux/mm.h>
+],[
+	struct vm_operations_struct op;
+
+	op.fault = NULL;
+], [
+	AC_MSG_RESULT([yes])
+	AC_DEFINE(HAVE_VM_OP_FAULT, 1,
+		[kernel has .fault in vm_operation_struct])
+],[
+	AC_MSG_RESULT([no])
+])
+])
+
+#
+# 2.6.18 vfs_symlink taken 4 paremater.
+#
+AC_DEFUN([LC_VFS_SYMLINK_4ARGS],
+[AC_MSG_CHECKING([if vfs_symlink wants 4 arguments])
+LB_LINUX_TRY_COMPILE([
+        #include <linux/fs.h>
+],[
+        vfs_symlink(NULL, 0, 0, NULL);
+],[
+        AC_DEFINE(HAVE_VFS_SYMLINK_4ARGS, 1,
+                  [vfs_symlink wants 4 arguments])
+        AC_MSG_RESULT([yes])
+],[
+        AC_MSG_RESULT([no])
+])
+])
+
+#
+# 
+#
+AC_DEFUN([LC_STRUCT_NAMEIDATA_PATH],
+[AC_MSG_CHECKING([if struct nameidata has a path field])
+LB_LINUX_TRY_COMPILE([
+        #include <linux/fs.h>
+        #include <linux/namei.h>
+],[
+        struct nameidata nd;
+ 
+ 	nd.path.dentry = NULL;
+],[
+        AC_MSG_RESULT([yes])
+        AC_DEFINE(HAVE_PATH_IN_STRUCT_NAMEIDATA, 1, [struct nameidata has a path field])
+],[
+        AC_MSG_RESULT([no])
+])
+])
+
+#
+# 2.6.32-220 vfs_statfs taken path paremater.
+#
+AC_DEFUN([LC_VFS_STATFS_PATH],
+[AC_MSG_CHECKING([if vfs_statfs wants path argument])
+LB_LINUX_TRY_COMPILE([
+        #include <linux/fs.h>
+],[
+	struct path path;
+
+        vfs_statfs(&path, NULL);
+],[
+        AC_DEFINE(HAVE_VFS_STATFS_PATH, 1,
+                  [vfs_statfs wants path argument])
+        AC_MSG_RESULT([yes])
+],[
+        AC_MSG_RESULT([no])
+])
+])
+
+# 2.6.23 extract nfs export related data into exportfs.h
+AC_DEFUN([LC_HAVE_EXPORTFS_H],
+[LB_CHECK_FILE([$LINUX/include/linux/exportfs.h], [
+	AC_DEFINE(HAVE_LINUX_EXPORTFS_H, 1,
+		[kernel has include/exportfs.h])
+],[
+	AC_MSG_RESULT([no])
+])
+])
+
+# 2.6.21 api change. 'register_sysctl_table' use only one argument,
+# instead of more old which need two.
+AC_DEFUN([LC_REGISTER_SYSCTL_2ARGS],
+[AC_MSG_CHECKING([check register_sysctl_table wants 2 args])
+LB_LINUX_TRY_COMPILE([
+	#include <linux/sysctl.h>
+],[
+	return register_sysctl_table(NULL, 0);
+],[
+	AC_MSG_RESULT(yes)
+	AC_DEFINE(HAVE_REGISTER_SYSCTL_2ARGS, 1,
+		[register_sysctl_table wants 2 args])
+],[
+	AC_MSG_RESULT(NO)
+])
+])
+
+
+#
 # LC_PROG_LINUX
 #
 # MTFS linux kernel checks
@@ -129,6 +341,18 @@ AC_DEFUN([LC_PROG_LINUX],
 	LC_STRCASECMP
 	LC_FS_STACK
 	LC_FS_RENAME_DOES_D_MOVE
+	LC_INODE_PERMISION_2ARGS
+	LC_FILE_WRITEV
+	LC_FILE_READV
+	LC_KERNEL_SPLICE_READ
+	LC_KERNEL_SENDFILE
+	LC_DENTRY_OPEN_4ARGS
+	LC_VM_OP_FAULT
+	LC_VFS_SYMLINK_4ARGS
+	LC_STRUCT_NAMEIDATA_PATH
+	LC_VFS_STATFS_PATH
+	LC_HAVE_EXPORTFS_H
+	LC_REGISTER_SYSCTL_2ARGS
 ])
 
 #

@@ -22,10 +22,16 @@ extern int mtfs_fsync(struct file *file, struct dentry *dentry, int datasync);
 extern int mtfs_fasync(int fd, struct file *file, int flag);
 extern int mtfs_lock(struct file *file, int cmd, struct file_lock *fl);
 extern int mtfs_flock(struct file *file, int cmd, struct file_lock *fl);
+#ifdef HAVE_FILE_READV
 extern ssize_t mtfs_file_readv(struct file *file, const struct iovec *iov,
                                unsigned long nr_segs, loff_t *ppos);
+#else /* ! HAVE_FILE_READV */
+#endif /* ! HAVE_FILE_WRITEV */
+#ifdef HAVE_FILE_WRITEV
 extern ssize_t mtfs_file_writev(struct file *file, const struct iovec *iov,
                                 unsigned long nr_segs, loff_t *ppos);
+#else /* ! HAVE_FILE_WRITEV */
+#endif /* ! HAVE_FILE_WRITEV */
 extern ssize_t mtfs_file_write_nonwritev(struct file *file, const char __user *buf,
                                          size_t len, loff_t *ppos);
 extern ssize_t mtfs_file_read_nonreadv(struct file *file, char __user *buf, size_t len,
@@ -33,9 +39,6 @@ extern ssize_t mtfs_file_read_nonreadv(struct file *file, char __user *buf, size
 extern ssize_t mtfs_file_read(struct file *file, char __user *buf, size_t len,
                               loff_t *ppos);
 extern ssize_t mtfs_file_write(struct file *file, const char __user *buf, size_t len, loff_t *ppos);
-extern ssize_t mtfs_file_aio_read(struct kiocb *iocb, char __user *buf, size_t count, loff_t pos);
-extern ssize_t mtfs_file_aio_write(struct kiocb *iocb, const char __user *buf,
-                                   size_t count, loff_t pos);
 extern loff_t mtfs_file_llseek(struct file *file, loff_t offset, int origin);
 extern int mtfs_file_mmap(struct file * file, struct vm_area_struct * vma);
 extern int mtfs_file_mmap_nowrite(struct file *file, struct vm_area_struct * vma);

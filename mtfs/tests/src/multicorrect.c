@@ -11,6 +11,7 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <sys/prctl.h>
+#include <inttypes.h>
 
 typedef struct block {
 	char *data;

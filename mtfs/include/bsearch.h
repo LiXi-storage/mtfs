@@ -5,7 +5,7 @@
 #ifndef __MTFS_BSEARCH_H__
 #define __MTFS_BSEARCH_H__
 
-#if defined (__linux__) && defined(__KERNEL__)
+#if defined(__linux__) && defined(__KERNEL__)
 
 #include <linux/sort.h>
 #define mtfs_sort(base, num, size, cmp) sort(base, num, size, cmp, NULL)
@@ -48,10 +48,10 @@ static inline void *bsearch(const void *key, const void *base, size_t num, size_
 
 	return NULL;
 }
-#else /* ! defined (__linux__) && defined(__KERNEL__) */
+#else /* ! defined(__linux__) && defined(__KERNEL__) */
 #include <stdlib.h>
 #define mtfs_sort(base, num, size, cmp) qsort(base, num, size, cmp)
-#endif
+#endif /* ! defined(__linux__) && defined(__KERNEL__) */
 
 static inline int compare_string_pointer(const void *p1, const void *p2)
 {

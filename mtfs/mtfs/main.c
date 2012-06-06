@@ -142,6 +142,8 @@ int mtfs_read_super(struct super_block *sb, void *input, int silent)
 	for (bindex = 0; bindex < bnum; bindex++) {
 		char *name = NULL;
 		struct nameidata nd;
+		struct dentry *dentry = NULL;
+		struct vfsmount *mnt = NULL;
 
 		name = mount_option.branch[bindex].path;
 		HASSERT(name);
@@ -152,16 +154,21 @@ int mtfs_read_super(struct super_block *sb, void *input, int silent)
 			bindex--;
 			goto out_put;
 		}
-		
-		if (unlikely(nd.dentry->d_inode == NULL)) {
+#ifdef HAVE_PATH_IN_STRUCT_NAMEIDATA
+		dentry = nd.path.dentry;
+		mnt = nd.path.mnt;
+#else /* !HAVE_PATH_IN_STRUCT_NAMEIDATA */
+		dentry = nd.dentry;
+		mnt = nd.mnt;
+#endif /* !HAVE_PATH_IN_STRUCT_NAMEIDATA */
+		if (unlikely(dentry->d_inode == NULL)) {
 			ret = -ENOENT; /* Which errno? */
 			HERROR("directory %s has no inode\n", name);
 			goto out_put;
 		}
-		mtfs_d2branch(d_root, bindex) = nd.dentry;
-		//mtfs_d2bvalid(d_root, branch_index) = 1;
-		mtfs_s2mntbranch(sb, bindex) = nd.mnt;
-		mtfs_s2branch(sb, bindex) = nd.dentry->d_sb;
+		mtfs_d2branch(d_root, bindex) = dentry;
+		mtfs_s2mntbranch(sb, bindex) = mnt;
+		mtfs_s2branch(sb, bindex) = dentry->d_sb;
 	}
 	bindex --;
 
@@ -317,8 +324,13 @@ static int mtfs_init_kmem_caches(void)
 		struct mtfs_cache_info *info;
 
 		info = &mtfs_cache_infos[i];
-		*(info->cache) = kmem_cache_create(info->name, info->size,
-				0, SLAB_HWCACHE_ALIGN, 0, 0);
+#ifdef HAVE_KMEM_CACHE_CREATE_DTOR
+        	*(info->cache) = kmem_cache_create(info->name, info->size,
+        	                                   0, SLAB_HWCACHE_ALIGN, NULL, NULL);
+#else /* !HAVE_KMEM_CACHE_CREATE_DTOR */
+        	*(info->cache) = kmem_cache_create(info->name, info->size,
+        	                                   0, SLAB_HWCACHE_ALIGN, NULL);
+#endif /* !HAVE_KMEM_CACHE_CREATE_DTOR */
 		if (*(info->cache) == NULL) {
 			mtfs_free_kmem_caches();
 			HERROR("kmem_cache_create failed\n");

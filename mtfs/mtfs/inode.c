@@ -3,6 +3,7 @@
  */
 
 #include "mtfs_internal.h"
+#include <linux/backing-dev.h>
 
 int mtfs_inode_dump(struct inode *inode)
 {
@@ -17,12 +18,14 @@ int mtfs_inode_dump(struct inode *inode)
 	HDEBUG("inode: i_ino = %lu, fs_type = %s, i_count = %d, "
 	       "i_nlink = %u, i_mode = %o, i_size = %llu, "
 	       "i_blocks = %llu, i_ctime = %lld, nrpages = %lu, "
-	       "i_state = 0x%lx, i_flags = 0x%x, i_version = %lu, "
+	       "i_state = 0x%lx, i_flags = 0x%x, i_version = %llu, "
 	       "i_generation = %x\n",
 	       inode->i_ino, inode->i_sb ? s_type(inode->i_sb) : "??", atomic_read(&inode->i_count),
 	       inode->i_nlink, inode->i_mode, i_size_read(inode),
-	       (unsigned long long)inode->i_blocks, (long long)timespec_to_ns(&inode->i_ctime) & 0x0ffff, inode->i_mapping ? inode->i_mapping->nrpages : 0,
-	       inode->i_state, inode->i_flags, inode->i_version,
+	       (unsigned long long)inode->i_blocks,
+	       (long long)timespec_to_ns(&inode->i_ctime) & 0x0ffff,
+	       inode->i_mapping ? inode->i_mapping->nrpages : 0,
+	       inode->i_state, inode->i_flags, (u64)inode->i_version,
 	       inode->i_generation);
 out:
 	return ret;
@@ -1099,7 +1102,9 @@ static int mtfs_symlink_branch(struct dentry *dentry, mtfs_bindex_t bindex, cons
 	struct dentry *hidden_dentry = mtfs_d2branch(dentry, bindex);
 	struct dentry *hidden_dir_dentry = NULL;
 	int ret = 0;
+#ifdef HAVE_VFS_SYMLINK_4ARGS
 	umode_t	mode = S_IALLUGO;
+#endif /* HAVE_VFS_SYMLINK_4ARGS */
 	HENTRY();
 
 	ret = mtfs_device_branch_errno(mtfs_d2dev(dentry), bindex, BOPS_MASK_WRITE);
@@ -1110,7 +1115,11 @@ static int mtfs_symlink_branch(struct dentry *dentry, mtfs_bindex_t bindex, cons
 
 	if (hidden_dentry && hidden_dentry->d_parent) {
 		hidden_dir_dentry = lock_parent(hidden_dentry);
+#ifdef HAVE_VFS_SYMLINK_4ARGS
 		ret = vfs_symlink(hidden_dir_dentry->d_inode, hidden_dentry, symname, mode);
+#else /* ! HAVE_VFS_SYMLINK_4ARGS */
+		ret = vfs_symlink(hidden_dir_dentry->d_inode, hidden_dentry, symname);
+#endif /* ! HAVE_VFS_SYMLINK_4ARGS */
 		unlock_dir(hidden_dir_dentry);
 		if (!ret && hidden_dentry->d_inode == NULL) {
 			HBUG();
@@ -1732,7 +1741,11 @@ void mtfs_put_link(struct dentry *dentry, struct nameidata *nd, void *ptr)
 }
 EXPORT_SYMBOL(mtfs_put_link);
 
+#ifdef HAVE_INODE_PERMISION_2ARGS
+int mtfs_permission(struct inode *inode, int mask)
+#else
 int mtfs_permission(struct inode *inode, int mask, struct nameidata *nd)
+#endif
 {
 	struct inode *hidden_inode = NULL;
 	int ret = 0;
@@ -1745,12 +1758,12 @@ int mtfs_permission(struct inode *inode, int mask, struct nameidata *nd)
 		goto out;
 	}
 
-#ifndef LIXI_20120309
 	HASSERT(hidden_inode->i_op);
 	HASSERT(hidden_inode->i_op->permission);
-	ret = hidden_inode->i_op->permission(hidden_inode, mask, nd);
+#ifdef HAVE_INODE_PERMISION_2ARGS
+	ret = hidden_inode->i_op->permission(hidden_inode, mask);
 #else
-	ret = permission(hidden_inode, mask, NULL);
+	ret = hidden_inode->i_op->permission(hidden_inode, mask, nd);
 #endif
 out:
 	HRETURN(ret);

@@ -12,6 +12,8 @@
 #include <fcntl.h>
 #include <stdlib.h>
 #include <debug.h>
+#include <unistd.h>
+#include <time.h>
 
 static inline void mtfs_random_init(int seed)
 {

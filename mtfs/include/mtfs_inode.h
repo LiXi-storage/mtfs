@@ -99,7 +99,11 @@ extern int mtfs_rename(struct inode *old_dir, struct dentry *old_dentry, struct 
 extern int mtfs_readlink(struct dentry *dentry, char __user *buf, int bufsiz);
 void mtfs_put_link(struct dentry *dentry, struct nameidata *nd, void *ptr);
 extern void *mtfs_follow_link(struct dentry *dentry, struct nameidata *nd);
+#ifdef HAVE_INODE_PERMISION_2ARGS
+extern int mtfs_permission(struct inode *inode, int mask);
+#else /* ! HAVE_INODE_PERMISION_2ARGS */
 extern int mtfs_permission(struct inode *inode, int mask, struct nameidata *nd);
+#endif /* ! HAVE_INODE_PERMISION_2ARGS */
 extern int mtfs_setattr(struct dentry *dentry, struct iattr *ia);
 extern int mtfs_getattr(struct vfsmount *mnt, struct dentry *dentry, struct kstat *stat);
 extern ssize_t mtfs_getxattr(struct dentry *dentry, const char *name, void *value, size_t size);

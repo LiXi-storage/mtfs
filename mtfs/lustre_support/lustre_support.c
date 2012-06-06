@@ -186,9 +186,7 @@ struct file_operations mtfs_lustre_main_fops =
 {
 	llseek:     mtfs_file_llseek,
 	read:       mtfs_file_read,
-	aio_read:   mtfs_file_aio_read,
 	write:      mtfs_file_write,
-	aio_write:  mtfs_file_aio_write,
 //	sendfile:   mtfs_lustre_file_sendfile, 
 	readv:      mtfs_file_readv,
         writev:     mtfs_lustre_file_writev,

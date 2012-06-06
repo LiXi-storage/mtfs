@@ -4,6 +4,7 @@
 
 #ifndef __MTFS_FLAG_H__
 #define __MTFS_FLAG_H__
+#include <asm/types.h>
 #include "mtfs_common.h"
 #include "debug.h"
 #include "mtfs_file.h"

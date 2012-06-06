@@ -5,6 +5,7 @@
 #include <mtfs_oplist.h>
 #include <mtfs_inode.h>
 #include <mtfs_flag.h>
+#include <linux/module.h>
 #include "main_internal.h"
 
 struct mtfs_operation_list *mtfs_oplist_alloc(mtfs_bindex_t bnum)

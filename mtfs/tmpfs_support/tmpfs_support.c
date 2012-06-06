@@ -9,6 +9,7 @@
 #include <mtfs_mmap.h>
 #include <mtfs_stack.h>
 #include <mtfs_junction.h>
+#include <linux/module.h>
 #include "tmpfs_support.h"
 
 size_t mtfs_tmpfs_file_read_branch(struct file *file, char __user *buf, size_t len,
@@ -209,7 +210,9 @@ struct file_operations mtfs_tmpfs_main_fops =
 	llseek:     mtfs_file_llseek,
 	read:       mtfs_tmpfs_file_read,
 	write:      mtfs_tmpfs_file_write,
-	sendfile:   mtfs_file_sendfile, 
+#ifdef HAVE_KERNEL_SENDFILE
+	sendfile:   mtfs_file_sendfile,
+#endif /* HAVE_KERNEL_SENDFILE */
 	readdir:    mtfs_readdir,
 	ioctl:      mtfs_ioctl,
 	mmap:       mtfs_file_mmap,
@@ -223,8 +226,6 @@ struct address_space_operations mtfs_tmpfs_aops =
 {
 	writepage:      mtfs_writepage,
 	readpage:       mtfs_readpage,
-	prepare_write:  mtfs_prepare_write,  /* Never needed */
-	commit_write:   mtfs_commit_write    /* Never needed */
 };
 
 struct mtfs_operations mtfs_tmpfs_operations = {

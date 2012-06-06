@@ -3,6 +3,7 @@
  */
 
 #include <debug.h>
+#include <sys/ioctl.h>
 #include "libmtfsapi.h"
 #define LL_IOC_GROUP_LOCK               _IOW ('f', 158, long)
 #define LL_IOC_GROUP_UNLOCK             _IOW ('f', 159, long)

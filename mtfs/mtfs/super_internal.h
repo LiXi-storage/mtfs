@@ -7,7 +7,6 @@
 #include <memory.h>
 #include <debug.h>
 #include <mtfs_super.h>
-//#include "mtfs_internal.h"
 #include "main_internal.h"
 extern struct super_operations mtfs_sops;
 

@@ -230,54 +230,6 @@ int mtfs_readpage(struct file *file, struct page *page)
 }
 EXPORT_SYMBOL(mtfs_readpage);
 
-int mtfs_prepare_write(struct file *file, struct page *page, unsigned from, unsigned to)
-{
-	int ret = 0;
-	HENTRY();
-	HBUG(); /* Never needed */
-
-	HASSERT(PageLocked(page));
-	kmap(page);
-
-	/* fast path for whole page writes */
-	if (from == 0 && to == PAGE_CACHE_SIZE)
-		goto out;
-
-	/* read the page to "revalidate" our data */
-	/* call the helper function which doesn't unlock the page */
-	if (!PageUptodate(page)) {
-		ret = mtfs_readpage_nounlock(file, page);
-	}
-
-out:
-	HRETURN(ret);
-}
-EXPORT_SYMBOL(mtfs_prepare_write);
-
-int mtfs_commit_write(struct file *file, struct page *page, unsigned from, unsigned to)
-{
-	int ret = 0;
-	HENTRY();
-	HBUG(); /* Never needed */
-
-	/*
-	 * We should probably use 1 << inode->i_blkbits instead of PAGE_SIZE here.
-	 * However, stackable f/s copy i_blkbits from f/s below and it can be
-	 * bigger than PAGE_SIZE (e.g., 32K for NFS).  PAGE_SIZE is hardcoded in
-	 * the alloc_page_buffers and makes create_empty_buffers
-	 * dereference a NULL pointer.  (Is it a kernel bug?)  Therefore, we have
-	 * to hardcode PAGE_SIZE either here or during the i_blkbits init.
-	 */
-	if (!page_has_buffers(page))
-			create_empty_buffers(page, PAGE_SIZE, 0);
-
-	ret = generic_commit_write(file, page, from, to);
-	kunmap(page);
-
-	HRETURN(ret);
-}
-EXPORT_SYMBOL(mtfs_commit_write);
-
 ssize_t mtfs_direct_IO(int rw, struct kiocb *kiocb,
 						const struct iovec *iov, loff_t file_offset,
 						unsigned long nr_segs)
@@ -338,17 +290,8 @@ out:
 }
 EXPORT_SYMBOL(mtfs_direct_IO);
 
-/**
- * Page fault handler.
- *
- * \param vma - is virtiual area struct related to page fault
- * \param address - address when hit fault
- * \param type - of fault
- *
- * \return allocated and filled page for address
- * \retval NOPAGE_SIGBUS if page not exist on this address
- * \retval NOPAGE_OOM not have memory for allocate new page
- */
+#ifdef HAVE_VM_OP_FAULT
+#else /* ! HAVE_VM_OP_FAULT */
 struct page *mtfs_nopage(struct vm_area_struct *vma, unsigned long address,
                          int *type)
 {
@@ -362,18 +305,20 @@ struct page *mtfs_nopage(struct vm_area_struct *vma, unsigned long address,
 	HRETURN(page);
 }
 EXPORT_SYMBOL(mtfs_nopage);
+#endif /* ! HAVE_VM_OP_FAULT */
 
 struct address_space_operations mtfs_aops =
 {
 	direct_IO:      mtfs_direct_IO,
 	writepage:      mtfs_writepage,
 	readpage:       mtfs_readpage,
-	prepare_write:  mtfs_prepare_write,  /* Never needed */
-	commit_write:   mtfs_commit_write    /* Never needed */
 };
 
 
 struct vm_operations_struct mtfs_file_vm_ops = {
+#ifdef HAVE_VM_OP_FAULT
+#else /* ! HAVE_VM_OP_FAULT */
 	nopage:         mtfs_nopage,
-	populate:       filemap_populate
+	populate:       filemap_populate,
+#endif /* ! HAVE_VM_OP_FAULT */
 };

@@ -30,7 +30,9 @@ static int mtfsctl_ignore_errors(int argc, char **argv)
 	return 0;
 }
 
+#if LIBCFS_ENABLED
 static int mtfsctl_debug_kernel(int argc, char **argv);
+#endif /* LIBCFS_ENABLED */
 
 command_t mtfsctl_cmdlist[] = {
 	/* Metacommands */
@@ -49,12 +51,15 @@ command_t mtfsctl_cmdlist[] = {
 	{"quit", mtfsctl_quit, 0, "quit"},
 
 	/* control commands */
+#if LIBCFS_ENABLED
 	{"debug_kernel", mtfsctl_debug_kernel, 0,
 	"get debug buffer and dump to a file\n"
 	"usage: debug_kernel [file]"},
+#endif /* LIBCFS_ENABLED */
 	{ 0, 0, 0, NULL }
 };
 
+#if LIBCFS_ENABLED
 int mtfsctl_debug_kernel(int argc, char **argv)
 {
 	struct option long_opts[] = {
@@ -104,6 +109,7 @@ int mtfsctl_debug_kernel(int argc, char **argv)
 out:
 	return rc;
 }
+#endif /* LIBCFS_ENABLED */
 
 int main(int argc, char **argv)
 {

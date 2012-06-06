@@ -15,6 +15,7 @@
 #include <sys/mount.h>
 #include <mtfs_common.h>
 #include <parse_option.h>
+#include <limits.h>
 #include "mtfs_version.h"
 
 int          verbose = 0;

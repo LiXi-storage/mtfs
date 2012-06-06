@@ -19,9 +19,9 @@ int mtfs_file_dump(struct file *file)
 	}
 
 	HDEBUG("file: f_mode = 0x%x, f_flags = 0%o, f_count = %ld, "
-		"f_version = %lu, f_pos = %llu\n",
+		"f_version = %llu, f_pos = %llu\n",
 		file->f_mode, file->f_flags, (long)file_count(file),
-		file->f_version, file->f_pos);
+		(u64)file->f_version, file->f_pos);
 	
 	dentry = file->f_dentry;
 	if (dentry && !IS_ERR(dentry)) {
@@ -134,7 +134,11 @@ int mtfs_open_branch(struct inode *inode, struct file *file, mtfs_bindex_t binde
 		 * dentry_open will dput and mntput if error.
 		 * Otherwise fput() will do an dput and mntput for us upon file close.
 		 */
+#ifdef HAVE_DENTRY_OPEN_4ARGS
+		hidden_file = dentry_open(hidden_dentry, hidden_mnt, hidden_flags, current_cred());
+#else /* HAVE_DENTRY_OPEN_4ARGS */
 		hidden_file = dentry_open(hidden_dentry, hidden_mnt, hidden_flags);
+#endif /* HAVE_DENTRY_OPEN_4ARGS */
 		if (IS_ERR(hidden_file)) {
 			HDEBUG("open branch[%d] of file [%*s], flags = 0x%x, ret = %ld\n", 
 			       bindex, hidden_dentry->d_name.len, hidden_dentry->d_name.name,
@@ -401,7 +405,6 @@ EXPORT_SYMBOL(mtfs_fasync);
 
 int mtfs_lock(struct file *file, int cmd, struct file_lock *fl)
 {
-	struct file_lock conflock;
 	int ret = 0;
 	struct file *hidden_file = NULL;
 	mtfs_bindex_t bindex = 0;
@@ -412,10 +415,9 @@ int mtfs_lock(struct file *file, int cmd, struct file_lock *fl)
 		hidden_file = mtfs_f2branch(file, bindex);
 		if (hidden_file) {
 			HASSERT(hidden_file->f_op);
+			HASSERT(hidden_file->f_op->lock);
 			if (hidden_file->f_op->lock) {
 				ret = hidden_file->f_op->lock(hidden_file, F_GETLK, fl);
-			} else {
-				posix_test_lock(hidden_file, fl, &conflock);
 			}
 		} else {
 			HDEBUG("branch[%d] of file [%*s] is NULL\n",
@@ -454,6 +456,7 @@ int mtfs_flock(struct file *file, int cmd, struct file_lock *fl)
 }
 EXPORT_SYMBOL(mtfs_flock);
 
+#ifdef HAVE_FILE_READV
 static size_t get_iov_count(const struct iovec *iov,
                             unsigned long *nr_segs)
 {
@@ -612,6 +615,18 @@ out:
 	HRETURN(ret);
 }
 
+ssize_t mtfs_file_read(struct file *file, char __user *buf, size_t len,
+                       loff_t *ppos)
+{
+	struct iovec local_iov = { .iov_base = (void __user *)buf,
+	                           .iov_len = len };
+	return mtfs_file_readv(file, &local_iov, 1, ppos);
+}
+EXPORT_SYMBOL(mtfs_file_read);
+#else /* !HAVE_FILE_READV */
+#endif /* !HAVE_FILE_READV */
+
+#ifdef HAVE_FILE_WRITEV
 ssize_t mtfs_file_writev(struct file *file, const struct iovec *iov,
                          unsigned long nr_segs, loff_t *ppos)
 {
@@ -712,17 +727,6 @@ out:
 }
 EXPORT_SYMBOL(mtfs_file_writev);
 
-ssize_t mtfs_file_read(struct file *file, char __user *buf, size_t len,
-                       loff_t *ppos)
-{
-	struct iovec local_iov = { .iov_base = (void __user *)buf,
-								.iov_len = len };
-	return mtfs_file_readv(file, &local_iov, 1, ppos);
-}
-EXPORT_SYMBOL(mtfs_file_read);
-
-
-
 ssize_t mtfs_file_write(struct file *file, const char __user *buf, size_t len, loff_t *ppos)
 {
 	struct iovec local_iov = { .iov_base = (void __user *)buf,
@@ -733,6 +737,8 @@ ssize_t mtfs_file_write(struct file *file, const char __user *buf, size_t len, l
 	return file->f_op->writev(file, &local_iov, 1, ppos);	
 }
 EXPORT_SYMBOL(mtfs_file_write);
+#else /* !HAVE_FILE_WRITEV */
+#endif /* !HAVE_FILE_WRITEV */
 
 static ssize_t mtfs_file_write_nonwritev_branch(struct file *file, const char __user *buf, size_t len,
                                                 loff_t *ppos, mtfs_bindex_t bindex)
@@ -858,30 +864,6 @@ ssize_t mtfs_file_read_nonreadv(struct file *file, char __user *buf, size_t len,
 }
 EXPORT_SYMBOL(mtfs_file_read_nonreadv);
 
-ssize_t
-mtfs_file_aio_read(struct kiocb *iocb, char __user *buf, size_t count, loff_t pos)
-{
-	ssize_t err = 0;
-	HENTRY();
-
-	err = generic_file_aio_read(iocb, buf, count, pos);
-
-	HRETURN(err);
-}
-EXPORT_SYMBOL(mtfs_file_aio_read);
-
-ssize_t mtfs_file_aio_write(struct kiocb *iocb, const char __user *buf,
-                            size_t count, loff_t pos)
-{
-	ssize_t ret = 0;
-	HENTRY();
-
-	ret = generic_file_aio_write(iocb, buf, count, pos);
-
-	HRETURN(ret);
-}
-EXPORT_SYMBOL(mtfs_file_aio_write);
-
 loff_t mtfs_file_llseek(struct file *file, loff_t offset, int origin)
 {
 	loff_t ret = 0;
@@ -948,6 +930,7 @@ out:
 }
 EXPORT_SYMBOL(mtfs_file_mmap_nowrite);
 
+#ifdef HAVE_KERNEL_SENDFILE
 ssize_t mtfs_file_sendfile(struct file *in_file, loff_t *ppos,
                            size_t len, read_actor_t actor, void *target)
 {
@@ -980,6 +963,7 @@ ssize_t mtfs_file_sendfile(struct file *in_file, loff_t *ppos,
 	HRETURN(ret);
 }
 EXPORT_SYMBOL(mtfs_file_sendfile);
+#endif /* HAVE_KERNEL_SENDFILE */
 
 struct file_operations mtfs_dir_fops =
 {
@@ -996,12 +980,18 @@ struct file_operations mtfs_main_fops =
 {
 	llseek:     mtfs_file_llseek,
 	read:       mtfs_file_read,
-	aio_read:   mtfs_file_aio_read,
 	write:      mtfs_file_write,
-	aio_write:  mtfs_file_aio_write,
+#ifdef HAVE_KERNEL_SENDFILE
 	sendfile:   mtfs_file_sendfile, 
+#endif /* HAVE_KERNEL_SENDFILE */
+#ifdef HAVE_FILE_READV
 	readv:      mtfs_file_readv,
+#else /* !HAVE_FILE_READV */
+#endif /* !HAVE_FILE_READV */
+#ifdef HAVE_FILE_WRITEV
 	writev:     mtfs_file_writev,
+#else /* !HAVE_FILE_WRITEV */
+#endif /* !HAVE_FILE_WRITEV */
 	readdir:    mtfs_readdir,
 	poll:       mtfs_poll,
 	ioctl:      mtfs_ioctl,

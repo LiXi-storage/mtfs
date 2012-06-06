@@ -1,8 +1,8 @@
 # Administration utilities Makefile
 SUBDIRS := .
 
-AM_CFLAGS=$(LLCFLAGS)
-AM_CPPFLAGS=$(LLCPPFLAGS) -DMTFS_UTILS=1
+AM_CFLAGS = $(LLCFLAGS)
+AM_CPPFLAGS = $(LLCPPFLAGS) -DMTFS_UTILS=1
 AM_LDFLAGS := -lattr
 
 LIBUSER := $(top_builddir)/mtfs/libuser/libuser.a
@@ -32,8 +32,10 @@ mtfs_SOURCES = mtfs.c hide.c hide.h grouplock.c grouplock.h exit_status.h
 mtfs_LDADD := $(LIBREADLINE) libmtfsapi.a $(LIBUSER)
 mtfs_DEPENDENCIES := $(LIBUSER) libmtfsapi.a
 
-libmtfsapi_a_SOURCES = libmtfsapi.c libcfs_debug.h libcfs_debug.c
-
+libmtfsapi_a_SOURCES = libmtfsapi.c
+if LIBCFS
+libmtfsapi_a_SOURCES += libcfs_debug.h libcfs_debug.c
+endif # LIBCFS
 mount_mtfs_SOURCES = mount_mtfs.c
 mount_mtfs_LDADD := $(LIBUSER)
 mount_mtfs_DEPENDENCIES := $(LIBUSER)

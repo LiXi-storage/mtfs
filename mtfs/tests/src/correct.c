@@ -5,6 +5,7 @@
 #include <memory.h>
 #include <mtfs_random.h>
 #include <debug.h>
+#include <inttypes.h>
 
 typedef struct block {
 	char *data;

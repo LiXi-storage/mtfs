@@ -76,7 +76,8 @@ int mtfs_d_revalidate(struct dentry *dentry, struct nameidata *nd)
 		}
 
 		if (nd) {
-			struct nameidata new_nd = {0};
+			struct nameidata new_nd;
+			memset(&new_nd, 0, sizeof(new_nd));
 
 			/* Revalidate the attr, see BUG351 */
 			new_nd.flags |= LOOKUP_REVAL;

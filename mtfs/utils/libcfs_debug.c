@@ -5,6 +5,8 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <debug.h>
+#include <unistd.h>
+#include <string.h>
 #include "libcfs_debug.h"
 
 static int subsystem_mask = ~0;

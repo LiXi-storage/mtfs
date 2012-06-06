@@ -8,6 +8,7 @@
 #include <mtfs_inode.h>
 #include <mtfs_file.h>
 #include <mtfs_junction.h>
+#include <linux/module.h>
 #include "nfs_support.h"
 
 struct dentry *mtfs_nfs_lookup(struct inode *dir, struct dentry *dentry, struct nameidata *nd)
@@ -98,10 +99,10 @@ struct file_operations mtfs_nfs_main_fops =
 {
 	llseek:         mtfs_file_llseek,
 	read:           mtfs_file_read_nonreadv,
-	aio_read:       mtfs_file_aio_read,
 	write:          mtfs_file_write_nonwritev,
-	aio_write:      mtfs_file_aio_write,
-	sendfile:       mtfs_file_sendfile, 
+#ifdef HAVE_KERNEL_SENDFILE
+	sendfile:   mtfs_file_sendfile,
+#endif /* HAVE_KERNEL_SENDFILE */
 	readdir:        mtfs_readdir,
 	poll:           mtfs_poll,
 	ioctl:          mtfs_ioctl,

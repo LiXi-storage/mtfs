@@ -8,6 +8,7 @@
 #include <mtfs_inode.h>
 #include <mtfs_file.h>
 #include <mtfs_junction.h>
+#include <linux/module.h>
 #include "ext2_support.h"
 
 struct dentry *mtfs_ext2_lookup(struct inode *dir, struct dentry *dentry, struct nameidata *nd)
@@ -97,12 +98,18 @@ struct file_operations mtfs_ext2_main_fops =
 {
 	llseek:     mtfs_file_llseek,
 	read:       mtfs_file_read,
-	aio_read:   mtfs_file_aio_read,
 	write:      mtfs_file_write,
-	aio_write:  mtfs_file_aio_write,
-	sendfile:   mtfs_file_sendfile, 
+#ifdef HAVE_KERNEL_SENDFILE
+	sendfile:   mtfs_file_sendfile,
+#endif /* HAVE_KERNEL_SENDFILE */
+#ifdef HAVE_FILE_READV
 	readv:      mtfs_file_readv,
+#else /* !HAVE_FILE_READV */
+#endif /* !HAVE_FILE_READV */
+#ifdef HAVE_FILE_WRITEV
 	writev:     mtfs_file_writev,
+#else /* !HAVE_FILE_WRITEV */
+#endif /* !HAVE_FILE_WRITEV */
 	readdir:    mtfs_readdir,
 	poll:       mtfs_poll,
 	ioctl:      mtfs_ioctl,

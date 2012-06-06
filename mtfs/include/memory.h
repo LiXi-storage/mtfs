@@ -39,6 +39,8 @@ do {                                                                          \
 #define mtfs_kmem_dec(ptr, size) do {} while (0)
 #endif /* !MEMORY_DEBUG */
 
+#include <linux/slab.h>
+#include <linux/hardirq.h>
 #define MTFS_ALLOC_GFP(ptr, size, gfp_mask)                                   \
 do {                                                                          \
     (ptr) = kmalloc(size, (gfp_mask));                                        \

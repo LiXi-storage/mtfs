@@ -3,6 +3,9 @@
  */
 
 #include "mtfs_internal.h"
+#ifdef HAVE_LINUX_EXPORTFS_H
+#include <linux/exportfs.h>
+#endif
 
 struct inode *mtfs_alloc_inode(struct super_block *sb)
 {
@@ -56,20 +59,23 @@ EXPORT_SYMBOL(mtfs_put_super);
 
 int mtfs_statfs(struct dentry *dentry, struct kstatfs *buf)
 {
-	int err = 0;
+	int ret = 0;
 	struct super_block *hidden_sb = NULL;
 	struct kstatfs rsb;
-	mtfs_bindex_t global_bindex = 0;
-	mtfs_bindex_t bindex1 = 0;
+	mtfs_bindex_t bindex = 0;
+	mtfs_bindex_t i = 0;
 	mtfs_bindex_t bnum = 0;
 	dev_t *hidden_s_dev = NULL;
 	int matched = 0;
 	struct super_block *sb = dentry->d_sb;
+#ifdef HAVE_VFS_STATFS_PATH
+	struct path hidden_path;
+#endif /* HAVE_VFS_STATFS_PATH */
 	HENTRY();
 
 	MTFS_ALLOC(hidden_s_dev, sizeof(*hidden_s_dev) * mtfs_s2bnum(sb));
 	if (!hidden_s_dev) {
-		err = -ENOMEM;
+		ret = -ENOMEM;
 		goto out;
 	}
 
@@ -79,20 +85,20 @@ int mtfs_statfs(struct dentry *dentry, struct kstatfs *buf)
 	buf->f_type = MTFS_SUPER_MAGIC;
 
 	bnum = mtfs_s2bnum(sb);
-	for (global_bindex = 0; global_bindex < bnum; global_bindex++) {
-
-		hidden_sb = mtfs_s2branch(sb, global_bindex);
+	for (bindex = 0; bindex < bnum; bindex++) {
+		hidden_sb = mtfs_s2branch(sb, bindex);
 
 		/* store the current s_dev for checking any
 		 * duplicate additions for super block data
 		 */
-		hidden_s_dev[global_bindex] = hidden_sb->s_dev;
+		hidden_s_dev[bindex] = hidden_sb->s_dev;
 		matched = 0;
-		for (bindex1 = 0; bindex1 < global_bindex; bindex1++) {
-			/* check the hidden super blocks with any previously 
+		for (i = 0; i < bindex; i++) {
+			/*
+			 * check the hidden super blocks with any previously 
 			 * added super block data.  If match, continue
 			 */
-			if (hidden_s_dev[bindex1] == hidden_sb->s_dev) {
+			if (hidden_s_dev[i] == hidden_sb->s_dev) {
 				matched = 1;
 				break;
 			}
@@ -101,8 +107,13 @@ int mtfs_statfs(struct dentry *dentry, struct kstatfs *buf)
 			continue;
 		}
 
-		err = vfs_statfs(mtfs_d2branch(sb->s_root, global_bindex), &rsb);
-
+#ifdef HAVE_VFS_STATFS_PATH
+		hidden_path.dentry = mtfs_d2branch(sb->s_root, bindex);
+		hidden_path.mnt = mtfs_s2mntbranch(sb, bindex);
+		ret = vfs_statfs(&hidden_path, &rsb);
+#else /* !HAVE_VFS_STATFS_PATH */
+		ret = vfs_statfs(mtfs_d2branch(sb->s_root, bindex), &rsb);
+#endif /* !HAVE_VFS_STATFS_PATH */
 		buf->f_bsize = rsb.f_bsize;
 		buf->f_blocks += rsb.f_blocks;
 		buf->f_bfree += rsb.f_bfree;
@@ -114,7 +125,7 @@ int mtfs_statfs(struct dentry *dentry, struct kstatfs *buf)
 	MTFS_FREE(hidden_s_dev, sizeof(*hidden_s_dev) * mtfs_s2bnum(sb));
 
 out:
-	HRETURN(err);
+	HRETURN(ret);
 }
 EXPORT_SYMBOL(mtfs_statfs);
 
@@ -165,8 +176,8 @@ int mtfs_show_options(struct seq_file *m, struct vfsmount *mnt)
 }
 EXPORT_SYMBOL(mtfs_show_options);
 
-static struct dentry *mtfs_get_parent(struct dentry *dentry) {
-	return d_find_alias(dentry->d_inode);
+static struct dentry *mtfs_get_parent(struct dentry *child) {
+	return d_find_alias(child->d_inode);
 }
 
 struct export_operations mtfs_export_ops = {

@@ -15,7 +15,7 @@ typedef enum operation_type {
 	OPERATION_TYPE_NUM,
 } operation_type_t;
 
-int random_test(bitmap_t *bitmap, int *array)
+int random_test(mtfs_bitmap_t *bitmap, int *array)
 {
 	int ret = 0;
 	operation_type_t operation = 0;
@@ -32,16 +32,16 @@ int random_test(bitmap_t *bitmap, int *array)
 	HASSERT(nbit >= 0 && nbit < MAX_BRANCH_NUMBER);
 	switch(operation) {
 	case OPERATION_TYPE_SET:
-		cfs_bitmap_set(bitmap, nbit);
+		mtfs_bitmap_set(bitmap, nbit);
 		array[nbit] = 1;
 		break;
 	case OPERATION_TYPE_CLEAR:
-		cfs_bitmap_clear(bitmap, nbit);
+		mtfs_bitmap_clear(bitmap, nbit);
 		array[nbit] = 0;
 		break;
 	case OPERATION_TYPE_CHECK:
 		//fprintf(stderr, "%d ", nbit);
-		output = cfs_bitmap_check(bitmap, nbit);
+		output = mtfs_bitmap_check(bitmap, nbit);
 		HASSERT(nbit >= 0 && nbit < MAX_BRANCH_NUMBER);
 		expect = array[nbit];
 		if (output != expect) {
@@ -61,11 +61,11 @@ int random_test(bitmap_t *bitmap, int *array)
 int main()
 {
 	int ret = 0;
-	bitmap_t *bitmap = NULL;
+	mtfs_bitmap_t *bitmap = NULL;
 	int *array = NULL;
 	int i = 0;
 	
-	bitmap = cfs_bitmap_allocate(MAX_BRANCH_NUMBER);
+	bitmap = mtfs_bitmap_allocate(MAX_BRANCH_NUMBER);
 	if (bitmap == NULL) {
 		ret = -ENOMEM;
 		goto out;
@@ -90,10 +90,10 @@ int main()
 	goto out;
 error:
 	HPRINT("Seted bits: ");
-	cfs_bitmap_dump(bitmap);
+	mtfs_bitmap_dump(bitmap);
 out:
 	if (bitmap) {
-		cfs_bitmap_freee(bitmap);
+		mtfs_bitmap_freee(bitmap);
 	}
 	if (array) {
 		MTFS_FREE(array, MAX_BRANCH_NUMBER * sizeof(*array));

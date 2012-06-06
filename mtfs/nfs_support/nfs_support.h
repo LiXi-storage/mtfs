@@ -4,7 +4,7 @@
 
 #ifndef __MTFS_NFS_SUPPORT_H__
 #define __MTFS_NFS_SUPPORT_H__
-#if defined (__linux__) && defined(__KERNEL__)
+#if defined(__linux__) && defined(__KERNEL__)
 #include <linux/nfs_fs.h>
 
 #endif /* defined (__linux__) && defined(__KERNEL__) */

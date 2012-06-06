@@ -5,6 +5,11 @@
 #include <mtfs_ioctl.h>
 #include <debug.h>
 #include <memory.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <sys/ioctl.h>
+#include <fcntl.h>
+#include <unistd.h>
 #include "libmtfsapi.h"
 
 #define SPACE2 "  "
@@ -315,6 +320,7 @@ out:
 	return ret;
 }
 
+#if LIBCFS_ENABLED
 #include "libcfs_debug.h"
 #define LIBCFS_DEBUG_FILE_PATH_DEFAULT "/tmp/lustre-log"
 /*
@@ -420,3 +426,4 @@ out_free_file:
 out:
 	HRETURN(ret);
 }
+#endif /* LIBCFS_ENABLED */

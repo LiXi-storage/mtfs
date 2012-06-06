@@ -7,6 +7,11 @@
 #include <mtfs_types.h>
 #include <mtfs_common.h>
 #include <mtfs_flag.h>
+#if defined(__linux__) && defined(__KERNEL__)
+#include <linux/limits.h>
+#else /* !defined(__linux__) && defined(__KERNEL__)*/
+#include <limits.h>
+#endif /* !defined(__linux__) && defined(__KERNEL__)*/
 /*
  * DEFINITIONS FOR USER AND KERNEL CODE:
  * (Note: ioctl numbers 1--9 are reserved for fistgen, the rest

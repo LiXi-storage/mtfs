@@ -366,9 +366,13 @@ int mtfs_insert_proc(void)
 
 #ifdef CONFIG_SYSCTL
 	if (mtfs_table_header == NULL) {
+#ifdef HAVE_REGISTER_SYSCTL_2ARGS
 		mtfs_table_header = register_sysctl_table(mtfs_top_table, 0);
+#else /* !HAVE_REGISTER_SYSCTL_2ARGS */
+		mtfs_table_header = register_sysctl_table(mtfs_top_table);
+#endif /* !HAVE_REGISTER_SYSCTL_2ARGS */
 	}
-#endif
+#endif /* CONFIG_SYSCTL */
 	mtfs_proc_root = mtfs_proc_register("fs/mtfs", NULL,
                                         mtfs_proc_vars_base, NULL);
 	if (unlikely(mtfs_proc_root == NULL)) {

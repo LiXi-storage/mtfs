@@ -24,7 +24,7 @@
 #else /* !LIBCFS_ENABLED */
 #define HASSERT(cond)        \
 do {                         \
-    if (!cond) {             \
+    if (!(cond)) {           \
         HBUG();              \
     }                        \
 } while(0)
@@ -42,7 +42,7 @@ do {                         \
 #include <stdio.h>
 #include <assert.h>
 
-#define HASSERT(e) assert(e)
+#define HASSERT(cond) assert(cond)
 
 #define HDEBUG(format, args...) fprintf(stderr, "DEBUG: %s(%d) %s(): " format, __FILE__,  __LINE__, __FUNCTION__, ##args)
 #define HERROR(format, args...) fprintf(stderr, "ERROR: %s(%d) %s(): " format, __FILE__,  __LINE__, __FUNCTION__, ##args)

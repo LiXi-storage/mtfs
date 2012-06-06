@@ -5,16 +5,15 @@
 #include <debug.h>
 #include <multithread.h>
 #include <cfg.h>
-
 #include <pthread.h>
 #include <stdlib.h>
 #include <string.h>
-
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <errno.h>
 #include <unistd.h>
+#include <compat.h>
 
 struct mtfs_hlist_head thread_head;
 

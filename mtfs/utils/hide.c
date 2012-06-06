@@ -10,6 +10,7 @@
 #include <debug.h>
 #include <memory.h>
 #include <parse_option.h>
+#include <sys/mount.h>
 
 int hide_dirs(char *source, int unhide)
 {

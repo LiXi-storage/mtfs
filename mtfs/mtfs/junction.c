@@ -5,6 +5,7 @@
 #include "junction_internal.h"
 #include <debug.h>
 #include <mtfs_common.h>
+#include <linux/module.h>
 
 spinlock_t mtfs_junction_lock = SPIN_LOCK_UNLOCKED;
 LIST_HEAD(mtfs_junctions);
