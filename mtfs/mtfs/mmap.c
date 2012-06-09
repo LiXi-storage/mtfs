@@ -41,7 +41,7 @@ static int mtfs_writepage_branch(struct page *page, struct inode *inode, mtfs_bi
 	if (PageWriteback(lower_page) || !clear_page_dirty_for_io(lower_page)) {
 		unlock_page(lower_page);
 		page_cache_release(lower_page);
-		LBUG();
+		HBUG();
 		goto out;
 	}
 
@@ -291,6 +291,15 @@ out:
 EXPORT_SYMBOL(mtfs_direct_IO);
 
 #ifdef HAVE_VM_OP_FAULT
+int mtfs_fault(struct vm_area_struct *vma, struct vm_fault *vmf)
+{
+	int ret = 0;
+	HENTRY();
+
+	ret = filemap_fault(vma, vmf);
+	HRETURN(ret);
+}
+EXPORT_SYMBOL(mtfs_fault);
 #else /* ! HAVE_VM_OP_FAULT */
 struct page *mtfs_nopage(struct vm_area_struct *vma, unsigned long address,
                          int *type)
@@ -317,6 +326,7 @@ struct address_space_operations mtfs_aops =
 
 struct vm_operations_struct mtfs_file_vm_ops = {
 #ifdef HAVE_VM_OP_FAULT
+	fault:         mtfs_fault,
 #else /* ! HAVE_VM_OP_FAULT */
 	nopage:         mtfs_nopage,
 	populate:       filemap_populate,

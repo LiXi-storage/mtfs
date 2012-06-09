@@ -22,19 +22,41 @@
 #define HWARN(format, args...)      CERROR("mtfs: "format, ##args)
 #define HPRINT(format, args...)     CERROR("mtfs: "format, ##args)
 #else /* !LIBCFS_ENABLED */
-#define HASSERT(cond)        \
-do {                         \
-    if (!(cond)) {           \
-        HBUG();              \
-    }                        \
+#include <linux/err.h>
+#include <linux/string.h>
+
+#define HBUG()                                       \
+do {                                                 \
+    HERROR("a bug found!");                          \
+    panic("MTFS BUG");                               \
 } while(0)
 
-#define HBUG()                      panic("MTFS BUG");
-#define HDEBUG(format, args...)     printk("mtfs: "format, ##args)
-#define HDEBUG_MEM(format, args...) printk(format, ##args)
-#define HERROR(format, args...)     printk("mtfs: "format, ##args)
-#define HWARN(format, args...)      printk("mtfs: "format, ##args)
-#define HPRINT(format, args...)     printk("mtfs: "format, ##args)
+
+#define HASSERT(cond) HASSERTF(cond, "\n")
+
+#define HASSERTF(cond, format, args...)              \
+do {                                                 \
+    if (!(cond)) {                                   \
+    	HERROR("ASSERTION( %s ) failed: "            \
+               format, #cond, ##args);               \
+        HBUG();                                      \
+    }                                                \
+} while(0)
+
+#define HDEBUG(format, args...)                      \
+do {                                                 \
+    const char *__file__ = __FILE__;                 \
+    if (strchr(__file__, '/')) {                     \
+        __file__ = strrchr(__file__, '/') + 1;       \
+    }                                                \
+    printk("mtfs: (%s:%d:%s()) " format,             \
+           __file__, __LINE__, __FUNCTION__, ##args);\
+} while(0)
+
+#define HDEBUG_MEM HDEBUG
+#define HERROR     HDEBUG
+#define HWARN      HDEBUG
+#define HPRINT     HDEBUG
 #endif /* !LIBCFS_ENABLED */
 
 #else /* !(defined (__linux__) && defined(__KERNEL__)) */

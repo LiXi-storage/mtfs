@@ -4,6 +4,7 @@
 
 #ifndef __MTFS_OPLIST_H__
 #define __MTFS_OPLIST_H__
+#include <linux/fs.h>
 #include "mtfs_common.h"
 #include "debug.h"
 #if defined (__linux__) && defined(__KERNEL__)

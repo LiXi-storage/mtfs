@@ -36,10 +36,19 @@ build_obj_list() {
   done;
 }
 
+config_libcfs_enabled() {
+  local LIBCFS_ENABLED
+  LIBCFS_ENABLED=$(grep "^#define LIBCFS_ENABLED" config.h | awk '{print $3}')
+  if [ "$LIBCFS_ENABLED" = "1" ]; then
+    return 0
+  fi
+  return 1
+}
+
 # user components libs
 build_obj_list . libuser_local.a
 build_obj_list ../mtfs libmtfs.a
-build_obj_list ../../libcfs/libcfs libcfs.a
+config_libcfs_enabled && build_obj_list ../../libcfs/libcfs libcfs.a
 
 # create static lib user
 rm -f $CWD/libuser.a

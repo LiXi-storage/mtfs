@@ -496,9 +496,16 @@ int mtfs_device_proc_register(struct mtfs_device *device)
 {
 	int ret = 0;
 	unsigned int hash_num = 0;
-	char name[PATH_MAX];
+	char *name = NULL;
 	mtfs_bindex_t bindex = 0;
 	struct mtfs_device_branch *dev_branch = NULL;
+
+	MTFS_ALLOC(name, PATH_MAX);
+	if (name == NULL) {
+		HERROR("not enough memory\n");
+		ret = -ENOMEM;
+		goto out;
+	}
 
 	hash_num = full_name_hash(device->device_name, device->name_length);
 	sprintf(name, "%x", hash_num);
@@ -524,13 +531,15 @@ int mtfs_device_proc_register(struct mtfs_device *device)
 			goto out_unregister;
 		}
 	}
-	goto out;
+	goto out_free_name;
 out_unregister:
 	for (; bindex >= 0; bindex--) {
 		dev_branch = mtfs_dev2branch(device, bindex);
 		mtfs_proc_remove(&dev_branch->proc_entry);
 	}
 	mtfs_proc_remove(&device->proc_entry);
+out_free_name:
+	MTFS_FREE(name, PATH_MAX);
 out:
 	return ret;
 }

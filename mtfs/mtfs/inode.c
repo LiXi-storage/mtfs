@@ -267,7 +267,7 @@ int mtfs_interpose(struct dentry *dentry, struct super_block *sb, int flag)
 			break;
 		default:
 			HERROR("Invalid interpose flag passed!");
-			LBUG();
+			HBUG();
 			break;
 	}
 
@@ -1743,14 +1743,15 @@ EXPORT_SYMBOL(mtfs_put_link);
 
 #ifdef HAVE_INODE_PERMISION_2ARGS
 int mtfs_permission(struct inode *inode, int mask)
-#else
+#else /* !HAVE_INODE_PERMISION_2ARGS */
 int mtfs_permission(struct inode *inode, int mask, struct nameidata *nd)
-#endif
+#endif /* !HAVE_INODE_PERMISION_2ARGS */
 {
-	struct inode *hidden_inode = NULL;
 	int ret = 0;
+	struct inode *hidden_inode = NULL;
 	HENTRY();
 
+	HDEBUG("permission [%lu]\n", inode->i_ino);
 	hidden_inode = mtfs_i_choose_branch(inode, MTFS_BRANCH_VALID);
 	if (IS_ERR(hidden_inode)) {
 		ret = PTR_ERR(hidden_inode);
@@ -1758,13 +1759,12 @@ int mtfs_permission(struct inode *inode, int mask, struct nameidata *nd)
 		goto out;
 	}
 
-	HASSERT(hidden_inode->i_op);
-	HASSERT(hidden_inode->i_op->permission);
-#ifdef HAVE_INODE_PERMISION_2ARGS
-	ret = hidden_inode->i_op->permission(hidden_inode, mask);
-#else
-	ret = hidden_inode->i_op->permission(hidden_inode, mask, nd);
-#endif
+#ifdef HAVE_INODE_PERMISION
+	ret = inode_permission(hidden_inode, mask);
+#else /* !HAVE_INODE_PERMISION */
+	ret = permission(hidden_inode, mask, nd);
+#endif /* !HAVE_INODE_PERMISION */
+
 out:
 	HRETURN(ret);
 }

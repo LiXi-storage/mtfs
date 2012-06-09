@@ -120,6 +120,23 @@ LB_LINUX_TRY_COMPILE([
 ])
 
 #
+# 2.6.32-220 changed permission to inode_permission
+#
+AC_DEFUN([LC_INODE_PERMISION],
+[AC_MSG_CHECKING([have inode_permission])
+LB_LINUX_TRY_COMPILE([
+	#include <linux/fs.h>
+],[
+	inode_permission(NULL, 0);
+],[
+	AC_DEFINE(HAVE_INODE_PERMISION, 1,
+		[have inode_permission])
+	AC_MSG_RESULT([yes])
+],[
+	AC_MSG_RESULT([no])
+])
+])
+#
 # 2.6.27
 #
 AC_DEFUN([LC_INODE_PERMISION_2ARGS],
@@ -330,7 +347,6 @@ LB_LINUX_TRY_COMPILE([
 ])
 ])
 
-
 #
 # LC_PROG_LINUX
 #
@@ -341,6 +357,7 @@ AC_DEFUN([LC_PROG_LINUX],
 	LC_STRCASECMP
 	LC_FS_STACK
 	LC_FS_RENAME_DOES_D_MOVE
+	LC_INODE_PERMISION
 	LC_INODE_PERMISION_2ARGS
 	LC_FILE_WRITEV
 	LC_FILE_READV

@@ -44,7 +44,6 @@ struct dentry *_mtfs_dchild_create(struct dentry *dparent, const unsigned char *
 			}
 			goto out;
 		} else {
-#ifndef LIXI_20120213
 			HDEBUG("[%*s/%*s] already existed, and is a %s, not a %s\n",
 			       dparent->d_name.len, dparent->d_name.name, len, name,
 			       mtfs_mode2type(dchild->d_inode->i_mode), mtfs_mode2type(mode));
@@ -64,13 +63,6 @@ struct dentry *_mtfs_dchild_create(struct dentry *dparent, const unsigned char *
 				ret = -EEXIST;
 				goto out_put;
 			}
-#else
-			HDEBUG("[%*s/%s] already existed, and is a %s, not a %s\n",
-			       dparent->d_name.len, dparent->d_name.name, name,
-			       mtfs_mode2type(dchild->d_inode->i_mode), mtfs_mode2type(mode));
-			ret = -EEXIST;
-			goto out_put;
-#endif
 		}
 	}
 
@@ -297,7 +289,6 @@ out:
 	HRETURN(dchild_new);
 }
 
-#ifndef LIXI_20120213
 struct dentry *mtfs_dchild_add_ino(struct dentry *dparent, const unsigned char *name, unsigned int len)
 {
 	int ret = 0;
@@ -336,89 +327,6 @@ out_unlock:
 	}
 	HRETURN(dchild_new);
 }
-#else
-struct dentry *mtfs_dchild_add_ino(struct dentry *dparent, const char *name)
-{
-	int ret = 0;
-	struct dentry *dchild_old = NULL;
-	struct dentry *dchild_new = NULL;
-	char *name_new = NULL;
-	HENTRY();
-
-	MTFS_ALLOC(name_new, PATH_MAX);
-	if (unlikely(name_new == NULL)) {
-		ret = -ENOMEM;
-		goto out;
-	}
-
-	HASSERT(dparent);
-	HASSERT(name);
-	dget(dparent);
-	mutex_lock(&dparent->d_inode->i_mutex);
-
-	dchild_old = lookup_one_len(name, dparent, strlen(name));
-	if (IS_ERR(dchild_old)) {
-		HERROR("lookup [%*s/%s] failed, ret = %d\n",
-		       dparent->d_name.len, dparent->d_name.name, name, ret);
-		ret = PTR_ERR(dchild_old);
-		goto out_unlock;
-	}
-
-	if (dchild_old->d_inode == NULL) {
-		dchild_new = dchild_old;
-		goto out_unlock;
-	}
-
-	strcpy(name_new, name);
-repeat:
-	sprintf(name_new, "%s:%lx", name_new, dchild_old->d_inode->i_ino);
-
-	dchild_new = lookup_one_len(name_new, dparent, strlen(name_new));
-	if (IS_ERR(dchild_new)) {
-		HERROR("lookup [%*s/%s] failed, ret = %d\n",
-		       dparent->d_name.len, dparent->d_name.name, name_new, ret);
-		ret = PTR_ERR(dchild_new);
-		goto out_dput_old;
-	}
-
-	if (dchild_new->d_inode != NULL) {
-		dput(dchild_new);
-		if (strlen(name_new) + 16 >= PATH_MAX) {
-			ret = -EEXIST;
-			goto out_dput_old;
-		}
-		goto repeat;
-	}
-
-	HDEBUG("renaming [%*s/%*s] to [%*s/%*s]\n",
-	       dparent->d_name.len, dparent->d_name.name,
-	       dchild_old->d_name.len, dchild_old->d_name.name,
-	       dparent->d_name.len, dparent->d_name.name,
-	       dchild_new->d_name.len, dchild_new->d_name.name);
-	/*
-	 * Rename in the same dir, and dir is locked,
-	 * no need to lock_rename()
-	 */
-	ret = vfs_rename(dparent->d_inode, dchild_old,
-	                 dparent->d_inode, dchild_new);
-
-	if (ret) {
-		dput(dchild_new);
-	}
-
-out_dput_old:
-	dput(dchild_old);
-out_unlock:
-	mutex_unlock(&dparent->d_inode->i_mutex);
-	dput(dparent);
-	MTFS_FREE(name_new, PATH_MAX);
-out:
-	if (ret) {
-		dchild_new = ERR_PTR(ret);
-	}
-	HRETURN(dchild_new);
-}
-#endif
 
 static inline int mutex_lock_if_needed(struct mutex *lock)
 {
@@ -551,12 +459,8 @@ int mtfs_backup_branch(struct dentry *dentry, mtfs_bindex_t bindex)
 		}
 	}
 
-#ifndef LIXI_20120111
 	hidden_d_new = mtfs_dchild_add_ino(hidden_d_parent_new,
 	                                   hidden_d_old->d_name.name, hidden_d_old->d_name.len);
-#else
-	hidden_d_new = mtfs_dchild_remove(hidden_d_parent_new, hidden_d_old->d_name.name);
-#endif
 	if (IS_ERR(hidden_d_new)) {
 		goto out_dput;		
 	}

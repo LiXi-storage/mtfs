@@ -26,11 +26,15 @@ extern int mtfs_flock(struct file *file, int cmd, struct file_lock *fl);
 extern ssize_t mtfs_file_readv(struct file *file, const struct iovec *iov,
                                unsigned long nr_segs, loff_t *ppos);
 #else /* ! HAVE_FILE_READV */
+extern ssize_t mtfs_file_aio_read(struct kiocb *iocb, const struct iovec *iov,
+                                  unsigned long nr_segs, loff_t pos);
 #endif /* ! HAVE_FILE_WRITEV */
 #ifdef HAVE_FILE_WRITEV
 extern ssize_t mtfs_file_writev(struct file *file, const struct iovec *iov,
                                 unsigned long nr_segs, loff_t *ppos);
 #else /* ! HAVE_FILE_WRITEV */
+extern ssize_t mtfs_file_aio_write(struct kiocb *iocb, const struct iovec *iov,
+                            unsigned long nr_segs, loff_t pos);
 #endif /* ! HAVE_FILE_WRITEV */
 extern ssize_t mtfs_file_write_nonwritev(struct file *file, const char __user *buf,
                                          size_t len, loff_t *ppos);

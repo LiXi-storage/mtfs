@@ -105,10 +105,12 @@ struct file_operations mtfs_ext2_main_fops =
 #ifdef HAVE_FILE_READV
 	readv:      mtfs_file_readv,
 #else /* !HAVE_FILE_READV */
+	aio_read:   mtfs_file_aio_read,
 #endif /* !HAVE_FILE_READV */
 #ifdef HAVE_FILE_WRITEV
 	writev:     mtfs_file_writev,
 #else /* !HAVE_FILE_WRITEV */
+	aio_write:  mtfs_file_aio_write,
 #endif /* !HAVE_FILE_WRITEV */
 	readdir:    mtfs_readdir,
 	poll:       mtfs_poll,

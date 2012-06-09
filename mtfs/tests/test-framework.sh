@@ -2,6 +2,18 @@
 trap 'print_summary && echo "test-framework exiting on error"' ERR
 set -e
 
+debug_print()
+{
+	if [ "$DEBUG" = "yes" ]; then
+		echo -e -n "$@"
+	fi
+}
+
+error_print()
+{
+	echo -e -n "$@"
+}
+
 print_summary()
 {
 	[ -n "$ONLY" ] && echo "WARNING: ONLY is set to ${ONLY}."
@@ -57,21 +69,21 @@ mount_filesystem_noexit()
 	local MOUNT_POINT=$4
 	local OPTION=$5
 
-	echo -n "mounting $FS_TYPE to $MOUNT_POINT..."
+	debug_print "mounting $FS_TYPE to $MOUNT_POINT..."
 	if ! filesystem_is_mounted $FS_TYPE $MOUNT_POINT; then
 		$MOUNT_CMD $DEV $MOUNT_POINT $OPTION
 
 		if ! filesystem_is_mounted $FS_TYPE $MOUNT_POINT; then
-			echo "failed"
-			echo "fs_type: $FS_TYPE"
+			debug_print "failed\n"
+			error_print "failed to mount $FS_TYPE to $MOUNT_POINT"
+			error_print "CMD: $MOUNT_CMD $DEV $MOUNT_POINT $OPTION, fs_type is $FS_TYPE"
 			/bin/grep -w $MOUNT_POINT /proc/mounts | awk '{ print $3 }' | grep $FS_TYPE
-			echo "CMD: $MOUNT_CMD $DEV $MOUNT_POINT $OPTION"
-			return -1
+			return 1
 		else
-			echo "succeed"
+			debug_print "succeed\n"
 		fi
 	else
-		 echo "already done"
+		 debug_print "already done\n"
     fi
 	return 0
 }
@@ -81,7 +93,7 @@ mount_filesystem()
 	mount_filesystem_noexit "$1" "$2" "$3" "$4" "$5"
 	local RET=$?
 	if [ "$RET" != 0 ]; then
-		exit -1
+		exit 1
 	fi
 	return 0
 }
@@ -104,31 +116,31 @@ umount_filesystem_noexit()
 	local MOUNT_POINT=$2
 
 
-	echo -n "umounting $MOUNT_POINT..."
+	debug_print "umounting $MOUNT_POINT..."
 
 	if [ "$FS_TYPE" = "" ]; then
-		echo "failed, BAD fstype"
-		return -1;
+		error_print "failed to umount $MOUNT_POINT, BAD fstype\n"
+		return 1;
 	fi
 
 	if [ "$MOUNT_POINT" = "" ]; then
-		echo "failed, BAD mount point"
-		return -1;
+		error_print "failed to umount $MOUNT_POINT, BAD mount point\n"
+		return 1;
 	fi
 
 	if filesystem_is_mounted $FS_TYPE $MOUNT_POINT; then
 		/bin/umount $MOUNT_POINT
 
 		if filesystem_is_mounted $FS_TYPE $MOUNT_POINT; then
-			echo "failed"
-			echo "CMD: /bin/umount $MOUNT_POINT"
-			return -1
+			error_print "unable to umount $MOUNT_POINT\n"
+			error_print "CMD: /bin/umount $MOUNT_POINT\n"
+			return 1
 		else
-			echo "succeed"
+			debug_print "succeed\n"
 		fi
 	else
-		 echo "already done"
-    fi
+		 debug_print "already done\n"
+	fi
 	return 0
 }
 
@@ -138,7 +150,7 @@ umount_filesystem()
 	local RET=$?
 	
 	if [ "$RET" != 0 ]; then
-		exit -1
+		exit 1
 	fi
 	return 0
 }
@@ -191,19 +203,19 @@ remove_module()
 {
 	local MODULE=$1
 
-	echo -n "removing module $MODULE..."
-	if $(module_is_inserted $MODULE); then
+	debug_print "removing module $MODULE..."
+	if module_is_inserted $MODULE; then
 		/sbin/rmmod $MODULE
 		
-		if $(module_is_inserted $MODULE); then		
-			echo "failed"
-			echo "CMD: /sbin/rmmod $MODULE"
-			exit -1
+		if module_is_inserted $MODULE; then		
+			debug_print "failed\n"
+			error_print "failed to remove module $MODULE"
+			exit 1
 		else
-			echo "succeed"
+			debug_print "succeed\n"
 		fi
 	else
-		echo "already done"
+		debug_print "already done\n"
 	fi
 	return
 }
@@ -213,19 +225,19 @@ insert_module()
 	local MODULE=$1
 	local MODULE_PATH=$2
 	
-	echo -n "inserting module $MODULE..."
-	if ! $(module_is_inserted $MODULE); then
+	debug_print "inserting module $MODULE..."
+	if ! module_is_inserted $MODULE; then
 		/sbin/insmod $MODULE_PATH
 		
 		if ! $(module_is_inserted $MODULE); then		
-			echo "failed"
-			echo "CMD: /sbin/insmod $MODULE_PATH"
-			exit -1
+			debug_print "failed\n"
+			error_print "failed to remove module $MODULE_PATH"
+			exit 1
 		else
-			echo "succeed"
+			debug_print "succeed\n"
 		fi
 	else
-		echo "already done"
+		debug_print "already donen"
 	fi
 	return
 }
@@ -243,7 +255,7 @@ module_is_installed()
 {
 	MODULE=$1
 	MODINFO=$(modinfo $MODULE 2>&1 | grep -w "could not find")
-	if "$MODINFO" = ""; then
+	if [ "${MODINFO}" = "" ]; then
 		return 0
 	fi
 	return 1
@@ -251,7 +263,7 @@ module_is_installed()
 
 insert_libcfs_module()
 {
-	if libcfs_is_installed libcfs; then
+	if module_is_installed libcfs; then
 		modprobe libcfs
 	else
 		insert_module libcfs ../../libcfs/libcfs/libcfs.ko
@@ -350,7 +362,9 @@ leak_detect_state_push()
 leak_detect_state_pop()
 {
 	# Recover back to old state
-	../utils/mtfsctl debug_kernel > /dev/null
+	if libcfs_module_is_inserted; then
+		../utils/mtfsctl debug_kernel > /dev/null
+	fi
 	DETECT_LEAK="$FORMER_DETECT_LEAK"
 }
 

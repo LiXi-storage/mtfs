@@ -18,12 +18,12 @@ DECLARE_RWSEM(global_rwsem);
 
 int mtfs_init_super(struct super_block *sb, struct mtfs_device *device, struct dentry *d_root)
 {
-	unsigned long long maxbytes = -1;
 	struct super_operations *sops = NULL;
 	struct dentry_operations *dops = NULL;
 	struct mtfs_operations *operations = NULL;
 	mtfs_bindex_t bindex = 0;
 	int ret = 0;
+	HENTRY();
 
 	mtfs_s2dev(sb) = device;
 
@@ -42,11 +42,10 @@ int mtfs_init_super(struct super_block *sb, struct mtfs_device *device, struct d
 	}
 
 	for (bindex = 0; bindex < mtfs_s2bnum(sb); bindex++) {
-		if (maxbytes < mtfs_s2branch(sb, bindex)->s_maxbytes) {
-			maxbytes = mtfs_s2branch(sb, bindex)->s_maxbytes;
+		if (sb->s_maxbytes < mtfs_s2branch(sb, bindex)->s_maxbytes) {
+			sb->s_maxbytes = mtfs_s2branch(sb, bindex)->s_maxbytes;
 		}
 	}
-	sb->s_maxbytes = maxbytes;
 	sb->s_op = sops;
 	sb->s_root = d_root;
 	sb->s_root->d_op = dops;
@@ -54,7 +53,7 @@ int mtfs_init_super(struct super_block *sb, struct mtfs_device *device, struct d
 	sb->s_root->d_parent = sb->s_root;
 	ret = mtfs_interpose(sb->s_root, sb, INTERPOSE_SUPER);
 
-	return ret;
+	HRETURN(ret);
 }
 
 int mtfs_init_recover(struct dentry *d_root)
