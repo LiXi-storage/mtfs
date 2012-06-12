@@ -268,15 +268,15 @@ LB_LINUX_TRY_COMPILE([
 AC_DEFUN([LC_VFS_SYMLINK_4ARGS],
 [AC_MSG_CHECKING([if vfs_symlink wants 4 arguments])
 LB_LINUX_TRY_COMPILE([
-        #include <linux/fs.h>
+	#include <linux/fs.h>
 ],[
-        vfs_symlink(NULL, 0, 0, NULL);
+	vfs_symlink(NULL, 0, 0, NULL);
 ],[
-        AC_DEFINE(HAVE_VFS_SYMLINK_4ARGS, 1,
-                  [vfs_symlink wants 4 arguments])
-        AC_MSG_RESULT([yes])
+	AC_DEFINE(HAVE_VFS_SYMLINK_4ARGS, 1,
+		[vfs_symlink wants 4 arguments])
+	AC_MSG_RESULT([yes])
 ],[
-        AC_MSG_RESULT([no])
+	AC_MSG_RESULT([no])
 ])
 ])
 
@@ -286,17 +286,17 @@ LB_LINUX_TRY_COMPILE([
 AC_DEFUN([LC_STRUCT_NAMEIDATA_PATH],
 [AC_MSG_CHECKING([if struct nameidata has a path field])
 LB_LINUX_TRY_COMPILE([
-        #include <linux/fs.h>
-        #include <linux/namei.h>
+	#include <linux/fs.h>
+	#include <linux/namei.h>
 ],[
-        struct nameidata nd;
- 
+	struct nameidata nd;
+
  	nd.path.dentry = NULL;
 ],[
-        AC_MSG_RESULT([yes])
-        AC_DEFINE(HAVE_PATH_IN_STRUCT_NAMEIDATA, 1, [struct nameidata has a path field])
+	AC_MSG_RESULT([yes])
+	AC_DEFINE(HAVE_PATH_IN_STRUCT_NAMEIDATA, 1, [struct nameidata has a path field])
 ],[
-        AC_MSG_RESULT([no])
+	AC_MSG_RESULT([no])
 ])
 ])
 
@@ -306,16 +306,16 @@ LB_LINUX_TRY_COMPILE([
 AC_DEFUN([LC_STRUCT_FILE_PATH],
 [AC_MSG_CHECKING([if struct file has a path field])
 LB_LINUX_TRY_COMPILE([
-        #include <linux/fs.h>
+	#include <linux/fs.h>
 ],[
-        struct file file;
- 
- 	file.f_path = NULL;
+	struct file file;
+
+	file.f_path.dentry = NULL;
 ],[
-        AC_MSG_RESULT([yes])
-        AC_DEFINE(HAVE_PATH_IN_STRUCT_FILE, 1, [struct file has a path field])
+	AC_MSG_RESULT([yes])
+	AC_DEFINE(HAVE_PATH_IN_STRUCT_FILE, 1, [struct file has a path field])
 ],[
-        AC_MSG_RESULT([no])
+	AC_MSG_RESULT([no])
 ])
 ])
 
@@ -327,15 +327,13 @@ AC_DEFUN([LC_VFS_STATFS_PATH],
 LB_LINUX_TRY_COMPILE([
         #include <linux/fs.h>
 ],[
-	struct path path;
-
-        vfs_statfs(&path, NULL);
+	extern int vfs_statfs(struct path *path, struct kstatfs *buf)
 ],[
-        AC_DEFINE(HAVE_VFS_STATFS_PATH, 1,
-                  [vfs_statfs wants path argument])
-        AC_MSG_RESULT([yes])
+	AC_DEFINE(HAVE_VFS_STATFS_PATH, 1,
+		[vfs_statfs wants path argument])
+	AC_MSG_RESULT([yes])
 ],[
-        AC_MSG_RESULT([no])
+	AC_MSG_RESULT([no])
 ])
 ])
 
