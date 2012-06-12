@@ -125,59 +125,21 @@ struct file_operations mtfs_ext2_main_fops =
 static int mtfs_ext2_setflags(struct inode *inode, struct file *file, unsigned long arg)
 {
 	int ret = 0;
-	struct file *hidden_file = NULL;
-	struct inode *hidden_inode = NULL;
-	mtfs_bindex_t bindex = 0;
-	int undo_ret = 0;
 	int flags = 0;
-	mm_segment_t old_fs;
 	HENTRY();
 
-	HASSERT(mtfs_f2info(file));
-
-	for(bindex = 0; bindex < mtfs_f2bnum(file); bindex++) {
-		hidden_file = mtfs_f2branch(file, bindex);
-		hidden_inode = mtfs_i2branch(inode, bindex);
-		if (hidden_file == NULL || hidden_inode == NULL) {
-			HERROR("branch[%d] of file [%*s] is NULL, ioctl setflags skipped\n", 
-			       bindex, file->f_dentry->d_name.len, file->f_dentry->d_name.name);
-			continue;
-		}
-
-		HASSERT(hidden_file->f_op);
-		HASSERT(hidden_file->f_op->ioctl);
-		ret = hidden_file->f_op->ioctl(hidden_inode, hidden_file, EXT2_IOC_SETFLAGS, arg);
-		if (ret < 0) {
-			HERROR("ioctl setflags branch[%d] of file [%*s] failed, ret = %d\n",
-			       bindex, file->f_dentry->d_name.len, file->f_dentry->d_name.name, ret);
-			bindex--;
-			goto out_undo;
-		}
-	}
-
-	if (get_user(flags, (int *)arg)) {
-		ret = -EFAULT;
+	ret = mtfs_ioctl_write(inode, file, EXT2_IOC_SETFLAGS, arg, 0);
+	if (ret < 0) {
 		goto out;
 	}
-	inode->i_flags = ext2_to_inode_flags(flags | EXT2_RESERVED_FL);
-	goto out;
-out_undo:
-	for(; bindex >= 0; bindex--) {
-		flags = inode_to_ext2_flags(inode->i_flags, 1);
-		hidden_file = mtfs_f2branch(file, bindex);
-		hidden_inode = mtfs_i2branch(inode, bindex);
-		if (!hidden_file) {
-			continue;
-		}
-		old_fs = get_fs();
-		set_fs(get_ds());
-		undo_ret = hidden_file->f_op->ioctl(hidden_inode, hidden_file, EXT2_IOC_SETFLAGS, (long)&flags);
-		set_fs(old_fs);
-		if (undo_ret < 0) {
-			HERROR("undo ioctl setflags branch[%d] of file [%*s] failed, ret = %d\n",
-			       bindex, file->f_dentry->d_name.len, file->f_dentry->d_name.name, undo_ret);
-		}
+
+	ret = get_user(flags, (int *)arg);
+	if (ret) {
+		HERROR("failed to get_user, ret = %d\n", ret);
+		goto out;
 	}
+
+	inode->i_flags = ext2_to_inode_flags(flags | EXT2_RESERVED_FL);
 out:
 	HRETURN(ret);
 }
@@ -185,45 +147,16 @@ out:
 static int mtfs_ext2_getflags(struct inode *inode, struct file *file, unsigned long arg)
 {
 	int ret = 0;
-	struct file *hidden_file = NULL;
-	struct inode *hidden_inode = NULL;
-	mtfs_bindex_t bindex = 0;
 	int flags = 0;
-	mm_segment_t old_fs;
 	HENTRY();
 
-	HASSERT(mtfs_f2info(file));
-	for(bindex = 0; bindex < mtfs_f2bnum(file); bindex++) {
-		hidden_file = mtfs_f2branch(file, bindex);
-		hidden_inode = mtfs_i2branch(inode, bindex);
-		if (hidden_file == NULL || hidden_inode == NULL) {
-			HERROR("branch[%d] of file [%*s] is NULL, ioctl getflags skipped\n", 
-			       bindex, file->f_dentry->d_name.len, file->f_dentry->d_name.name);
-			continue;
-		}
-
-		HASSERT(hidden_file->f_op);
-		HASSERT(hidden_file->f_op->ioctl);
-		old_fs = get_fs();
-		set_fs(get_ds());
-		ret = hidden_file->f_op->ioctl(hidden_inode, hidden_file, EXT2_IOC_GETFLAGS, (long)&flags);
-		set_fs(old_fs);
-		//ret = hidden_file->f_op->ioctl(hidden_inode, hidden_file, EXT2_IOC_GETFLAGS, arg);
-		if (ret < 0) {
-			HERROR("ioctl getflags branch[%d] of file [%*s] failed, ret = %d\n",
-			       bindex, file->f_dentry->d_name.len, file->f_dentry->d_name.name, ret);
-		} else {
-			inode->i_flags = ext2_to_inode_flags(flags | EXT2_RESERVED_FL);
-			goto out;
-		}
-	}
-
-out:
+	ret = mtfs_ioctl_read(inode, file, EXT2_IOC_GETFLAGS, (unsigned long)&flags, 1);
 	if (ret < 0) {
-		HRETURN(ret);
-	} else {
-		HRETURN(put_user(flags, (int __user *)arg));
+		goto out;
 	}
+	ret = put_user(flags, (int __user *)arg);
+out:
+	HRETURN(ret);
 }
 
 int mtfs_ext2_ioctl(struct inode *inode, struct file *file, unsigned int cmd, unsigned long arg)

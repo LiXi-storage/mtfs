@@ -40,7 +40,7 @@ static int mtfs_user_get_state(struct inode *inode, struct file *file, struct mt
 		}
 		(state->state[bindex]).flag = branch_flag;
 	}
-	
+
 	ret = copy_to_user(user_state, state, state_size);
 
 free_state:	
@@ -172,7 +172,48 @@ out:
 	HRETURN(ret);
 }
 
-static int mtfs_ioctl_do_branch(struct inode *inode, struct file *file, unsigned int cmd, unsigned long arg, mtfs_bindex_t bindex)
+static long __vfs_ioctl(struct file *filp, unsigned int cmd,
+		        unsigned long arg, int is_kernel_ds)
+{
+	int ret = -ENOTTY;
+	mm_segment_t old_fs = {0};
+
+	if (!filp->f_op) {
+		goto out;
+	}
+
+	if (is_kernel_ds) {
+		old_fs = get_fs();
+		set_fs(get_ds());
+	}
+
+	if (filp->f_op->unlocked_ioctl) {
+		ret = filp->f_op->unlocked_ioctl(filp, cmd, arg);
+		if (ret == -ENOIOCTLCMD) {
+			ret = -EINVAL;
+		}
+		goto out_ds;
+	} else if (filp->f_op->ioctl) {
+		//lock_kernel();
+#ifdef HAVE_PATH_IN_STRUCT_FILE
+		ret = filp->f_op->ioctl(filp->f_path.dentry->d_inode,
+					filp, cmd, arg);
+#else
+		ret = filp->f_op->ioctl(filp->f_dentry->d_inode,
+					filp, cmd, arg);
+#endif
+		//unlock_kernel();
+	}
+out_ds:
+	if (is_kernel_ds) {
+		set_fs(old_fs);
+	}
+ out:
+	return ret;
+}
+
+
+static int mtfs_ioctl_do_branch(struct inode *inode, struct file *file, unsigned int cmd, unsigned long arg, mtfs_bindex_t bindex, int is_kernel_ds)
 {
 	int ret = 0;
 	struct file *hidden_file = mtfs_f2branch(file, bindex);
@@ -186,14 +227,7 @@ static int mtfs_ioctl_do_branch(struct inode *inode, struct file *file, unsigned
 	}
 
 	if (hidden_file && hidden_inode) {
-		HASSERT(hidden_file->f_op);
-#ifdef HAVE_UNLOCKED_IOCTL
-		HASSERT(hidden_file->f_op->unlocked_ioctl);
-		ret = hidden_file->f_op->unlocked_ioctl(hidden_file, cmd, arg);
-#else
-		HASSERT(hidden_file->f_op->ioctl);
-		ret = hidden_file->f_op->ioctl(hidden_inode, hidden_file, cmd, arg);
-#endif
+		ret = __vfs_ioctl(hidden_file, cmd, arg, is_kernel_ds);
 	} else {
 		HERROR("branch[%d] of file [%*s] is NULL, ioctl setflags skipped\n", 
 		       bindex, file->f_dentry->d_name.len, file->f_dentry->d_name.name);
@@ -204,7 +238,8 @@ out:
 	HRETURN(ret);
 }
 
-int mtfs_ioctl_write(struct inode *inode, struct file *file, unsigned int cmd, unsigned long arg)
+int mtfs_ioctl_write(struct inode *inode, struct file *file,
+                     unsigned int cmd, unsigned long arg, int is_kernel_ds)
 {
 	int ret = 0;
 	mtfs_bindex_t i = 0;
@@ -233,7 +268,7 @@ int mtfs_ioctl_write(struct inode *inode, struct file *file, unsigned int cmd, u
 
 	for (i = 0; i < mtfs_f2bnum(file); i++) {
 		bindex = list->op_binfo[i].bindex;
-		ret = mtfs_ioctl_do_branch(inode, file, cmd, arg, bindex);
+		ret = mtfs_ioctl_do_branch(inode, file, cmd, arg, bindex, is_kernel_ds);
 		result.ret = ret;
 		mtfs_oplist_setbranch(list, i, (ret == 0 ? 1 : 0), result);
 		if (i == list->latest_bnum - 1) {
@@ -270,6 +305,26 @@ out:
 }
 EXPORT_SYMBOL(mtfs_ioctl_write);
 
+int mtfs_ioctl_read(struct inode *inode, struct file *file,
+                    unsigned int cmd, unsigned long arg, int is_kernel_ds)
+{
+	mtfs_bindex_t bindex = -1;
+	int ret = 0;
+	HENTRY();
+
+	ret = mtfs_i_choose_bindex(inode, MTFS_BRANCH_VALID, &bindex);
+	if (ret) {
+		HERROR("choose bindex failed, ret = %d\n", ret);
+		goto out;
+	}
+
+	HASSERT(bindex >=0 && bindex < mtfs_i2bnum(inode));
+	ret = mtfs_ioctl_do_branch(inode, file, cmd, arg, bindex, is_kernel_ds);
+out:
+	HRETURN(ret);
+}
+EXPORT_SYMBOL(mtfs_ioctl_read);
+
 int mtfs_ioctl(struct inode *inode, struct file *file, unsigned int cmd, unsigned long arg)
 {
 	int ret = 0;
@@ -278,13 +333,16 @@ int mtfs_ioctl(struct inode *inode, struct file *file, unsigned int cmd, unsigne
 
 	switch (cmd) {
 	case MTFS_IOCTL_GET_FLAG:
-		ret = mtfs_user_get_state(inode, file, (struct mtfs_user_flag __user *)arg, MTFS_BRANCH_MAX);
+		ret = mtfs_user_get_state(inode, file,
+		                          (struct mtfs_user_flag __user *)arg, MTFS_BRANCH_MAX);
 		break;
 	case MTFS_IOCTL_SET_FLAG:
-		ret = mtfs_user_set_state(inode,  file, (struct mtfs_user_flag __user *)arg);
+		ret = mtfs_user_set_state(inode,  file,
+		                          (struct mtfs_user_flag __user *)arg);
 		break;
 	case MTFS_IOCTL_REMOVE_BRANCH:
-		ret = mtfs_user_remove_branch(inode, file, (struct mtfs_remove_branch_info __user *)arg);
+		ret = mtfs_user_remove_branch(inode, file,
+		                              (struct mtfs_remove_branch_info __user *)arg);
 		break;
 	case MTFS_IOCTL_RULE_ADD:
 		ret = -EINVAL;

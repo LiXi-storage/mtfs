@@ -266,7 +266,7 @@ int mtfs_lustre_ioctl(struct inode *inode, struct file *file, unsigned int cmd, 
 
 	switch (cmd) {
 	case FSFILT_IOC_SETFLAGS:
-		ret = mtfs_ioctl_write(inode, file, cmd, arg);
+		ret = mtfs_ioctl_write(inode, file, cmd, arg, 0);
 		break;
 	case FSFILT_IOC_GETFLAGS:
 		ret = mtfs_lustre_getflags(inode, file, arg);

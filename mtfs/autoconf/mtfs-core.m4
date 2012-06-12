@@ -301,6 +301,25 @@ LB_LINUX_TRY_COMPILE([
 ])
 
 #
+# 
+#
+AC_DEFUN([LC_STRUCT_FILE_PATH],
+[AC_MSG_CHECKING([if struct file has a path field])
+LB_LINUX_TRY_COMPILE([
+        #include <linux/fs.h>
+],[
+        struct file file;
+ 
+ 	file.f_path = NULL;
+],[
+        AC_MSG_RESULT([yes])
+        AC_DEFINE(HAVE_PATH_IN_STRUCT_FILE, 1, [struct file has a path field])
+],[
+        AC_MSG_RESULT([no])
+])
+])
+
+#
 # 2.6.32-220 vfs_statfs taken path paremater.
 #
 AC_DEFUN([LC_VFS_STATFS_PATH],
@@ -367,6 +386,7 @@ AC_DEFUN([LC_PROG_LINUX],
 	LC_VM_OP_FAULT
 	LC_VFS_SYMLINK_4ARGS
 	LC_STRUCT_NAMEIDATA_PATH
+	LC_STRUCT_FILE_PATH
 	LC_VFS_STATFS_PATH
 	LC_HAVE_EXPORTFS_H
 	LC_REGISTER_SYSCTL_2ARGS

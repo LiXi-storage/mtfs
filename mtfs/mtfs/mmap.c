@@ -11,7 +11,9 @@ static int mtfs_writepage_branch(struct page *page, struct inode *inode, mtfs_bi
 {
 	int ret = 0;
 	struct inode *lower_inode = NULL;
-	struct page *lower_page;
+	struct page *lower_page = NULL;
+	char *kaddr = NULL;
+	char *lower_kaddr = NULL;
 	HENTRY();
 
 	ret = mtfs_device_branch_errno(mtfs_i2dev(inode), bindex, BOPS_MASK_WRITE);
@@ -29,34 +31,42 @@ static int mtfs_writepage_branch(struct page *page, struct inode *inode, mtfs_bi
 	/* This will lock_page */
 	lower_page = grab_cache_page(lower_inode->i_mapping, hidden_page_index);
 	if (!lower_page) {
-		ret = -ENOMEM;
+		ret = -ENOMEM; /* Which errno*/
 		goto out;
 	}
 
-	set_page_dirty(lower_page);
-	if (wbc->sync_mode != WB_SYNC_NONE) {
-		wait_on_page_writeback(lower_page);
-	}
+	/*
+	 * Writepage is not allowed when writeback is in progress.
+	 * And PageWriteback flag will be set by writepage in some fs.
+	 * So wait until it finishs.
+	 */
+	wait_on_page_writeback(lower_page);
+	HASSERT(!PageWriteback(lower_page));
 
-	if (PageWriteback(lower_page) || !clear_page_dirty_for_io(lower_page)) {
+	/* Copy data to lower_page */
+	kaddr = kmap(page);
+	lower_kaddr = kmap(lower_page);
+	memcpy(lower_kaddr, kaddr, PAGE_CACHE_SIZE);
+	flush_dcache_page(lower_page);
+	kunmap(lower_page);
+	kunmap(page);
+
+	set_page_dirty(lower_page);
+
+	if (!clear_page_dirty_for_io(lower_page)) {
+		HERROR("page(%p) is not dirty\n", lower_page);
 		unlock_page(lower_page);
 		page_cache_release(lower_page);
 		HBUG();
 		goto out;
 	}
 
-	SetPageReclaim(lower_page);
-
-	/* This will unlock_page*/
+	/* This will unlock_page */
 	ret = lower_inode->i_mapping->a_ops->writepage(lower_page, wbc);
-	if (ret) {
-		ClearPageReclaim(lower_page);
-		page_cache_release(lower_page);
-		goto out;
-	}
-	
-	if (!PageWriteback(lower_page)) {
-		ClearPageReclaim(lower_page);
+	if (ret == AOP_WRITEPAGE_ACTIVATE) {
+		HDEBUG("lowerfs choose to not start writepage\n");
+		unlock_page(lower_page);
+		ret = 0;
 	}
 
 	page_cache_release(lower_page); /* because read_cache_page increased refcnt */

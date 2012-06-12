@@ -734,12 +734,12 @@ ssize_t mtfs_file_aio_write(struct kiocb *iocb, const struct iovec *iov,
 		size = -ENOMEM;
 		goto out;
 	}
-	
+
 	MTFS_ALLOC(iov_tmp, length);
 	if (!iov_tmp) {
 		size = -ENOMEM;
 		goto out_new_alloced;
-	}	
+	}
 	memcpy((char *)iov_new, (char *)iov, length); 
 
 	list = mtfs_oplist_build(file->f_dentry->d_inode);
