@@ -447,7 +447,8 @@ out:
 }
 EXPORT_SYMBOL(mtfs_lookup_backend);
 
-struct dentry *mtfs_lookup(struct inode *dir, struct dentry *dentry, struct nameidata *nd)
+struct dentry *mtfs_lookup(struct inode *dir,
+                           struct dentry *dentry, struct nameidata *nd)
 {
 	struct dentry *ret = NULL;
 	int rc = 0;
@@ -516,7 +517,78 @@ out:
 }
 EXPORT_SYMBOL(mtfs_lookup);
 
-int mtfs_create_branch(struct dentry *dentry, int mode, mtfs_bindex_t bindex)
+#ifndef LIXI_20120613
+static int mtfs_create_branch(struct dentry *dentry, int mode,
+                              mtfs_bindex_t bindex, struct nameidata *nd)
+{
+	int ret = 0;
+	struct dentry *hidden_dentry = mtfs_d2branch(dentry, bindex);
+	struct dentry *hidden_dir_dentry = NULL;
+#if (LINUX_VERSION_CODE == KERNEL_VERSION(2,6,32))
+	struct dentry *dentry_save = NULL;
+	struct vfsmount *vfsmount_save = 0;
+	unsigned int flags_save = 0;
+#endif  /* (LINUX_VERSION_CODE == KERNEL_VERSION(2,6,32)) */
+	HENTRY();
+
+	ret = mtfs_device_branch_errno(mtfs_d2dev(dentry), bindex, BOPS_MASK_WRITE);
+	if (ret) {
+		HDEBUG("branch[%d] is abandoned\n", bindex);
+		goto out; 
+	}
+
+	if (hidden_dentry && hidden_dentry->d_parent) {
+		hidden_dir_dentry = lock_parent(hidden_dentry);
+#if (LINUX_VERSION_CODE == KERNEL_VERSION(2,6,32))
+		/* God damn the nfs_create of this version */
+		if (strcmp(hidden_dir_dentry->d_sb->s_type->name, "nfs") == 0) {
+			dentry_save = nd->path.dentry;
+			vfsmount_save = nd->path.mnt;
+			flags_save = nd->flags;
+
+			nd->path.dentry = hidden_dentry;
+			nd->path.mnt = mtfs_s2mntbranch(dentry->d_sb, bindex);
+			nd->flags &= ~LOOKUP_OPEN;
+			ret = vfs_create(hidden_dir_dentry->d_inode,
+			                 hidden_dentry, mode, nd);
+			nd->path.dentry = dentry_save;
+			nd->path.mnt = vfsmount_save;
+			nd->flags = flags_save;
+		} else {
+			ret = vfs_create(hidden_dir_dentry->d_inode,
+			                 hidden_dentry, mode, NULL);
+		}
+#else /* !(LINUX_VERSION_CODE == KERNEL_VERSION(2,6,32)) */
+		ret = vfs_create(hidden_dir_dentry->d_inode,
+		                 hidden_dentry, mode, NULL);
+#endif /* !(LINUX_VERSION_CODE == KERNEL_VERSION(2,6,32)) */
+		unlock_dir(hidden_dir_dentry);
+		if (!ret && hidden_dentry->d_inode == NULL) {
+			HBUG();
+			HDEBUG("branch[%d] of dentry [%*s] is negative\n", bindex,
+			       hidden_dentry->d_name.len, hidden_dentry->d_name.name);
+			ret = -EIO; /* which errno? */
+		}
+	} else {
+		if (hidden_dentry == NULL) {
+			HDEBUG("branch[%d] of dentry [%*s/%*s] is NULL\n", bindex,
+			       dentry->d_parent->d_name.len,
+			       dentry->d_parent->d_name.name,
+			       dentry->d_name.len, dentry->d_name.name);
+		} else {
+			HDEBUG("parent's branch[%d] of dentry [%*s/%*s] is NULL\n", bindex,
+			       dentry->d_parent->d_name.len,
+			       dentry->d_parent->d_name.name,
+			       dentry->d_name.len, dentry->d_name.name);
+		}
+		ret = -ENOENT;
+	}
+
+out:
+	HRETURN(ret);	
+}
+#else
+static int mtfs_create_branch(struct dentry *dentry, int mode, mtfs_bindex_t bindex)
 {
 	int ret = 0;
 	struct dentry *hidden_dentry = mtfs_d2branch(dentry, bindex);
@@ -555,6 +627,7 @@ int mtfs_create_branch(struct dentry *dentry, int mode, mtfs_bindex_t bindex)
 out:
 	HRETURN(ret);	
 }
+#endif
 
 int mtfs_create(struct inode *dir, struct dentry *dentry, int mode, struct nameidata *nd)
 {
@@ -588,7 +661,7 @@ int mtfs_create(struct inode *dir, struct dentry *dentry, int mode, struct namei
 
 	for (i = 0; i < mtfs_i2bnum(dir); i++) {
 		bindex = list->op_binfo[i].bindex;
-		ret = mtfs_create_branch(dentry, mode, bindex);
+		ret = mtfs_create_branch(dentry, mode, bindex, nd);
 		result.ret = ret;
 		mtfs_oplist_setbranch(list, i, (ret == 0 ? 1 : 0), result);
 		if (i == list->latest_bnum - 1) {

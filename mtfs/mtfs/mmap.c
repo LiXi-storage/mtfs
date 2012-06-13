@@ -333,7 +333,6 @@ struct address_space_operations mtfs_aops =
 	readpage:       mtfs_readpage,
 };
 
-
 struct vm_operations_struct mtfs_file_vm_ops = {
 #ifdef HAVE_VM_OP_FAULT
 	fault:         mtfs_fault,

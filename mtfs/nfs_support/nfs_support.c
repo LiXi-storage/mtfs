@@ -7,6 +7,7 @@
 #include <mtfs_dentry.h>
 #include <mtfs_inode.h>
 #include <mtfs_file.h>
+#include <mtfs_mmap.h>
 #include <mtfs_junction.h>
 #include <linux/module.h>
 #include "nfs_support.h"
@@ -101,7 +102,7 @@ struct file_operations mtfs_nfs_main_fops =
 	read:           mtfs_file_read_nonreadv,
 	write:          mtfs_file_write_nonwritev,
 #ifdef HAVE_KERNEL_SENDFILE
-	sendfile:   mtfs_file_sendfile,
+	sendfile:       mtfs_file_sendfile,
 #endif /* HAVE_KERNEL_SENDFILE */
 	readdir:        mtfs_readdir,
 	poll:           mtfs_poll,
@@ -111,6 +112,14 @@ struct file_operations mtfs_nfs_main_fops =
 	release:        mtfs_release,
 	fsync:          mtfs_fsync,
 	/* TODO: splice_read, splice_write */
+};
+
+
+struct address_space_operations mtfs_nfs_aops =
+{
+	direct_IO:      mtfs_direct_IO,
+	writepage:      mtfs_writepage,
+	readpage:       mtfs_readpage,
 };
 
 int mtfs_nfs_ioctl(struct inode *inode, struct file *file, unsigned int cmd, unsigned long arg)
@@ -135,6 +144,7 @@ struct mtfs_operations mtfs_nfs_operations = {
 	dir_fops:                &mtfs_nfs_dir_fops,
 	sops:                    &mtfs_nfs_sops,
 	dops:                    &mtfs_nfs_dops,
+	aops:                    &mtfs_nfs_aops,
 	ioctl:                   &mtfs_nfs_ioctl,
 };
 

@@ -129,6 +129,8 @@ umount_filesystem_noexit()
 	fi
 
 	if filesystem_is_mounted $FS_TYPE $MOUNT_POINT; then
+		# Sync before umount, nfs may fail if not.
+		sync
 		/bin/umount $MOUNT_POINT
 
 		if filesystem_is_mounted $FS_TYPE $MOUNT_POINT; then
