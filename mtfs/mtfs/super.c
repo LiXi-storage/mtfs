@@ -2,6 +2,7 @@
  * Copyright (C) 2011 Li Xi <pkuelelixi@gmail.com>
  */
 
+#include <linux/seq_file.h>
 #include "mtfs_internal.h"
 #ifdef HAVE_LINUX_EXPORTFS_H
 #include <linux/exportfs.h>

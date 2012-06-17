@@ -364,6 +364,82 @@ LB_LINUX_TRY_COMPILE([
 ])
 ])
 
+# 2.6.23 lost dtor argument
+AC_DEFUN([LC_KMEM_CACHE_CREATE_DTOR],
+[AC_MSG_CHECKING([check kmem_cache_create has dtor argument])
+LB_LINUX_TRY_COMPILE([
+	#include <linux/slab.h>
+],[
+	kmem_cache_create(NULL, 0, 0, 0, NULL, NULL);
+],[
+	AC_MSG_RESULT(yes)
+	AC_DEFINE(HAVE_KMEM_CACHE_CREATE_DTOR, 1,
+		[kmem_cache_create has dtor argument])
+],[
+	AC_MSG_RESULT(NO)
+])
+])
+
+# 2.6.24 request not use real numbers for ctl_name
+AC_DEFUN([LC_SYSCTL_UNNUMBERED],
+[AC_MSG_CHECKING([for CTL_UNNUMBERED])
+LB_LINUX_TRY_COMPILE([
+	#include <linux/sysctl.h>
+],[
+	#ifndef CTL_UNNUMBERED
+	#error CTL_UNNUMBERED not exist in kernel
+	#endif
+],[
+	AC_MSG_RESULT(yes)
+	AC_DEFINE(HAVE_SYSCTL_UNNUMBERED, 1,
+		[sysctl has CTL_UNNUMBERED])
+],[
+	AC_MSG_RESULT(NO)
+])
+])
+
+# 2.6.19 API change
+#panic_notifier_list use atomic_notifier operations
+#
+AC_DEFUN([LC_ATOMIC_PANIC_NOTIFIER],
+[AC_MSG_CHECKING([panic_notifier_list is atomic])
+LB_LINUX_TRY_COMPILE([
+	#include <linux/notifier.h>
+	#include <linux/kernel.h>
+],[
+	struct atomic_notifier_head panic_notifier_list;
+],[
+	AC_MSG_RESULT(yes)
+	AC_DEFINE(HAVE_ATOMIC_PANIC_NOTIFIER, 1,
+		[panic_notifier_list is atomic_notifier_head])
+],[
+	AC_MSG_RESULT(NO)
+])
+])
+
+# See if sysctl proc_handler wants only 5 arguments (since 2.6.32)
+AC_DEFUN([LC_5ARGS_SYSCTL_PROC_HANDLER],
+[AC_MSG_CHECKING([if sysctl proc_handler wants 5 args])
+LB_LINUX_TRY_COMPILE([
+	#include <linux/sysctl.h>
+],[
+	struct ctl_table *table = NULL;
+	int write = 1;
+	void __user *buffer = NULL;
+	size_t *lenp = NULL;
+	loff_t *ppos = NULL;
+
+	proc_handler *proc_handler;
+	proc_handler(table, write, buffer, lenp, ppos);
+],[
+	AC_MSG_RESULT(yes)
+	AC_DEFINE(HAVE_5ARGS_SYSCTL_PROC_HANDLER, 1,
+		[sysctl proc_handler wants 5 args])
+],[
+ 	AC_MSG_RESULT(no)
+])
+])
+
 #
 # LC_PROG_LINUX
 #
@@ -388,6 +464,10 @@ AC_DEFUN([LC_PROG_LINUX],
 	LC_VFS_STATFS_PATH
 	LC_HAVE_EXPORTFS_H
 	LC_REGISTER_SYSCTL_2ARGS
+	LC_KMEM_CACHE_CREATE_DTOR
+	LC_SYSCTL_UNNUMBERED
+	LC_ATOMIC_PANIC_NOTIFIER
+	LC_5ARGS_SYSCTL_PROC_HANDLER
 ])
 
 #

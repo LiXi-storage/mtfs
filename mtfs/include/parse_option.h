@@ -7,6 +7,8 @@
 #include <memory.h>
 #include <debug.h>
 
+#define DEBUG_SUBSYSTEM S_MTFS
+
 struct mount_barnch {
 	int length;
 	char *path;

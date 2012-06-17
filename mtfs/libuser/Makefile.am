@@ -10,10 +10,6 @@ AM_CPPFLAGS = $(LLCPPFLAGS)
 AM_LDFLAGS :=
 
 USER_LIBS = $(top_builddir)/mtfs/mtfs/libmtfs.a libuser_local.a
-if LIBCFS
-USER_LIBS += $(top_builddir)/libcfs/libcfs/libcfs.a
-endif #LIBCFS
-
 
 if LIBMTFS
 lib_LIBRARIES = libuser.a

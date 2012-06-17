@@ -5,4 +5,6 @@
 /autoMakefile
 /autoMakefile.in
 /Makefile
+/modules.order
+/mtfs_ext3.ko.unsigned
 

@@ -37,6 +37,7 @@ CLIENTS=${CLIENTS:-$(hostname)}
 PDSH=${PDSH:-ssh}
 DETECT_LEAK=${DETECT_LEAK-yes}
 MTFS_LOG=${MTFS_LOG-/tmp/mtfs.log}
+DEBUG=${DEBUG:-yes}
 
 # lowerfs feature define area
 LOWERFS_DIR_INVALID_WHEN_REMOVED=${LOWERFS_DIR_INVALID_WHEN_REMOVED:-yes}

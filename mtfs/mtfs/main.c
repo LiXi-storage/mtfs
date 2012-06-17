@@ -7,8 +7,6 @@
 #include <parse_option.h>
 #include <compat.h>
 
-int mtfs_debug_level = 11;
-
 /* This definition must only appear after we include <linux/module.h> */
 #ifndef MODULE_LICENSE
 #define MODULE_LICENSE(foo)
@@ -345,19 +343,25 @@ out:
 static int __init mtfs_init(void)
 {
 	int ret = 0;
-	
+
 	HDEBUG("Registering mtfs\n");
+
+	ret = mtfs_debug_init(5 * 1024 * 1024);
+	if (ret) {
+		printk(KERN_ERR "MTFS Error: failed to init debug system, ret = %d\n", ret);
+		goto out;
+	}
 
 	ret = mtfs_init_kmem_caches();
 	if (ret) {
 		HERROR("Failed to allocate one or more kmem_cache objects\n");
-		goto out;
+		goto out_debug_cleanup;
 	}
 
 	ret = mtfs_insert_proc();
 	if (ret) {
 		HERROR("failed to insert_proc: error %d\n", ret);
-		goto out;
+		goto out_free_kmem;
 	}
 	
 	ret = register_filesystem(&mtfs_fs_type);
@@ -377,6 +381,10 @@ out_unregister_mtfs:
 	unregister_filesystem(&mtfs_fs_type);
 out_remove_proc:
 	mtfs_remove_proc();
+out_free_kmem:
+	mtfs_free_kmem_caches();
+out_debug_cleanup:
+	mtfs_debug_cleanup();
 out:
 	return ret;
 }
@@ -384,10 +392,11 @@ out:
 static void __exit mtfs_exit(void)
 {
 	HDEBUG("Unregistering mtfs\n");
-	mtfs_remove_proc();
-	unregister_filesystem(&mtfs_fs_type);
-	mtfs_free_kmem_caches();
 	unregister_filesystem(&mtfs_hidden_fs_type);
+	unregister_filesystem(&mtfs_fs_type);
+	mtfs_remove_proc();
+	mtfs_free_kmem_caches();
+	mtfs_debug_cleanup();
 }
 
 MODULE_AUTHOR("Massive Storage Management Workgroup of Jiangnan Computing Technology Institute");

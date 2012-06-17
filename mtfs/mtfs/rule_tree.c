@@ -13,6 +13,8 @@
 #include <bsearch.h>
 #include <rule_tree.h>
 
+#define DEBUG_SUBSYSTEM S_MTFS
+
 raid_type_t raid_default = RAID_TYPE_RAID0;
 
 /*

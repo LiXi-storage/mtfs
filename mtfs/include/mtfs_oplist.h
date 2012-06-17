@@ -4,10 +4,15 @@
 
 #ifndef __MTFS_OPLIST_H__
 #define __MTFS_OPLIST_H__
+
+#if defined (__linux__) && defined(__KERNEL__)
+
 #include <linux/fs.h>
 #include "mtfs_common.h"
 #include "debug.h"
-#if defined (__linux__) && defined(__KERNEL__)
+
+#define DEBUG_SUBSYSTEM S_MTFS
+
 typedef union mtfs_operation_result {
 	int ret;
 	void *ptr;

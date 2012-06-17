@@ -49,6 +49,7 @@ title()
 	RANTEST=${RANTEST}$*", "
 }
 
+#cleanup_all "skip_leak_check"
 run_tests()
 {
 	local NAME=$1

@@ -34,16 +34,15 @@
 #include <asm/system.h>
 #include <asm/segment.h>
 #include <asm/mman.h>
-
 #include <mtfs_common.h>
 #include <mtfs_inode.h>
 #include <mtfs_dentry.h>
 #include <mtfs_super.h>
 #include <memory.h>
-#include <libcfs/libcfs.h>
-#include <libcfs/kp30.h>
 #include <debug.h>
 #include <raid.h>
+
+#define DEBUG_SUBSYSTEM S_MTFS
 
 extern struct rw_semaphore global_rwsem;
 static inline void global_read_lock(void)

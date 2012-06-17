@@ -7,14 +7,17 @@
 #include <debug.h>
 #include <unistd.h>
 #include <string.h>
-#include "libcfs_debug.h"
+#include <debug.h>
+#include <memory.h>
+#include "libmtfsapi.h"
+#include "mtfs_debug.h"
 
 static int subsystem_mask = ~0;
 static int debug_mask = ~0;
 
 /* all strings nul-terminated; only the struct and hdr need to be freed */
 struct dbg_line {
-        struct ptldebug_header *hdr;
+        struct mtfs_ptldebug_header *hdr;
         char *file;
         char *fn;
         char *text;
@@ -44,7 +47,7 @@ int dbg_write_cmd(int fd, char *str, int len)
 	return (rc == len ? 0 : 1);
 }
 
-static void dump_hdr(unsigned long long offset, struct ptldebug_header *hdr)
+static void dump_hdr(unsigned long long offset, struct mtfs_ptldebug_header *hdr)
 {
         fprintf(stderr, "badly-formed record at offset = %llu\n", offset);
         fprintf(stderr, "  len = %u\n", hdr->ph_len);
@@ -84,7 +87,7 @@ static void print_rec(struct dbg_line ***linevp, int used, int fdout)
 	qsort(linev, used, sizeof(struct dbg_line *), cmp_rec);
 	for (i = 0; i < used; i++) {
 		struct dbg_line *line = linev[i];
-		struct ptldebug_header *hdr = line->hdr;
+		struct mtfs_ptldebug_header *hdr = line->hdr;
 		char out[4097];
 		char *buf = out;
 		int bytes;
@@ -137,7 +140,7 @@ static int add_rec(struct dbg_line *line, struct dbg_line ***linevp, int *lenp,
 int parse_buffer(int fdin, int fdout)
 {
 	struct dbg_line *line;
-	struct ptldebug_header *hdr;
+	struct mtfs_ptldebug_header *hdr;
 	char buf[4097], *ptr;
 	unsigned long dropped = 0, kept = 0, bad = 0;
 	struct dbg_line **linev = NULL;
@@ -279,4 +282,109 @@ print:
 		dropped + kept + bad, kept, dropped, bad);
 
 	HRETURN(0);
+}
+
+#define MTFS_DEBUG_FILE_PATH_DEFAULT "/tmp/lustre-log"
+#define MTFS_DUMP_KERNEL_CTL_NAME    "/proc/sys/mtfs/dump_kernel"
+/*
+ * Filename may be NULL
+ */
+int mtfsctl_api_debug_kernel(const char *out_file, struct mtfs_param *param)
+{
+	int ret = 0;
+	char *tmp_file = NULL;
+	struct stat st;
+	int fdin = 0;
+ 	int fdout = 0;
+ 	int save_errno = 0;
+ 	HENTRY();
+
+	MTFS_STRDUP(tmp_file, MTFS_DEBUG_FILE_PATH_DEFAULT);
+	if (tmp_file == NULL) {
+		HERROR("not enough memory\n");
+		ret = -ENOMEM;
+		goto out;
+	}
+
+	if (stat(tmp_file, &st) == 0) {
+		if (! S_ISREG(st.st_mode)) {
+			HERROR("%s exists, and is not a regular file\n",
+			       tmp_file);
+			ret = -EEXIST;
+			goto out_free_file;
+		}
+
+		ret = unlink(tmp_file);
+		if (ret) {
+			HERROR("failed to unlink %s\n",
+			       tmp_file);
+			goto out_free_file;
+		}
+	}
+	fdin = dbg_open_ctlhandle(MTFS_DUMP_KERNEL_CTL_NAME);
+        if (fdin < 0) {
+                HERROR("open(dump_kernel) failed: %s\n",
+                       strerror(errno));
+                ret = -errno;
+                goto out_free_file;
+        }
+
+	ret = dbg_write_cmd(fdin, tmp_file, strlen(tmp_file));
+	save_errno = errno;
+	dbg_close_ctlhandle(fdin);
+	if (ret != 0) {
+		HERROR("write(%s) failed: %s\n", tmp_file,
+		       strerror(save_errno));
+		ret = -save_errno;
+		goto out_free_file;    
+	}
+
+	fdin = open(tmp_file, O_RDONLY);
+	if (fdin < 0) {
+		if (errno == ENOENT) {
+			/* no dump file created */
+			ret = 0;
+			return 0;
+		}
+		HERROR("fopen(%s) failed: %s\n", tmp_file,
+		        strerror(errno));
+		ret = -errno;
+		goto out_free_file;
+        }
+
+	if (out_file) {
+		fdout = open(out_file, O_WRONLY | O_CREAT | O_TRUNC,
+		             S_IRUSR | S_IWUSR);
+		if (fdout < 0) {
+			HERROR("fopen(%s) failed: %s\n", out_file,
+			       strerror(errno));
+			goto out_close_fdin;
+		}
+	} else {
+		fdout = fileno(stdout);
+	}
+
+	ret = parse_buffer(fdin, fdout);
+	if (out_file) {
+		close(fdout);
+	}
+
+	if (ret) {
+		HERROR("parse_buffer failed; leaving tmp file %s"
+		       "behind.\n", tmp_file);
+	} else {
+		ret = unlink(tmp_file);
+		if (ret) {
+                        HERROR("dumped successfully, but couldn't "
+			       "unlink tmp file %s: %s\n", tmp_file,
+			       strerror(errno));
+			goto out_close_fdin;
+		}
+	}
+out_close_fdin:
+	close(fdin);
+out_free_file:
+	MTFS_FREE_STR(tmp_file);
+out:
+	HRETURN(ret);
 }

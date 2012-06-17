@@ -49,8 +49,8 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <semaphore.h>
-#include <libcfs/libcfs.h>
 #if MTFS_IS_LUSTRE
+#include <libcfs/libcfs.h>
 #include <lustre/liblustreapi.h>
 #endif /* MTFS_IS_LUSTRE */
 

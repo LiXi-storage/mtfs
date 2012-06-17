@@ -195,12 +195,6 @@ module_is_inserted()
 	return
 }
 
-libcfs_module_is_inserted()
-{
-	module_is_inserted "libcfs"
-	return $?
-}
-
 remove_module()
 {
 	local MODULE=$1
@@ -263,15 +257,6 @@ module_is_installed()
 	return 1
 }
 
-insert_libcfs_module()
-{
-	if module_is_installed libcfs; then
-		modprobe libcfs
-	else
-		insert_module libcfs ../../libcfs/libcfs/libcfs.ko
-	fi
-}
-
 insert_mtfs_module()
 {
 	insert_module $MTFS_MODULE $MTFS_MODULE_PATH
@@ -332,24 +317,18 @@ remount_mtfs()
 
 init_leak_log()
 {
-	if ! libcfs_module_is_inserted; then
-		insert_libcfs_module	
-	fi
-
-	if ! libcfs_module_is_inserted; then
-		echo "failed to insert libcfs"
-		return
-	fi
-
-	echo "super" > /proc/sys/lnet/debug
+	echo "malloc" > /proc/sys/mtfs/debug
 	echo > $MTFS_LOG
 	../utils/mtfsctl debug_kernel > /dev/null
 }
 
 check_leak_log()
 {
-	../utils/mtfsctl debug_kernel > $MTFS_LOG
-	$LEAK_FINDER $MTFS_LOG 2>&1 | egrep '*** Leak:' && error "memory leak detected, see log $MTFS_LOG" || true
+	if module_is_inserted mtfs; then
+		../utils/mtfsctl debug_kernel > $MTFS_LOG
+		$LEAK_FINDER $MTFS_LOG 2>&1 | egrep '*** Leak:' && error "memory leak detected, see log $MTFS_LOG" || true
+	fi
+
 }
 
 leak_detect_state_push()
@@ -364,7 +343,7 @@ leak_detect_state_push()
 leak_detect_state_pop()
 {
 	# Recover back to old state
-	if libcfs_module_is_inserted; then
+	if module_is_inserted mtfs; then
 		../utils/mtfsctl debug_kernel > /dev/null
 	fi
 	DETECT_LEAK="$FORMER_DETECT_LEAK"
@@ -440,12 +419,15 @@ setup_all()
 		fi
 	fi
 
-	if [ "$DETECT_LEAK" = "yes" ]; then
-		init_leak_log
-	fi
-
 	insert_module $MTFS_MODULE $MTFS_MODULE_PATH
 	insert_module $SUPPORT_MODULE $SUPPORT_MODULE_PATH
+
+	if [ "$DETECT_LEAK" = "yes" ]; then
+		# Since log is inited here
+		# memory leaked when inserting module won't be detected
+		init_leak_log "$INIT_NEED_CHECK_LEAK"
+	fi
+
 	mount_mtfs
 	if [ "$DOING_MUTLTI" = "yes" ]; then
 		if [ "$LOWERFS_HAVE_DEV" = "yes" ]; then
@@ -461,12 +443,16 @@ setup_all()
 
 cleanup_all()
 {
+	CHECK_LEAK="$1"
+
 	umount_mtfs
 	if [ "$DOING_MUTLTI" = "yes" ]; then
 		umount_mtfs2
 	fi
 
-	if [ "$DETECT_LEAK" = "yes" ]; then
+	if [ "$DETECT_LEAK" = "yes" -a "$CHECK_LEAK" != "skip_leak_check" ]; then
+		check_leak_log
+
 		local PROC_FILE="/proc/sys/mtfs/memused"
 		if [ -f $PROC_FILE ]; then
 			local MEM_USED=$(cat $PROC_FILE)
@@ -489,20 +475,9 @@ cleanup_all()
 	return
 }
 
-cleanup_all_check()
-{
-	cleanup_all
-
-	if [ "$DETECT_LEAK" = "yes" ]; then
-		if $(libcfs_module_is_inserted); then
-			check_leak_log
-		fi
-	fi
-}
-
 cleanup_and_setup()
 {
-	cleanup_all_check
+	cleanup_all
 	setup_all
 	return
 }
@@ -735,7 +710,7 @@ run_one_cleanup_setup()
 	local ret=$?
 
 	if [ "$CLEANUP_PER_TEST" = "yes" ]; then
-		cleanup_all_check
+		cleanup_all
 	fi
 
 	return $ret

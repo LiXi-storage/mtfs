@@ -6,4 +6,6 @@
 /autoMakefile
 /autoMakefile.in
 /Makefile
+/modules.order
+/mtfs.ko.unsigned
 

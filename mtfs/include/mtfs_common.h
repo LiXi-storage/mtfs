@@ -23,4 +23,11 @@ static inline mtfs_bindex_t mtfs_get_primary_bindex(void)
 {
 	return MTFS_DEFAULT_PRIMARY_BRANCH;
 }
+
+#ifndef MIN
+# define MIN(a,b) (((a)<(b)) ? (a): (b))
+#endif
+#ifndef MAX
+# define MAX(a,b) (((a)>(b)) ? (a): (b))
+#endif
 #endif /* __MTFS_COMMON_H__ */

@@ -10,6 +10,8 @@
 #include <linux/module.h>
 #include "ext3_support.h"
 
+#define DEBUG_SUBSYSTEM S_MTFS
+
 struct dentry *mtfs_ext3_lookup(struct inode *dir, struct dentry *dentry, struct nameidata *nd)
 {
 	struct dentry *ret = NULL;

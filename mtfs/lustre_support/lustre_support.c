@@ -2,6 +2,7 @@
  * Copyright (C) 2011 Li Xi <pkuelelixi@gmail.com>
  */
 
+#include <linux/module.h>
 #include <mtfs_support.h>
 #include <mtfs_super.h>
 #include <mtfs_dentry.h>
@@ -10,6 +11,8 @@
 #include <mtfs_flag.h>
 #include <mtfs_junction.h>
 #include "lustre_support.h"
+
+#define DEBUG_SUBSYSTEM S_MTFS
 
 struct super_operations mtfs_lustre_sops =
 {

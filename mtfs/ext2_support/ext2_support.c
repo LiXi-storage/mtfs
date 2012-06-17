@@ -11,6 +11,8 @@
 #include <linux/module.h>
 #include "ext2_support.h"
 
+#define DEBUG_SUBSYSTEM S_MTFS
+
 struct dentry *mtfs_ext2_lookup(struct inode *dir, struct dentry *dentry, struct nameidata *nd)
 {
 	struct dentry *ret = NULL;

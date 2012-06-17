@@ -12,6 +12,8 @@
 #include <debug.h>
 #include <memory.h>
 
+#define DEBUG_SUBSYSTEM S_MTFS
+
 /*
  * Function: int queue_initialise (queue_t *queue)
  * Purpose : initialise a queue
@@ -56,7 +58,7 @@ out:
 void queue_free(queue_t *queue)
 {
 	if (!mtfs_list_empty(&queue->head)) {
-		HWARN("freeing non-empty queue %p\n", queue);
+		MWARN("freeing non-empty queue %p\n", queue);
 	}
 
 	MTFS_FREE(queue->alloc, queue->size);

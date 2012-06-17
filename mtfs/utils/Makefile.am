@@ -24,7 +24,7 @@ endif # UTILS
 
 lib_LIBRARIES = libmtfsapi.a
 
-mtfsctl_SOURCES = mtfsctl.c
+mtfsctl_SOURCES = mtfsctl.c mtfs_debug.h mtfs_debug.c
 mtfsctl_LDADD := $(LIBREADLINE) $(LIBUSER) libmtfsapi.a
 mtfsctl_DEPENDENCIES := $(LIBUSER) libmtfsapi.a
 
@@ -33,9 +33,6 @@ mtfs_LDADD := $(LIBREADLINE) libmtfsapi.a $(LIBUSER)
 mtfs_DEPENDENCIES := $(LIBUSER) libmtfsapi.a
 
 libmtfsapi_a_SOURCES = libmtfsapi.c
-if LIBCFS
-libmtfsapi_a_SOURCES += libcfs_debug.h libcfs_debug.c
-endif # LIBCFS
 mount_mtfs_SOURCES = mount_mtfs.c
 mount_mtfs_LDADD := $(LIBUSER)
 mount_mtfs_DEPENDENCIES := $(LIBUSER)

@@ -598,10 +598,10 @@ static inline void mtfs_hlist_add_after(mtfs_hlist_node_t *n,
 	     pos = mtfs_list_entry(pos->member.prev, type, member))
 
 #define mtfs_list_for_each_entry_safe_typed(pos, n, head, type, member)	\
-    for (pos = mtfs_list_entry((head)->next, type, member),		\
-		n = mtfs_list_entry(pos->member.next, type, member);	\
-	     &pos->member != (head);                                    \
-	     pos = n, n = mtfs_list_entry(n->member.next, type, member))
+        for (pos = mtfs_list_entry((head)->next, type, member),		\
+             n = mtfs_list_entry(pos->member.next, type, member);	\
+             &pos->member != (head);                                    \
+             pos = n, n = mtfs_list_entry(n->member.next, type, member))
 
 #define mtfs_list_for_each_entry_safe_from_typed(pos, n, head, type, member)  \
         for (n = mtfs_list_entry(pos->member.next, type, member);             \

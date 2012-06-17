@@ -1,4 +1,3 @@
-@LIBCFS_TRUE@subdir-m += @LIBCFS_SUBDIR@
 subdir-m += mtfs
 
 @INCLUDE_RULES@

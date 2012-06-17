@@ -1,8 +1,10 @@
 /*
  * Copyright (C) 2011 Li Xi <pkuelelixi@gmail.com>
  */
-
+#include <debug.h>
 #include "mtfs_internal.h"
+#include "tracefile.h"
+
 static struct ctl_table_header *mtfs_table_header = NULL;
 
 atomic64_t mtfs_kmemory_used = {0};
@@ -11,20 +13,88 @@ EXPORT_SYMBOL(mtfs_kmemory_used);
 atomic64_t mtfs_kmemory_used_max = {0};
 EXPORT_SYMBOL(mtfs_kmemory_used_max);
 
+static int
+mtfs_proc_call_handler(void *data, int write,
+                       loff_t *ppos, void *buffer, size_t *lenp,
+                       int (*handler)(void *data, int write,
+                       loff_t pos, void *buffer, int len))
+{
+	int rc = handler(data, write, *ppos, buffer, *lenp);
+
+	if (rc < 0) {
+		return rc;
+	}
+
+	if (write) {
+		*ppos += *lenp;
+	} else {
+		*lenp = rc;
+		*ppos += rc;
+	}
+
+	return 0;
+}
+
+static int __mtfs_proc_dump_kernel(void *data, int write,
+                            loff_t pos, void *buffer, int nob)
+{
+	int ret = 0;
+
+	if (!write) {
+		goto out;
+	}
+
+	ret = mtfs_trace_dump_debug_buffer_usrstr(buffer, nob);
+out:
+	return ret;
+}
+MTFS_DECLARE_PROC_HANDLER(mtfs_proc_dump_kernel)
+
+static int __mtfs_proc_dobitmasks(void *data, int write,
+                             loff_t pos, void *buffer, int nob)
+{
+	const int     tmpstrlen = 512;
+	char         *tmpstr;
+	int           rc;
+	unsigned int *mask = data;
+	int           is_subsys = (mask == &mtfs_subsystem_debug) ? 1 : 0;
+	int           is_printk = (mask == &mtfs_printk) ? 1 : 0;
+
+	rc = mtfs_trace_allocate_string_buffer(&tmpstr, tmpstrlen);
+	if (rc < 0)
+		return rc;
+	if (!write) {
+		mtfs_debug_mask2str(tmpstr, tmpstrlen, *mask, is_subsys);
+		rc = strlen(tmpstr);
+		if (pos >= rc) {
+			rc = 0;
+		} else {
+			rc = mtfs_trace_copyout_string(buffer, nob,
+			                               tmpstr + pos, "\n");
+                }
+        } else {
+		rc = mtfs_trace_copyin_string(tmpstr, tmpstrlen, buffer, nob);
+		if (rc < 0)
+			return rc;
+
+		rc = mtfs_debug_str2mask(mask, tmpstr, is_subsys);
+		/* Always print LBUG/LASSERT to console, so keep this mask */
+		if (is_printk)
+			*mask |= D_EMERG;
+	}
+
+	mtfs_trace_free_string_buffer(tmpstr, tmpstrlen);
+	return rc;
+}
+MTFS_DECLARE_PROC_HANDLER(mtfs_proc_dobitmasks)
+
 static struct ctl_table mtfs_table[] = {
 	/*
 	 * NB No .strategy entries have been provided since sysctl(8) prefers
 	 * to go via /proc for portability.
 	 */
 	{
-		.ctl_name = MTFS_PROC_DEBUG,
-		.procname = "mtfs_debug",
-		.data     = &mtfs_debug_level,
-		.maxlen   = sizeof(int),
-		.mode     = 0644,
-		.proc_handler = &proc_dointvec,
-	},
-	{
+		/* Memory that mtfs alloced */
 		.ctl_name = MTFS_PROC_MEMUSED,
 		.procname = "memused",
 		.data     = (__u64 *)&mtfs_kmemory_used.counter,
@@ -34,13 +104,31 @@ static struct ctl_table mtfs_table[] = {
 		.strategy = &sysctl_intvec,
 	},
 	{
-		.ctl_name = MTFS_PROC_MEMUSED,
+		/* Historical record of memory that mtfs alloced */
+		.ctl_name = MTFS_PROC_MEMUSED_MAX,
 		.procname = "memused_max",
 		.data     = (__u64 *)&mtfs_kmemory_used_max.counter,
 		.maxlen   = sizeof(int),
 		.mode     = 0444,
 		.proc_handler = &proc_dointvec,
 		.strategy = &sysctl_intvec,
+	},
+	{
+		/* Dump kernel trace records */
+		.ctl_name = MTFS_PROC_DUMP_KERNEL,
+		.procname = "dump_kernel",
+		.maxlen   = 256,
+		.mode     = 0200,
+		.proc_handler = &mtfs_proc_dump_kernel,
+	},
+        {
+		/* Mask kernel trace */
+		.ctl_name = MTFS_PROC_DEBUG_MASK,
+		.procname = "debug",
+		.data     = &mtfs_debug,
+		.maxlen   = sizeof(int),
+		.mode     = 0644,
+		.proc_handler = &mtfs_proc_dobitmasks,
 	},
 	{0}
 };
@@ -61,13 +149,13 @@ static struct ctl_table mtfs_top_table[] = {
 DECLARE_RWSEM(mtfs_proc_lock);
 
 /* to begin from 2.6.23, Linux defines self file_operations (proc_reg_file_ops)
- * in procfs, the proc file_operation (mtfs_proc_generic_fops)
+ * in promtfs, the proc file_operation (mtfs_proc_generic_fops)
  * will be wrapped into the new defined proc_reg_file_ops, which instroduces 
  * user count in proc_dir_entrey(pde_users) to protect the proc entry from 
  * being deleted. then the protection lock (mtfs_proc_lock)
  * isn't necessary anymore for mtfs_proc_generic_fops(e.g. mtfs_proc_fops_read).
  */
-#ifndef HAVE_PROCFS_USERS
+#ifndef HAVE_PROMTFS_USERS
 
 #define MTFS_PROC_ENTRY()           do {  \
         down_read(&mtfs_proc_lock);      \
@@ -82,16 +170,16 @@ DECLARE_RWSEM(mtfs_proc_lock);
 #define MTFS_PROC_EXIT()
 #endif
 
-#ifdef HAVE_PROCFS_DELETED
+#ifdef HAVE_PROMTFS_DELETED
 
-#ifdef HAVE_PROCFS_USERS
+#ifdef HAVE_PROMTFS_USERS
 #error proc_dir_entry->deleted is conflicted with proc_dir_entry->pde_users
-#endif /* HAVE_PROCFS_USERS */
+#endif /* HAVE_PROMTFS_USERS */
 
 #define MTFS_PROC_CHECK_DELETED(dp) ((dp)->deleted)
 
-#else /* !HAVE_PROCFS_DELETED */
-#ifdef HAVE_PROCFS_USERS
+#else /* !HAVE_PROMTFS_DELETED */
+#ifdef HAVE_PROMTFS_USERS
 
 #define MTFS_PROC_CHECK_DELETED(dp) ({            \
         int deleted = 0;                        \
@@ -102,10 +190,10 @@ DECLARE_RWSEM(mtfs_proc_lock);
         deleted;                                \
 })
 
-#else /* !HAVE_PROCFS_USERS */
+#else /* !HAVE_PROMTFS_USERS */
 #define MTFS_PROC_CHECK_DELETED(dp) (0)
-#endif /* !HAVE_PROCFS_USERS */
-#endif /* HAVE_PROCFS_DELETED */
+#endif /* !HAVE_PROMTFS_USERS */
+#endif /* HAVE_PROMTFS_DELETED */
 
 static ssize_t mtfs_proc_fops_read(struct file *f, char __user *buf, size_t size,
                                  loff_t *ppos)
@@ -294,18 +382,18 @@ void mtfs_proc_remove(struct proc_dir_entry **rooth)
 		 * without this LASSERT we would loop here forever.
 		 */
 		HASSERT(strlen(rm_entry->name) == rm_entry->namelen);
-#ifdef HAVE_PROCFS_USERS
+#ifdef HAVE_PROMTFS_USERS
 		/*
-		 * if procfs uses user count to synchronize deletion of
+		 * if promtfs uses user count to synchronize deletion of
 		 * proc entry, there is no protection for rm_entry->data,
-		 * then lprocfs_fops_read and lprocfs_fops_write maybe
+		 * then lpromtfs_fops_read and lpromtfs_fops_write maybe
 		 * call proc_dir_entry->read_proc (or write_proc) with
 		 * proc_dir_entry->data == NULL, then cause kernel Oops.
 		 * see bug19706 for detailed information
 		 */
 
 		/*
-		 * procfs won't free rm_entry->data if it isn't a LINK,
+		 * promtfs won't free rm_entry->data if it isn't a LINK,
 		 * and Lustre won't use rm_entry->data if it is a LINK
 		 */
 		if (S_ISLNK(rm_entry->mode))
@@ -313,7 +401,7 @@ void mtfs_proc_remove(struct proc_dir_entry **rooth)
 #else
 		/*
 		 * Now, the rm_entry->deleted flags is protected
-		 * by _lprocfs_lock.
+		 * by _lpromtfs_lock.
 		 */
 		rm_entry->data = NULL;
 #endif

@@ -374,7 +374,6 @@ int mtfs_lookup_backend(struct inode *dir, struct dentry *dentry, int interpose_
 	} else {
 		HDEBUG("dentry operations not supplied, use default\n");
 		dentry->d_op = &mtfs_dops;
-		HDEBUG();
 	}
 
 	bnum = mtfs_d2bnum(dentry);

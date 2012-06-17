@@ -12,5 +12,4 @@ extern struct kmem_cache *mtfs_sb_info_cache;
 extern struct kmem_cache *mtfs_device_cache;
 extern struct kmem_cache *mtfs_oplist_cache;
 
-extern int mtfs_debug_level;
 #endif /* __MTFS_MAIN_H__ */

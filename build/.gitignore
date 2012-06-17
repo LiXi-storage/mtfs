@@ -4,7 +4,7 @@
 /.tmp_versions
 /autoMakefile
 /autoMakefile.in
+/conftest.ko.unsigned
 /modules.order
 /Module.markers
 /Module.symvers
-

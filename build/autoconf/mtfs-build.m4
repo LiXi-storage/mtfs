@@ -99,23 +99,6 @@ fi
 ])
 ])
 
-# Define no libcfs by default.
-AC_DEFUN([LB_LIBCFS_DIR],
-[
-case x$libcfs_is_module in
-	xyes)
-          LIBCFS_INCLUDE_DIR="libcfs/include"
-          LIBCFS_SUBDIR="libcfs"
-          ;;
-        x*)
-          LIBCFS_INCLUDE_DIR="lnet/include"
-          LIBCFS_SUBDIR=""
-          ;;
-esac
-AC_SUBST(LIBCFS_SUBDIR)
-AC_SUBST(LIBCFS_INCLUDE_DIR)
-])
-
 #
 # Added LIXI_20110506
 # set prefix of message printed by CDEBUG/CERROR
@@ -151,13 +134,10 @@ if test x$enable_modules = xyes ; then
 	case $target_os in
 		linux*)
 			LB_PROG_LINUX
-			LIBCFS_PROG_LINUX
-			#LN_PROG_LINUX
 			LC_PROG_LINUX
 			;;
 		darwin*)
 			LB_PROG_DARWIN
-			LIBCFS_PROG_DARWIN
 			;;
 		*)
 			# This is strange - MTFS supports a target we don't
@@ -225,23 +205,6 @@ AC_MSG_RESULT([$enable_doc])
 AC_SUBST(ENABLE_DOC)
 ])
 
-#
-# LB_CONFIG_LIBCFS
-#
-# Build libcfs?
-#
-AC_DEFUN([LB_CONFIG_LIBCFS],
-[AC_MSG_CHECKING([whether to build libcfs])
-AC_ARG_ENABLE([libcfs],
-        AC_HELP_STRING([--disable-libcfs],
-                        [skip creation of libcfs]),
-        [],[enable_libcfs='yes'])
-if test x$enable_libcfs = xyes; then
-   AC_DEFINE(LIBCFS_ENABLED, 1, [enable libcfs])
-else
-   AC_DEFINE(LIBCFS_ENABLED, 0, [disable libcfs])
-fi
-AC_MSG_RESULT([$enable_libcfs])])
 
 #
 # LB_CONFIG_INIT_SCRIPTS
@@ -301,7 +264,6 @@ AC_SUBST(sysconfdir)
 docdir='${datadir}/doc/$(PACKAGE)'
 AC_SUBST(docdir)
 
-LIBCFS_PATH_DEFAULTS
 LC_PATH_DEFAULTS
 
 ])
@@ -357,8 +319,6 @@ if test $target_cpu == "powerpc64"; then
 	CC="$CC -m64"
 fi
 
-CPPFLAGS="-I$PWD/$LIBCFS_INCLUDE_DIR $CPPFLAGS"
-
 LLCPPFLAGS="-D__arch_lib__ -D_LARGEFILE64_SOURCE=1"
 AC_SUBST(LLCPPFLAGS)
 
@@ -366,8 +326,8 @@ AC_SUBST(LLCPPFLAGS)
 LLCFLAGS="-g -Wall -fPIC -D_GNU_SOURCE"
 AC_SUBST(LLCFLAGS)
 
-# everyone builds against libcfs
-EXTRA_KCFLAGS="$EXTRA_KCFLAGS -g -I$PWD/$LIBCFS_INCLUDE_DIR"
+#
+EXTRA_KCFLAGS="$EXTRA_KCFLAGS -g"
 AC_SUBST(EXTRA_KCFLAGS)
 ])
 
@@ -385,12 +345,10 @@ AM_CONDITIONAL(LINUX, test x$lb_target_os = "xlinux")
 AM_CONDITIONAL(DARWIN, test x$lb_target_os = "xdarwin")
 AM_CONDITIONAL(CRAY_XT3, test x$enable_cray_xt3 = "xyes")
 AM_CONDITIONAL(SUNOS, test x$lb_target_os = "xSunOS")
-AM_CONDITIONAL(LIBCFS, test x$enable_libcfs = xyes)
 
 LB_LINUX_CONDITIONALS
 LB_DARWIN_CONDITIONALS
 
-LIBCFS_CONDITIONALS
 LC_CONDITIONALS
 ])
 
@@ -418,8 +376,6 @@ AC_PACKAGE_TARNAME[.spec]
 AC_DEFUN([LB_CONFIGURE],
 [LB_CANONICAL_SYSTEM
 
-LB_LIBCFS_DIR
-
 LB_INCLUDE_RULES
 
 LB_PATH_DEFAULTS
@@ -429,7 +385,6 @@ LB_PROG_CC
 LB_CONFIG_DOCS
 LB_CONFIG_UTILS
 LB_CONFIG_TESTS
-LB_CONFIG_LIBCFS
 
 LC_CONFIG_BACKEDN_LUSTRE
 LC_CONFIG_BACKEDN_EXT2
@@ -444,19 +399,16 @@ LC_CONFIG_MANAGE
 # two macros for cmd3 
 m4_ifdef([LC_CONFIG_SPLIT], [LC_CONFIG_SPLIT])
 LB_DEFINE_CDEBUG_PREFIX
-LN_CONFIG_CDEBUG
 
 LB_CONFIG_MODULES
 
 LC_CONFIG_LIBMTFS
-LIBCFS_CONFIGURE
 
 LC_CONFIGURE
 
 LB_CONDITIONALS
 LB_CONFIG_HEADERS
 
-LIBCFS_CONFIG_FILES
 LB_CONFIG_FILES
 
 LC_CONFIG_FILES

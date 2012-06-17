@@ -12,6 +12,8 @@
 #include <linux/module.h>
 #include "tmpfs_support.h"
 
+#define DEBUG_SUBSYSTEM S_MTFS
+
 size_t mtfs_tmpfs_file_read_branch(struct file *file, char __user *buf, size_t len,
                                    loff_t *ppos, mtfs_bindex_t bindex)
 {
