@@ -6,6 +6,7 @@
 #define __MTFS_SUPPORT_H__
 
 #if defined (__linux__) && defined(__KERNEL__)
+
 #include <linux/list.h>
 #include <linux/fs.h>
 
@@ -28,5 +29,9 @@ struct lowerfs_operations {
 
 extern int lowerfs_register_ops(struct lowerfs_operations *fs_ops);
 extern void lowerfs_unregister_ops(struct lowerfs_operations *fs_ops);
-#endif /* defined (__linux__) && defined(__KERNEL__) */
+
+#else /* !defined (__linux__) && defined(__KERNEL__) */
+#error This head is only for kernel space use
+#endif /* !defined (__linux__) && defined(__KERNEL__) */
+
 #endif /* __MTFS_SUPPORT_H__ */

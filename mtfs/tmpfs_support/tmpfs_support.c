@@ -297,7 +297,7 @@ static void tmpfs_support_exit(void)
 	junction_unregister(&mtfs_tmpfs_junction);
 }
 
-MODULE_AUTHOR("Massive Storage Management Workgroup of Jiangnan Computing Technology Institute");
+MODULE_AUTHOR("MulTi File System Workgroup");
 MODULE_DESCRIPTION("mtfs's support for tmpfs");
 MODULE_LICENSE("GPL");
 

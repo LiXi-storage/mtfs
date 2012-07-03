@@ -58,5 +58,9 @@ static inline int mtfs_oplist_setbranch(struct mtfs_operation_list *list,
 mtfs_operation_result_t mtfs_oplist_result(struct mtfs_operation_list *list);
 int mtfs_oplist_update(struct inode *inode, struct mtfs_operation_list *list);
 int mtfs_oplist_check(struct mtfs_operation_list *list);
-#endif /* defined (__linux__) && defined(__KERNEL__) */
+
+#else /* !defined (__linux__) && defined(__KERNEL__) */
+#error This head is only for kernel space use
+#endif /* !defined (__linux__) && defined(__KERNEL__) */
+
 #endif /* __MTFS_FLAG_H__ */

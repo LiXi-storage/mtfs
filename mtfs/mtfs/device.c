@@ -4,6 +4,7 @@
 
 #include <compat.h>
 #include <linux/ctype.h>
+#include <proc.h>
 #include "device_internal.h"
 #include "mtfs_internal.h"
 #include "junction_internal.h"

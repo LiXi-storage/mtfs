@@ -4,9 +4,11 @@
 
 #ifndef __MTFS_RANDOM_H__
 #define __MTFS_RANDOM_H__
-#if defined (__linux__) && defined(__KERNEL__)
 
+#if defined (__linux__) && defined(__KERNEL__)
+#error This head is only for user space use
 #else /* !(defined (__linux__) && defined(__KERNEL__)) */
+
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>

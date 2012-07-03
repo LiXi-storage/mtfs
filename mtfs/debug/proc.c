@@ -1,11 +1,15 @@
 /*
  * Copyright (C) 2011 Li Xi <pkuelelixi@gmail.com>
  */
-#include <debug.h>
-#include "mtfs_internal.h"
-#include "tracefile.h"
 
-static struct ctl_table_header *mtfs_table_header = NULL;
+#include <debug.h>
+#include <asm/atomic.h>
+#include <linux/module.h>
+#include <memory.h>
+#include "tracefile.h"
+#include "proc_internal.h"
+
+#define DEBUG_SUBSYSTEM S_MTFS
 
 atomic64_t mtfs_kmemory_used = {0};
 EXPORT_SYMBOL(mtfs_kmemory_used);
@@ -132,7 +136,8 @@ static struct ctl_table mtfs_table[] = {
 	},
 	{0}
 };
-static struct ctl_table mtfs_top_table[] = {
+
+struct ctl_table mtfs_top_table[] = {
 	{
 		.ctl_name = CTL_MTFS,
 		.procname = "mtfs",
@@ -145,6 +150,7 @@ static struct ctl_table mtfs_top_table[] = {
 		.ctl_name = 0
 	}
 };
+EXPORT_SYMBOL(mtfs_top_table);
 
 DECLARE_RWSEM(mtfs_proc_lock);
 
@@ -411,6 +417,7 @@ void mtfs_proc_remove(struct proc_dir_entry **rooth)
 	}
 	up_write(&mtfs_proc_lock);
 }
+EXPORT_SYMBOL(mtfs_proc_remove);
 
 struct proc_dir_entry *mtfs_proc_register(const char *name,
                                             struct proc_dir_entry *parent,
@@ -435,64 +442,4 @@ struct proc_dir_entry *mtfs_proc_register(const char *name,
 	}
 	return newchild;
 }
-
-/* Root for /proc/fs/mtfs */
-struct proc_dir_entry *mtfs_proc_root = NULL;
-struct proc_dir_entry *mtfs_proc_device = NULL;
-
-struct mtfs_proc_vars mtfs_proc_vars_base[] = {
-	{ "device_list", mtfs_proc_read_devices, NULL, NULL },
-	{ 0 }
-};
-
-#define MTFS_PROC_DEVICE_NAME "devices"
-
-int mtfs_insert_proc(void)
-{
-	int ret = 0;
-	HENTRY();
-
-#ifdef CONFIG_SYSCTL
-	if (mtfs_table_header == NULL) {
-#ifdef HAVE_REGISTER_SYSCTL_2ARGS
-		mtfs_table_header = register_sysctl_table(mtfs_top_table, 0);
-#else /* !HAVE_REGISTER_SYSCTL_2ARGS */
-		mtfs_table_header = register_sysctl_table(mtfs_top_table);
-#endif /* !HAVE_REGISTER_SYSCTL_2ARGS */
-	}
-#endif /* CONFIG_SYSCTL */
-	mtfs_proc_root = mtfs_proc_register("fs/mtfs", NULL,
-                                        mtfs_proc_vars_base, NULL);
-	if (unlikely(mtfs_proc_root == NULL)) {
-		HERROR("failed to register /proc/fs/mtfs\n");
-		ret = -ENOMEM;
-		goto out;
-	}
-
-	mtfs_proc_device = mtfs_proc_register(MTFS_PROC_DEVICE_NAME, mtfs_proc_root,
-                                        NULL, NULL);
-	if (unlikely(mtfs_proc_device == NULL)) {
-		HERROR("failed to register /proc/fs/mtfs"MTFS_PROC_DEVICE_NAME"\n");
-		ret = -ENOMEM;
-		goto out;
-	}
-out:
-	HRETURN(ret);
-}
-
-void mtfs_remove_proc(void)
-{
-#ifdef CONFIG_SYSCTL
-	if (mtfs_table_header != NULL) {
-		unregister_sysctl_table(mtfs_table_header);
-	}
-
-	mtfs_table_header = NULL;
-#endif
-	if (mtfs_proc_root) {
-		mtfs_proc_remove(&mtfs_proc_root);
-	}
-	if (mtfs_proc_device) {
-		mtfs_proc_remove(&mtfs_proc_device);
-	}		
-}
+EXPORT_SYMBOL(mtfs_proc_register);

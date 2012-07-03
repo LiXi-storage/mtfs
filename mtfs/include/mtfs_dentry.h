@@ -4,7 +4,10 @@
 
 #ifndef __MTFS_DENTRY_H__
 #define __MTFS_DENTRY_H__
+
+#if defined(__linux__) && defined(__KERNEL__)
 #include "mtfs_common.h"
+#include "mtfs_super.h"
 #include <linux/dcache.h>
 
 struct mtfs_dentry_branch {
@@ -28,4 +31,19 @@ struct mtfs_dentry_info {
 
 extern int mtfs_d_revalidate(struct dentry *dentry, struct nameidata *nd);
 extern void mtfs_d_release(struct dentry *dentry);
+
+static inline struct dentry *mtfs_d_root_branch(struct dentry *dentry, mtfs_bindex_t bindex)
+{
+	return mtfs_d2branch(dentry->d_sb->s_root, bindex);
+}
+
+static inline struct dentry *mtfs_d_recover_branch(struct dentry *dentry, mtfs_bindex_t bindex)
+{
+	return mtfs_s2brecover(dentry->d_sb, bindex);
+}
+
+#else /* !defined (__linux__) && defined(__KERNEL__) */
+#error This head is only for kernel space use
+#endif /* !defined (__linux__) && defined(__KERNEL__) */
+
 #endif /* __MTFS_DENTRY_H__ */

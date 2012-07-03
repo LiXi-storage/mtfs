@@ -80,5 +80,9 @@ struct mtfs_file_info {
 #define mtfs_f2barray(file) (mtfs_f2info(file)->barray)
 #define mtfs_f2branch(file, bindex) (mtfs_f2barray(file)[bindex].bfile)
 #define mtfs_f2bvalid(file, bindex) (mtfs_f2barray(file)[bindex].is_valid)
-#endif /* defined (__linux__) && defined(__KERNEL__) */
+
+#else /* !defined (__linux__) && defined(__KERNEL__) */
+#error This head is only for kernel space use
+#endif /* !defined (__linux__) && defined(__KERNEL__) */
+
 #endif /* __MTFS_FILE_H__ */

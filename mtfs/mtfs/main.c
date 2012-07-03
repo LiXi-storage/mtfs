@@ -6,6 +6,8 @@
 #include <linux/module.h>
 #include <parse_option.h>
 #include <compat.h>
+#include <mtfs_selfheal.h>
+#include <proc.h>
 
 /* This definition must only appear after we include <linux/module.h> */
 #ifndef MODULE_LICENSE
@@ -340,6 +342,52 @@ out:
 	return ret;
 }
 
+
+/* Root for /proc/fs/mtfs */
+struct proc_dir_entry *mtfs_proc_root = NULL;
+struct proc_dir_entry *mtfs_proc_device = NULL;
+
+struct mtfs_proc_vars mtfs_proc_vars_base[] = {
+	{ "device_list", mtfs_proc_read_devices, NULL, NULL },
+	{ 0 }
+};
+
+#define MTFS_PROC_DEVICE_NAME "devices"
+
+int mtfs_insert_proc(void)
+{
+	int ret = 0;
+	HENTRY();
+
+	mtfs_proc_root = mtfs_proc_register("fs/mtfs", NULL,
+                                        mtfs_proc_vars_base, NULL);
+	if (unlikely(mtfs_proc_root == NULL)) {
+		HERROR("failed to register /proc/fs/mtfs\n");
+		ret = -ENOMEM;
+		goto out;
+	}
+
+	mtfs_proc_device = mtfs_proc_register(MTFS_PROC_DEVICE_NAME, mtfs_proc_root,
+                                        NULL, NULL);
+	if (unlikely(mtfs_proc_device == NULL)) {
+		HERROR("failed to register /proc/fs/mtfs"MTFS_PROC_DEVICE_NAME"\n");
+		ret = -ENOMEM;
+		goto out;
+	}
+out:
+	HRETURN(ret);
+}
+
+void mtfs_remove_proc(void)
+{
+	if (mtfs_proc_root) {
+		mtfs_proc_remove(&mtfs_proc_root);
+	}
+	if (mtfs_proc_device) {
+		mtfs_proc_remove(&mtfs_proc_device);
+	}		
+}
+
 static int __init mtfs_init(void)
 {
 	int ret = 0;
@@ -399,7 +447,7 @@ static void __exit mtfs_exit(void)
 	mtfs_debug_cleanup();
 }
 
-MODULE_AUTHOR("Massive Storage Management Workgroup of Jiangnan Computing Technology Institute");
+MODULE_AUTHOR("MulTi File System Workgroup");
 MODULE_DESCRIPTION("mtfs");
 MODULE_LICENSE("GPL");
 

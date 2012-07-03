@@ -67,5 +67,9 @@ static inline struct mtfs_device *mtfs_f2dev(struct file *file)
 #define BOPS_MASK_READ  0x00000002
 
 extern int mtfs_device_branch_errno(struct mtfs_device *device, mtfs_bindex_t bindex, __u32 emask);
-#endif /* defined (__linux__) && defined(__KERNEL__) */
+
+#else /* !defined (__linux__) && defined(__KERNEL__) */
+#error This head is only for kernel space use
+#endif /* !defined (__linux__) && defined(__KERNEL__) */
+
 #endif /* __MTFS_DEVICE_H__ */

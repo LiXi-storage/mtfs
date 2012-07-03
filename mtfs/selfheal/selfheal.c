@@ -1,11 +1,15 @@
 /*
  * Copyright (C) 2011 Li Xi <pkuelelixi@gmail.com>
  */
+
+#include <linux/module.h>
 #include <mtfs_list.h>
 #include <mtfs_inode.h>
 #include <mtfs_dentry.h>
 #include <memory.h>
-#include "mtfs_internal.h"
+#include "selfheal_internal.h"
+
+#define DEBUG_SUBSYSTEM S_MTFS
 
 struct mtfs_dentry_list {
 	mtfs_list_t list;
@@ -120,6 +124,7 @@ struct dentry *mtfs_dchild_create(struct dentry *dparent, const unsigned char *n
 	mutex_unlock(&dparent->d_inode->i_mutex);
 	HRETURN(dchild);
 }
+EXPORT_SYMBOL(mtfs_dchild_create);
 
 struct dentry *mtfs_dentry_list_mkpath(struct dentry *d_parent, mtfs_list_t *dentry_list)
 {
@@ -222,6 +227,7 @@ out:
 	}
 	HRETURN(dchild);
 }
+EXPORT_SYMBOL(mtfs_dchild_remove);
 
 /* If succeed, return dchild_new which needed to be dput */
 struct dentry *mtfs_dchild_rename2new(struct dentry *dparent, struct dentry *dchild_old,
@@ -264,6 +270,7 @@ struct dentry *mtfs_dchild_rename2new(struct dentry *dparent, struct dentry *dch
 out:
 	HRETURN(dchild_new);
 }
+EXPORT_SYMBOL(mtfs_dchild_rename2new);
 
 struct dentry *_mtfs_dchild_add_ino(struct dentry *dparent, struct dentry *dchild_old)
 {
@@ -288,6 +295,7 @@ struct dentry *_mtfs_dchild_add_ino(struct dentry *dparent, struct dentry *dchil
 out:
 	HRETURN(dchild_new);
 }
+EXPORT_SYMBOL(_mtfs_dchild_add_ino);
 
 struct dentry *mtfs_dchild_add_ino(struct dentry *dparent, const unsigned char *name, unsigned int len)
 {
@@ -327,6 +335,7 @@ out_unlock:
 	}
 	HRETURN(dchild_new);
 }
+EXPORT_SYMBOL(mtfs_dchild_add_ino);
 
 static inline int mutex_lock_if_needed(struct mutex *lock)
 {
@@ -490,6 +499,7 @@ struct dentry *mtfs_cleanup_branch(struct inode *dir, struct dentry *dentry, mtf
 {
 	int ret = 0;
 	struct dentry *hidden_dentry = mtfs_d2branch(dentry, bindex);
+	struct dentry *hidden_dir_dentry = mtfs_d2branch(dentry->d_parent, bindex);
 	HENTRY();
 
 	HASSERT(inode_is_locked(dir));
@@ -502,12 +512,15 @@ struct dentry *mtfs_cleanup_branch(struct inode *dir, struct dentry *dentry, mtf
 			hidden_dentry = ERR_PTR(ret);
 			goto out;
 		}
-	
+
 		dput(hidden_dentry);
 	}
 
 	mtfs_d2branch(dentry, bindex) = NULL;
-	hidden_dentry = mtfs_lookup_branch(dentry, bindex);
+
+	mutex_lock(&hidden_dir_dentry->d_inode->i_mutex);
+	hidden_dentry = lookup_one_len(dentry->d_name.name, hidden_dir_dentry, dentry->d_name.len);
+	mutex_unlock(&hidden_dir_dentry->d_inode->i_mutex);
 	if (IS_ERR(hidden_dentry)) {
 		goto out;
 	} else {
@@ -539,6 +552,91 @@ int mtfs_lookup_discard_dentry(struct inode *dir, struct dentry *dentry, struct 
 			
 		}
 	}
+out:
+	HRETURN(ret);
+}
+EXPORT_SYMBOL(mtfs_lookup_discard_dentry);
+
+static int selfheal_max_nthreads = 0;
+module_param(selfheal_max_nthreads, int, 0644);
+MODULE_PARM_DESC(selfheal_max_nthreads, "Max selfheal thread count to be started.");
+EXPORT_SYMBOL(selfheal_max_nthreads);
+static struct selfheal_daemon *selfheal_daemons;
+
+int selfheal_daemon_start(int index, int max, const char *name, struct selfheal_daemon_ctl *sc)
+{
+	HENTRY();
+	HRETURN(0);
+}
+
+void selfheal_daemon_stop(struct selfheal_daemon_ctl *sc, int force)
+{
+	HENTRY();
+	_HRETURN();
+}
+
+void selfheal_daemon_fini(void)
+{
+	int i = 0;
+	HENTRY();
+
+	if (selfheal_daemons == NULL) {
+		HERROR("selfheal daemons is not inited yet\n");
+		HBUG();
+		goto out;
+	}
+
+	for (i = 0; i < selfheal_daemons->sd_nthreads; i++) {
+		selfheal_daemon_stop(&selfheal_daemons->sd_threads[i], 0);
+	}
+	MTFS_FREE(selfheal_daemons, selfheal_daemons->sd_size);
+	selfheal_daemons = NULL;
+
+out:
+	_HRETURN();
+}
+
+#define MAX_SELFHEAL_NAME_LENGTH 16
+int selfheal_daemon_init(void)
+{
+	int nthreads = num_online_cpus();
+	char name[MAX_SELFHEAL_NAME_LENGTH];
+	int size = 0;
+	int ret = 0;
+	int i = 0;
+	HENTRY();
+
+	if (selfheal_max_nthreads > 0 && selfheal_max_nthreads < nthreads) {
+                nthreads = selfheal_max_nthreads;
+	}
+
+	size = offsetof(struct selfheal_daemon, sd_threads[nthreads]);
+	MTFS_ALLOC(selfheal_daemons, size);
+	if (selfheal_daemons == NULL) {
+		ret = -ENOMEM;
+		goto out;
+	}
+
+	for (i = 0; i < nthreads; i++) {
+		snprintf(name, MAX_SELFHEAL_NAME_LENGTH - 1, "selfheal_%d", i);
+		ret = selfheal_daemon_start(i, nthreads, name,
+		                            &selfheal_daemons->sd_threads[i]);
+		if (ret) {
+			i--;
+			goto out_stop;
+		}
+	}
+
+	selfheal_daemons->sd_size = size;
+	selfheal_daemons->sd_index = 0;
+	selfheal_daemons->sd_nthreads = nthreads;
+	goto out;
+out_stop:
+	for (; i >= 0; i--) {
+		selfheal_daemon_stop(&selfheal_daemons->sd_threads[i], 0);
+	}
+	MTFS_FREE(selfheal_daemons, size);
+	selfheal_daemons = NULL;
 out:
 	HRETURN(ret);
 }

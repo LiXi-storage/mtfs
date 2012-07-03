@@ -4,7 +4,7 @@
 #ifndef __MTFS_MULTITHREAD_H__
 #define __MTFS_MULTITHREAD_H__
 #if defined (__linux__) && defined(__KERNEL__)
-#error This head is only for userspace use
+#error This head is only for user space use
 #else /* defined (__linux__) && defined(__KERNEL__) */
 
 #include <mtfs_list.h>

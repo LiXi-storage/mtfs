@@ -35,5 +35,9 @@ struct mtfs_junction {
 
 extern int junction_register(struct mtfs_junction *junction);
 extern void junction_unregister(struct mtfs_junction *junction);
-#endif /* defined (__linux__) && defined(__KERNEL__) */
+
+#else /* !defined (__linux__) && defined(__KERNEL__) */
+#error This head is only for kernel space use
+#endif /* !defined (__linux__) && defined(__KERNEL__) */
+
 #endif /* __MTFS_JUNCTION_H__ */

@@ -6,10 +6,9 @@
 #define __MTFS_PROC_INTERNAL_H__
 
 #include <linux/proc_fs.h>
-
-int mtfs_insert_proc(void);
-void mtfs_remove_proc(void);
-void mtfs_proc_remove(struct proc_dir_entry **rooth);
+#include <linux/fs.h>
+#include <linux/sysctl.h>
+#include <proc.h>
 
 #ifdef HAVE_SYSCTL_UNNUMBERED
 #define CTL_MTFS              CTL_UNNUMBERED
@@ -28,25 +27,6 @@ enum {
 	MTFS_PROC_DEBUG_MASK,
 };
 #endif /* !define(HAVE_SYSCTL_UNNUMBERED) */
-
-struct mtfs_proc_vars {
-        const char   *name;
-        read_proc_t *read_fptr;
-        write_proc_t *write_fptr;
-        void *data;
-        struct file_operations *fops;
-        /**
-         * /proc file mode.
-         */
-        mode_t proc_mode;
-};
-
-struct proc_dir_entry *mtfs_proc_register(const char *name,
-                                            struct proc_dir_entry *parent,
-                                            struct mtfs_proc_vars *list, void *data);
-extern struct proc_dir_entry *mtfs_proc_root;
-extern struct proc_dir_entry *mtfs_proc_device;
-
 
 #ifdef HAVE_5ARGS_SYSCTL_PROC_HANDLER
 #define MTFS_PROC_PROTO(name)                                           \

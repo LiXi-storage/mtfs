@@ -5,6 +5,8 @@
 #ifndef __MTFS_STACK_H__
 #define __MTFS_STACK_H__
 
+#if defined(__linux__) && defined(__KERNEL__)
+
 #ifdef HAVE_FS_STACK
 #include <linux/fs_stack.h>
 #else /* !HAVE_FS_STACK */
@@ -36,5 +38,11 @@ static inline void fsstack_copy_attr_times(struct inode *dest,
 	dest->i_mtime = src->i_mtime;
 	dest->i_ctime = src->i_ctime;
 }
+
 #endif /* !HAVE_FS_STACK */
+
+#else /* !defined (__linux__) && defined(__KERNEL__) */
+#error This head is only for kernel space use
+#endif /* !defined (__linux__) && defined(__KERNEL__) */
+
 #endif /* __MTFS_STACK_H__ */

@@ -6,6 +6,7 @@
 #include <mtfs_ioctl.h>
 #include <linux/dcache.h>
 #include <linux/uio.h>
+#include <mtfs_oplist.h>
 
 int mtfs_file_dump(struct file *file)
 {

@@ -5,6 +5,7 @@
 #include "mtfs_internal.h"
 #include "mmap_internal.h"
 #include <linux/uio.h>
+#include <mtfs_oplist.h>
 
 static int mtfs_writepage_branch(struct page *page, struct inode *inode, mtfs_bindex_t bindex,
                                  unsigned hidden_page_index, struct writeback_control *wbc)

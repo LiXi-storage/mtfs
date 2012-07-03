@@ -205,7 +205,7 @@ remove_module()
 		
 		if module_is_inserted $MODULE; then		
 			debug_print "failed\n"
-			error_print "failed to remove module $MODULE"
+			error_print "failed to remove module $MODULE\n"
 			exit 1
 		else
 			debug_print "succeed\n"
@@ -233,7 +233,7 @@ insert_module()
 			debug_print "succeed\n"
 		fi
 	else
-		debug_print "already donen"
+		debug_print "already done\n"
 	fi
 	return
 }
@@ -255,22 +255,6 @@ module_is_installed()
 		return 0
 	fi
 	return 1
-}
-
-insert_mtfs_module()
-{
-	insert_module $MTFS_MODULE $MTFS_MODULE_PATH
-}
-
-insert_support_module()
-{
-	insert_module $SUPPORT_MODULE $SUPPORT_MODULE_PATH
-}
-
-mounted_mtfs_filesystems()
-{
-	awk '($3 ~ "mtfs") { print $2 }' /proc/mounts
-	return
 }
 
 mount_mtfs()
@@ -324,7 +308,7 @@ init_leak_log()
 
 check_leak_log()
 {
-	if module_is_inserted mtfs; then
+	if module_is_inserted $DEBUG_MODULE; then
 		../utils/mtfsctl debug_kernel > $MTFS_LOG
 		$LEAK_FINDER $MTFS_LOG 2>&1 | egrep '*** Leak:' && error "memory leak detected, see log $MTFS_LOG" || true
 	fi
@@ -419,6 +403,8 @@ setup_all()
 		fi
 	fi
 
+	insert_module $DEBUG_MODULE $DEBUG_MODULE_PATH
+	insert_module $SELFHEAL_MODULE $SELFHEAL_MODULE_PATH
 	insert_module $MTFS_MODULE $MTFS_MODULE_PATH
 	insert_module $SUPPORT_MODULE $SUPPORT_MODULE_PATH
 
@@ -450,6 +436,10 @@ cleanup_all()
 		umount_mtfs2
 	fi
 
+	remove_module $SUPPORT_MODULE
+	remove_module $MTFS_MODULE
+	remove_module $SELFHEAL_MODULE
+
 	if [ "$DETECT_LEAK" = "yes" -a "$CHECK_LEAK" != "skip_leak_check" ]; then
 		check_leak_log
 
@@ -462,8 +452,7 @@ cleanup_all()
 		fi
 	fi
 
-	remove_module $SUPPORT_MODULE
-	remove_module $MTFS_MODULE
+	remove_module $DEBUG_MODULE
 
 	if [ "$MOUNT_LOWERFS" = "yes" ]; then
 		umount_lowerfs

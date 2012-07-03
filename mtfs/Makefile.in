@@ -1,4 +1,4 @@
-subdir-m += mtfs
+subdir-m += mtfs selfheal debug
 @LUSTRE_SUPPORT_TRUE@subdir-m += lustre_support
 @EXT2_SUPPORT_TRUE@subdir-m += ext2_support
 @EXT3_SUPPORT_TRUE@subdir-m += ext3_support

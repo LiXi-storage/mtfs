@@ -4,6 +4,7 @@
 
 #ifndef __MTFS_SUPER_H__
 #define __MTFS_SUPER_H__
+
 #if defined (__linux__) && defined(__KERNEL__)
 #include <mtfs_common.h>
 
@@ -36,5 +37,9 @@ extern void mtfs_put_super(struct super_block *sb);
 extern int mtfs_statfs(struct dentry *dentry, struct kstatfs *buf);
 extern void mtfs_clear_inode(struct inode *inode);
 extern int mtfs_show_options(struct seq_file *m, struct vfsmount *mnt);
-#endif /* defined (__linux__) && defined(__KERNEL__) */
+
+#else /* !defined (__linux__) && defined(__KERNEL__) */
+#error This head is only for kernel space use
+#endif /* !defined (__linux__) && defined(__KERNEL__) */
+
 #endif /* __MTFS_SUPER_H__ */

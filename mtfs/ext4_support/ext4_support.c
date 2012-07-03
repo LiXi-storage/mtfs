@@ -187,7 +187,7 @@ static void ext4_support_exit(void)
 	junction_unregister(&mtfs_ext4_junction);
 }
 
-MODULE_AUTHOR("Massive Storage Management Workgroup of Jiangnan Computing Technology Institute");
+MODULE_AUTHOR("MulTi File System Workgroup");
 MODULE_DESCRIPTION("mtfs's support for ext4");
 MODULE_LICENSE("GPL");
 

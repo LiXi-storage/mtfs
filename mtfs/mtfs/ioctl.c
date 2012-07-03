@@ -3,6 +3,7 @@
  */
 
 #include "mtfs_internal.h"
+#include <mtfs_selfheal.h>
 
 static int mtfs_user_get_state(struct inode *inode, struct file *file, struct mtfs_user_flag __user *user_state, mtfs_bindex_t max_bnum)
 {

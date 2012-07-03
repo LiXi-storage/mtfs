@@ -440,6 +440,34 @@ LB_LINUX_TRY_COMPILE([
 ])
 ])
 
+AC_DEFUN([LC_HAVE_OOM_H],
+[LB_CHECK_FILE([$LINUX/include/linux/oom.h], [
+	AC_DEFINE(HAVE_LINUX_OOM_H, 1,
+		[kernel has include/oom.h])
+],[
+	AC_MSG_RESULT([no])
+])
+])
+
+# 2.6.18 store oom parameters in task struct.
+# 2.6.32 store oom parameters in signal struct
+AC_DEFUN([LC_OOMADJ_IN_SIG],
+[AC_MSG_CHECKING([kernel store oom parameters in task])
+LB_LINUX_TRY_COMPILE([
+ 	#include <linux/sched.h>
+],[
+	struct signal_struct s;
+
+	s.oom_adj = 0;
+],[
+	AC_MSG_RESULT(yes)
+	AC_DEFINE(HAVE_OOMADJ_IN_SIG, 1,
+		[kernel store a oom parameters in signal struct])
+],[
+	AC_MSG_RESULT(no)
+])
+])
+
 #
 # LC_PROG_LINUX
 #
@@ -468,6 +496,8 @@ AC_DEFUN([LC_PROG_LINUX],
 	LC_SYSCTL_UNNUMBERED
 	LC_ATOMIC_PANIC_NOTIFIER
 	LC_5ARGS_SYSCTL_PROC_HANDLER
+	LC_HAVE_OOM_H
+	LC_OOMADJ_IN_SIG
 ])
 
 #
@@ -761,6 +791,8 @@ AC_DEFUN([LC_CONFIG_FILES],
 mtfs/Makefile
 mtfs/autoMakefile
 mtfs/autoconf/Makefile
+mtfs/debug/Makefile
+mtfs/debug/autoMakefile
 mtfs/doc/Makefile
 mtfs/include/Makefile
 mtfs/mtfs/Makefile
@@ -785,6 +817,8 @@ mtfs/ntfs3g_support/Makefile
 mtfs/ntfs3g_support/autoMakefile
 mtfs/lustre_support/Makefile
 mtfs/lustre_support/autoMakefile
+mtfs/selfheal/Makefile
+mtfs/selfheal/autoMakefile
 mtfs/tmpfs_support/Makefile
 mtfs/tmpfs_support/autoMakefile
 ])

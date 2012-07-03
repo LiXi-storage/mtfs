@@ -3,9 +3,11 @@
  */
 
 #include <linux/module.h>
+#include <linux/ctype.h>
+#include <linux/sysctl.h>
 #include <debug.h>
 #include <compat.h>
-#include <linux/ctype.h>
+#include <proc.h>
 #include "linux_debug.h"
 #include "linux_tracefile.h"
 #include "tracefile.h"
@@ -302,3 +304,41 @@ mtfs_debug_str2mask(int *mask, const char *str, int is_subsys)
         return mtfs_str2mask(str, fn, mask, is_subsys ? 0 : D_CANTMASK,
                             0xffffffff);
 }
+
+static struct ctl_table_header *mtfs_table_header = NULL;
+
+static int __init mtfs_debug_module_init(void)
+{
+	int ret = 0;
+
+#ifdef CONFIG_SYSCTL
+	if (mtfs_table_header == NULL) {
+#ifdef HAVE_REGISTER_SYSCTL_2ARGS
+		mtfs_table_header = register_sysctl_table(mtfs_top_table, 0);
+#else /* !HAVE_REGISTER_SYSCTL_2ARGS */
+		mtfs_table_header = register_sysctl_table(mtfs_top_table);
+#endif /* !HAVE_REGISTER_SYSCTL_2ARGS */
+	}
+#endif /* CONFIG_SYSCTL */
+
+	
+	return ret;
+}
+
+static void __exit mtfs_debug_module_exit(void)
+{
+#ifdef CONFIG_SYSCTL
+	if (mtfs_table_header != NULL) {
+		unregister_sysctl_table(mtfs_table_header);
+	}
+
+	mtfs_table_header = NULL;
+#endif
+}
+
+MODULE_AUTHOR("MulTi File System Workgroup");
+MODULE_DESCRIPTION("mtfs_debug");
+MODULE_LICENSE("GPL");
+
+module_init(mtfs_debug_module_init)
+module_exit(mtfs_debug_module_exit)

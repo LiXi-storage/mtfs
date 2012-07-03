@@ -7,7 +7,6 @@
 #include <asm/types.h>
 #include "mtfs_common.h"
 #include "debug.h"
-#include "mtfs_file.h"
 
 #define DEBUG_SUBSYSTEM S_MTFS
 
@@ -93,6 +92,7 @@ out:
 #define XATTR_NAME_MTFS_FLAG    "trusted.mtfs.flag"
 
 #if defined (__linux__) && defined(__KERNEL__)
+#include "mtfs_file.h"
 #include "mtfs_inode.h"
 #include "mtfs_dentry.h"
 extern int mtfs_branch_is_valid(struct inode *inode, mtfs_bindex_t bindex, __u32 valid_flags);

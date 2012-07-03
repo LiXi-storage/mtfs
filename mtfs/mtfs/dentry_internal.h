@@ -96,13 +96,4 @@ static inline int mtfs_d_is_positive(struct dentry *dentry)
 	return positive_bnum > 0;
 }
 
-static inline struct dentry *mtfs_d_root_branch(struct dentry *dentry, mtfs_bindex_t bindex)
-{
-	return mtfs_d2branch(dentry->d_sb->s_root, bindex);
-}
-
-static inline struct dentry *mtfs_d_recover_branch(struct dentry *dentry, mtfs_bindex_t bindex)
-{
-	return mtfs_s2brecover(dentry->d_sb, bindex);
-}
 #endif /* __MTFS_DENTRY_INTERNAL_H__ */

@@ -11,23 +11,18 @@ mtfs-objs   := dentry.o \
 	support.o \
 	junction.o \
 	stack.o \
-	proc.o \
 	hide.o \
 	device.o \
 	ioctl.o \
 	flag.o \
-	selfheal.o \
 	oplist.o \
-	debug.o \
-	linux_tracefile.o \
-	tracefile.o \
-	linux_debug.o \
-	compat.o
+	compat.o \
+	thread.o
 
 EXTRA_DIST := $(mtfs-objs:.o=.c)
 EXTRA_DIST += dentry_internal.h device_internal.h file_internal.h hide_internal.h mtfs_internal.h
-EXTRA_DIST += inode_internal.h junction_internal.h main_internal.h mmap_internal.h selfheal_internal.h
-EXTRA_DIST += proc_internal.h super_internal.h support_internal.h flag_internal.h ioctl_internal.h
-EXTRA_DIST += oplist_internal.h linux_tracefile.h tracefile.h linux_debug.h
+EXTRA_DIST += inode_internal.h junction_internal.h main_internal.h mmap_internal.h
+EXTRA_DIST += super_internal.h support_internal.h flag_internal.h ioctl_internal.h
+EXTRA_DIST += oplist_internal.h
 
 @INCLUDE_RULES@

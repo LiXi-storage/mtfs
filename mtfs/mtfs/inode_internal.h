@@ -11,9 +11,9 @@ extern struct inode_operations mtfs_main_iops;
 extern struct inode_operations mtfs_dir_iops;
 extern struct inode_operations mtfs_symlink_iops;
 
+struct dentry *mtfs_lookup_branch(struct dentry *dentry, mtfs_bindex_t bindex);
 int mtfs_interpose(struct dentry *dentry, struct super_block *sb, int flag);
 int mtfs_inode_dump(struct inode *inode);
-struct dentry *mtfs_lookup_branch(struct dentry *dentry, mtfs_bindex_t bindex);
 
 static inline struct mtfs_inode_info *mtfs_ii_alloc(void)
 {

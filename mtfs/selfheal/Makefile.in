@@ -1,0 +1,7 @@
+MODULES := mtfs_selfheal
+mtfs_selfheal-objs := selfheal.o
+
+EXTRA_DIST := $(mtfs_selfheal-objs:.o=.c)
+EXTRA_DIST += selfheal_internal.h
+
+@INCLUDE_RULES@

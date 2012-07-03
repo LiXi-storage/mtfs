@@ -144,5 +144,9 @@ static inline const char *mtfs_mode2type(umode_t mode)
 	default:       return "unkown type file"; break;
 	}
 }
-#endif /* defined (__linux__) && defined(__KERNEL__) */
+
+#else /* !defined (__linux__) && defined(__KERNEL__) */
+#error This head is only for kernel space use
+#endif /* !defined (__linux__) && defined(__KERNEL__) */
+
 #endif /* __MTFS_INODE_H__ */

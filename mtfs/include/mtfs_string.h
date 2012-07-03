@@ -7,8 +7,8 @@
 
 #if defined (__linux__) && defined(__KERNEL__)
 #include <linux/string.h>
-#else
+#else /* !defined (__linux__) && defined(__KERNEL__) */
 #include <string.h>
-#endif
+#endif /* !defined (__linux__) && defined(__KERNEL__) */
 
 #endif /* __MTFS_STRING_H__ */

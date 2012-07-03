@@ -80,7 +80,6 @@ static inline int global_write_trylock(void)
 	return down_write_trylock(&global_rwsem);
 }
 
-#include "selfheal_internal.h"
 #include "flag_internal.h"
 #include "super_internal.h"
 #include "inode_internal.h"
@@ -88,7 +87,6 @@ static inline int global_write_trylock(void)
 #include "file_internal.h"
 #include "mmap_internal.h"
 #include "support_internal.h"
-#include "proc_internal.h"
 #include "main_internal.h"
 #include "hide_internal.h"
 #include "device_internal.h"

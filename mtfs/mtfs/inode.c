@@ -4,6 +4,8 @@
 
 #include "mtfs_internal.h"
 #include <linux/backing-dev.h>
+#include <mtfs_oplist.h>
+#include <mtfs_selfheal.h>
 
 int mtfs_inode_dump(struct inode *inode)
 {
@@ -516,7 +518,6 @@ out:
 }
 EXPORT_SYMBOL(mtfs_lookup);
 
-#ifndef LIXI_20120613
 static int mtfs_create_branch(struct dentry *dentry, int mode,
                               mtfs_bindex_t bindex, struct nameidata *nd)
 {
@@ -586,47 +587,6 @@ static int mtfs_create_branch(struct dentry *dentry, int mode,
 out:
 	HRETURN(ret);	
 }
-#else
-static int mtfs_create_branch(struct dentry *dentry, int mode, mtfs_bindex_t bindex)
-{
-	int ret = 0;
-	struct dentry *hidden_dentry = mtfs_d2branch(dentry, bindex);
-	struct dentry *hidden_dir_dentry = NULL;
-	HENTRY();
-
-	ret = mtfs_device_branch_errno(mtfs_d2dev(dentry), bindex, BOPS_MASK_WRITE);
-	if (ret) {
-		HDEBUG("branch[%d] is abandoned\n", bindex);
-		goto out; 
-	}
-
-	if (hidden_dentry && hidden_dentry->d_parent) {
-		hidden_dir_dentry = lock_parent(hidden_dentry);
-		ret = vfs_create(hidden_dir_dentry->d_inode, hidden_dentry, mode, NULL);
-		unlock_dir(hidden_dir_dentry);
-		if (!ret && hidden_dentry->d_inode == NULL) {
-			HBUG();
-			HDEBUG("branch[%d] of dentry [%*s] is negative\n", bindex,
-			       hidden_dentry->d_name.len, hidden_dentry->d_name.name);
-			ret = -EIO; /* which errno? */
-		}
-	} else {
-		if (hidden_dentry == NULL) {
-			HDEBUG("branch[%d] of dentry [%*s/%*s] is NULL\n", bindex,
-			       dentry->d_parent->d_name.len, dentry->d_parent->d_name.name,
-			       dentry->d_name.len, dentry->d_name.name);
-		} else {
-			HDEBUG("parent's branch[%d] of dentry [%*s/%*s] is NULL\n", bindex,
-			       dentry->d_parent->d_name.len, dentry->d_parent->d_name.name,
-			       dentry->d_name.len, dentry->d_name.name);
-		}
-		ret = -ENOENT;
-	}
-
-out:
-	HRETURN(ret);	
-}
-#endif
 
 int mtfs_create(struct inode *dir, struct dentry *dentry, int mode, struct nameidata *nd)
 {

@@ -1,0 +1,11 @@
+MODULES := mtfs_debug
+mtfs_debug-objs := debug.o \
+	linux_tracefile.o \
+	tracefile.o \
+	linux_debug.o \
+	proc.o
+
+EXTRA_DIST := $(mtfs_debug-objs:.o=.c)
+EXTRA_DIST += linux_tracefile.h tracefile.h linux_debug.h proc_internal.h
+
+@INCLUDE_RULES@
