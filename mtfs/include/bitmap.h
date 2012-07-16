@@ -5,7 +5,17 @@
 #ifndef __MTFS_BITMAP_H__
 #define __MTFS_BITMAP_H__
 
+#if defined(__KERNEL__)
+#if !defined(BITS_PER_LONG)
+#error "BITS_PER_LONG not defined"
+#endif /* !defined(BITS_PER_LONG) */
+#else /* !defined(__KERNEL__) */
+#if !defined(__WORDSIZE)
+#error "__WORDSIZE not defined"
+#else /* defined(__WORDSIZE) */
 #define BITS_PER_LONG __WORDSIZE
+#endif /* defined(__WORDSIZE) */
+#endif /* !defined(__KERNEL__) */
 
 typedef struct {
         int             size;
@@ -20,16 +30,16 @@ mtfs_bitmap_t *MTFS_ALLOCATE_BITMAP(int size)
 {
         mtfs_bitmap_t *ptr;
 
-        HRFS_ALLOC(ptr, MTFS_BITMAP_SIZE(size));
+        MTFS_ALLOC(ptr, MTFS_BITMAP_SIZE(size));
         if (ptr == NULL)
-                RETURN(ptr);
+                return(ptr);
 
         ptr->size = size;
 
-        RETURN (ptr);
+        return(ptr);
 }
 
-#define MTFS_FREE_BITMAP(ptr)        HRFS_FREE(ptr, MTFS_BITMAP_SIZE(ptr->size))
+#define MTFS_FREE_BITMAP(ptr)        MTFS_FREE(ptr, MTFS_BITMAP_SIZE(ptr->size))
 
 #if defined(__linux__) && defined(__KERNEL__)
 #define mtfs_test_bit(nr, addr)              test_bit(nr, addr)

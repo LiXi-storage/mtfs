@@ -12,8 +12,6 @@
 #include <mtfs_junction.h>
 #include "lustre_support.h"
 
-#define DEBUG_SUBSYSTEM S_MTFS
-
 struct super_operations mtfs_lustre_sops =
 {
 	alloc_inode:    mtfs_alloc_inode,

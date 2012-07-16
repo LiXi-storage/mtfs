@@ -12,8 +12,6 @@
 #include "linux_tracefile.h"
 #include "tracefile.h"
 
-#define DEBUG_SUBSYSTEM S_MTFS
-
 unsigned int mtfs_subsystem_debug = ~0;
 module_param(mtfs_subsystem_debug, int, 0644);
 MODULE_PARM_DESC(mtfs_debug, "MTFS kernel debug subsystem mask");
@@ -311,6 +309,12 @@ static int __init mtfs_debug_module_init(void)
 {
 	int ret = 0;
 
+	ret = mtfs_debug_init(5 * 1024 * 1024);
+	if (ret) {
+		printk(KERN_ERR "MTFS Error: failed to init debug system, ret = %d\n", ret);
+		goto out;
+	}
+
 #ifdef CONFIG_SYSCTL
 	if (mtfs_table_header == NULL) {
 #ifdef HAVE_REGISTER_SYSCTL_2ARGS
@@ -321,7 +325,7 @@ static int __init mtfs_debug_module_init(void)
 	}
 #endif /* CONFIG_SYSCTL */
 
-	
+out:
 	return ret;
 }
 
@@ -334,9 +338,10 @@ static void __exit mtfs_debug_module_exit(void)
 
 	mtfs_table_header = NULL;
 #endif
+	mtfs_debug_cleanup();
 }
 
-MODULE_AUTHOR("MulTi File System Workgroup");
+MODULE_AUTHOR("MulTi File System Development Workgroup");
 MODULE_DESCRIPTION("mtfs_debug");
 MODULE_LICENSE("GPL");
 

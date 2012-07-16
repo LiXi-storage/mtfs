@@ -56,19 +56,21 @@ int mtfs_api_getstate(char *path, struct mtfs_param *param)
 	if (fd < 0) {
 		HERROR("Fail to open '%s': %s\n", path, strerror(errno));
 		ret = errno;
-		goto free_state;
+		goto out_free_state;
 	}
 	
 	ret = ioctl(fd, MTFS_IOCTL_GET_FLAG, (void *)state);
 	if (ret) {
 		HERROR("Fail to getstate '%s'\n", path);
-		goto free_state;
+		goto out_close_file;
 	}
-	
+
 	HPRINT("%s\n", path);
 	mtfs_dump_state(state);
 	HPRINT("\n");
-free_state:
+out_close_file:
+	close(fd);
+out_free_state:
 	MTFS_FREE(state, state_size);
 out:
 	return ret;

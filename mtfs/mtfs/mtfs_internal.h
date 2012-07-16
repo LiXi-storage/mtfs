@@ -42,8 +42,6 @@
 #include <debug.h>
 #include <raid.h>
 
-#define DEBUG_SUBSYSTEM S_MTFS
-
 extern struct rw_semaphore global_rwsem;
 static inline void global_read_lock(void)
 {

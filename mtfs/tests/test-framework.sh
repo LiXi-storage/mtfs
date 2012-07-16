@@ -311,8 +311,17 @@ check_leak_log()
 	if module_is_inserted $DEBUG_MODULE; then
 		../utils/mtfsctl debug_kernel > $MTFS_LOG
 		$LEAK_FINDER $MTFS_LOG 2>&1 | egrep '*** Leak:' && error "memory leak detected, see log $MTFS_LOG" || true
-	fi
 
+		local PROC_FILE="/proc/sys/mtfs/memused"
+		if [ -f $PROC_FILE ]; then
+			local MEM_USED=$(cat $PROC_FILE)
+			if [ "$MEM_USED" != "0" ]; then
+				error "memory leaked $MEM_USED, see $PROC_FILE"
+			fi
+		else
+			error "$PROC_FILE not found"
+		fi
+	fi
 }
 
 leak_detect_state_push()
@@ -404,15 +413,15 @@ setup_all()
 	fi
 
 	insert_module $DEBUG_MODULE $DEBUG_MODULE_PATH
-	insert_module $SELFHEAL_MODULE $SELFHEAL_MODULE_PATH
-	insert_module $MTFS_MODULE $MTFS_MODULE_PATH
-	insert_module $SUPPORT_MODULE $SUPPORT_MODULE_PATH
-
 	if [ "$DETECT_LEAK" = "yes" ]; then
 		# Since log is inited here
 		# memory leaked when inserting module won't be detected
 		init_leak_log "$INIT_NEED_CHECK_LEAK"
 	fi
+
+	insert_module $SELFHEAL_MODULE $SELFHEAL_MODULE_PATH
+	insert_module $MTFS_MODULE $MTFS_MODULE_PATH
+	insert_module $SUPPORT_MODULE $SUPPORT_MODULE_PATH
 
 	mount_mtfs
 	if [ "$DOING_MUTLTI" = "yes" ]; then
@@ -442,14 +451,6 @@ cleanup_all()
 
 	if [ "$DETECT_LEAK" = "yes" -a "$CHECK_LEAK" != "skip_leak_check" ]; then
 		check_leak_log
-
-		local PROC_FILE="/proc/sys/mtfs/memused"
-		if [ -f $PROC_FILE ]; then
-			local MEM_USED=$(cat $PROC_FILE)
-			if [ "$MEM_USED" != "0" ]; then
-				error "memory leaked $MEM_USED, see $PROC_FILE"
-			fi
-		fi
 	fi
 
 	remove_module $DEBUG_MODULE

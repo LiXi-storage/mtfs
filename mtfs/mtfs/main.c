@@ -394,16 +394,10 @@ static int __init mtfs_init(void)
 
 	HDEBUG("Registering mtfs\n");
 
-	ret = mtfs_debug_init(5 * 1024 * 1024);
-	if (ret) {
-		printk(KERN_ERR "MTFS Error: failed to init debug system, ret = %d\n", ret);
-		goto out;
-	}
-
 	ret = mtfs_init_kmem_caches();
 	if (ret) {
 		HERROR("Failed to allocate one or more kmem_cache objects\n");
-		goto out_debug_cleanup;
+		goto out;
 	}
 
 	ret = mtfs_insert_proc();
@@ -431,8 +425,6 @@ out_remove_proc:
 	mtfs_remove_proc();
 out_free_kmem:
 	mtfs_free_kmem_caches();
-out_debug_cleanup:
-	mtfs_debug_cleanup();
 out:
 	return ret;
 }
@@ -444,10 +436,9 @@ static void __exit mtfs_exit(void)
 	unregister_filesystem(&mtfs_fs_type);
 	mtfs_remove_proc();
 	mtfs_free_kmem_caches();
-	mtfs_debug_cleanup();
 }
 
-MODULE_AUTHOR("MulTi File System Workgroup");
+MODULE_AUTHOR("MulTi File System Development Workgroup");
 MODULE_DESCRIPTION("mtfs");
 MODULE_LICENSE("GPL");
 

@@ -11,8 +11,6 @@
 #include "tracefile.h"
 #include "linux_tracefile.h"
 
-#define DEBUG_SUBSYSTEM S_MTFS
-
 /* percents to share the total debug memory for each type */
 static unsigned int pages_factor[MTFS_TCD_TYPE_MAX] = {
 	80,  /* 80% pages for MTFS_TCD_TYPE_PROC */

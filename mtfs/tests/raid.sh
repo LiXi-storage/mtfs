@@ -201,12 +201,29 @@ isolate_long_path()
 
 	cd $PWD
 }
+
 test_2a()
 {
 	isolate_long_path 1 10 || error "failed to isolate long path"
 	isolate_long_path 1 11 || error "failed to isolate long path"
 }
 run_test 2a "long path when cleanup branch"
+
+# rmbranch a 
+test_3a()
+{
+	touch $DIR/f3a
+	$UTIL_MTFS rmbranch -b 100 $DIR/f3a && error "rmbranch succeeded";
+	$UTIL_MTFS rmbranch -b -1 $DIR/f3a && error "rmbranch succeeded ";
+}
+run_test 3a "illegal argument to rmbranch"
+
+# rmbranch tests
+test_3b()
+{
+	touch $DIR/f3b
+	
+}
 
 cleanup_all
 echo "=== $0: completed ==="

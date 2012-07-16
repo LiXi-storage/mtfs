@@ -12,8 +12,6 @@
 #include <debug.h>
 #include <memory.h>
 
-#define DEBUG_SUBSYSTEM S_MTFS
-
 /*
  * Function: int queue_initialise (queue_t *queue)
  * Purpose : initialise a queue

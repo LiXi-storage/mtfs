@@ -7,16 +7,6 @@
 
 #if defined(__linux__) && defined(__KERNEL__)
 #include <mtfs_oplist.h>
-struct selfheal_daemon_ctl {
-	unsigned long sd_flags;
-};
-
-struct selfheal_daemon {
-	int                        sd_size;
-	int                        sd_index;
-	int                        sd_nthreads;
-	struct selfheal_daemon_ctl sd_threads[0];
-};
 
 extern struct dentry *mtfs_dchild_rename2new(struct dentry *dparent, struct dentry *dchild_old,
                                       const unsigned char *name_new, unsigned int len);

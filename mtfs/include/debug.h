@@ -92,13 +92,15 @@ mtfs_debug_str2mask(int *mask, const char *str, int is_subsys);
 #define D_EMERG       0x00000008
 #define D_WARNING     0x00000010
 #define D_CONSOLE     0x00000020
-#define  D_MALLOC     0x00000040
+#define D_MALLOC      0x00000040
 
 #define D_CANTMASK   (D_ERROR | D_EMERG | D_WARNING | D_CONSOLE)
 
 #define MDEBUG_DEFAULT_MAX_DELAY (600 * HZ)         /* jiffies */
 #define MDEBUG_DEFAULT_MIN_DELAY ((1 * HZ + 1) / 2) /* jiffies */
 #define MDEBUG_DEFAULT_BACKOFF   2
+
+#define DEBUG_SUBSYSTEM S_MTFS
 
 #define MTFS_DEBUG_MSG_DATA_DECL(dataname, mask, cdls)    \
         static struct mtfs_debug_msg_data dataname = {    \
@@ -152,7 +154,7 @@ extern unsigned int mtfs_catastrophe;
 
 #define HBUG()                                       \
 do {                                                 \
-    HERROR("a bug found!");                          \
+    HERROR("a bug found!\n");                        \
     panic("MTFS BUG");                               \
 } while(0)
 

@@ -9,8 +9,6 @@
 #include "tracefile.h"
 #include "proc_internal.h"
 
-#define DEBUG_SUBSYSTEM S_MTFS
-
 atomic64_t mtfs_kmemory_used = {0};
 EXPORT_SYMBOL(mtfs_kmemory_used);
 

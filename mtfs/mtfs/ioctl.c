@@ -166,6 +166,11 @@ static int mtfs_user_remove_branch(struct inode *parent_inode, struct file *pare
 		goto out_free_info;
 	}
 
+	if (remove_info->bindex < 0 || remove_info->bindex >= mtfs_i2bnum(parent_inode)) {
+		ret = -EFAULT;
+		goto out_free_info;
+	}
+
 	ret = mtfs_remove_branch(parent_file->f_dentry, remove_info->name, remove_info->bindex);
 out_free_info:
 	MTFS_FREE_PTR(remove_info);

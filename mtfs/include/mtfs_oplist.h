@@ -11,8 +11,6 @@
 #include "mtfs_common.h"
 #include "debug.h"
 
-#define DEBUG_SUBSYSTEM S_MTFS
-
 typedef union mtfs_operation_result {
 	int ret;
 	void *ptr;

@@ -42,14 +42,6 @@ do {                                                                          \
 #include <linux/slab.h>
 #include <linux/hardirq.h>
 
-#define _MTFS_ALLOC_GFP(ptr, size, gfp_mask)                                  \
-do {                                                                          \
-    (ptr) = kmalloc(size, (gfp_mask));                                        \
-    if (likely((ptr) != NULL)) {                                              \
-        memset((ptr), 0, size);                                               \
-    }                                                                         \
-} while (0)
-
 #define MTFS_ALLOC_GFP(ptr, size, gfp_mask)                                   \
 do {                                                                          \
     (ptr) = kmalloc(size, (gfp_mask));                                        \
@@ -64,22 +56,15 @@ do {                                                                          \
 #define MTFS_ALLOC(ptr, size) MTFS_ALLOC_GFP(ptr, size, GFP_KERNEL)
 #define MTFS_ALLOC_PTR(ptr)   MTFS_ALLOC(ptr, sizeof *(ptr))
 
-#define _MTFS_FREE(ptr, size)                                                 \
-do {                                                                          \
-    HASSERT(ptr);                                                             \
-    POISON((ptr), 0x5a, size);                                                \
-    kfree(ptr);                                                               \
-    (ptr) = NULL;                                                             \
-} while (0)
-
 #define MTFS_FREE(ptr, size)                                                  \
 do {                                                                          \
+    int _size = (size);                                                       \
     HASSERT(ptr);                                                             \
     MDEBUG_MEM("mtfs_kfreed '" #ptr "': %d at %p.\n",                         \
-           (int)(size), (ptr));                                               \
-    POISON((ptr), 0x5a, size);                                                \
+               _size, (ptr));                                                 \
+    POISON((ptr), 0x5a, _size);                                               \
     kfree(ptr);                                                               \
-    mtfs_kmem_dec((ptr), size);                                               \
+    mtfs_kmem_dec((ptr), _size);                                              \
     (ptr) = NULL;                                                             \
 } while (0)
 

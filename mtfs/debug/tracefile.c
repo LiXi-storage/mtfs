@@ -14,8 +14,6 @@
 #include "tracefile.h"
 #include "linux_tracefile.h"
 
-#define DEBUG_SUBSYSTEM S_MTFS
-
 #ifndef HAVE_FILE_FSYNC_2ARGS
 # define mtfs_do_fsync(fp, flag)    ((fp)->f_op->fsync(fp, (fp)->f_dentry, flag))
 #else
@@ -60,11 +58,12 @@ static struct mtfs_trace_page *mtfs_tage_alloc(int gfp)
         if (page == NULL)
                 return NULL;
 
-        _MTFS_ALLOC_GFP(tage, sizeof(*tage), gfp);
-        if (tage == NULL) {
-                __free_page(page);
-                return NULL;
-        }
+	tage = kmalloc(sizeof(*tage), gfp);
+	if (unlikely(tage == NULL)) {
+		__free_page(page);
+		return NULL;
+	} 
+	memset(tage, 0, sizeof(*tage));
 
         tage->page = page;
         atomic_inc(&mtfs_tage_allocated);
@@ -350,16 +349,18 @@ int mtfs_trace_allocate_string_buffer(char **str, int nob)
 	if (nob > 2 * PAGE_CACHE_SIZE)            /* string must be "sensible" */
 		return -EINVAL;
 
-        _MTFS_ALLOC_GFP(*str, nob, __GFP_IO | __GFP_FS);
-        if (*str == NULL)
-                return -ENOMEM;
+	*str = kmalloc(nob, __GFP_IO | __GFP_FS);
+	if (unlikely(*str == NULL)) {
+		return -ENOMEM;
+	} 
+	memset(*str, 0, nob);
 
         return 0;
 }
 
 void mtfs_trace_free_string_buffer(char *str, int nob)
 {
-        _MTFS_FREE(str, nob);
+	kfree(str);
 }
 
 int mtfs_trace_dump_debug_buffer_usrstr(void *usr_str, int usr_str_nob)

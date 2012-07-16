@@ -8,8 +8,6 @@
 #include "mtfs_common.h"
 #include "debug.h"
 
-#define DEBUG_SUBSYSTEM S_MTFS
-
 /*
  * Same to macros defined in lustre/include/lustre_idl.h
  * We should keep this ture:

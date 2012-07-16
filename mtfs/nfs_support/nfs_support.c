@@ -12,8 +12,6 @@
 #include <linux/module.h>
 #include "nfs_support.h"
 
-#define DEBUG_SUBSYSTEM S_MTFS
-
 struct dentry *mtfs_nfs_lookup(struct inode *dir, struct dentry *dentry, struct nameidata *nd)
 {
 	struct dentry *ret = NULL;
