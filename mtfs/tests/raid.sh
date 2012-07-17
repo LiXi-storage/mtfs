@@ -86,6 +86,8 @@ remove_bad_branch()
 	fi
 
 	check_exist $DIR/$tfile || error "not exist $? after removed branch[$BRANCH_NUM]"
+
+	liberate_file $DIR
 }
 
 get_opposite_bindex()
@@ -127,6 +129,8 @@ remove_good_branch()
 	check_nonexist $DIR/$tfile || error "exist $? after removed branch[$BRANCH_NUM]"
 	mkdir $DIR/$tfile || error "mkdir failed"
 	rmdir $DIR/$tfile || error "rmdir failed"
+
+	liberate_file $DIR
 }
 
 test_0a() 
@@ -199,6 +203,8 @@ isolate_long_path()
 	$UTIL_MTFS setbranch -b $OPPOSITE_BINDEX -d 1 ./ 2>&1 > /dev/null || error "set flag failed"
 	check_nonexist $ENTRY || error "$ENTRY exist $?"
 
+	liberate_file $DIR
+	rm $DIR/d2a -rf
 	cd $PWD
 }
 
@@ -207,23 +213,30 @@ test_2a()
 	isolate_long_path 1 10 || error "failed to isolate long path"
 	isolate_long_path 1 11 || error "failed to isolate long path"
 }
-run_test 2a "long path when cleanup branch"
+#run_test 2a "long path when cleanup branch"
 
 # rmbranch a 
 test_3a()
 {
 	touch $DIR/f3a
-	$UTIL_MTFS rmbranch -b 100 $DIR/f3a && error "rmbranch succeeded";
-	$UTIL_MTFS rmbranch -b -1 $DIR/f3a && error "rmbranch succeeded ";
+	$UTIL_MTFS rmbranch -b 100 $DIR/f3a > /dev/null  2>&1 && error "rm branch succeeded";
+	$UTIL_MTFS rmbranch -b -1 $DIR/f3a > /dev/null  2>&1 && error "rm branch succeeded";
+	return 0
 }
 run_test 3a "illegal argument to rmbranch"
 
 # rmbranch tests
 test_3b()
 {
+	rm $DIR/f3b -f
 	touch $DIR/f3b
-	
+	$UTIL_MTFS rmbranch -b 1 $DIR/f3b || error "rm branch[1] failed";
+	check_exist $DIR/f3b || error "$DIR/f3b not exist $?"
+	echo "$UTIL_MTFS rmbranch -b 0 $DIR/f3b"
+	$UTIL_MTFS rmbranch -b 0 $DIR/f3b || error "rm branch[0] failed";
+	check_nonexist $DIR/f3b || error "$DIR/f3b exist $?"
 }
+run_test 3b "rmbranch all branches"
 
 cleanup_all
 echo "=== $0: completed ==="

@@ -79,7 +79,24 @@ struct inode_operations mtfs_ext2_main_iops =
 	listxattr:      mtfs_listxattr,
 };
 
+int mtfs_d_revalidate_local(struct dentry *dentry, struct nameidata *nd)
+{
+	int ret = 0;
+	HENTRY();
+
+	HDEBUG("d_revalidate [%*s]\n", dentry->d_name.len, dentry->d_name.name);
+
+	if (dentry->d_flags & DCACHE_MTFS_INVALID) {
+		ret = 0;
+		goto out;
+	}
+	ret = 1;
+out:
+	HRETURN(ret);
+}
+
 struct dentry_operations mtfs_ext2_dops = {
+	d_revalidate:  mtfs_d_revalidate_local,
 	d_release:     mtfs_d_release,
 };
 

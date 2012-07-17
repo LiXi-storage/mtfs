@@ -5,7 +5,7 @@
 #include "mtfs_internal.h"
 #include <linux/backing-dev.h>
 #include <mtfs_oplist.h>
-#include <mtfs_selfheal.h>
+#include "heal_internal.h"
 
 int mtfs_inode_dump(struct inode *inode)
 {

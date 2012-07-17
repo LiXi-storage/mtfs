@@ -8,6 +8,7 @@
 #include <compat.h>
 #include <mtfs_selfheal.h>
 #include <proc.h>
+#include "heal_internal.h"
 
 /* This definition must only appear after we include <linux/module.h> */
 #ifndef MODULE_LICENSE

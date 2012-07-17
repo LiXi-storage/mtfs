@@ -42,6 +42,9 @@ static inline struct dentry *mtfs_d_recover_branch(struct dentry *dentry, mtfs_b
 	return mtfs_s2brecover(dentry->d_sb, bindex);
 }
 
+/* Becareful not to conflict with kernel */
+#define DCACHE_MTFS_INVALID 0x8000000
+
 #else /* !defined (__linux__) && defined(__KERNEL__) */
 #error This head is only for kernel space use
 #endif /* !defined (__linux__) && defined(__KERNEL__) */

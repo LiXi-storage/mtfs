@@ -96,4 +96,7 @@ static inline int mtfs_d_is_positive(struct dentry *dentry)
 	return positive_bnum > 0;
 }
 
+#define lock_dentry(___dentry)          spin_lock(&(___dentry)->d_lock)
+#define unlock_dentry(___dentry)        spin_unlock(&(___dentry)->d_lock)
+
 #endif /* __MTFS_DENTRY_INTERNAL_H__ */

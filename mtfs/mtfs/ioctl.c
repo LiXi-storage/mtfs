@@ -2,8 +2,10 @@
  * Copyright (C) 2011 Li Xi <pkuelelixi@gmail.com>
  */
 
-#include "mtfs_internal.h"
 #include <mtfs_selfheal.h>
+#include "mtfs_internal.h"
+#include "heal_internal.h"
+#include "dentry_internal.h"
 
 static int mtfs_user_get_state(struct inode *inode, struct file *file, struct mtfs_user_flag __user *user_state, mtfs_bindex_t max_bnum)
 {
@@ -122,19 +124,50 @@ out:
 
 static int mtfs_remove_branch(struct dentry *d_parent, const char *name, mtfs_bindex_t bindex)
 {
-	int ret = 0;
-	struct dentry *d_child = NULL;
+	int ret                        = 0;
+	struct dentry *hidden_d_child  = NULL;
 	struct dentry *hidden_d_parent = mtfs_d2branch(d_parent, bindex);
+	struct dentry *d_child         = NULL;
 	HENTRY();
 
 	if (hidden_d_parent|| hidden_d_parent->d_inode) {
-		d_child = mtfs_dchild_remove(hidden_d_parent, name);
-		if (IS_ERR(d_child)) {
-			ret = PTR_ERR(d_child);
+		hidden_d_child = mtfs_dchild_remove(hidden_d_parent, name);
+		if (IS_ERR(hidden_d_child)) {
+			ret = PTR_ERR(hidden_d_child);
 			goto out;
-		} else {
+		}
+
+#ifdef LIXI_20120717
+		mutex_lock(&d_parent->d_inode->i_mutex);
+		{
+			d_child = lookup_one_len(hidden_d_child->d_name.name,
+			                         d_parent, hidden_d_child->d_name.len);
+			dput(hidden_d_child);
+
+			hidden_d_child = mtfs_lookup_branch(d_child, bindex);
+			if (IS_ERR(hidden_d_child)) {
+				mtfs_d2branch(d_child, bindex) = NULL;
+				ret = PTR_ERR(hidden_d_child);
+			} else {
+				mtfs_d2branch(d_child, bindex) = hidden_d_child;
+			}
+			mtfs_inode_set(d_child->d_inode, d_child);
 			dput(d_child);
 		}
+		mutex_unlock(&d_parent->d_inode->i_mutex);
+#else
+		dput(hidden_d_child);
+		mutex_lock(&d_parent->d_inode->i_mutex);
+		{
+			d_child = lookup_one_len(hidden_d_child->d_name.name,
+				                 d_parent, hidden_d_child->d_name.len);
+			lock_dentry(d_child);
+			d_child->d_flags |= DCACHE_MTFS_INVALID;
+			unlock_dentry(d_child);
+			dput(d_child);
+		}
+		mutex_unlock(&d_parent->d_inode->i_mutex);
+#endif
 	} else {
 		if (hidden_d_parent == NULL) {
 			HDEBUG("branch[%d] of dentry [%*s] is NULL\n", bindex,
@@ -145,6 +178,7 @@ static int mtfs_remove_branch(struct dentry *d_parent, const char *name, mtfs_bi
 		}
 		ret = -ENOENT;
 	}
+
 out:
 	HRETURN(ret);
 }

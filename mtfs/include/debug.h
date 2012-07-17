@@ -143,6 +143,7 @@ do {                                            \
 extern unsigned int mtfs_catastrophe;
 
 #define MDEBUG_MEM(format, args...) MDEBUG(D_MALLOC, format, ##args)
+//#define MTRACE(format, args...)     HERROR(format, ##args)
 #define MTRACE(format, args...)     MDEBUG(D_TRACE, format, ##args)
 #define MWARN(format, args...)      MDEBUG(D_WARNING, format, ##args)
 #define HDEBUG(format, args...)     MDEBUG(D_INFO, format, ##args)
