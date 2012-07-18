@@ -215,7 +215,6 @@ test_2a()
 }
 #run_test 2a "long path when cleanup branch"
 
-# rmbranch a 
 test_3a()
 {
 	touch $DIR/f3a
@@ -225,7 +224,6 @@ test_3a()
 }
 run_test 3a "illegal argument to rmbranch"
 
-# rmbranch tests
 test_3b()
 {
 	rm $DIR/f3b -f

@@ -417,7 +417,6 @@ int mtfs_lookup_backend(struct inode *dir, struct dentry *dentry, int interpose_
 			goto out_free;
 		}
 
-	
 		hidden_dir = mtfs_i_choose_branch(dir, MTFS_ATTR_VALID);
 		if (IS_ERR(hidden_dir)) {
 			ret = PTR_ERR(hidden_dir);

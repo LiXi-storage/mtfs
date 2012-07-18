@@ -23,6 +23,6 @@ EXTRA_DIST := $(mtfs-objs:.o=.c)
 EXTRA_DIST += dentry_internal.h device_internal.h file_internal.h hide_internal.h mtfs_internal.h
 EXTRA_DIST += inode_internal.h junction_internal.h main_internal.h mmap_internal.h
 EXTRA_DIST += super_internal.h support_internal.h flag_internal.h ioctl_internal.h
-EXTRA_DIST += oplist_internal.h
+EXTRA_DIST += oplist_internal.h heal_internal.h
 
 @INCLUDE_RULES@

@@ -498,7 +498,7 @@ static int mtfs_log(int argc, char **argv)
 	int c = 0;
 	int rc = 0;
 	struct mtfs_param param = { 0 };
-	
+
 	optind = 0;
 	while ((c = getopt_long(argc, argv, short_opts, long_opts, NULL)) != -1) {
 		switch (c) {
@@ -520,7 +520,7 @@ static int mtfs_log(int argc, char **argv)
 			goto out;
 		}
 	}
-	
+
 	if (optind >= argc) {
 		rc = CMD_HELP;
 		goto out;
