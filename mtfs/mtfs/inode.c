@@ -409,7 +409,7 @@ int mtfs_lookup_backend(struct inode *dir, struct dentry *dentry, int interpose_
 			/* TODO: remove branch */
 			HERROR("nonlatest branches exist when lastest branches absent, "
 			       "removing those branches\n");
-			ret = mtfs_lookup_discard_dentry(dir, dentry, list);
+			ret = heal_discard_dentry(dir, dentry, list);
 			if (ret) {
 				HERROR("failed to remove branches\n");
 			}

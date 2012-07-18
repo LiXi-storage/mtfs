@@ -10,11 +10,15 @@
 #include "mtfs_oplist.h"
 
 struct heal_operations {
-	int (*h_discard_dentry)(struct inode *dir,
+	int (*ho_discard_dentry)(struct inode *dir,
 	                        struct dentry *dentry,
 	                        struct mtfs_operation_list *list);
 };
 
+extern int heal_discard_dentry_sync(struct inode *dir,
+                                    struct dentry *dentry, struct mtfs_operation_list *list);
+extern int heal_discard_dentry_async(struct inode *dir,
+                                     struct dentry *dentry, struct mtfs_operation_list *list);
 #else /* !defined (__linux__) && defined(__KERNEL__) */
 #error This head is only for kernel space use
 #endif /* !defined (__linux__) && defined(__KERNEL__) */

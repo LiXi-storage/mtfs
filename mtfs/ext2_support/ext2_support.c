@@ -2,13 +2,14 @@
  * Copyright (C) 2011 Li Xi <pkuelelixi@gmail.com>
  */
 
+#include <linux/module.h>
+#include <mtfs_heal.h>
 #include <mtfs_support.h>
 #include <mtfs_super.h>
 #include <mtfs_dentry.h>
 #include <mtfs_inode.h>
 #include <mtfs_file.h>
 #include <mtfs_junction.h>
-#include <linux/module.h>
 #include "ext2_support.h"
 
 struct dentry *mtfs_ext2_lookup(struct inode *dir, struct dentry *dentry, struct nameidata *nd)
@@ -137,6 +138,11 @@ struct file_operations mtfs_ext2_main_fops =
 	release:    mtfs_release,
 	fsync:      mtfs_fsync,
 	/* TODO: splice_read, splice_write */
+};
+
+struct heal_operations mtfs_ext2_hops =
+{
+	ho_discard_dentry: heal_discard_dentry_async,
 };
 
 static int mtfs_ext2_setflags(struct inode *inode, struct file *file, unsigned long arg)

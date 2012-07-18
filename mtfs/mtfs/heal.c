@@ -10,6 +10,7 @@
 #include <mtfs_selfheal.h>
 #include "inode_internal.h"
 #include "heal_internal.h"
+#include "support_internal.h"
 
 /* If succeed, return dchild_new which needed to be dput */
 struct dentry *mtfs_dchild_rename2new(struct dentry *dparent, struct dentry *dchild_old,
@@ -518,26 +519,13 @@ out:
 	HRETURN(hidden_dentry);
 }
 
-int mtfs_lookup_discard_dentry(struct inode *dir, struct dentry *dentry, struct mtfs_operation_list *list)
+int heal_discard_dentry_sync(struct inode *dir, struct dentry *dentry, struct mtfs_operation_list *list)
 {
 	int            ret = 0;
 	mtfs_bindex_t  bindex = 0;
 	mtfs_bindex_t  i = 0;
 	struct dentry *hidden_dentry = NULL;
 	HENTRY();
-
-#ifndef LIXI_20120715
-	{
-		struct mtfs_request *request = NULL;
-		HERROR("in mtfs_lookup_discard_dentry\n");
-		request = selfheal_request_pack();
-		if (IS_ERR(request)) {
-			HERROR("failed to alloc request\n");
-			goto out;
-		}
-		selfheal_add_req(request, MDL_POLICY_ROUND, -1);
-	}
-#endif
 
 	HASSERT(inode_is_locked(dir));
 	for (i = list->latest_bnum; i < list->bnum; i++) {
@@ -554,5 +542,42 @@ int mtfs_lookup_discard_dentry(struct inode *dir, struct dentry *dentry, struct 
 		}
 	}
 out:
+	HRETURN(ret);
+}
+EXPORT_SYMBOL(heal_discard_dentry_sync);
+
+int heal_discard_dentry_async(struct inode *dir, struct dentry *dentry, struct mtfs_operation_list *list)
+{
+	int ret = 0;
+	struct mtfs_request *request = NULL;
+	HENTRY();
+
+	request = selfheal_request_pack();
+	if (IS_ERR(request)) {
+		HERROR("failed to alloc request\n");
+		goto out;
+	}
+	selfheal_add_req(request, MDL_POLICY_ROUND, -1);
+
+out:
+	HRETURN(ret);
+}
+EXPORT_SYMBOL(heal_discard_dentry_async);
+
+int heal_discard_dentry(struct inode *dir, struct dentry *dentry, struct mtfs_operation_list *list)
+{
+	int ret = 0;
+	struct mtfs_operations *operations = NULL;
+	HENTRY();
+
+	HASSERT(inode_is_locked(dir));
+	operations = mtfs_i2ops(dir);
+	if (operations->heal_ops && operations->heal_ops->ho_discard_dentry) {
+		ret = operations->heal_ops->ho_discard_dentry(dir, dentry, list);
+	} else {
+		HDEBUG("discard_dentry operation not supplied, use default\n");
+		ret = heal_discard_dentry_sync(dir, dentry, list);
+	}
+
 	HRETURN(ret);
 }
