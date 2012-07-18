@@ -2,13 +2,19 @@
  * Copyright (C) 2011 Li Xi <pkuelelixi@gmail.com>
  */
 
-#include "mtfs_internal.h"
 #include <linux/module.h>
+#include <linux/mount.h>
 #include <parse_option.h>
 #include <compat.h>
-#include <mtfs_selfheal.h>
 #include <proc.h>
+#include <mtfs_selfheal.h>
+#include <mtfs_device.h>
+#include <mtfs_file.h>
+#include "hide_internal.h"
+#include "super_internal.h"
+#include "dentry_internal.h"
 #include "heal_internal.h"
+#include "device_internal.h"
 
 /* This definition must only appear after we include <linux/module.h> */
 #ifndef MODULE_LICENSE

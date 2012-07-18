@@ -2,7 +2,14 @@
  * Copyright (C) 2011 Li Xi <pkuelelixi@gmail.com>
  */
 
-#include "mtfs_internal.h"
+#include <linux/fs.h>
+#include <linux/fs_stack.h>
+#include <linux/version.h>
+#include <linux/module.h>
+#include <debug.h>
+#include "support_internal.h"
+#include "inode_internal.h"
+#include "dentry_internal.h"
 
 #define qstr_pair(qstr)        (qstr)->len, (qstr)->name
 #define d_name_pair(dentry)    qstr_pair(&(dentry)->d_name)

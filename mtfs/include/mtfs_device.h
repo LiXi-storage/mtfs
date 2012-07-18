@@ -9,10 +9,11 @@
 #include <parse_option.h>
 #include <mtfs_common.h>
 #include <mtfs_junction.h>
+#include <mtfs_heal.h>
 
 struct mtfs_branch_debug {
-	int active; /* Wheather debug is active */
-	int errno;  /* Every write operation should return this errno */
+	int active;       /* Wheather debug is active */
+	int errno;        /* Every write operation should return this errno */
 	__u32 bops_emask; /* Branch operation error mask */
 };
 
@@ -25,15 +26,15 @@ struct mtfs_device_branch {
 };
 
 struct mtfs_device {
-	struct list_head device_list;        /* Managed in the device list */
-	char *device_name;                   /* Name of the device */
-	int name_length;                     /* Length of the device name */
-	struct super_block *sb;              /* Super block this device belong to */
-	struct mtfs_junction *junction;      /* Junction to lowerfs */
-	struct proc_dir_entry *proc_entry;   /* Proc entry for this device */
-	int no_abort;                        /* Do not abort when no latest branch success */
-	mtfs_bindex_t bnum;                  /* Branch number */
-	struct mtfs_device_branch branch[MTFS_BRANCH_MAX];   /* Info for each branch */
+	struct list_head device_list;                      /* Managed in the device list */
+	char *device_name;                                 /* Name of the device */
+	int name_length;                                   /* Length of the device name */
+	struct super_block *sb;                            /* Super block this device belong to */
+	struct mtfs_junction *junction;                    /* Junction to lowerfs */
+	struct proc_dir_entry *proc_entry;                 /* Proc entry for this device */
+	int no_abort;                                      /* Do not abort when no latest branch success */
+	mtfs_bindex_t bnum;                                /* Branch number */
+	struct mtfs_device_branch branch[MTFS_BRANCH_MAX]; /* Info for each branch */
 };
 
 #define mtfs_dev2bops(device, bindex) (device->branch[bindex].ops)

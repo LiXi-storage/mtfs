@@ -2,10 +2,23 @@
  * Copyright (C) 2011 Li Xi <pkuelelixi@gmail.com>
  */
 
-#include "mtfs_internal.h"
+#include <linux/mm.h>
+#include <linux/fs.h>
 #include <linux/backing-dev.h>
+#include <linux/fs_stack.h>
+#include <linux/module.h>
+#include <linux/version.h>
+#include <debug.h>
+#include <memory.h>
 #include <mtfs_oplist.h>
+#include <mtfs_dentry.h>
+#include <mtfs_inode.h>
+#include "support_internal.h"
+#include "inode_internal.h"
 #include "heal_internal.h"
+#include "super_internal.h"
+#include "mmap_internal.h"
+#include "dentry_internal.h"
 
 int mtfs_inode_dump(struct inode *inode)
 {

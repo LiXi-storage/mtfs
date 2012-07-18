@@ -4,6 +4,7 @@
 
 #ifndef __MTFS_INODE_INTERNAL_H__
 #define __MTFS_INODE_INTERNAL_H__
+
 #include <mtfs_common.h>
 #include <mtfs_inode.h>
 #include "main_internal.h"

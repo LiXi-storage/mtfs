@@ -2,10 +2,14 @@
  * Copyright (C) 2011 Li Xi <pkuelelixi@gmail.com>
  */
 
-#include "mtfs_internal.h"
-#include "mmap_internal.h"
+#include <linux/module.h>
 #include <linux/uio.h>
 #include <mtfs_oplist.h>
+#include <mtfs_device.h>
+#include <mtfs_inode.h>
+#include <mtfs_file.h>
+#include <mtfs_flag.h>
+#include "mmap_internal.h"
 
 static int mtfs_writepage_branch(struct page *page, struct inode *inode, mtfs_bindex_t bindex,
                                  unsigned hidden_page_index, struct writeback_control *wbc)

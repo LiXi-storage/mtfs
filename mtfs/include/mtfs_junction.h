@@ -8,6 +8,7 @@
 #if defined (__linux__) && defined(__KERNEL__)
 #include <linux/list.h>
 #include <linux/fs.h>
+#include "mtfs_heal.h"
 
 struct mtfs_operations {
 	struct inode_operations *symlink_iops;
@@ -20,6 +21,7 @@ struct mtfs_operations {
 	struct address_space_operations *aops;
 	struct vm_operations_struct *vm_ops;
 	int (*ioctl)(struct inode *inode, struct file *file, unsigned int cmd, unsigned long arg);
+	struct heal_operations *heal_ops;
 };
 
 struct mtfs_junction {

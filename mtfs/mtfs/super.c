@@ -2,11 +2,21 @@
  * Copyright (C) 2011 Li Xi <pkuelelixi@gmail.com>
  */
 
+#include <linux/mount.h>
+#include <linux/statfs.h>
 #include <linux/seq_file.h>
-#include "mtfs_internal.h"
+#include <linux/fs.h>
+#include <linux/module.h>
 #ifdef HAVE_LINUX_EXPORTFS_H
 #include <linux/exportfs.h>
 #endif
+#include <debug.h>
+#include <memory.h>
+#include <mtfs_super.h>
+#include <mtfs_dentry.h>
+#include "device_internal.h"
+#include "inode_internal.h"
+#include "support_internal.h"
 
 struct inode *mtfs_alloc_inode(struct super_block *sb)
 {

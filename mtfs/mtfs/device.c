@@ -2,12 +2,15 @@
  * Copyright (C) 2011 Li Xi <pkuelelixi@gmail.com>
  */
 
-#include <compat.h>
 #include <linux/ctype.h>
+#include <linux/uaccess.h>
+#include <linux/module.h>
+#include <compat.h>
 #include <proc.h>
+#include <mtfs_dentry.h>
 #include "device_internal.h"
-#include "mtfs_internal.h"
 #include "junction_internal.h"
+#include "support_internal.h"
 
 static struct mtfs_device *mtfs_device_alloc(mount_option_t *mount_option)
 {

@@ -2,10 +2,14 @@
  * Copyright (C) 2011 Li Xi <pkuelelixi@gmail.com>
  */
 
+#include <linux/module.h>
 #include <mtfs_selfheal.h>
-#include "mtfs_internal.h"
+#include <debug.h>
+#include <memory.h>
 #include "heal_internal.h"
 #include "dentry_internal.h"
+#include "ioctl_internal.h"
+#include "support_internal.h"
 
 static int mtfs_user_get_state(struct inode *inode, struct file *file, struct mtfs_user_flag __user *user_state, mtfs_bindex_t max_bnum)
 {

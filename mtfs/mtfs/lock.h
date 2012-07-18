@@ -4,8 +4,9 @@
 
 #ifndef __MTFS_LOCK_H__
 #define __MTFS_LOCK_H__
+
 #include <libcfs/linux-lock.h>
-#include "mtfs_internal.h"
+
 static inline void d_info_rwlock_init(dentry_t *dentry)
 {
 	HASSERT(dentry);

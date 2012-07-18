@@ -2,7 +2,10 @@
  * Copyright (C) 2011 Li Xi <pkuelelixi@gmail.com>
  */
 
-#include "mtfs_internal.h"
+#include <linux/fs.h>
+#include <linux/module.h>
+#include <debug.h>
+#include <mtfs_common.h>
 
 #define MTFS_HIDDEN_SUPER_MAGIC 0xbadc0ffee
 

@@ -2,11 +2,18 @@
  * Copyright (C) 2011 Li Xi <pkuelelixi@gmail.com>
  */
 
-#include "mtfs_internal.h"
-#include <mtfs_ioctl.h>
 #include <linux/dcache.h>
+#include <linux/fs_stack.h>
+#include <linux/module.h>
 #include <linux/uio.h>
+#include <linux/mount.h>
 #include <mtfs_oplist.h>
+#include <mtfs_ioctl.h>
+#include <mtfs_device.h>
+#include "dentry_internal.h"
+#include "file_internal.h"
+#include "support_internal.h"
+#include "mmap_internal.h"
 
 int mtfs_file_dump(struct file *file)
 {

@@ -4,7 +4,10 @@
 
 #ifndef __MTFS_MMAP_INTERNAL_H__
 #define __MTFS_MMAP_INTERNAL_H__
+
+#include <linux/pagemap.h>
 #include <mtfs_mmap.h>
+
 extern struct address_space_operations mtfs_aops;
 extern struct vm_operations_struct mtfs_file_vm_ops;
 struct page *mtfs_read_cache_page(struct file *file, struct inode *hidden_inode, mtfs_bindex_t bindex, unsigned page_index);

@@ -6,6 +6,8 @@
 #define __MTFS_SUPER_H__
 
 #if defined (__linux__) && defined(__KERNEL__)
+
+#include <linux/fs.h>
 #include <mtfs_common.h>
 
 struct mtfs_sb_branch {

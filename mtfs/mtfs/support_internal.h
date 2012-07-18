@@ -8,7 +8,6 @@
 #include <mtfs_common.h>
 #include <mtfs_support.h>
 #include <mtfs_flag.h>
-#include "mtfs_internal.h"
 
 struct lowerfs_operations *lowerfs_get_ops(const char *type);
 void lowerfs_put_ops(struct lowerfs_operations *fs_ops);
