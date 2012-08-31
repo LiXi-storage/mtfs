@@ -44,4 +44,4 @@ int
 mtfs_print_log(const char *file, const char *function, int line,
 	 mtfs_loglevel_t level, const char *fmt, ...);
 char *combine_str(const char *str1, const char *str2);
-#endif //_MTFS_LOG_H_
+#endif /* _MTFS_LOG_H_ */

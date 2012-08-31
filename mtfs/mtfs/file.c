@@ -10,6 +10,7 @@
 #include <mtfs_oplist.h>
 #include <mtfs_ioctl.h>
 #include <mtfs_device.h>
+#include <mtfs_lock.h>
 #include "dentry_internal.h"
 #include "file_internal.h"
 #include "support_internal.h"
@@ -766,10 +767,12 @@ ssize_t mtfs_file_aio_write(struct kiocb *iocb, const struct iovec *iov,
 		}
 	}
 
-	if (mtfs_i_wlock_down_interruptible(inode)) {
-		size = -EINTR;
+	lock = mlock_enqueue(inode, MLOCK_MODE_WRITE);
+	if (lock == NULL) {
+		size = -ENOMEM;
 		goto out_free_oplist;
 	}
+
 	for (i = 0; i < mtfs_f2bnum(file); i++) {
 		bindex = list->op_binfo[i].bindex;
 		memcpy((char *)iov_tmp, (char *)iov_new, length);
@@ -790,7 +793,8 @@ ssize_t mtfs_file_aio_write(struct kiocb *iocb, const struct iovec *iov,
 			}
 		}
 	}
-	mtfs_i_wlock_up(inode);
+
+	mlock_cancel(lock);
 
 	mtfs_oplist_check(list);
 	if (list->success_bnum <= 0) {
@@ -899,6 +903,7 @@ ssize_t mtfs_file_writev(struct file *file, const struct iovec *iov,
 	struct mtfs_operation_list *list = NULL;
 	mtfs_operation_result_t result = {0};
 	struct inode *inode = file->f_dentry->d_inode;
+	struct mlock *lock = NULL;
 	HENTRY();
 
 	MTFS_ALLOC(iov_new, length);
@@ -930,10 +935,12 @@ ssize_t mtfs_file_writev(struct file *file, const struct iovec *iov,
 		}
 	}
 
-	if (mtfs_i_wlock_down_interruptible(inode)) {
-		size = -EINTR;
+	lock = mlock_enqueue(inode, MLOCK_MODE_WRITE);
+	if (lock == NULL) {
+		size = -ENOMEM;
 		goto out_free_oplist;
 	}
+
 	for (i = 0; i < mtfs_f2bnum(file); i++) {
 		bindex = list->op_binfo[i].bindex;
 		memcpy((char *)iov_tmp, (char *)iov_new, length);
@@ -948,13 +955,14 @@ ssize_t mtfs_file_writev(struct file *file, const struct iovec *iov,
 				if (!(mtfs_i2dev(file->f_dentry->d_inode)->no_abort)) {
 					result = mtfs_oplist_result(list);
 					size = result.size;
-					mtfs_i_wlock_up(inode);
+					mlock_cancel(lock);
 					goto out_free_oplist;
 				}
 			}
 		}
 	}
-	mtfs_i_wlock_up(inode);
+
+	mlock_cancel(lock);
 
 	mtfs_oplist_check(list);
 	if (list->success_bnum <= 0) {

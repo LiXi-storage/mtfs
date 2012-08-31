@@ -51,7 +51,7 @@ int __queue_add(queue_t *queue, void *data, int head);
 
 /*
  * Function: data_t *queue_remove (queue)
- * Purpose : removes first SCSI command from a queue
+ * Purpose : removes first node command from a queue
  * Params  : queue   - queue to remove command from
  * Returns : Scsi_Cmnd if successful (and a reference), or NULL if no command available
  */

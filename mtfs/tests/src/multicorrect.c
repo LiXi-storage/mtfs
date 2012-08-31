@@ -401,7 +401,7 @@ int main(int argc, char *argv[])
 		ret = errno;
 		goto out;
 	}
-	
+
 	for (i = 0; i < 2; i++) {
 		branch_path[i] = argv[i + 2];
 		branch_fd[i] = open(branch_path[i], O_RDONLY);
@@ -428,24 +428,20 @@ int main(int argc, char *argv[])
 		goto out;
 	}
 
-/*
 	ret = create_thread_group(&thread_groups[0], NULL);
 	if (ret == -1) {
 		goto out;
 	}
-*/
 
 	ret = create_thread_group(&thread_groups[1], NULL);
 	if (ret == -1) {
 		goto out;
 	}
 
-/*
 	ret = create_thread_group(&thread_groups[2], NULL);
 	if (ret == -1) {
 		goto out;
 	}
-*/
 
 	while(1) {
 	//for (i = 0; i < seconds / 10 + 1; i++) {

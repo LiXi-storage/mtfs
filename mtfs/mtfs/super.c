@@ -30,9 +30,9 @@ struct inode *mtfs_alloc_inode(struct super_block *sb)
 	}
 
 	/* Init inode */
-	inode_init_once(&inode_info->vfs_inode);
+	inode_init_once(&inode_info->mii_inode);
 
-	inode = &inode_info->vfs_inode;
+	inode = &inode_info->mii_inode;
 
 out:
 	HRETURN(inode);

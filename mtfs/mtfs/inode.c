@@ -19,6 +19,7 @@
 #include "super_internal.h"
 #include "mmap_internal.h"
 #include "dentry_internal.h"
+#include "lock_internal.h"
 
 int mtfs_inode_dump(struct inode *inode)
 {
@@ -90,9 +91,8 @@ int mtfs_inode_init(struct inode *inode, struct dentry *dentry)
 		HDEBUG("aops operations not supplied, use default\n");
 		inode->i_mapping->a_ops = &mtfs_aops;
 	}
-	mtfs_i_init_lock(inode);
 
-        mtfs_i_wlock_init(inode);
+	mlock_resource_init(inode);
 	HRETURN(ret);
 }
 

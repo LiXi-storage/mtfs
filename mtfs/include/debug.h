@@ -147,11 +147,13 @@ extern unsigned int mtfs_catastrophe;
 #define MTRACE(format, args...)     MDEBUG(D_TRACE, format, ##args)
 #define MWARN(format, args...)      MDEBUG(D_WARNING, format, ##args)
 #define HDEBUG(format, args...)     MDEBUG(D_INFO, format, ##args)
+//#define HDEBUG(format, args...)     HERROR(format, ##args)
 #define HERROR(format, args...)     MDEBUG(D_ERROR, format, ##args)
 #define HPRINT(format, args...)     MDEBUG(D_INFO, format, ##args)
 
 #include <linux/err.h>
 #include <linux/string.h>
+#include <linux/kernel.h>
 
 #define HBUG()                                       \
 do {                                                 \
@@ -178,7 +180,11 @@ do {                                                 \
 #include <asm/types.h>
 
 #define HASSERT(cond) assert(cond)
+#if 0
 #define MTRACE(format, args...) fprintf(stderr, "DEBUG: %s(%d) %s(): " format, __FILE__,  __LINE__, __FUNCTION__, ##args)
+#else
+#define MTRACE(format, args...)
+#endif
 #define HDEBUG(format, args...) fprintf(stderr, "DEBUG: %s(%d) %s(): " format, __FILE__,  __LINE__, __FUNCTION__, ##args)
 #define HERROR(format, args...) fprintf(stderr, "ERROR: %s(%d) %s(): " format, __FILE__,  __LINE__, __FUNCTION__, ##args)
 #define MWARN(format, args...)  fprintf(stderr, "WARN: %s(%d) %s(): " format, __FILE__,  __LINE__, __FUNCTION__, ##args)

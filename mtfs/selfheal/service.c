@@ -8,7 +8,6 @@
 #include <memory.h>
 #include <mtfs_list.h>
 #include <thread.h>
-#include "thread_internal.h"
 #include "service_internal.h"
 
 static inline int
@@ -34,7 +33,7 @@ static int mtfs_service_main(void *arg)
 #define MTFS_MAX_THREAD_NAME_LENGTH 32
 int mtfs_start_thread(struct mtfs_service *svc)
 {
-	struct l_wait_info lwi = { 0 };
+	struct mtfs_wait_info mwi = { 0 };
 	struct mtfs_thread *thread = NULL;
 	int ret = 0;
 	char name[MTFS_MAX_THREAD_NAME_LENGTH];
@@ -91,9 +90,9 @@ int mtfs_start_thread(struct mtfs_service *svc)
 		goto out_delete_thread;
 	}
 
-	l_wait_event(thread->t_ctl_waitq,
+	mtfs_wait_event(thread->t_ctl_waitq,
 	             thread_is_running(thread) || thread_is_stopped(thread),
-	             &lwi);
+	             &mwi);
 
 	ret = thread_is_stopped(thread) ? thread->t_id : 0;
 	goto out;

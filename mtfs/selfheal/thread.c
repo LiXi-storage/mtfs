@@ -65,7 +65,7 @@ sigset_t mtfs_block_sigs(sigset_t bits)
         SIGNAL_MASK_UNLOCK(current, flags);
         return old;
 }
-
+EXPORT_SYMBOL(mtfs_block_sigs);
 
 sigset_t mtfs_block_sigsinv(unsigned long sigs)
 {
@@ -80,6 +80,7 @@ sigset_t mtfs_block_sigsinv(unsigned long sigs)
 
         return old;
 }
+EXPORT_SYMBOL(mtfs_block_sigsinv);
 
 void mtfs_clear_sigpending(void)
 {
@@ -89,6 +90,7 @@ void mtfs_clear_sigpending(void)
         clear_tsk_thread_flag(current, TIF_SIGPENDING);
         SIGNAL_MASK_UNLOCK(current, flags);
 }
+EXPORT_SYMBOL(mtfs_clear_sigpending);
 
 void mtfs_daemonize(char *str)
 {

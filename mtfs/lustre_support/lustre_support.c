@@ -145,16 +145,10 @@ ssize_t mtfs_lustre_file_writev(struct file *file, const struct iovec *iov,
 		goto out;
 	}
 
-	if (mtfs_i_wlock_down_interruptible(inode)) {
-		HERROR("Interupted by signal\n");
-		/* Never return an error like -EINTR */
-		goto out_free_oplist;
-	}
 	ret = mtfs_ll_file_writev(file, iov, nr_segs, ppos, oplist);
 	if (ret) {
 		HERROR("failed to writev, ret = %d\n", ret);
 	}
-	mtfs_i_wlock_up(inode);
 
 	mtfs_oplist_check(oplist);
 	if (oplist->success_bnum <= 0) {

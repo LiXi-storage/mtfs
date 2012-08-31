@@ -39,5 +39,12 @@ extern int strncasecmp(const char *s1, const char *s2, size_t n);
         ((type *)((char *)(ptr)-(unsigned long)(&((type *)0)->member)))
 #endif /* !container_of */
 
+#define EXPORT_SYMBOL(s)
+#define MODULE_AUTHOR(s)
+#define MODULE_DESCRIPTION(s)
+#define MODULE_LICENSE(s)
+#define MODULE_PARM(a, b)
+#define MODULE_PARM_DESC(a, b)
+
 #endif  /* !defined(__linux__) && defined(__KERNEL__) */
 #endif /* _MTFS_COMPAT_H_ */

@@ -9,6 +9,7 @@
 #include <linux/fs.h>
 #include <linux/namei.h>
 #include "mtfs_common.h"
+#include "mtfs_lock.h"
 
 struct mtfs_inode_branch {
 	struct inode *binode;
@@ -16,70 +17,20 @@ struct mtfs_inode_branch {
 
 /* mtfs inode data in memory */
 struct mtfs_inode_info {
-	struct inode vfs_inode;
-	struct rw_semaphore rwsem; /* protect barray */
-	struct semaphore write_sem;
-	mtfs_bindex_t bnum;
-	struct mtfs_inode_branch barray[MTFS_BRANCH_MAX];
+	struct inode             mii_inode;
+	struct mlock_resource    mii_resource;
+	struct semaphore         mii_write_sem;
+	mtfs_bindex_t            mii_bnum;
+	struct mtfs_inode_branch mii_barray[MTFS_BRANCH_MAX];
 };
 
 /* DO NOT access mtfs_*_info_t directly, use following macros */
-#define mtfs_i2info(inode) (container_of(inode, struct mtfs_inode_info, vfs_inode))
-#define mtfs_i2bnum(inode) (mtfs_i2info(inode)->bnum)
-#define mtfs_i2barray(inode) (mtfs_i2info(inode)->barray)
+#define mtfs_i2info(inode)           (container_of(inode, struct mtfs_inode_info, mii_inode))
+#define mtfs_i2bnum(inode)           (mtfs_i2info(inode)->mii_bnum)
+#define mtfs_i2barray(inode)         (mtfs_i2info(inode)->mii_barray)
 #define mtfs_i2branch(inode, bindex) (mtfs_i2barray(inode)[bindex].binode)
-#define mtfs_i2rwsem(inode) (mtfs_i2info(inode)->rwsem)
-#define mtfs_i2wsem(inode) (mtfs_i2info(inode)->write_sem)
+#define mtfs_i2resource(inode)       (&mtfs_i2info(inode)->mii_resource)
 
-static inline void mtfs_i_init_lock(struct inode *inode)
-{
-	init_rwsem(&mtfs_i2rwsem(inode));
-}
-
-static inline int mtfs_i_is_locked(struct inode *inode)
-{
-	return !down_write_trylock(&mtfs_i2rwsem(inode));
-}
-
-static inline int mtfs_i_is_write_locked(struct inode *inode)
-{
-	return !down_read_trylock(&mtfs_i2rwsem(inode));
-}
-
-static inline void mtfs_i_read_lock(struct inode *inode)
-{
-	down_read(&mtfs_i2rwsem(inode));
-}
-
-static inline void mtfs_i_read_unlock(struct inode *inode)
-{
-	up_read(&mtfs_i2rwsem(inode));
-}
-
-static inline void mtfs_i_write_lock(struct inode *inode)
-{
-	down_write(&mtfs_i2rwsem(inode));
-}
-
-static inline void mtfs_i_write_unlock(struct inode *inode)
-{
-	up_write(&mtfs_i2rwsem(inode));
-}
-
-static inline void mtfs_i_wlock_init(struct inode *inode)
-{
-	sema_init(&mtfs_i2wsem(inode), 1);
-}
-
-static inline int mtfs_i_wlock_down_interruptible(struct inode *inode)
-{
-	return down_interruptible(&mtfs_i2wsem(inode));
-}
-
-static inline void mtfs_i_wlock_up(struct inode *inode)
-{
-	up(&mtfs_i2wsem(inode));
-}
 /* The values for mtfs_interpose's flag. */
 #define INTERPOSE_DEFAULT	0
 #define INTERPOSE_LOOKUP	1
@@ -97,7 +48,7 @@ extern int mtfs_mkdir(struct inode *dir, struct dentry *dentry, int mode);
 extern int mtfs_mknod(struct inode *dir, struct dentry *dentry, int mode, dev_t dev);
 extern int mtfs_rename(struct inode *old_dir, struct dentry *old_dentry, struct inode *new_dir, struct dentry *new_dentry);
 extern int mtfs_readlink(struct dentry *dentry, char __user *buf, int bufsiz);
-void mtfs_put_link(struct dentry *dentry, struct nameidata *nd, void *ptr);
+extern void mtfs_put_link(struct dentry *dentry, struct nameidata *nd, void *ptr);
 extern void *mtfs_follow_link(struct dentry *dentry, struct nameidata *nd);
 #ifdef HAVE_INODE_PERMISION_2ARGS
 extern int mtfs_permission(struct inode *inode, int mask);

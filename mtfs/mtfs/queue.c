@@ -1,13 +1,10 @@
-/*
- * Copyright (C) 2011 Li Xi <pkuelelixi@gmail.com>
- */
+/* Copied from kernel/drivers/scsi/arm/queue.c */
 
 /*
  * For both kernel and userspace use
  * DO NOT use anything special that opposes this purpose
  */
 
-/* Copy from kernel/drivers/scsi/arm/queue.c */
 #include <mtfs_queue.h>
 #include <debug.h>
 #include <memory.h>
@@ -113,7 +110,7 @@ static void *__queue_remove(queue_t *queue, mtfs_list_t *ent)
 
 /*
  * Function: data_t *queue_remove (queue)
- * Purpose : removes first SCSI command from a queue
+ * Purpose : removes first item from a queue
  * Params  : queue   - queue to remove command from
  * Returns : data if successful (and a reference), or NULL if no command available
  */
@@ -144,10 +141,10 @@ void queue_remove_all_target(queue_t *queue)
 }
 
 /*
- * Function: int queue_remove_data(Queue_t *queue, Scsi_Cmnd *SCpnt)
+ * Function: int queue_remove_data(queue_t *queue, void *data)
  * Purpose : remove a specific node from the queues
  * Params  : queue - queue to look in
- *	     SCpnt - command to find
+ *	     data - node to find
  * Returns : 0 if not found
  */
 int queue_remove_data(queue_t *queue, void *data)

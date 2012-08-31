@@ -15,6 +15,7 @@
 #include "dentry_internal.h"
 #include "heal_internal.h"
 #include "device_internal.h"
+#include "lock_internal.h"
 
 /* This definition must only appear after we include <linux/module.h> */
 #ifndef MODULE_LICENSE
@@ -256,7 +257,7 @@ static void mtfs_inode_info_init_once(void *vptr)
 {
 	struct mtfs_inode_info *hi = (struct mtfs_inode_info *)vptr;
 
-	inode_init_once(&hi->vfs_inode);
+	inode_init_once(&hi->mii_inode);
 }
 
 struct mtfs_cache_info {
@@ -272,6 +273,7 @@ struct kmem_cache *mtfs_inode_info_cache;
 struct kmem_cache *mtfs_sb_info_cache;
 struct kmem_cache *mtfs_device_cache;
 struct kmem_cache *mtfs_oplist_cache;
+struct kmem_cache *mtfs_lock_cache;
 
 static struct mtfs_cache_info mtfs_cache_infos[] = {
 	{
@@ -304,6 +306,11 @@ static struct mtfs_cache_info mtfs_cache_infos[] = {
 		.cache = &mtfs_oplist_cache,
 		.name = "mtfs_oplist_cache",
 		.size = sizeof(struct mtfs_operation_list),
+	},
+	{
+		.cache = &mtfs_lock_cache,
+		.name = "mtfs_lock_cache",
+		.size = sizeof(struct mlock),
 	},
 };
 	

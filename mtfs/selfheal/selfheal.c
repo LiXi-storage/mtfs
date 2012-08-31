@@ -10,7 +10,6 @@
 #include <thread.h>
 #include <bitmap.h>
 #include "selfheal_internal.h"
-#include "thread_internal.h"
 
 struct mtfs_request *mtfs_request_alloc(void)
 {
@@ -296,13 +295,13 @@ static int selfheal_daemon_main(void *arg)
 
 	complete(&sc->sc_starting);
 	do {
-		struct l_wait_info lwi;
+		struct mtfs_wait_info mwi;
 		int timeout;
 
 		timeout = MTFS_SELFHEAL_TIMEOUT;
-		lwi = LWI_TIMEOUT_INTR_ALL(timeout * HZ, NULL, NULL, NULL);
+		mwi = MWI_TIMEOUT_INTR_ALL(timeout * HZ, NULL, NULL, NULL);
 
-		l_wait_event(set->set_waitq, selfheal_check(sc), &lwi);
+		mtfs_wait_event(set->set_waitq, selfheal_check(sc), &mwi);
 		if (mtfs_test_bit(MTFS_DAEMON_STOP, &sc->sc_flags)) {
 			if (mtfs_test_bit(MTFS_DAEMON_FORCE, &sc->sc_flags)) {
 				//abort;

@@ -14,6 +14,11 @@ if [ "$basename" = "manage" ]; then
 	command="`pwd`/../../manage/hfsm"
 fi
 
+if [ ! -x "$command" ]; then
+	echo "can not run $command"
+	exit
+fi
+
 echo "command = $command"
 
 VALGRIND_DIR=${VALGRIND_DIR:-/tmp}
