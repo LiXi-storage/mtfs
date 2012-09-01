@@ -274,6 +274,7 @@ struct kmem_cache *mtfs_sb_info_cache;
 struct kmem_cache *mtfs_device_cache;
 struct kmem_cache *mtfs_oplist_cache;
 struct kmem_cache *mtfs_lock_cache;
+struct kmem_cache *mtfs_interval_cache;
 
 static struct mtfs_cache_info mtfs_cache_infos[] = {
 	{
@@ -311,6 +312,11 @@ static struct mtfs_cache_info mtfs_cache_infos[] = {
 		.cache = &mtfs_lock_cache,
 		.name = "mtfs_lock_cache",
 		.size = sizeof(struct mlock),
+	},
+	{
+		.cache = &mtfs_interval_cache,
+		.name = "mtfs_interval_cache",
+		.size = sizeof(struct mlock_interval),
 	},
 };
 	

@@ -535,6 +535,9 @@ ssize_t mtfs_file_readv(struct file *file, const struct iovec *iov,
 	size_t count = 0;
 	mtfs_bindex_t bindex = 0;
 	loff_t tmp_pos = 0;
+	struct inode *inode = file->f_dentry->d_inode;
+	struct mlock *lock = NULL;
+	struct mlock_enqueue_info einfo;
 	HENTRY();
 
 	count = get_iov_count(iov, &nr_segs);
@@ -561,6 +564,14 @@ ssize_t mtfs_file_readv(struct file *file, const struct iovec *iov,
 	memcpy((char *)iov_new, (char *)iov, length); 
 
 	HASSERT(mtfs_f2info(file));
+
+	einfo.mode = MLOCK_MODE_READ;
+	lock = mlock_enqueue(inode, &einfo);
+	if (lock == NULL) {
+		ret = -ENOMEM;
+		goto tmp_alloced_err;
+	}
+
 	for (bindex = 0; bindex < mtfs_f2bnum(file); bindex++) {
 		memcpy((char *)iov_tmp, (char *)iov_new, length);
 		tmp_pos = *ppos;
@@ -574,7 +585,9 @@ ssize_t mtfs_file_readv(struct file *file, const struct iovec *iov,
 		}
 	}
 
-//tmp_alloced_err:
+	mlock_cancel(lock);
+
+tmp_alloced_err:
 	MTFS_FREE(iov_tmp, length);
 new_alloced_err:
 	MTFS_FREE(iov_new, length);
@@ -641,7 +654,7 @@ out:
 }
 
 ssize_t mtfs_file_aio_read(struct kiocb *iocb, const struct iovec *iov,
-                                  unsigned long nr_segs, loff_t pos)
+                           unsigned long nr_segs, loff_t pos)
 {
 	ssize_t ret = 0;
 	struct iovec *iov_new = NULL;
@@ -651,6 +664,9 @@ ssize_t mtfs_file_aio_read(struct kiocb *iocb, const struct iovec *iov,
 	mtfs_bindex_t bindex = 0;
 	loff_t tmp_pos = 0;
 	struct file *file = iocb->ki_filp;
+	struct inode *inode = file->f_dentry->d_inode;
+	struct mlock *lock = NULL;
+	struct mlock_enqueue_info einfo;
 	HENTRY();
 
 	count = get_iov_count(iov, &nr_segs);
@@ -677,6 +693,14 @@ ssize_t mtfs_file_aio_read(struct kiocb *iocb, const struct iovec *iov,
 	memcpy((char *)iov_new, (char *)iov, length); 
 
 	HASSERT(mtfs_f2info(file));
+
+	einfo.mode = MLOCK_MODE_READ;
+	lock = mlock_enqueue(inode, &einfo);
+	if (lock == NULL) {
+		ret = -ENOMEM;
+		goto tmp_alloced_err;
+	}
+
 	for (bindex = 0; bindex < mtfs_f2bnum(file); bindex++) {
 		memcpy((char *)iov_tmp, (char *)iov_new, length);
 		tmp_pos = pos;
@@ -690,7 +714,9 @@ ssize_t mtfs_file_aio_read(struct kiocb *iocb, const struct iovec *iov,
 		}
 	}
 
-//tmp_alloced_err:
+	mlock_cancel(lock);
+
+tmp_alloced_err:
 	MTFS_FREE(iov_tmp, length);
 new_alloced_err:
 	MTFS_FREE(iov_new, length);
@@ -736,6 +762,8 @@ ssize_t mtfs_file_aio_write(struct kiocb *iocb, const struct iovec *iov,
 	mtfs_operation_result_t result = {0};
 	struct file *file = iocb->ki_filp;
 	struct inode *inode = file->f_dentry->d_inode;
+	struct mlock *lock = NULL;
+	struct mlock_enqueue_info einfo;
 	HENTRY();
 
 	MTFS_ALLOC(iov_new, length);
@@ -751,7 +779,7 @@ ssize_t mtfs_file_aio_write(struct kiocb *iocb, const struct iovec *iov,
 	}
 	memcpy((char *)iov_new, (char *)iov, length); 
 
-	list = mtfs_oplist_build(file->f_dentry->d_inode);
+	list = mtfs_oplist_build(inode);
 	if (unlikely(list == NULL)) {
 		HERROR("failed to build operation list\n");
 		size = -ENOMEM;
@@ -767,7 +795,8 @@ ssize_t mtfs_file_aio_write(struct kiocb *iocb, const struct iovec *iov,
 		}
 	}
 
-	lock = mlock_enqueue(inode, MLOCK_MODE_WRITE);
+	einfo.mode = MLOCK_MODE_WRITE;
+	lock = mlock_enqueue(inode, &einfo);
 	if (lock == NULL) {
 		size = -ENOMEM;
 		goto out_free_oplist;
@@ -904,6 +933,7 @@ ssize_t mtfs_file_writev(struct file *file, const struct iovec *iov,
 	mtfs_operation_result_t result = {0};
 	struct inode *inode = file->f_dentry->d_inode;
 	struct mlock *lock = NULL;
+	struct mlock_enqueue_info einfo;
 	HENTRY();
 
 	MTFS_ALLOC(iov_new, length);
@@ -935,7 +965,8 @@ ssize_t mtfs_file_writev(struct file *file, const struct iovec *iov,
 		}
 	}
 
-	lock = mlock_enqueue(inode, MLOCK_MODE_WRITE);
+	einfo.mode = MLOCK_MODE_WRITE;
+	lock = mlock_enqueue(inode, &einfo);
 	if (lock == NULL) {
 		size = -ENOMEM;
 		goto out_free_oplist;
