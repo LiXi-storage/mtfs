@@ -6,6 +6,7 @@
 
 #if defined (__linux__) && defined(__KERNEL__)
 
+#include <linux/signal.h>
 extern int mtfs_create_thread(int (*fn)(void *), void *arg, unsigned long flags);
 extern int mtfs_daemonize_ctxt(char *str);
 

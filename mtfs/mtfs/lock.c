@@ -2,6 +2,7 @@
  * Copyright (C) 2011 Li Xi <pkuelelixi@gmail.com>
  */
 
+#include <linux/sched.h>
 #include <debug.h>
 #include <memory.h>
 #include <thread.h>

@@ -468,6 +468,71 @@ LB_LINUX_TRY_COMPILE([
 ])
 ])
 
+# 2.6.32 set_cpus_allowed is no more defined if CONFIG_CPUMASK_OFFSTACK=yes
+AC_DEFUN([LC_SET_CPUS_ALLOWED],
+[AC_MSG_CHECKING([if kernel defines set_cpus_allowed])
+LB_LINUX_TRY_COMPILE([
+	#include <linux/sched.h>
+],[
+	struct task_struct *p = NULL;
+	cpumask_t mask = { { 0 } };
+
+	(void) set_cpus_allowed(p, mask);
+],[
+	AC_MSG_RESULT([yes])
+ 	AC_DEFINE(HAVE_SET_CPUS_ALLOWED, 1,
+		[set_cpus_allowed is exported by the kernel])
+],[
+	AC_MSG_RESULT([no])
+])
+])
+
+# The actual symbol exported varies among architectures, so we need
+# to check many symbols (but only in the current architecture.)  No
+# matter what symbol is exported, the kernel #defines node_to_cpumask
+# to the appropriate function and that's what we use.
+AC_DEFUN([LC_EXPORT_NODE_TO_CPUMASK],
+[LB_CHECK_SYMBOL_EXPORT([node_to_cpumask],
+	[arch/$LINUX_ARCH/mm/numa.c],
+	[AC_DEFINE(HAVE_NODE_TO_CPUMASK, 1,
+		[node_to_cpumask is exported by
+		the kernel])]) # x86_64
+LB_CHECK_SYMBOL_EXPORT([node_to_cpu_mask],
+	[arch/$LINUX_ARCH/kernel/smpboot.c],
+	[AC_DEFINE(HAVE_NODE_TO_CPUMASK, 1,
+		[node_to_cpumask is exported by
+			the kernel])]) # ia64
+LB_CHECK_SYMBOL_EXPORT([node_2_cpu_mask],
+	[arch/$LINUX_ARCH/kernel/smpboot.c],
+	[AC_DEFINE(HAVE_NODE_TO_CPUMASK, 1,
+		[node_to_cpumask is exported by
+			the kernel])]) # i386
+])
+
+#
+# LC_FUNC_UNSHARE_FS_STRUCT
+#
+# unshare_fs_struct was introduced in 2.6.30 to prevent others to directly
+# mess with copy_fs_struct
+#
+AC_DEFUN([LC_FUNC_UNSHARE_FS_STRUCT],
+[AC_MSG_CHECKING([if kernel defines unshare_fs_struct()])
+tmp_flags="$EXTRA_KCFLAGS"
+EXTRA_KCFLAGS="-Werror"
+LB_LINUX_TRY_COMPILE([
+	#include <linux/sched.h>
+	#include <linux/fs_struct.h>
+],[
+	unshare_fs_struct();
+],[
+	AC_MSG_RESULT([yes])
+	AC_DEFINE(HAVE_UNSHARE_FS_STRUCT, 1, [unshare_fs_struct found])
+],[
+	AC_MSG_RESULT([no])
+])
+EXTRA_KCFLAGS="$tmp_flags"
+])
+
 #
 # LC_PROG_LINUX
 #
@@ -498,6 +563,9 @@ AC_DEFUN([LC_PROG_LINUX],
 	LC_5ARGS_SYSCTL_PROC_HANDLER
 	LC_HAVE_OOM_H
 	LC_OOMADJ_IN_SIG
+	LC_SET_CPUS_ALLOWED
+	LC_EXPORT_NODE_TO_CPUMASK
+	LC_FUNC_UNSHARE_FS_STRUCT
 ])
 
 #

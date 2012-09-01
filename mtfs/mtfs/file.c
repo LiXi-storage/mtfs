@@ -7,6 +7,7 @@
 #include <linux/module.h>
 #include <linux/uio.h>
 #include <linux/mount.h>
+#include <linux/sched.h>
 #include <mtfs_oplist.h>
 #include <mtfs_ioctl.h>
 #include <mtfs_device.h>
@@ -816,7 +817,7 @@ ssize_t mtfs_file_aio_write(struct kiocb *iocb, const struct iovec *iov,
 				if (!(mtfs_i2dev(file->f_dentry->d_inode)->no_abort)) {
 					result = mtfs_oplist_result(list);
 					size = result.size;
-					mtfs_i_wlock_up(inode);
+					mlock_cancel(lock);
 					goto out_free_oplist;
 				}
 			}

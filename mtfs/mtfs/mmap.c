@@ -4,6 +4,7 @@
 
 #include <linux/module.h>
 #include <linux/uio.h>
+#include <linux/aio.h>
 #include <mtfs_oplist.h>
 #include <mtfs_device.h>
 #include <mtfs_inode.h>
@@ -246,8 +247,8 @@ int mtfs_readpage(struct file *file, struct page *page)
 EXPORT_SYMBOL(mtfs_readpage);
 
 ssize_t mtfs_direct_IO(int rw, struct kiocb *kiocb,
-						const struct iovec *iov, loff_t file_offset,
-						unsigned long nr_segs)
+                       const struct iovec *iov, loff_t file_offset,
+                       unsigned long nr_segs)
 {
 	ssize_t ret = 0;
 	struct iovec *iov_new = NULL;

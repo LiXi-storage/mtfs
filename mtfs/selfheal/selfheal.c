@@ -2,6 +2,7 @@
  * Copyright (C) 2011 Li Xi <pkuelelixi@gmail.com>
  */
 
+#include <linux/sched.h>
 #include <linux/module.h>
 #include <mtfs_list.h>
 #include <mtfs_inode.h>
@@ -268,6 +269,17 @@ int selfheal_add_req(struct mtfs_request *req, mdl_policy_t policy, int idx)
 }
 EXPORT_SYMBOL(selfheal_add_req);
 
+#ifdef HAVE_SET_CPUS_ALLOWED
+#define mtfs_set_cpus_allowed(task, mask)  set_cpus_allowed(task, mask)
+#else
+#define mtfs_set_cpus_allowed(task, mask)  set_cpus_allowed_ptr(task, &(mask))
+#endif
+
+#ifndef HAVE_NODE_TO_CPUMASK
+#define node_to_cpumask(i)         (*(cpumask_of_node(i)))
+#endif
+
+
 #define MTFS_SELFHEAL_TIMEOUT 10
 static int selfheal_daemon_main(void *arg)
 {
@@ -288,8 +300,8 @@ static int selfheal_daemon_main(void *arg)
 				index = 0;
 			}
 		}
-		set_cpus_allowed(current,
-                                 node_to_cpumask(cpu_to_node(index)));
+		mtfs_set_cpus_allowed(current,
+                                      node_to_cpumask(cpu_to_node(index)));
 	}
 #endif
 

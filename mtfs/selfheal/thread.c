@@ -6,6 +6,7 @@
 #include <linux/sched.h>
 #include <linux/spinlock.h>
 #include <linux/smp_lock.h>
+#include <linux/fs_struct.h>
 
 #ifdef HAVE_LINUX_OOM_H
 #include <linux/oom.h>

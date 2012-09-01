@@ -1,11 +1,10 @@
 /.*.cmd
 /*.ko
 /*.mod.c
+/*.ko.unsigned
 
 /.deps
 /autoMakefile
 /autoMakefile.in
 /Makefile
 /modules.order
-/mtfs.ko.unsigned
-
