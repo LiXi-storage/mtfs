@@ -2,14 +2,17 @@
  * Copyright (C) 2011 Li Xi <pkuelelixi@gmail.com>
  */
 
+#if defined (__linux__) && defined(__KERNEL__)
 #include <linux/sched.h>
+#include <thread.h>
+#endif /* defined (__linux__) && defined(__KERNEL__) */
+
+#include <compat.h>
 #include <debug.h>
 #include <memory.h>
-#include <thread.h>
 #include <mtfs_lock.h>
 #include <mtfs_list.h>
 #include <mtfs_interval_tree.h>
-#include <mtfs_inode.h>
 #include "main_internal.h"
 
 /* compatibility matrix */
@@ -201,6 +204,8 @@ static int mlock_extent_init(struct mlock *lock, struct mlock_enqueue_info *einf
 {
 	struct mlock_interval *node = NULL;
 	int ret = 0;
+	__u64 start;
+ 	__u64 end;
 	HENTRY();
 
 	HASSERT(lock->ml_type->mto_type == MLOCK_TYPE_EXTENT);
@@ -211,9 +216,10 @@ static int mlock_extent_init(struct mlock *lock, struct mlock_enqueue_info *einf
 		goto out;
 	}
 
-	//lock->ml_policy_data.mlp_extent = einfo->data.mlp_extent;
-	lock->ml_policy_data.mlp_extent.start = 0;
-	lock->ml_policy_data.mlp_extent.end = MLOCK_EXTENT_EOF;
+	lock->ml_policy_data.mlp_extent = einfo->data.mlp_extent;
+	start = lock->ml_policy_data.mlp_extent.start;
+	end = lock->ml_policy_data.mlp_extent.end;
+	HASSERT(start < end);
 
 	MTFS_INIT_LIST_HEAD(&node->mli_group);
 	mlock_interval_attach(node, lock);
@@ -394,6 +400,18 @@ struct mlock_type_object mlock_type_extent = {
 	.mto_unlink = mlock_extent_unlink,
 };
 
+#if defined (__linux__) && defined(__KERNEL__)
+static void mlock_init_waitq(struct mlock *lock)
+{
+	init_waitqueue_head(&lock->ml_waitq);
+}
+#else /* !defined (__linux__) && defined(__KERNEL__) */
+static void mlock_init_waitq(struct mlock *lock)
+{
+	pthread_mutex_init(&lock->ml_mutex, NULL);
+	pthread_cond_init(&lock->ml_cond, NULL);
+}
+#endif /* !defined (__linux__) && defined(__KERNEL__) */
 
 static struct mlock *mlock_create(struct mlock_resource *resource, struct mlock_enqueue_info *einfo)
 {
@@ -412,8 +430,10 @@ static struct mlock *mlock_create(struct mlock_resource *resource, struct mlock_
 	lock->ml_type = resource->mlr_type;
 	MTFS_INIT_LIST_HEAD(&lock->ml_res_link);
 	lock->ml_state = MLOCK_STATE_NEW;
-	init_waitqueue_head(&lock->ml_waitq);
+	mlock_init_waitq(lock);
+#if defined (__linux__) && defined(__KERNEL__)
 	lock->ml_pid = current->pid;
+#endif
 
 	if (lock->ml_type->mto_init) {
 		ret = lock->ml_type->mto_init(lock, einfo);
@@ -541,9 +561,29 @@ static int mlock_enqueue_try(struct mlock *lock)
 	HRETURN(ret);
 }
 
-struct mlock *mlock_enqueue(struct inode *inode, struct mlock_enqueue_info *einfo)
+#if defined (__linux__) && defined(__KERNEL__)
+
+#define mlock_wait_condition(lock, condition)  \
+    mtfs_wait_condition(lock->ml_waitq, condition)
+
+#else /* !defined (__linux__) && defined(__KERNEL__) */
+
+#define mlock_wait_condition(lock, condition)   \
+do {                                            \
+    pthread_mutex_lock(&lock->ml_mutex);        \
+    {                                           \
+        while (condition == 0) {                \
+            pthread_cond_wait(&lock->ml_cond,   \
+                              &lock->ml_mutex); \
+        }    	                                \
+    }   	                                \
+    pthread_mutex_unlock (&lock->ml_mutex);     \
+} while (0)
+
+#endif /* !defined (__linux__) && defined(__KERNEL__) */
+
+struct mlock *mlock_enqueue(struct mlock_resource *resource, struct mlock_enqueue_info *einfo)
 {
-	struct mlock_resource *resource = mtfs_i2resource(inode);
 	int ret = 0;
 	struct mlock *lock = NULL;
 	HENTRY();
@@ -555,7 +595,7 @@ struct mlock *mlock_enqueue(struct inode *inode, struct mlock_enqueue_info *einf
 
 	ret = mlock_enqueue_try(lock);
 	if (ret) {
-		mtfs_wait_condition(lock->ml_waitq, mlock_is_granted(lock));
+		mlock_wait_condition(lock, mlock_is_granted(lock));
 		HDEBUG("lock is granted because another lock is canceled\n");
 	}
 	HRETURN(lock);
@@ -574,6 +614,22 @@ void mlock_destroy(struct mlock *lock)
 	_HRETURN();
 }
 
+#if defined (__linux__) && defined(__KERNEL__)
+static inline void mlock_wakeup(struct mlock *lock)
+{
+	wake_up(&lock->ml_waitq);
+}
+#else /* !defined (__linux__) && defined(__KERNEL__) */
+static inline void mlock_wakeup(struct mlock *lock)
+{
+	pthread_mutex_lock(&lock->ml_mutex);
+	{
+		pthread_cond_broadcast(&lock->ml_cond);
+	}
+	pthread_mutex_unlock(&lock->ml_mutex);
+}
+#endif /* !defined (__linux__) && defined(__KERNEL__) */
+
 void mlock_resource_reprocess(struct mlock_resource *resource)
 {
 	mtfs_list_t *tmp = NULL;
@@ -589,7 +645,7 @@ void mlock_resource_reprocess(struct mlock_resource *resource)
 		if (ret) {
 			continue;
 		}
-		wake_up(&lock->ml_waitq);	
+		mlock_wakeup(lock);
 	}
 	_HRETURN();
 }
@@ -612,17 +668,15 @@ void mlock_cancel(struct mlock *lock)
 
 #define MLOCK_TYPE_DEFAULT (&mlock_type_extent)
 
-void mlock_resource_init(struct inode *inode)
+void mlock_resource_init(struct mlock_resource *resource)
 {
-	struct mlock_resource *resource = mtfs_i2resource(inode);
 	int index = 0;
 	HENTRY();
 
 	MTFS_INIT_LIST_HEAD(&resource->mlr_granted);
 	MTFS_INIT_LIST_HEAD(&resource->mlr_waiting);
 
-	spin_lock_init(&resource->mlr_lock);
-	resource->mlr_inode = inode;
+	mtfs_spin_lock_init(&resource->mlr_lock);
 	resource->mlr_type = MLOCK_TYPE_DEFAULT;
 
         /* initialize interval trees for each lock mode*/

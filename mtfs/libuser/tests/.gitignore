@@ -6,5 +6,6 @@
 /test_branch_bitmap
 /test_cfg
 /test_interval_tree
+/test_mlock
 /test_parse_option
 /test_rule_tree

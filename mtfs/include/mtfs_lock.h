@@ -5,9 +5,7 @@
 #ifndef __MTFS_LOCK_H__
 #define __MTFS_LOCK_H__
 
-#if defined(__linux__) && defined(__KERNEL__)
-
-#include <linux/spinlock.h>
+#include <spinlock.h>
 #include <mtfs_list.h>
 #include <mtfs_interval_tree.h>
 
@@ -78,8 +76,7 @@ struct mlock_interval_tree {
 struct mlock_resource {
 	mtfs_list_t                mlr_granted; /* Queue of granted locks */
 	mtfs_list_t                mlr_waiting; /* Queue of waiting locks */
-	spinlock_t                 mlr_lock;    /* Lock */
-	struct inode              *mlr_inode;   /* Inode this resource belongs to */
+	mtfs_spinlock_t            mlr_lock;    /* Lock */
 	int                        mlr_inited;  /* Resource is inited */
 	struct mlock_type_object  *mlr_type;    /* Resource type */
 
@@ -89,17 +86,17 @@ struct mlock_resource {
 
 static inline void mlock_resource_lock(struct mlock_resource *resource)
 {
-	spin_lock(&resource->mlr_lock);
+	mtfs_spin_lock(&resource->mlr_lock);
 }
 
 static inline void mlock_resource_unlock(struct mlock_resource *resource)
 {
-	spin_unlock(&resource->mlr_lock);
+	mtfs_spin_unlock(&resource->mlr_lock);
 }
 
 static inline int mlock_resource_is_locked(struct mlock_resource *resource)
 {
-	return spin_is_locked(&resource->mlr_lock);
+	return mtfs_spin_is_locked(&resource->mlr_lock);
 }
 
 /* lock state */
@@ -122,7 +119,12 @@ struct mlock {
 	struct mlock_type_object *ml_type;        /* Lock type */
 	mtfs_list_t               ml_res_link;    /* Linkage to resource's lock queues */
 	mlock_state_t             ml_state;       /* Lock state */
+#if defined (__linux__) && defined(__KERNEL__)
 	wait_queue_head_t         ml_waitq;       /* Process waiting for the lock */
+#else
+	pthread_mutex_t           ml_mutex;
+	pthread_cond_t            ml_cond;
+#endif
 	pid_t                     ml_pid;         /* Pid which created this lock */
 
 	union mlock_policy_data   ml_policy_data; /* Policy data */
@@ -147,11 +149,8 @@ static inline int mlock_is_granted(struct mlock *lock)
 }
 
 extern void mlock_cancel(struct mlock *lock);
-extern struct mlock *mlock_enqueue(struct inode *inode,
-                                   struct mlock_enqueue_info *info);
+struct mlock *mlock_enqueue(struct mlock_resource *resource,
+                            struct mlock_enqueue_info *einfo);
+void mlock_resource_init(struct mlock_resource *resource);
 
-#else /* !defined (__linux__) && defined(__KERNEL__) */
-#error This head file is only for kernel space use
-#endif /* !defined (__linux__) && defined(__KERNEL__) */
-
-#endif /* __MLOCK_H__ */
+#endif /* __MTFS_LOCK_H__ */

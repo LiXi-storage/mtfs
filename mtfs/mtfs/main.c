@@ -15,7 +15,6 @@
 #include "dentry_internal.h"
 #include "heal_internal.h"
 #include "device_internal.h"
-#include "lock_internal.h"
 
 /* This definition must only appear after we include <linux/module.h> */
 #ifndef MODULE_LICENSE

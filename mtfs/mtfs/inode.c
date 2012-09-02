@@ -19,7 +19,6 @@
 #include "super_internal.h"
 #include "mmap_internal.h"
 #include "dentry_internal.h"
-#include "lock_internal.h"
 
 int mtfs_inode_dump(struct inode *inode)
 {
@@ -92,7 +91,7 @@ int mtfs_inode_init(struct inode *inode, struct dentry *dentry)
 		inode->i_mapping->a_ops = &mtfs_aops;
 	}
 
-	mlock_resource_init(inode);
+	mlock_resource_init(mtfs_i2resource(inode));
 	HRETURN(ret);
 }
 

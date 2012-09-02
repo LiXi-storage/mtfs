@@ -567,7 +567,9 @@ ssize_t mtfs_file_readv(struct file *file, const struct iovec *iov,
 	HASSERT(mtfs_f2info(file));
 
 	einfo.mode = MLOCK_MODE_READ;
-	lock = mlock_enqueue(inode, &einfo);
+	einfo.data.mlp_extent.start = 0;
+	einfo.data.mlp_extent.end = MLOCK_EXTENT_EOF;
+	lock = mlock_enqueue(mtfs_i2resource(inode), &einfo);
 	if (lock == NULL) {
 		ret = -ENOMEM;
 		goto tmp_alloced_err;
@@ -696,7 +698,9 @@ ssize_t mtfs_file_aio_read(struct kiocb *iocb, const struct iovec *iov,
 	HASSERT(mtfs_f2info(file));
 
 	einfo.mode = MLOCK_MODE_READ;
-	lock = mlock_enqueue(inode, &einfo);
+	einfo.data.mlp_extent.start = 0;
+	einfo.data.mlp_extent.end = MLOCK_EXTENT_EOF;
+	lock = mlock_enqueue(mtfs_i2resource(inode), &einfo);
 	if (lock == NULL) {
 		ret = -ENOMEM;
 		goto tmp_alloced_err;
@@ -797,7 +801,9 @@ ssize_t mtfs_file_aio_write(struct kiocb *iocb, const struct iovec *iov,
 	}
 
 	einfo.mode = MLOCK_MODE_WRITE;
-	lock = mlock_enqueue(inode, &einfo);
+	einfo.data.mlp_extent.start = 0;
+	einfo.data.mlp_extent.end = MLOCK_EXTENT_EOF;
+	lock = mlock_enqueue(mtfs_i2resource(inode), &einfo);
 	if (lock == NULL) {
 		size = -ENOMEM;
 		goto out_free_oplist;
@@ -967,7 +973,9 @@ ssize_t mtfs_file_writev(struct file *file, const struct iovec *iov,
 	}
 
 	einfo.mode = MLOCK_MODE_WRITE;
-	lock = mlock_enqueue(inode, &einfo);
+	einfo.data.mlp_extent.start = 0;
+	einfo.data.mlp_extent.end = MLOCK_EXTENT_EOF;
+	lock = mlock_enqueue(mtfs_i2resource(inode), &einfo);
 	if (lock == NULL) {
 		size = -ENOMEM;
 		goto out_free_oplist;

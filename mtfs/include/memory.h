@@ -133,5 +133,10 @@ do {                                                                          \
     free(str);                                                                \
 } while (0)
 
+#define MTFS_SLAB_ALLOC(ptr, slab, size) MTFS_ALLOC(ptr, size)
+#define MTFS_SLAB_ALLOC_PTR(ptr, slab)   MTFS_ALLOC(ptr, sizeof *(ptr))
+
+#define MTFS_SLAB_FREE(ptr, slab, size)  MTFS_FREE(ptr, size)
+#define MTFS_SLAB_FREE_PTR(ptr, slab)    MTFS_FREE(ptr, sizeof *(ptr))
 #endif /* !((__linux__) && defined(__KERNEL__)) */
 #endif /* __MTFS_MEMORY_H__ */

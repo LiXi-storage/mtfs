@@ -46,5 +46,6 @@ extern int strncasecmp(const char *s1, const char *s2, size_t n);
 #define MODULE_PARM(a, b)
 #define MODULE_PARM_DESC(a, b)
 
+
 #endif  /* !defined(__linux__) && defined(__KERNEL__) */
 #endif /* _MTFS_COMPAT_H_ */

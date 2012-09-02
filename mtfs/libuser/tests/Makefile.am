@@ -11,7 +11,9 @@ LIBMTFS_LIBS = $(top_builddir)/mtfs/libuser/libuser.a
 if LIBMTFS_TESTS
 noinst_PROGRAMS = err2str
 
-noinst_PROGRAMS += test_rule_tree test_branch_bitmap test_parse_option test_cfg test_interval_tree
+noinst_PROGRAMS += test_rule_tree test_branch_bitmap
+noinst_PROGRAMS += test_parse_option test_cfg
+noinst_PROGRAMS += test_interval_tree test_mlock
 
 test_rule_tree_SOURCES = test_rule_tree.c
 test_rule_tree_CFLAGS = $(LL_CFLAGS)
@@ -37,6 +39,11 @@ test_interval_tree_SOURCES = test_interval_tree.c
 test_interval_tree_CFLAGS = $(LL_CFLAGS)
 test_interval_tree_LDADD := $(LIBMTFS_LIBS)
 test_interval_tree_DEPENDENCIES := $(LIBMTFS_LIBS)
+
+test_mlock_SOURCES = test_mlock.c
+test_mlock_CFLAGS = $(LL_CFLAGS)
+test_mlock_LDADD := $(LIBMTFS_LIBS) -lpthread
+test_mlock_DEPENDENCIES := $(LIBMTFS_LIBS)
 endif #LIBMTFS_TESTS
 
 noinst_DATA = 
