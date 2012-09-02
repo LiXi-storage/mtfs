@@ -567,8 +567,8 @@ ssize_t mtfs_file_readv(struct file *file, const struct iovec *iov,
 	HASSERT(mtfs_f2info(file));
 
 	einfo.mode = MLOCK_MODE_READ;
-	einfo.data.mlp_extent.start = 0;
-	einfo.data.mlp_extent.end = MLOCK_EXTENT_EOF;
+	einfo.data.mlp_extent.start = *ppos;
+	einfo.data.mlp_extent.end = *ppos + count;
 	lock = mlock_enqueue(mtfs_i2resource(inode), &einfo);
 	if (lock == NULL) {
 		ret = -ENOMEM;
@@ -698,8 +698,8 @@ ssize_t mtfs_file_aio_read(struct kiocb *iocb, const struct iovec *iov,
 	HASSERT(mtfs_f2info(file));
 
 	einfo.mode = MLOCK_MODE_READ;
-	einfo.data.mlp_extent.start = 0;
-	einfo.data.mlp_extent.end = MLOCK_EXTENT_EOF;
+	einfo.data.mlp_extent.start = pos;
+	einfo.data.mlp_extent.end = pos + count;
 	lock = mlock_enqueue(mtfs_i2resource(inode), &einfo);
 	if (lock == NULL) {
 		ret = -ENOMEM;
@@ -760,6 +760,7 @@ ssize_t mtfs_file_aio_write(struct kiocb *iocb, const struct iovec *iov,
 	struct iovec *iov_new = NULL;
 	struct iovec *iov_tmp = NULL;
 	size_t length = sizeof(*iov) * nr_segs;
+	size_t count = 0;
 	mtfs_bindex_t bindex = 0;
 	loff_t tmp_pos = 0;
 	mtfs_bindex_t i = 0;
@@ -770,6 +771,16 @@ ssize_t mtfs_file_aio_write(struct kiocb *iocb, const struct iovec *iov,
 	struct mlock *lock = NULL;
 	struct mlock_enqueue_info einfo;
 	HENTRY();
+
+	count = get_iov_count(iov, &nr_segs);
+	/*
+	 * "If nbyte is 0, read() will return 0 and have no other results."
+	 *						-- Single Unix Spec
+	 */
+	if (count <= 0) {
+		ret = count;
+		goto out;
+	}
 
 	MTFS_ALLOC(iov_new, length);
 	if (!iov_new) {
@@ -801,8 +812,8 @@ ssize_t mtfs_file_aio_write(struct kiocb *iocb, const struct iovec *iov,
 	}
 
 	einfo.mode = MLOCK_MODE_WRITE;
-	einfo.data.mlp_extent.start = 0;
-	einfo.data.mlp_extent.end = MLOCK_EXTENT_EOF;
+	einfo.data.mlp_extent.start = pos;
+	einfo.data.mlp_extent.end = pos + count;
 	lock = mlock_enqueue(mtfs_i2resource(inode), &einfo);
 	if (lock == NULL) {
 		size = -ENOMEM;
@@ -933,6 +944,7 @@ ssize_t mtfs_file_writev(struct file *file, const struct iovec *iov,
 	struct iovec *iov_new = NULL;
 	struct iovec *iov_tmp = NULL;
 	size_t length = sizeof(*iov) * nr_segs;
+	size_t count = 0;
 	mtfs_bindex_t bindex = 0;
 	loff_t tmp_pos = 0;
 	mtfs_bindex_t i = 0;
@@ -942,6 +954,16 @@ ssize_t mtfs_file_writev(struct file *file, const struct iovec *iov,
 	struct mlock *lock = NULL;
 	struct mlock_enqueue_info einfo;
 	HENTRY();
+
+	count = get_iov_count(iov, &nr_segs);
+	/*
+	 * "If nbyte is 0, read() will return 0 and have no other results."
+	 *						-- Single Unix Spec
+	 */
+	if (count <= 0) {
+		ret = count;
+		goto out;
+	}
 
 	MTFS_ALLOC(iov_new, length);
 	if (!iov_new) {
@@ -973,8 +995,8 @@ ssize_t mtfs_file_writev(struct file *file, const struct iovec *iov,
 	}
 
 	einfo.mode = MLOCK_MODE_WRITE;
-	einfo.data.mlp_extent.start = 0;
-	einfo.data.mlp_extent.end = MLOCK_EXTENT_EOF;
+	einfo.data.mlp_extent.start = *ppos;
+	einfo.data.mlp_extent.end = *ppos + count;
 	lock = mlock_enqueue(mtfs_i2resource(inode), &einfo);
 	if (lock == NULL) {
 		size = -ENOMEM;

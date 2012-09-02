@@ -321,7 +321,7 @@ void *check_proc(thread_info_t *thread_info)
 			done = 0;
 			do {
 				first_read_count = read(branch_fd[0], first_buf, count);
-				if (ret < 0) {
+				if (first_read_count < 0) {
 					HERROR("failed to read\n");
 					goto out;
 				}
@@ -338,13 +338,14 @@ void *check_proc(thread_info_t *thread_info)
 						goto out;
 					}
 
-					//if (memcmp(first_buf, buf, read_count) != 0) {
-					//	HERROR("buff differ\n");
-					//	goto out;
-					//}
+					if (memcmp(first_buf, buf, read_count) != 0) {
+						HERROR("buff differ\n");
+						goto out;
+					}
 				}
 			} while (first_read_count != 0);
 			HPRINT("checked\n");
+			sleep(10);
 		}
 		pthread_rwlock_unlock(&rwlock);
 		sleep_random();
