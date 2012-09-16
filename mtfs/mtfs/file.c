@@ -17,6 +17,9 @@
 #include "support_internal.h"
 #include "mmap_internal.h"
 
+#define READ 0
+#define WRITE 1
+
 int mtfs_file_dump(struct file *file)
 {
 	int ret = 0;
@@ -38,6 +41,41 @@ int mtfs_file_dump(struct file *file)
 		ret = mtfs_dentry_dump(dentry);
 	}
 out:
+	return ret;
+}
+
+static int mtfs_f_alloc(struct file *file, int bnum)
+{
+	struct mtfs_file_info *f_info = NULL;
+	int ret = 0;
+	
+	HASSERT(file);
+	HASSERT(bnum > 0 && bnum <= MTFS_BRANCH_MAX);
+
+	MTFS_SLAB_ALLOC_PTR(f_info, mtfs_file_info_cache);
+	if (unlikely(f_info == NULL)) {
+		ret = -ENOMEM;
+		goto out;
+	}
+	f_info->bnum = bnum;
+	
+	_mtfs_f2info(file) = f_info;
+out:
+	return ret;
+}
+
+static int mtfs_f_free(struct file *file)
+{
+	struct mtfs_file_info *f_info = NULL;
+	int ret = 0;
+	
+	HASSERT(file);
+	f_info = mtfs_f2info(file);
+	HASSERT(f_info);
+
+	MTFS_SLAB_FREE_PTR(f_info, mtfs_file_info_cache);
+	_mtfs_f2info(file) = NULL;
+	HASSERT(_mtfs_f2info(file) == NULL);
 	return ret;
 }
 
@@ -492,9 +530,10 @@ static size_t get_iov_count(const struct iovec *iov,
 	}
 	return count;
 }
+
 #ifdef HAVE_FILE_READV
-size_t mtfs_file_readv_branch(struct file *file, const struct iovec *iov,
-                                     unsigned long nr_segs, loff_t *ppos, mtfs_bindex_t bindex)
+ssize_t mtfs_file_rw_branch(int is_write, struct file *file, const struct iovec *iov,
+                            unsigned long nr_segs, loff_t *ppos, mtfs_bindex_t bindex)
 {
 	ssize_t ret = 0;
 	struct file *hidden_file = mtfs_f2branch(file, bindex);
@@ -502,27 +541,47 @@ size_t mtfs_file_readv_branch(struct file *file, const struct iovec *iov,
 	struct inode *hidden_inode = NULL;
 	HENTRY();
 
-	if (hidden_file) {
-		HASSERT(hidden_file->f_op);
-		HASSERT(hidden_file->f_op->readv);
-		ret = hidden_file->f_op->readv(hidden_file, iov, nr_segs, ppos);
-		if (ret > 0) {
-			/*
-			 * Lustre update inode size whenever read/write.
-			 * TODO: Do not update unless file growes bigger.
-			 */
-			inode = file->f_dentry->d_inode;
-			HASSERT(inode);
-			hidden_inode = mtfs_i2branch(inode, bindex);
-			HASSERT(hidden_inode);
-			fsstack_copy_inode_size(inode, hidden_inode);
-		}
+	if (is_write) {
+		ret = mtfs_device_branch_errno(mtfs_f2dev(file), bindex, BOPS_MASK_WRITE);
 	} else {
-		HERROR("branch[%d] of file [%*s] is NULL\n",
-		       bindex, file->f_dentry->d_name.len, file->f_dentry->d_name.name);
-		ret = -ENOENT;
+		ret = mtfs_device_branch_errno(mtfs_f2dev(file), bindex, BOPS_MASK_READ);
 	}
 
+	if (ret) {
+		HDEBUG("branch[%d] is abandoned\n", bindex);
+		goto out; 
+	}
+
+	if (hidden_file == NULL) {
+		HERROR("branch[%d] of file [%*s] is NULL\n",
+		       bindex, file->f_dentry->d_name.len,
+		       file->f_dentry->d_name.name);
+		ret = -ENOENT;
+		goto out;
+	}
+
+	HASSERT(hidden_file->f_op);
+	if (is_write) {
+		HASSERT(hidden_file->f_op->writev);
+		ret = hidden_file->f_op->writev(hidden_file, iov, nr_segs, ppos);
+	} else {
+		HASSERT(hidden_file->f_op->readv);
+		ret = hidden_file->f_op->readv(hidden_file, iov, nr_segs, ppos);
+	}
+
+	if (ret > 0) {
+		/*
+		 * Lustre update inode size whenever read/write.
+		 * TODO: Do not update unless file growes bigger.
+		 */
+		inode = file->f_dentry->d_inode;
+		HASSERT(inode);
+		hidden_inode = mtfs_i2branch(inode, bindex);
+		HASSERT(hidden_inode);
+		fsstack_copy_inode_size(inode, hidden_inode);
+	}
+
+out:
 	HRETURN(ret);
 }
 
@@ -578,7 +637,7 @@ ssize_t mtfs_file_readv(struct file *file, const struct iovec *iov,
 	for (bindex = 0; bindex < mtfs_f2bnum(file); bindex++) {
 		memcpy((char *)iov_tmp, (char *)iov_new, length);
 		tmp_pos = *ppos;
-		ret = mtfs_file_readv_branch(file, iov_tmp, nr_segs, &tmp_pos, bindex);
+		ret = mtfs_file_rw_branch(READ, file, iov_tmp, nr_segs, &tmp_pos, bindex);
 		HDEBUG("readed branch[%d] of file [%*s] at pos = %llu, ret = %ld\n",
 		       bindex, file->f_dentry->d_name.len, file->f_dentry->d_name.name,
 		       *ppos, ret);
@@ -607,12 +666,140 @@ ssize_t mtfs_file_read(struct file *file, char __user *buf, size_t len,
 	return mtfs_file_readv(file, &local_iov, 1, ppos);
 }
 EXPORT_SYMBOL(mtfs_file_read);
-#else /* !HAVE_FILE_READV */
-#define READ 0
-#define WRITE 1
 
-size_t mtfs_readv_writev_branch(int type, struct file *file, const struct iovec *iov,
-                                unsigned long nr_segs, loff_t *ppos, mtfs_bindex_t bindex)
+ssize_t mtfs_file_writev(struct file *file, const struct iovec *iov,
+                         unsigned long nr_segs, loff_t *ppos)
+{
+	int ret = 0;
+	ssize_t size = 0;
+	struct iovec *iov_new = NULL;
+	struct iovec *iov_tmp = NULL;
+	size_t length = sizeof(*iov) * nr_segs;
+	size_t count = 0;
+	mtfs_bindex_t bindex = 0;
+	loff_t tmp_pos = 0;
+	mtfs_bindex_t i = 0;
+	struct mtfs_operation_list *list = NULL;
+	mtfs_operation_result_t result = {0};
+	struct inode *inode = file->f_dentry->d_inode;
+	struct mlock *lock = NULL;
+	struct mlock_enqueue_info einfo;
+	HENTRY();
+
+	count = get_iov_count(iov, &nr_segs);
+	/*
+	 * "If nbyte is 0, read() will return 0 and have no other results."
+	 *						-- Single Unix Spec
+	 */
+	if (count <= 0) {
+		ret = count;
+		goto out;
+	}
+
+	MTFS_ALLOC(iov_new, length);
+	if (!iov_new) {
+		size = -ENOMEM;
+		goto out;
+	}
+	
+	MTFS_ALLOC(iov_tmp, length);
+	if (!iov_tmp) {
+		size = -ENOMEM;
+		goto out_new_alloced;
+	}	
+	memcpy((char *)iov_new, (char *)iov, length); 
+
+	list = mtfs_oplist_build(file->f_dentry->d_inode);
+	if (unlikely(list == NULL)) {
+		HERROR("failed to build operation list\n");
+		size = -ENOMEM;
+		goto out_tmp_alloced;
+	}
+
+	if (list->latest_bnum == 0) {
+		HERROR("file [%*s] has no valid branch, please check it\n",
+		       file->f_dentry->d_name.len, file->f_dentry->d_name.name);
+		if (!(mtfs_i2dev(file->f_dentry->d_inode)->no_abort)) {
+			size = -EIO;
+			goto out_free_oplist;
+		}
+	}
+
+	einfo.mode = MLOCK_MODE_WRITE;
+	einfo.data.mlp_extent.start = *ppos;
+	einfo.data.mlp_extent.end = *ppos + count;
+	lock = mlock_enqueue(mtfs_i2resource(inode), &einfo);
+	if (lock == NULL) {
+		size = -ENOMEM;
+		goto out_free_oplist;
+	}
+
+	for (i = 0; i < mtfs_f2bnum(file); i++) {
+		bindex = list->op_binfo[i].bindex;
+		memcpy((char *)iov_tmp, (char *)iov_new, length);
+		tmp_pos = *ppos;
+		size = mtfs_file_rw_branch(WRITE, file, iov_tmp, nr_segs, &tmp_pos, bindex);
+		result.size = size;
+		mtfs_oplist_setbranch(list, i, (size >= 0 ? 1 : 0), result);
+		if (i == list->latest_bnum - 1) {
+			mtfs_oplist_check(list);
+			if (list->success_latest_bnum <= 0) {
+				HDEBUG("operation failed for all latest %d branches\n", list->latest_bnum);
+				if (!(mtfs_i2dev(file->f_dentry->d_inode)->no_abort)) {
+					result = mtfs_oplist_result(list);
+					size = result.size;
+					mlock_cancel(lock);
+					goto out_free_oplist;
+				}
+			}
+		}
+	}
+
+	mlock_cancel(lock);
+
+	mtfs_oplist_check(list);
+	if (list->success_bnum <= 0) {
+		result = mtfs_oplist_result(list);
+		size = result.size;
+		goto out_free_oplist;
+	}
+
+	ret = mtfs_oplist_update(file->f_dentry->d_inode, list);
+	if (ret) {
+		HERROR("failed to update inode\n");
+		HBUG();
+	}
+
+	HASSERT(list->success_bnum > 0);
+	result = mtfs_oplist_result(list);
+	size = result.size;
+	*ppos = *ppos + size;
+
+out_free_oplist:
+	mtfs_oplist_free(list);
+out_tmp_alloced:
+	MTFS_FREE(iov_tmp, length);
+out_new_alloced:
+	MTFS_FREE(iov_new, length);
+out:
+	HRETURN(size);
+}
+EXPORT_SYMBOL(mtfs_file_writev);
+
+ssize_t mtfs_file_write(struct file *file, const char __user *buf, size_t len, loff_t *ppos)
+{
+	struct iovec local_iov = { .iov_base = (void __user *)buf,
+	                           .iov_len = len };
+	HASSERT(file->f_op);
+	HASSERT(file->f_op->writev);
+	return file->f_op->writev(file, &local_iov, 1, ppos);	
+}
+EXPORT_SYMBOL(mtfs_file_write);
+
+#else /* !HAVE_FILE_READV */
+
+size_t mtfs_file_rw_branch(int type, struct file *file, const struct iovec *iov,
+                           unsigned long nr_segs, loff_t *ppos, mtfs_bindex_t bindex)
 {
 	ssize_t ret = 0;
 	struct file *hidden_file = mtfs_f2branch(file, bindex);
@@ -709,7 +896,7 @@ ssize_t mtfs_file_aio_read(struct kiocb *iocb, const struct iovec *iov,
 	for (bindex = 0; bindex < mtfs_f2bnum(file); bindex++) {
 		memcpy((char *)iov_tmp, (char *)iov_new, length);
 		tmp_pos = pos;
-		ret = mtfs_readv_writev_branch(READ, file, iov_tmp, nr_segs, &tmp_pos, bindex);
+		ret = mtfs_file_rw_branch(READ, file, iov_tmp, nr_segs, &tmp_pos, bindex);
 		HDEBUG("readed branch[%d] of file [%*s] at pos = %llu, ret = %ld\n",
 		       bindex, file->f_dentry->d_name.len, file->f_dentry->d_name.name,
 		       pos, ret);
@@ -824,7 +1011,7 @@ ssize_t mtfs_file_aio_write(struct kiocb *iocb, const struct iovec *iov,
 		bindex = list->op_binfo[i].bindex;
 		memcpy((char *)iov_tmp, (char *)iov_new, length);
 		tmp_pos = pos;
-		size = mtfs_readv_writev_branch(WRITE, file, iov_tmp, nr_segs, &tmp_pos, bindex);
+		size = mtfs_file_rw_branch(WRITE, file, iov_tmp, nr_segs, &tmp_pos, bindex);
 		result.size = size;
 		mtfs_oplist_setbranch(list, i, (size >= 0 ? 1 : 0), result);
 		if (i == list->latest_bnum - 1) {
@@ -893,179 +1080,8 @@ ssize_t mtfs_file_write(struct file *file, const char __user *buf, size_t len, l
 	HRETURN(ret);
 }
 EXPORT_SYMBOL(mtfs_file_write);
+
 #endif /* !HAVE_FILE_READV */
-
-#ifdef HAVE_FILE_WRITEV
-static ssize_t mtfs_file_writev_branch(struct file *file, const struct iovec *iov,
-                                       unsigned long nr_segs, loff_t *ppos, mtfs_bindex_t bindex)
-{
-	ssize_t ret = 0;
-	struct file *hidden_file = mtfs_f2branch(file, bindex);
-	struct inode *inode = NULL;
-	struct inode *hidden_inode = NULL;
-	HENTRY();
-
-	ret = mtfs_device_branch_errno(mtfs_f2dev(file), bindex, BOPS_MASK_WRITE);
-	if (ret) {
-		HDEBUG("branch[%d] is abandoned\n", bindex);
-		goto out; 
-	}
-
-	if (hidden_file) {
-		HASSERT(hidden_file->f_op);
-		HASSERT(hidden_file->f_op->writev);
-		ret = hidden_file->f_op->writev(hidden_file, iov, nr_segs, ppos);
-		if (ret > 0) {
-			/*
-			 * Lustre update inode size whenever read/write.
-			 * TODO: Do not update unless file growes bigger.
-			 */
-			inode = file->f_dentry->d_inode;
-			HASSERT(inode);
-			hidden_inode = mtfs_i2branch(inode, bindex);
-			HASSERT(hidden_inode);
-			fsstack_copy_inode_size(inode, hidden_inode);
-		}
-	} else {
-		HERROR("branch[%d] of file [%*s] is NULL\n",
-		       bindex, file->f_dentry->d_name.len, file->f_dentry->d_name.name);
-		ret = -ENOENT;
-	}
-
-out:
-	HRETURN(ret);
-}
-
-ssize_t mtfs_file_writev(struct file *file, const struct iovec *iov,
-                         unsigned long nr_segs, loff_t *ppos)
-{
-	int ret = 0;
-	ssize_t size = 0;
-	struct iovec *iov_new = NULL;
-	struct iovec *iov_tmp = NULL;
-	size_t length = sizeof(*iov) * nr_segs;
-	size_t count = 0;
-	mtfs_bindex_t bindex = 0;
-	loff_t tmp_pos = 0;
-	mtfs_bindex_t i = 0;
-	struct mtfs_operation_list *list = NULL;
-	mtfs_operation_result_t result = {0};
-	struct inode *inode = file->f_dentry->d_inode;
-	struct mlock *lock = NULL;
-	struct mlock_enqueue_info einfo;
-	HENTRY();
-
-	count = get_iov_count(iov, &nr_segs);
-	/*
-	 * "If nbyte is 0, read() will return 0 and have no other results."
-	 *						-- Single Unix Spec
-	 */
-	if (count <= 0) {
-		ret = count;
-		goto out;
-	}
-
-	MTFS_ALLOC(iov_new, length);
-	if (!iov_new) {
-		size = -ENOMEM;
-		goto out;
-	}
-	
-	MTFS_ALLOC(iov_tmp, length);
-	if (!iov_tmp) {
-		size = -ENOMEM;
-		goto out_new_alloced;
-	}	
-	memcpy((char *)iov_new, (char *)iov, length); 
-
-	list = mtfs_oplist_build(file->f_dentry->d_inode);
-	if (unlikely(list == NULL)) {
-		HERROR("failed to build operation list\n");
-		size = -ENOMEM;
-		goto out_tmp_alloced;
-	}
-
-	if (list->latest_bnum == 0) {
-		HERROR("file [%*s] has no valid branch, please check it\n",
-		       file->f_dentry->d_name.len, file->f_dentry->d_name.name);
-		if (!(mtfs_i2dev(file->f_dentry->d_inode)->no_abort)) {
-			size = -EIO;
-			goto out_free_oplist;
-		}
-	}
-
-	einfo.mode = MLOCK_MODE_WRITE;
-	einfo.data.mlp_extent.start = *ppos;
-	einfo.data.mlp_extent.end = *ppos + count;
-	lock = mlock_enqueue(mtfs_i2resource(inode), &einfo);
-	if (lock == NULL) {
-		size = -ENOMEM;
-		goto out_free_oplist;
-	}
-
-	for (i = 0; i < mtfs_f2bnum(file); i++) {
-		bindex = list->op_binfo[i].bindex;
-		memcpy((char *)iov_tmp, (char *)iov_new, length);
-		tmp_pos = *ppos;
-		size = mtfs_file_writev_branch(file, iov_tmp, nr_segs, &tmp_pos, bindex);
-		result.size = size;
-		mtfs_oplist_setbranch(list, i, (size >= 0 ? 1 : 0), result);
-		if (i == list->latest_bnum - 1) {
-			mtfs_oplist_check(list);
-			if (list->success_latest_bnum <= 0) {
-				HDEBUG("operation failed for all latest %d branches\n", list->latest_bnum);
-				if (!(mtfs_i2dev(file->f_dentry->d_inode)->no_abort)) {
-					result = mtfs_oplist_result(list);
-					size = result.size;
-					mlock_cancel(lock);
-					goto out_free_oplist;
-				}
-			}
-		}
-	}
-
-	mlock_cancel(lock);
-
-	mtfs_oplist_check(list);
-	if (list->success_bnum <= 0) {
-		result = mtfs_oplist_result(list);
-		size = result.size;
-		goto out_free_oplist;
-	}
-
-	ret = mtfs_oplist_update(file->f_dentry->d_inode, list);
-	if (ret) {
-		HERROR("failed to update inode\n");
-		HBUG();
-	}
-
-	HASSERT(list->success_bnum > 0);
-	result = mtfs_oplist_result(list);
-	size = result.size;
-	*ppos = *ppos + size;
-
-out_free_oplist:
-	mtfs_oplist_free(list);
-out_tmp_alloced:
-	MTFS_FREE(iov_tmp, length);
-out_new_alloced:
-	MTFS_FREE(iov_new, length);
-out:
-	HRETURN(size);
-}
-EXPORT_SYMBOL(mtfs_file_writev);
-
-ssize_t mtfs_file_write(struct file *file, const char __user *buf, size_t len, loff_t *ppos)
-{
-	struct iovec local_iov = { .iov_base = (void __user *)buf,
-	                           .iov_len = len };
-	HASSERT(file->f_op);
-	HASSERT(file->f_op->writev);
-	return file->f_op->writev(file, &local_iov, 1, ppos);	
-}
-EXPORT_SYMBOL(mtfs_file_write);
-#else /* !HAVE_FILE_WRITEV */
-#endif /* !HAVE_FILE_WRITEV */
 
 static ssize_t mtfs_file_write_nonwritev_branch(struct file *file, const char __user *buf, size_t len,
                                                 loff_t *ppos, mtfs_bindex_t bindex)
@@ -1313,12 +1329,8 @@ struct file_operations mtfs_main_fops =
 #endif /* HAVE_KERNEL_SENDFILE */
 #ifdef HAVE_FILE_READV
 	readv:      mtfs_file_readv,
-#else /* !HAVE_FILE_READV */
-#endif /* !HAVE_FILE_READV */
-#ifdef HAVE_FILE_WRITEV
 	writev:     mtfs_file_writev,
-#else /* !HAVE_FILE_WRITEV */
-#endif /* !HAVE_FILE_WRITEV */
+#endif /* HAVE_FILE_READV */
 	readdir:    mtfs_readdir,
 	poll:       mtfs_poll,
 	ioctl:      mtfs_ioctl,

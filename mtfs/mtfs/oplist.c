@@ -61,36 +61,55 @@ out:
 }
 EXPORT_SYMBOL(mtfs_oplist_build_keep_order);
 
-struct mtfs_operation_list *mtfs_oplist_build(struct inode *inode)
+int mtfs_oplist_init(struct mtfs_operation_list *oplist, struct inode *inode)
 {
-	struct mtfs_operation_list *list = NULL;
 	mtfs_bindex_t bindex = 0;
 	mtfs_bindex_t bnum = mtfs_i2bnum(inode);
 	mtfs_bindex_t blast = bnum - 1;
 	mtfs_bindex_t bfirst = 0;
 	int is_valid = 1;
 	struct mtfs_operation_binfo *binfo = NULL;
-
-	list = mtfs_oplist_alloc(bnum);
-	if (unlikely(list == NULL)) {
-		goto out;
-	}
+	int ret = 0;
+	HENTRY();
 
 	/* NOT a good implementation, change me */
 	for (bindex = 0; bindex < bnum; bindex++) {
 		is_valid = mtfs_branch_is_valid(inode, bindex, MTFS_DATA_VALID);
 		if (is_valid) {
-			binfo = &(list->op_binfo[bfirst]);
+			binfo = &(oplist->op_binfo[bfirst]);
 			bfirst++;
 		} else {
-			binfo = &(list->op_binfo[blast]);
+			binfo = &(oplist->op_binfo[blast]);
 			blast--;
 		}
 		binfo->bindex = bindex;
 	}
-	list->latest_bnum = bfirst;
+	oplist->latest_bnum = bfirst;
+	oplist->bnum = bnum;
+
+	HRETURN(ret);
+}
+EXPORT_SYMBOL(mtfs_oplist_init);
+
+struct mtfs_operation_list *mtfs_oplist_build(struct inode *inode)
+{
+	struct mtfs_operation_list *oplist = NULL;
+	mtfs_bindex_t bnum = mtfs_i2bnum(inode);
+	int ret = 0;
+	HENTRY();
+	
+	oplist = mtfs_oplist_alloc(bnum);
+	if (unlikely(oplist == NULL)) {
+		goto out;
+	}
+
+	ret = mtfs_oplist_init(oplist, inode);
+	if (unlikely(ret)) {
+		mtfs_oplist_free(oplist);
+		oplist = NULL;
+	}	
 out:
-	return list;
+	HRETURN(oplist);
 }
 EXPORT_SYMBOL(mtfs_oplist_build);
 
@@ -156,6 +175,64 @@ mtfs_operation_result_t mtfs_oplist_result(struct mtfs_operation_list *list)
 	return list->op_binfo[bindex].result;
 }
 EXPORT_SYMBOL(mtfs_oplist_result);
+
+/* Choose a operation status returned */
+void mtfs_oplist_merge(struct mtfs_operation_list *oplist)
+{
+	mtfs_bindex_t bindex = 0;
+	mtfs_bindex_t bindex_chosed = -1;
+	HENTRY();
+
+	if (oplist->checked_bnum == 0) {
+		HASSERT(oplist->valid_bnum == 0);
+		HASSERT(oplist->success_bnum == 0);
+		HASSERT(oplist->success_latest_bnum == 0);
+		HASSERT(oplist->success_nonlatest_bnum == 0);
+		HASSERT(oplist->fault_bnum == 0);
+		HASSERT(oplist->fault_latest_bnum == 0);
+		HASSERT(oplist->fault_nonlatest_bnum == 0);
+	}
+
+	for (bindex = oplist->checked_bnum; bindex < oplist->bnum; bindex++) {
+		if (!oplist->op_binfo[bindex].valid) {
+			break;
+		}
+
+		oplist->checked_bnum++;
+		oplist->valid_bnum++;
+		if (oplist->op_binfo[bindex].is_suceessful) {
+			oplist->success_bnum++;
+			if (bindex < oplist->latest_bnum) {
+				oplist->success_latest_bnum++;
+			} else {
+				oplist->success_nonlatest_bnum++;
+			}
+			bindex_chosed = bindex;
+		} else {
+			oplist->fault_bnum++;
+			if (bindex < oplist->latest_bnum) {
+				oplist->fault_latest_bnum++;
+			} else {
+				oplist->fault_nonlatest_bnum++;
+			}
+		}
+	}
+	HASSERT(oplist->fault_latest_bnum + oplist->fault_nonlatest_bnum == oplist->fault_bnum);
+	HASSERT(oplist->success_latest_bnum + oplist->success_nonlatest_bnum == oplist->success_bnum);
+	HASSERT(oplist->success_bnum + oplist->fault_bnum == oplist->valid_bnum);
+	HASSERT(oplist->valid_bnum <= oplist->bnum);
+	HASSERT(oplist->checked_bnum <= oplist->bnum);
+
+	if (oplist->opinfo == NULL) {
+		oplist->opinfo = &(oplist->op_binfo[0]);
+	} else if (bindex_chosed != -1) {
+		oplist->opinfo = &(oplist->op_binfo[bindex_chosed]);
+	}
+	_HRETURN();
+
+
+}
+EXPORT_SYMBOL(mtfs_oplist_merge);
 
 int mtfs_oplist_update(struct inode *inode, struct mtfs_operation_list *list)
 {

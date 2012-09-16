@@ -29,6 +29,7 @@ struct mtfs_operation_list {
 	mtfs_bindex_t checked_bnum;             /* Number of nonlatest branches failed */
 	mtfs_bindex_t latest_bnum;              /* Number of latest branches */
 	struct mtfs_operation_binfo op_binfo[MTFS_BRANCH_MAX];  /* Global bindex */
+	struct mtfs_operation_binfo *opinfo;    /* Merged Result */
 	mtfs_bindex_t valid_bnum;               /* Number of valid branches */
 	mtfs_bindex_t success_bnum;             /* Number of branches succeeded */
 	mtfs_bindex_t success_latest_bnum;      /* Number of latest branches succeeded */
@@ -41,7 +42,9 @@ struct mtfs_operation_list {
 extern struct mtfs_operation_list *mtfs_oplist_build_keep_order(struct inode *inode);
 extern struct mtfs_operation_list *mtfs_oplist_build(struct inode *inode);
 extern struct mtfs_operation_list *mtfs_oplist_alloc(mtfs_bindex_t bnum);
-extern void mtfs_oplist_free(struct mtfs_operation_list *list);
+int mtfs_oplist_init(struct mtfs_operation_list *oplist, struct inode *inode);
+extern void mtfs_oplist_free(struct mtfs_operation_list *oplist);
+void mtfs_oplist_merge(struct mtfs_operation_list *oplist);
 static inline int mtfs_oplist_setbranch(struct mtfs_operation_list *list,
                           mtfs_bindex_t bindex,
                           int is_successful,
@@ -53,6 +56,7 @@ static inline int mtfs_oplist_setbranch(struct mtfs_operation_list *list,
 	list->op_binfo[bindex].result = result;
 	return 0;
 }
+
 mtfs_operation_result_t mtfs_oplist_result(struct mtfs_operation_list *list);
 int mtfs_oplist_update(struct inode *inode, struct mtfs_operation_list *list);
 int mtfs_oplist_check(struct mtfs_operation_list *list);
