@@ -12,8 +12,6 @@ TESTS_DIR=${TESTS_DIR:-$(cd $(dirname $0); echo $PWD)}
 init_test_env
 
 echo "==== $0: started ===="
-BRANCH_0="$MTFS_DIR1/test"
-BRANCH_1="$MTFS_DIR2/test"
 
 check_nonexist()
 {
@@ -235,6 +233,17 @@ test_3b()
 	check_nonexist $DIR/f3b || error "$DIR/f3b exist $?"
 }
 run_test 3b "rmbranch all branches"
+
+test_4() {
+	$MULTICORRECT $DIR/$tfile $BRANCH_0/$tfile $BRANCH_1/$tfile -s 60 > /dev/null \
+	|| error "multicorret failed"
+	diff $BRANCH_0/$tfile $BRANCH_1/$tfile > /dev/null || error "file diff"
+	#rm -f $DIR/$tfile
+}
+leak_detect_state_push "no"
+run_test 4 "concurrent write test ======================================="
+leak_detect_state_pop
+
 
 cleanup_all
 echo "=== $0: completed ==="

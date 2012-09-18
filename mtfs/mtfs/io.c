@@ -110,16 +110,20 @@ static int mtfs_io_iter_init_rw(struct mtfs_io *io)
 
 void mtfs_io_iter_start_rw(struct mtfs_io *io)
 {
+#ifdef HAVE_FILE_READV
 	struct mtfs_io_rw *io_rw = &io->u.mi_rw;
 	mtfs_bindex_t global_bindex = io->mi_oplist.op_binfo[io->mi_bindex].bindex;
+#endif /* HAVE_FILE_READV */
 	HENTRY();
 
+#ifdef HAVE_FILE_READV
 	io->mi_result.size = mtfs_file_rw_branch(io_rw->is_write,
 	                                         io_rw->file,
 	                                         io_rw->iov_tmp,
 	                                         io_rw->nr_segs,
 	                                         &io_rw->pos_tmp,
 	                                         global_bindex);
+#endif /* HAVE_FILE_READV */
 	if (io->mi_result.size > 0) {
 		/* TODO: this check is weak */
 		io->mi_successful = 1;

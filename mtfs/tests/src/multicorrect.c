@@ -20,11 +20,9 @@ typedef struct block {
 
 #define MAX_BUFF_LENGTH 104857600
 #define MAX_LSEEK_OFFSET MAX_BUFF_LENGTH
-pthread_cond_t cond;
 pthread_rwlock_t rwlock;
-pthread_mutex_t mutex;
 #define MAX_BNUM 16
-int bnum = 2;
+int bnum = 0;
 char *branch_path[MAX_BNUM];
 int branch_fd[MAX_BNUM];
 char *path;
@@ -164,22 +162,17 @@ void *write_little_proc(thread_info_t *thread_info)
 	while (1) {
 		pthread_rwlock_rdlock(&rwlock);
 		{
-			//pthread_mutex_lock(&mutex);
-			//{
-			//	pthread_cond_wait(&cond, &mutex);
-				count = block_size;
-				offset = random_get_offset();
-				HPRINT("writing %ld at %ld\n", count, offset);
-				writed = pwrite(fd, block->data, count, offset);
-				if (writed != count) {
-					HERROR("failed to write, "
-					       "expected %ld, got %ld\n", 
-					       count, writed);
-					exit(0);
-				}
-				HPRINT("writed %ld at %ld\n", writed, offset);
-			//}
-			//pthread_mutex_unlock(&mutex);
+			count = block_size;
+			offset = random_get_offset();
+			HPRINT("writing %ld at %ld\n", count, offset);
+			writed = pwrite(fd, block->data, count, offset);
+			if (writed != count) {
+				HERROR("failed to write, "
+				       "expected %ld, got %ld\n", 
+				       count, writed);
+				exit(0);
+			}
+			HPRINT("writed %ld at %ld\n", writed, offset);
 		}
 		pthread_rwlock_unlock(&rwlock);
 		sleep_random();
@@ -215,7 +208,6 @@ void *write_proc(thread_info_t *thread_info)
 	while (1) {
 		pthread_rwlock_rdlock(&rwlock);
 		{
-			pthread_cond_broadcast(&cond);
 			count = block_size;
 			offset = 0;
 			HPRINT("writing %ld at %ld\n", count, offset);
@@ -316,8 +308,6 @@ void *check_proc(thread_info_t *thread_info)
 				}
 			}
 
-
-
 			done = 0;
 			do {
 				first_read_count = read(branch_fd[0], first_buf, count);
@@ -345,10 +335,9 @@ void *check_proc(thread_info_t *thread_info)
 				}
 			} while (first_read_count != 0);
 			HPRINT("checked\n");
-			sleep(10);
 		}
 		pthread_rwlock_unlock(&rwlock);
-		sleep_random();
+		sleep(10);
 	}
 out:
 	if (first_buf != NULL) {
@@ -376,35 +365,62 @@ const thread_group_t thread_groups[] = {
 
 void usage(const char *progname)
 {
-	fprintf(stderr, "usage: %s [-n loop_count] [-v] [-x] [file]\n"
-		"\t-n: number of test loops (default 1000000)\n"
-		"\t-b: block size when -r is not set (default 1048576)\n"
-		"\t-r: use randmon block size\n"		
-		"\t-x: don't exit on error\n", progname);
+	fprintf(stderr, "usage: %s [-s seconds] [-c] file bfile0...\n"
+		"\t-s: seconds to test\n"
+		"\t-c: run check thread\n", progname);
 }
 
+	
 int main(int argc, char *argv[])
 {
 	int ret = 0;
-	//int seconds = 100;
+	int seconds = 60;
 	int i = 0;
+	char *end = NULL;
+	int check = 0;
+	int c;
 
-	if (argc != 4) {
-		HERROR("argument error\n");
-		ret = -EINVAL;
-		goto out;
+	while ((c = getopt(argc, argv, "s:c")) != EOF) {
+		switch(c) {
+		case 's':
+			i = strtoul(optarg, &end, 0);
+			if (i && end != NULL && *end == '\0') {
+				seconds = i;
+			} else {
+				HERROR("bad seconds: '%s'\n", optarg);
+				usage(argv[0]);
+				return 1;
+			}
+			break;
+		case 'c':
+			check++;
+			break;
+		default:
+			usage(argv[0]);
+			return 1;
+		}
+	}
+	
+	if (argc < optind + 2) {
+		usage(argv[0]);
+		return 1;
 	}
 
-	path = argv[1];
-	fd = open(path, O_WRONLY);
+	bnum = argc - optind - 1;
+	path = argv[optind];
+	fd = open(path, O_WRONLY | O_CREAT | O_TRUNC);
 	if (fd < 0) {
 		HERROR("failed to open %s: %s\n", path, strerror(errno));
 		ret = errno;
 		goto out;
 	}
+	printf("file = %s\n", path);
+	optind++;
 
-	for (i = 0; i < 2; i++) {
-		branch_path[i] = argv[i + 2];
+
+	for (i = 0; i < bnum; i++, optind++) {
+		branch_path[i] = argv[optind];
+		printf("bfile[%d] = %s\n", i, branch_path[i]);
 		branch_fd[i] = open(branch_path[i], O_RDONLY);
 		if (branch_fd[i] < 0) {
 			HERROR("failed to open %s: %s\n", branch_path[i], strerror(errno));
@@ -413,19 +429,8 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	ret = pthread_mutex_init(&mutex, NULL);
-	if (ret) {
-		goto out;
-	}
-
 	ret = pthread_rwlock_init(&rwlock, NULL);
 	if (ret) {
-		goto out;
-	}
-
-
-	ret = pthread_cond_init(&cond, NULL);
-	if (ret == -1) {
 		goto out;
 	}
 
@@ -439,20 +444,19 @@ int main(int argc, char *argv[])
 		goto out;
 	}
 
-	ret = create_thread_group(&thread_groups[2], NULL);
-	if (ret == -1) {
-		goto out;
+	if (check) {
+		ret = create_thread_group(&thread_groups[2], NULL);
+		if (ret == -1) {
+			goto out;
+		}
 	}
 
-	while(1) {
-	//for (i = 0; i < seconds / 10 + 1; i++) {
+	for (i = 0; i < seconds; i+=10) {
 		sleep(10);
 		HPRINT(".");
 		HFLUSH();
 	}
 	pthread_rwlock_destroy(&rwlock);
-	pthread_cond_destroy(&cond);
-	pthread_mutex_destroy(&mutex);
 out:
 	return ret;
 }
