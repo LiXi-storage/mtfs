@@ -10,32 +10,20 @@
 #include <mtfs_oplist.h>
 #include <mtfs_lock.h>
 
-enum mtfs_io_type {
+typedef enum mtfs_io_type {
 	MIT_READV,
 	MIT_WRITEV,
-};
+} mtfs_io_type_t;
 
 struct mtfs_io {
-	struct mtfs_io_operations *mi_ops;
-	enum mtfs_io_type mi_type;
+	const struct mtfs_io_operations *mi_ops;
+	mtfs_io_type_t mi_type;
 	mtfs_bindex_t mi_bindex;
 	mtfs_bindex_t mi_bnum;
 	mtfs_operation_result_t mi_result;
-	int mi_continue;
 	int mi_successful;
-	union {
-		struct mtfs_io_rw {
-			struct file *file;
-			const struct iovec *iov;
-			unsigned long nr_segs;
-			loff_t *ppos;
-			ssize_t ret;
+	int mi_break;
 
-			int is_write;
-			struct iovec *iov_tmp;
-			loff_t pos_tmp;
-		} mi_rw;
-	} u;
 	/*
 	 * Inited when ->mio_init
 	 * Set when ->mio_iter_end
@@ -51,6 +39,20 @@ struct mtfs_io {
 	struct mlock *mi_mlock;
 	struct mlock_resource *mi_resource;
 	struct mlock_enqueue_info mi_einfo;
+
+	union {
+		struct mtfs_io_rw {
+			struct file *file;
+			const struct iovec *iov;
+			unsigned long nr_segs;
+			loff_t *ppos;
+			ssize_t ret;
+
+			struct iovec *iov_tmp;
+			loff_t pos_tmp;
+			size_t iov_length;
+		} mi_rw;
+	} u;
 };
 
 struct mtfs_io_operations {
@@ -84,7 +86,9 @@ struct mtfs_io_operations {
 	 * Determin continue to iter or not.
 	 * If continue return 0, else return errno.
 	 */
-	int (*mio_iter_fini) (struct mtfs_io *io, int init_ret);
+	void (*mio_iter_fini) (struct mtfs_io *io, int init_ret);
 };
 
+int mtfs_io_loop(struct mtfs_io *io);
+extern const struct mtfs_io_operations mtfs_io_ops[];
 #endif /* __MTFS_IO_INTERNAL_H__ */

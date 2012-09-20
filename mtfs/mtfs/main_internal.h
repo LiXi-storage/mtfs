@@ -13,6 +13,7 @@ extern struct kmem_cache *mtfs_device_cache;
 extern struct kmem_cache *mtfs_oplist_cache;
 extern struct kmem_cache *mtfs_lock_cache;
 extern struct kmem_cache *mtfs_interval_cache;
+extern struct kmem_cache *mtfs_io_cache;
 
 extern struct proc_dir_entry *mtfs_proc_root;
 extern struct proc_dir_entry *mtfs_proc_device;

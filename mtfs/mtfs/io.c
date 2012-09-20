@@ -59,6 +59,8 @@ static void mtfs_io_fini_oplist(struct mtfs_io *io)
 	HASSERT(inode);
 
 	mtfs_oplist_merge(oplist);
+	io->mi_result = oplist->opinfo->result;
+	io->mi_successful = oplist->opinfo->is_suceessful;
 
 	ret = mtfs_oplist_update(inode, oplist);
 	if (ret) {
@@ -108,22 +110,20 @@ static int mtfs_io_iter_init_rw(struct mtfs_io *io)
 	HRETURN(ret);
 }
 
-void mtfs_io_iter_start_rw(struct mtfs_io *io)
+static void mtfs_io_iter_start_rw(struct mtfs_io *io)
 {
-#ifdef HAVE_FILE_READV
 	struct mtfs_io_rw *io_rw = &io->u.mi_rw;
 	mtfs_bindex_t global_bindex = io->mi_oplist.op_binfo[io->mi_bindex].bindex;
-#endif /* HAVE_FILE_READV */
+	int is_write = 0;
 	HENTRY();
 
-#ifdef HAVE_FILE_READV
-	io->mi_result.size = mtfs_file_rw_branch(io_rw->is_write,
+	is_write = (io->mi_type == MIT_WRITEV) ? 1 : 0;
+	io->mi_result.size = mtfs_file_rw_branch(is_write,
 	                                         io_rw->file,
 	                                         io_rw->iov_tmp,
 	                                         io_rw->nr_segs,
 	                                         &io_rw->pos_tmp,
 	                                         global_bindex);
-#endif /* HAVE_FILE_READV */
 	if (io->mi_result.size > 0) {
 		/* TODO: this check is weak */
 		io->mi_successful = 1;
@@ -134,46 +134,39 @@ void mtfs_io_iter_start_rw(struct mtfs_io *io)
 	_HRETURN();
 }
 
-static int mtfs_io_iter_fini_readv(struct mtfs_io *io, int init_ret)
+static void mtfs_io_iter_fini_readv(struct mtfs_io *io, int init_ret)
 {
-	int ret = 0;
 	HENTRY();
 
 	if (unlikely(init_ret)) {
 		if (io->mi_bindex == io->mi_bnum - 1) {
-			ret = -1;
+			io->mi_break = 1;
 		} else {
 			io->mi_bindex++;
-			ret = 0;
 		}
 		goto out;
 	}
 
-	if (io->mi_successful) {
-		ret = 1;
+	if (io->mi_successful ||
+	    io->mi_bindex == io->mi_oplist.latest_bnum - 1) {
+	    	io->mi_break = 1;
 	} else {
-		if (io->mi_bindex == io->mi_bnum - 1) {
-			ret = -1;
-		} else {
-			io->mi_bindex++;
-			ret = 0;
-		}
+		io->mi_bindex++;
 	}
+
 out:
-	HRETURN(ret);
+	_HRETURN();
 }
 
-static int mtfs_io_iter_fini_writev(struct mtfs_io *io, int init_ret)
+static void mtfs_io_iter_fini_writev(struct mtfs_io *io, int init_ret)
 {
-	int ret = 0;
 	HENTRY();
 
 	if (unlikely(init_ret)) {
 		if (io->mi_bindex == io->mi_bnum - 1) {
-			ret = -1;
+			io->mi_break = 1;
 		} else {
 			io->mi_bindex++;
-			ret = 0;
 		}
 		goto out;
 	}
@@ -184,25 +177,24 @@ static int mtfs_io_iter_fini_writev(struct mtfs_io *io, int init_ret)
 			HDEBUG("operation failed for all latest %d branches\n",
 			       io->mi_oplist.latest_bnum);
 			if (!(mtfs_i2dev(io->mi_oplist_dentry->d_inode)->no_abort)) {
-				ret = -1;
+				io->mi_break = 1;
 				goto out;
 			}
 		}
 	}
 
 	if (io->mi_bindex == io->mi_bnum - 1) {
-		ret = -1;
+		io->mi_break = 1;
 	} else {
 		io->mi_bindex++;
-		ret = 0;
 	}
 out:
-	HRETURN(ret);
+	_HRETURN();
 }
 
-static const struct mtfs_io_operations mtfs_io_ops[] = {
+const struct mtfs_io_operations mtfs_io_ops[] = {
 	[MIT_READV] = {
-		.mio_init       = NULL,
+		.mio_init       = mtfs_io_init_oplist,
 		.mio_fini       = NULL,
 		.mio_lock       = mtfs_io_lock_mlock,
 		.mio_unlock     = mtfs_io_unlock_mlock,
@@ -223,7 +215,7 @@ static const struct mtfs_io_operations mtfs_io_ops[] = {
 	},
 };
 
-int mtfs_io_init(struct mtfs_io *io)
+static int mtfs_io_init(struct mtfs_io *io)
 {
 	int ret = 0;
 	HENTRY();
@@ -236,7 +228,7 @@ int mtfs_io_init(struct mtfs_io *io)
 	HRETURN(ret);
 }
 
-void mtfs_io_fini(struct mtfs_io *io)
+static void mtfs_io_fini(struct mtfs_io *io)
 {
 	HENTRY();
 
@@ -248,7 +240,7 @@ void mtfs_io_fini(struct mtfs_io *io)
 	_HRETURN();
 }
 
-int mtfs_io_lock(struct mtfs_io *io)
+static int mtfs_io_lock(struct mtfs_io *io)
 {
 	int ret = 0;
 	HENTRY();
@@ -261,7 +253,7 @@ int mtfs_io_lock(struct mtfs_io *io)
 	HRETURN(ret);
 }
 
-void mtfs_io_unlock(struct mtfs_io *io)
+static void mtfs_io_unlock(struct mtfs_io *io)
 {
 	HENTRY();
 
@@ -273,7 +265,7 @@ void mtfs_io_unlock(struct mtfs_io *io)
 	_HRETURN();
 }
 
-int mtfs_io_iter_init(struct mtfs_io *io)
+static int mtfs_io_iter_init(struct mtfs_io *io)
 {
 	int ret = 0;
 	HENTRY();
@@ -286,7 +278,7 @@ int mtfs_io_iter_init(struct mtfs_io *io)
 	HRETURN(ret);
 }
 
-void mtfs_io_iter_start(struct mtfs_io *io)
+static void mtfs_io_iter_start(struct mtfs_io *io)
 {
 	HENTRY();
 
@@ -298,7 +290,7 @@ void mtfs_io_iter_start(struct mtfs_io *io)
 	_HRETURN();
 }
 
-void mtfs_io_iter_end(struct mtfs_io *io)
+static void mtfs_io_iter_end(struct mtfs_io *io)
 {
 	HENTRY();
 
@@ -310,17 +302,16 @@ void mtfs_io_iter_end(struct mtfs_io *io)
 	_HRETURN();
 }
 
-int mtfs_io_iter_fini(struct mtfs_io *io, int init_ret)
+static void mtfs_io_iter_fini(struct mtfs_io *io, int init_ret)
 {
-	int ret = 0;
 	HENTRY();
 
 	HASSERT(io->mi_ops);
 	if (io->mi_ops->mio_iter_fini) {
-		ret = io->mi_ops->mio_iter_fini(io, init_ret);
+		io->mi_ops->mio_iter_fini(io, init_ret);
 	}
 
-	HRETURN(ret);
+	_HRETURN();
 }
 
 int mtfs_io_loop(struct mtfs_io *io)
@@ -347,7 +338,7 @@ int mtfs_io_loop(struct mtfs_io *io)
 			mtfs_io_iter_end(io);
 		}
 		mtfs_io_iter_fini(io, ret);
-	} while (!ret && io->mi_continue);
+	} while ((!ret) && (!io->mi_break));
 
 	mtfs_io_unlock(io);
 out_fini:

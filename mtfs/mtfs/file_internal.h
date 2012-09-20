@@ -6,8 +6,6 @@
 #define __MTFS_FILE_INTERNAL_H__
 #include <mtfs_file.h>
 
-#ifdef HAVE_FILE_READV
 ssize_t mtfs_file_rw_branch(int is_write, struct file *file, const struct iovec *iov,
                             unsigned long nr_segs, loff_t *ppos, mtfs_bindex_t bindex);
-#endif /* HAVE_FILE_READV */
 #endif /* __MTFS_FILE_INTERNAL_H__ */

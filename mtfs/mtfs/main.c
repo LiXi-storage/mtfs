@@ -15,6 +15,7 @@
 #include "dentry_internal.h"
 #include "heal_internal.h"
 #include "device_internal.h"
+#include "io_internal.h"
 
 /* This definition must only appear after we include <linux/module.h> */
 #ifndef MODULE_LICENSE
@@ -274,6 +275,7 @@ struct kmem_cache *mtfs_device_cache;
 struct kmem_cache *mtfs_oplist_cache;
 struct kmem_cache *mtfs_lock_cache;
 struct kmem_cache *mtfs_interval_cache;
+struct kmem_cache *mtfs_io_cache;
 
 static struct mtfs_cache_info mtfs_cache_infos[] = {
 	{
@@ -316,6 +318,11 @@ static struct mtfs_cache_info mtfs_cache_infos[] = {
 		.cache = &mtfs_interval_cache,
 		.name = "mtfs_interval_cache",
 		.size = sizeof(struct mlock_interval),
+	},
+	{
+		.cache = &mtfs_io_cache,
+		.name = "mtfs_io_cache",
+		.size = sizeof(struct mtfs_io),
 	},
 };
 	

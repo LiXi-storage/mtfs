@@ -1,6 +1,7 @@
 /*
  * Copyright (C) 2011 Li Xi <pkuelelixi@gmail.com>
  */
+
 #include <memory.h>
 #include <mtfs_oplist.h>
 #include <mtfs_inode.h>
@@ -228,6 +229,7 @@ void mtfs_oplist_merge(struct mtfs_operation_list *oplist)
 	} else if (bindex_chosed != -1) {
 		oplist->opinfo = &(oplist->op_binfo[bindex_chosed]);
 	}
+
 	_HRETURN();
 
 
@@ -241,9 +243,15 @@ int mtfs_oplist_update(struct inode *inode, struct mtfs_operation_list *list)
 	int ret = 0;
 	HENTRY();
 
-	HASSERT(list->checked_bnum > 0);
+	HASSERT(list->checked_bnum == list->bnum);
 	HASSERT(list->valid_bnum > 0);
-	HASSERT(list->success_latest_bnum > 0);
+	
+	
+	if (list->success_latest_bnum == 0) {
+		/* No success at all*/
+		goto out;
+	}
+
 	if (list->fault_latest_bnum == 0) {
 		goto out;
 	}
