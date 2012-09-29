@@ -13,7 +13,7 @@
 
 extern spinlock_t mtfs_device_lock;
 
-struct mtfs_device *mtfs_newdev(struct super_block *sb, mount_option_t *mount_option);
+struct mtfs_device *mtfs_newdev(struct super_block *sb, struct mount_option *mount_option);
 void mtfs_freedev(struct mtfs_device *device);
 int mtfs_proc_read_devices(char *page, char **start, off_t off,
                            int count, int *eof, void *data);

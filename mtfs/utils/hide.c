@@ -14,7 +14,7 @@
 
 int hide_dirs(char *source, int unhide)
 {
-	mount_option_t mount_option;
+	struct mount_option mount_option;
 	int ret = 0;
 	mtfs_bindex_t bindex = 0;
 	char option[] = "";
@@ -40,7 +40,7 @@ int hide_dirs(char *source, int unhide)
 		}
 	}
 
-	mount_option_finit(&mount_option);
+	mount_option_fini(&mount_option);
 out:
 	return ret;
 }

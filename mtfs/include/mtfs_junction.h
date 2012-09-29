@@ -28,7 +28,8 @@ struct mtfs_junction {
 	struct list_head junction_list;
 	struct module *junction_owner;
 	const char *junction_name;
-	
+
+	const char *mj_subject;
 	const char *primary_type;
 	const char **secondary_types;
 

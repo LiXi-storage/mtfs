@@ -9,13 +9,13 @@ int main()
 {
 	int ret = 0;
 	char input[MAX_MOUNT_OPTION_LENGTH];
-	mount_option_t mount_option;
+	struct mount_option mount_option;
 	
 	fscanf(stdin, "%s", input);
 	ret = mtfs_parse_options(input, &mount_option);
 	if (!ret) {
 		mount_option_dump(&mount_option);
-		mount_option_finit(&mount_option);
+		mount_option_fini(&mount_option);
 	}
 	return ret;
 }

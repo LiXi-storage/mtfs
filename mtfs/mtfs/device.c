@@ -12,7 +12,7 @@
 #include "junction_internal.h"
 #include "support_internal.h"
 
-static struct mtfs_device *mtfs_device_alloc(mount_option_t *mount_option)
+static struct mtfs_device *mtfs_device_alloc(struct mount_option *mount_option)
 {
 	struct mtfs_device *device = NULL;
 	mtfs_bindex_t bindex = 0;
@@ -571,7 +571,7 @@ void mtfs_unregister_device(struct mtfs_device *device)
 	spin_unlock(&mtfs_device_lock);
 }
 
-struct mtfs_device *mtfs_newdev(struct super_block *sb, mount_option_t *mount_option)
+struct mtfs_device *mtfs_newdev(struct super_block *sb, struct mount_option *mount_option)
 {
 	struct mtfs_device *newdev = NULL;
 	int ret = 0;
@@ -619,7 +619,7 @@ struct mtfs_device *mtfs_newdev(struct super_block *sb, mount_option_t *mount_op
 	}
 	secondary_types[secondary_number] = NULL;
 
-	newdev->junction = junction_get(primary_type, secondary_types);
+	newdev->junction = junction_get("HA", primary_type, secondary_types);
 	if (IS_ERR(newdev->junction)) {
 		HERROR("junction type [%s] not supported yet\n", primary_type); /* TODO: print secondary type */
 		ret = PTR_ERR(newdev->junction);

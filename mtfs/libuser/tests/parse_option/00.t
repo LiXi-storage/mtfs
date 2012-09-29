@@ -22,11 +22,11 @@ echo "1..5"
 
 # test 1
 IN="
-device=/mnt/mtfs1:/mnt/mtfs2:/mnt/mtfs3:/mnt/mtfs4:/mnt/mtfs5:/mnt/mtfs6,debug=0
+device=/mnt/mtfs1:/mnt/mtfs2:/mnt/mtfs3:/mnt/mtfs4:/mnt/mtfs5:/mnt/mtfs6
 " OUT="
 bnum = 6
 /mnt/mtfs1:/mnt/mtfs2:/mnt/mtfs3:/mnt/mtfs4:/mnt/mtfs5:/mnt/mtfs6
-debug_level = 0
+subject = high-reliability
 " expect 0
 
 #
@@ -34,36 +34,39 @@ debug_level = 0
 # Colon at beginning or end is allowed
 #
 IN="
-device=:/mnt/mtfs1:/mnt/mtfs2:,debug=1
+device=:/mnt/mtfs1:/mnt/mtfs2:
 " OUT="
 bnum = 2
 /mnt/mtfs1:/mnt/mtfs2
-debug_level = 1
+subject = high-reliability
 " expect 0
 
 #
 # test 3
-# Debug level value is checked
+# Unkown option is checked
 #
-IN="
-device=:/mnt/mtfs1:/mnt/mtfs2:,debug=-12345
+IN="unkown_option,device=:/mnt/mtfs1:/mnt/mtfs2:
 " OUT="
 " expect -EINVAL
 
-
 #
 # test 4
-# Unkown option is checked
+# Only one device option is allowed
 #
-IN="unkown_option,device=:/mnt/mtfs1:/mnt/mtfs2:,debug=1
+IN="
+device=:/mnt/mtfs1:/mnt/mtfs2:,device=:/mnt/mtfs1:/mnt/mtfs2:
 " OUT="
 " expect -EINVAL
 
 #
 # test 5
-# Only one device option is allowed
+# Subject is set
 #
 IN="
-device=:/mnt/mtfs1:/mnt/mtfs2:,debug=-12345,device=:/mnt/mtfs1:/mnt/mtfs2:
+device=:/mnt/mtfs1:/mnt/mtfs2:,subject=statistic
 " OUT="
-" expect -EINVAL
+bnum = 2
+/mnt/mtfs1:/mnt/mtfs2
+subject = statistic
+" expect 0
+

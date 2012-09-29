@@ -97,6 +97,20 @@ do {                                                                          \
 } while (0)
 
 #define MTFS_SLAB_FREE_PTR(ptr, slab) MTFS_SLAB_FREE(ptr, slab, sizeof *(ptr))
+
+#define MTFS_STRDUP(dest, src)                                                \
+do {                                                                          \
+    MTFS_ALLOC(dest, strlen(src) + 1);                                        \
+    if (dest) {                                                               \
+        strcpy(dest, src);                                                    \
+    }                                                                         \
+} while (0)
+
+#define MTFS_FREE_STR(str)                                                    \
+do {                                                                          \
+    MTFS_FREE(str, strlen(str) + 1);                                          \
+} while (0)
+
 #else /* !((__linux__) && defined(__KERNEL__)) */
 
 #include <stdlib.h>

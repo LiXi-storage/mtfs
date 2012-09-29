@@ -110,7 +110,7 @@ void mtfs_finit_recover(struct dentry *d_root)
 int mtfs_read_super(struct super_block *sb, void *input, int silent)
 {
 	int ret = 0;
-	mount_option_t mount_option;
+	struct mount_option mount_option;
 	mtfs_bindex_t bnum = 0;
 	mtfs_bindex_t bindex = 0;
 	struct dentry *d_root = NULL;
@@ -228,7 +228,7 @@ out_d_free:
 out_dput:
 	dput(d_root);
 out_option_finit:
-	mount_option_finit(&mount_option);
+	mount_option_fini(&mount_option);
 out:
 	HRETURN(ret);
 }

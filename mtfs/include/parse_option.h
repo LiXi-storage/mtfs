@@ -12,13 +12,13 @@ struct mount_barnch {
 	char *path;
 };
 
-typedef struct mount_option {
+struct mount_option {
 	int bnum;
 	struct mount_barnch *branch;
-	int debug_level;
-} mount_option_t;
+	char *mo_subject;
+};
 
-static inline int mount_option_init(mount_option_t *mount_option, int bnum)
+static inline int mount_option_init(struct mount_option *mount_option, int bnum)
 {
 	int ret = 0;
 
@@ -37,7 +37,7 @@ out:
 	return ret;
 }
 
-static inline int mount_option_finit(struct mount_option *option)
+static inline int mount_option_fini(struct mount_option *option)
 {
 	int ret = 0;
 	int i = 0;
@@ -51,6 +51,10 @@ static inline int mount_option_finit(struct mount_option *option)
 			}
 		}
 		MTFS_FREE(option->branch, sizeof(*option->branch) * option->bnum);
+	}
+
+	if (option->mo_subject) {
+		MTFS_FREE_STR(option->mo_subject);
 	}
 	memset(option, 0, sizeof(*option));
 
@@ -67,7 +71,6 @@ static inline struct mount_option *mount_option_alloc(void)
 	}
 	HASSERT(option);
 	HASSERT(option->bnum == 0);
-	HASSERT(option->debug_level == 0);
 out:
 	return option;
 }
@@ -75,7 +78,7 @@ out:
 static inline void mount_option_free(struct mount_option *option)
 {
 	HASSERT(option);
-	mount_option_finit(option);
+	mount_option_fini(option);
 	MTFS_FREE_PTR(option);
 	HASSERT(!option);
 }
@@ -96,7 +99,8 @@ static inline void mount_option_dump(struct mount_option *option)
 		}
 	}
 	HPRINT("\n");
-	HPRINT("debug_level = %d\n", option->debug_level);
+	HPRINT("subject = %s\n", option->mo_subject);
+	HPRINT("\n");
 }
 
 static inline void append_dir(char *dirs, const char *one)
@@ -106,7 +110,8 @@ static inline void append_dir(char *dirs, const char *one)
 	}
 	strcat(dirs, one);
 }
+
 /* Parse options from mount. Returns 0 on success */
-int mtfs_parse_options(char *input, mount_option_t *mount_option);
-int parse_dir_option(char *dir_option, mount_option_t *mount_option);
+int mtfs_parse_options(char *input, struct mount_option *mount_option);
+int parse_dir_option(char *dir_option, struct mount_option *mount_option);
 #endif /* __MTFS_PARSE_OPTION_H__ */

@@ -196,7 +196,7 @@ out:
 char *reslove_source_path(const char *origin_source)
 {
 	int ret = 0;
-	mount_option_t mount_option;
+	struct mount_option mount_option;
 	mtfs_bindex_t bindex = 0;
 	char *path = NULL;
 	char *source = NULL;
@@ -236,7 +236,7 @@ char *reslove_source_path(const char *origin_source)
 		}
 	}
 finit_option:
-	mount_option_finit(&mount_option);
+	mount_option_fini(&mount_option);
 out:
 	return source;
 }

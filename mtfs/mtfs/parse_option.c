@@ -8,20 +8,21 @@
  */
 #include <parse_option.h>
 #include <parser.h>
+#include <mtfs_common.h>
 
 enum {
-	opt_debug, /* Set debug_level */
+	opt_subject, /* Set subject */
 	opt_dirs, /* Set dirs */
 	opt_err /* Error */
 };
 
 static match_table_t tokens = {
-	{ opt_debug, "debug=%d" },
+	{ opt_subject, "subject=%s" },
 	{ opt_dirs, "device=%s" },
 	{ opt_err, NULL }
 };
 
-int parse_dir_option(char *dir_option, mount_option_t *mount_option)
+int parse_dir_option(char *dir_option, struct mount_option *mount_option)
 {
 	int ret = 0;
 	char *start = dir_option;
@@ -96,16 +97,17 @@ out:
 }
 
 /* Parse options from mount. Returns 0 on success */
-int mtfs_parse_options(char *input, mount_option_t *mount_option)
+int mtfs_parse_options(char *input, struct mount_option *mount_option)
 {
 	int ret = 0;
 	char *p = NULL;
 	int token = 0;
 	substring_t args[MAX_OPT_ARGS];
-	int dirs_setted = 0;
-	int tmp = 0;
-	
+	int dirs_is_set = 0;
+	int subject_is_set = 0;
+
 	HASSERT(mount_option);
+	memset(mount_option, 0, sizeof(*mount_option));
 	if (!input) {
 		HERROR("Hidden dirs not seted\n");
 		ret = -EINVAL;
@@ -118,25 +120,38 @@ int mtfs_parse_options(char *input, mount_option_t *mount_option)
 		}
 		token = match_token(p, tokens, args);
 		switch (token) {
-		case opt_debug:
-			if (match_int(&args[0], &tmp)) {
-				HERROR("debug level requires an argument\n");
+		case opt_subject:
+			if (subject_is_set) {
+				HERROR("unexpected multiple dir options\n");
 				ret = -EINVAL;
 				goto error;
 			}
-			
-			/* check debug_level */
-			if (tmp < 0 || tmp > 100) {
-				HERROR("debug level should be between %d and %d\n", 0, 100);
-				ret = -EINVAL;
+			p = match_strdup(&args[0]);
+			if (p == NULL) {
+				HERROR("not enough memory\n");
+				ret = -ENOMEM;
 				goto error;
 			}
-			
-			HDEBUG("set debug_level to %d\n", tmp);
-			mount_option->debug_level = tmp;
+
+			MTFS_STRDUP(mount_option->mo_subject, p);
+			if (mount_option->mo_subject == NULL) {
+				HERROR("not enough memory\n");
+				ret = -ENOMEM;
+			}
+
+#if defined (__linux__) && defined(__KERNEL__)
+			kfree(p);
+#else
+			free(p);
+#endif
+			if (ret) {
+				goto error;
+			}
+
+			subject_is_set = 1;
 			break;
 		case opt_dirs:
-			if (dirs_setted) {
+			if (dirs_is_set) {
 				HERROR("unexpected multiple dir options\n");
 				ret = -EINVAL;
 				goto error;
@@ -157,7 +172,7 @@ int mtfs_parse_options(char *input, mount_option_t *mount_option)
 				goto error;
 			}
 			/* Finally , everything is OK */
-			dirs_setted = 1;
+			dirs_is_set = 1;
 			break;
 		default:
 			HERROR("unexpected option\n");
@@ -166,15 +181,25 @@ int mtfs_parse_options(char *input, mount_option_t *mount_option)
 		}
 	}
 	
-	if (!dirs_setted) {
-		HERROR("Hidden dirs not seted\n");
+	if (!dirs_is_set) {
+		HERROR("lower directories are not set yet\n");
 		ret = -EINVAL;
+		goto error;
 	}
+
+	if (!subject_is_set) {
+		HDEBUG("subject is not seted, use default: %s\n", MTFS_DEFAULT_SUBJECT);
+		MTFS_STRDUP(mount_option->mo_subject, MTFS_DEFAULT_SUBJECT);
+		if (mount_option->mo_subject == NULL) {
+			HERROR("not enough memory\n");
+			ret = -ENOMEM;
+			goto error;
+		}
+	}
+
 	goto out;
 error:
-	if (dirs_setted) {
-		mount_option_finit(mount_option);
-	}	
+	mount_option_fini(mount_option);
 out:
 	return ret;	
 }
