@@ -11,27 +11,31 @@
 #include <mtfs_common.h>
 
 struct mtfs_sb_branch {
-	struct super_block *b_sb;
-	struct vfsmount    *b_mnt;
-	struct dentry      *b_drecover;
+	struct super_block *msb_sb;
+	struct vfsmount    *msb_mnt;
+	struct dentry      *msb_drecover;
+	struct dentry      *msb_dreserve;
 };
 
 /* mtfs super-block data in memory */
 struct mtfs_sb_info {
-	struct        mtfs_device *device;
-	mtfs_bindex_t bnum; /* branch number */
-	struct        mtfs_sb_branch barray[MTFS_BRANCH_MAX];
+	struct mtfs_device   *msi_device;
+	mtfs_bindex_t         msi_bnum; /* branch number */
+	struct mtfs_sb_branch msi_barray[MTFS_BRANCH_MAX];
 };
 
 /* DO NOT access mtfs_*_info_t directly, use following macros */
 #define _mtfs_s2info(sb)             ((sb)->s_fs_info)
 #define mtfs_s2info(sb)              ((struct mtfs_sb_info *)_mtfs_s2info(sb))
-#define mtfs_s2barray(sb)            (mtfs_s2info(sb)->barray)
-#define mtfs_s2branch(sb, bindex)    (mtfs_s2barray(sb)[bindex].b_sb)
-#define mtfs_s2mntbranch(sb, bindex) (mtfs_s2barray(sb)[bindex].b_mnt)
-#define mtfs_s2brecover(sb, bindex)  (mtfs_s2barray(sb)[bindex].b_drecover)
-#define mtfs_s2bnum(sb)              (mtfs_s2info(sb)->bnum)
-#define mtfs_s2dev(sb)               (mtfs_s2info(sb)->device)
+
+#define mtfs_s2bnum(sb)              (mtfs_s2info(sb)->msi_bnum)
+#define mtfs_s2dev(sb)               (mtfs_s2info(sb)->msi_device)
+#define mtfs_s2barray(sb)            (mtfs_s2info(sb)->msi_barray)
+
+#define mtfs_s2branch(sb, bindex)    (mtfs_s2barray(sb)[bindex].msb_sb)
+#define mtfs_s2mntbranch(sb, bindex) (mtfs_s2barray(sb)[bindex].msb_mnt)
+#define mtfs_s2bdrecover(sb, bindex) (mtfs_s2barray(sb)[bindex].msb_drecover)
+#define mtfs_s2bdreserve(sb, bindex) (mtfs_s2barray(sb)[bindex].msb_dreserve)
 
 extern struct inode *mtfs_alloc_inode(struct super_block *sb);
 extern void mtfs_destroy_inode(struct inode *inode);

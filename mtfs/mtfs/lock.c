@@ -5,6 +5,7 @@
 #if defined (__linux__) && defined(__KERNEL__)
 #include <linux/sched.h>
 #include <thread.h>
+#include "main_internal.h"
 #endif /* defined (__linux__) && defined(__KERNEL__) */
 
 #include <compat.h>
@@ -13,7 +14,6 @@
 #include <mtfs_lock.h>
 #include <mtfs_list.h>
 #include <mtfs_interval_tree.h>
-#include "main_internal.h"
 
 /* compatibility matrix */
 mlock_mode_t mlock_compat_array[] = {

@@ -39,7 +39,7 @@ static inline struct dentry *mtfs_d_root_branch(struct dentry *dentry, mtfs_bind
 
 static inline struct dentry *mtfs_d_recover_branch(struct dentry *dentry, mtfs_bindex_t bindex)
 {
-	return mtfs_s2brecover(dentry->d_sb, bindex);
+	return mtfs_s2bdrecover(dentry->d_sb, bindex);
 }
 
 /* Becareful not to conflict with kernel */

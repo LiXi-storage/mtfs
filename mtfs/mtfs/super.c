@@ -17,6 +17,7 @@
 #include "device_internal.h"
 #include "inode_internal.h"
 #include "support_internal.h"
+#include "main_internal.h"
 
 struct inode *mtfs_alloc_inode(struct super_block *sb)
 {
@@ -57,8 +58,8 @@ void mtfs_put_super(struct super_block *sb)
 	if (mtfs_s2info(sb)) {
 		for (bindex = 0; bindex < mtfs_s2bnum(sb); bindex++) {
 			mntput(mtfs_s2mntbranch(sb, bindex));
-			dput(mtfs_s2brecover(sb, bindex));
 		}
+		mtfs_reserve_fini(sb);
 		HASSERT(mtfs_s2dev(sb));
 		mtfs_freedev(mtfs_s2dev(sb));
 		mtfs_s_free(sb);

@@ -582,6 +582,7 @@ struct mtfs_device *mtfs_newdev(struct super_block *sb, struct mount_option *mou
 	const char *primary_type = NULL;
 	const char **secondary_types = NULL;
 	int secondary_number = 0;
+	HENTRY();
 
 	MTFS_ALLOC(secondary_types, sizeof(*secondary_types) * bnum);
 	if (secondary_types == NULL) {
@@ -658,7 +659,8 @@ out:
 	if (ret) {
 		newdev = ERR_PTR(ret);
 	}
-	return newdev;
+
+	HRETURN(newdev);
 }
 
 void mtfs_freedev(struct mtfs_device *device)

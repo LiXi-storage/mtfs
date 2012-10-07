@@ -31,9 +31,9 @@ static inline int mtfs_s_alloc(struct super_block *sb, mtfs_bindex_t bnum)
 		ret = -ENOMEM;
 		goto out;
 	}
-	s_info->bnum = bnum;
-
 	_mtfs_s2info(sb) = s_info;
+
+	mtfs_s2bnum(sb) = bnum;
 out:
 	return ret;
 }

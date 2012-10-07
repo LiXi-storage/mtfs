@@ -64,47 +64,106 @@ int mtfs_init_super(struct super_block *sb, struct mtfs_device *device, struct d
 	HRETURN(ret);
 }
 
-int mtfs_init_recover(struct dentry *d_root)
+int mtfs_reserve_init_branch(struct dentry *d_root, mtfs_bindex_t bindex)
 {
-	int ret = 0;
 	struct dentry *hidden_child = NULL;
 	struct dentry *hidden_parent = NULL;
+	char *name = NULL;
+	int ret = 0;
+	HENTRY();
+
+	hidden_parent = mtfs_d2branch(d_root, bindex);
+	HASSERT(hidden_parent);
+	name = ".mtfs";
+	hidden_child = mtfs_dchild_create(hidden_parent,
+	                                  name, strlen(name),
+	                                  S_IFDIR | S_IRWXU, 0, 0);
+	if (IS_ERR(hidden_child)) {
+		ret = PTR_ERR(hidden_child);
+		HERROR("create branch[%d] of [%*s/%s] failed, ret = %d\n",
+		       bindex, hidden_parent->d_name.len,
+		       hidden_parent->d_name.name, name, ret);
+		goto out;
+	}
+	mtfs_s2bdreserve(d_root->d_sb, bindex) = hidden_child;
+
+	hidden_parent = mtfs_s2bdreserve(d_root->d_sb, bindex);
+	HASSERT(hidden_parent);
+	name = "RECOVER";
+	hidden_child = mtfs_dchild_create(hidden_parent,
+	                                  name, strlen(name),
+	                                  S_IFDIR | S_IRWXU, 0, 0);
+	if (IS_ERR(hidden_child)) {
+		ret = PTR_ERR(hidden_child);
+		HERROR("create branch[%d] of [%*s/%s] failed, ret = %d\n",
+		       bindex, hidden_parent->d_name.len,
+		       hidden_parent->d_name.name, name, ret);
+		goto out_put_reserve;
+	}
+	mtfs_s2bdrecover(d_root->d_sb, bindex) = hidden_child;
+
+	goto out;
+
+out_put_reserve:
+	dput(mtfs_s2bdreserve(d_root->d_sb, bindex));
+	mtfs_s2bdreserve(d_root->d_sb, bindex) = NULL;
+out:
+	HRETURN(ret);
+}
+
+void mtfs_reserve_fini_branch(struct super_block *sb, mtfs_bindex_t bindex)
+{
+	HASSERT(mtfs_s2bdrecover(sb, bindex));
+	dput(mtfs_s2bdrecover(sb, bindex));
+	mtfs_s2bdrecover(sb, bindex) = NULL;
+
+	HASSERT(mtfs_s2bdreserve(sb, bindex));
+	dput(mtfs_s2bdreserve(sb, bindex));
+	mtfs_s2bdreserve(sb, bindex) = NULL;
+}
+
+int mtfs_reserve_init(struct dentry *d_root)
+{
+	int ret = 0;
 	mtfs_bindex_t bindex = 0;
-	const char *name = ".mtfs";
 	HENTRY();
 
 	HASSERT(d_root);
 	for (bindex = 0; bindex < mtfs_d2bnum(d_root); bindex++) {
-		hidden_parent = mtfs_d2branch(d_root, bindex);
-		HASSERT(hidden_parent);
-		hidden_child = mtfs_dchild_create(hidden_parent, name, strlen(name), S_IFDIR | S_IRWXU, 0, 0);
-		if (IS_ERR(hidden_child)) {
-			ret = PTR_ERR(hidden_child);
-			HERROR("create branch[%d] of [%*s/%s] failed\n",
-			       bindex, hidden_parent->d_name.len, hidden_parent->d_name.name, name);
+		ret = mtfs_reserve_init_branch(d_root, bindex);
+		if (ret) {
+			HERROR("failed to init branch[%d]\n", bindex);
 			bindex--;
-			goto out_put_recover;
+			goto out_fini;
 		}
-		mtfs_s2brecover(d_root->d_sb, bindex) = hidden_child;
 	}
 	goto out;
-out_put_recover:
+out_fini:
 	for (; bindex >= 0; bindex--) {
-		HASSERT(mtfs_s2brecover(d_root->d_sb, bindex));
-		dput(mtfs_s2brecover(d_root->d_sb, bindex));
+		mtfs_reserve_fini_branch(d_root->d_sb, bindex);
 	}
 out:
 	HRETURN(ret);
 }
 
-void mtfs_finit_recover(struct dentry *d_root)
+void mtfs_reserve_fini(struct super_block *sb)
 {
 	mtfs_bindex_t bindex = 0;
-	HASSERT(d_root);
-	for (bindex = 0; bindex < mtfs_d2bnum(d_root); bindex++) {
-		HASSERT(mtfs_s2brecover(d_root->d_sb, bindex));
-		dput(mtfs_s2brecover(d_root->d_sb, bindex));
+
+	HASSERT(sb);
+	for (bindex = 0; bindex < mtfs_s2bnum(sb); bindex++) {
+		mtfs_reserve_fini_branch(sb, bindex);
 	}
+}
+
+int mtfs_init_recover(struct dentry *d_root)
+{
+	return mtfs_reserve_init(d_root);
+}
+
+void mtfs_finit_recover(struct dentry *d_root)
+{
+	mtfs_reserve_fini(d_root->d_sb);
 }
 
 int mtfs_read_super(struct super_block *sb, void *input, int silent)
