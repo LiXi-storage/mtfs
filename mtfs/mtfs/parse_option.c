@@ -104,7 +104,6 @@ int mtfs_parse_options(char *input, struct mount_option *mount_option)
 	int token = 0;
 	substring_t args[MAX_OPT_ARGS];
 	int dirs_is_set = 0;
-	int subject_is_set = 0;
 
 	HASSERT(mount_option);
 	memset(mount_option, 0, sizeof(*mount_option));
@@ -121,8 +120,8 @@ int mtfs_parse_options(char *input, struct mount_option *mount_option)
 		token = match_token(p, tokens, args);
 		switch (token) {
 		case opt_subject:
-			if (subject_is_set) {
-				HERROR("unexpected multiple dir options\n");
+			if (mount_option->mo_subject_is_set) {
+				HERROR("unexpected multiple subject options\n");
 				ret = -EINVAL;
 				goto error;
 			}
@@ -134,21 +133,18 @@ int mtfs_parse_options(char *input, struct mount_option *mount_option)
 			}
 
 			MTFS_STRDUP(mount_option->mo_subject, p);
-			if (mount_option->mo_subject == NULL) {
-				HERROR("not enough memory\n");
-				ret = -ENOMEM;
-			}
-
 #if defined (__linux__) && defined(__KERNEL__)
 			kfree(p);
 #else
 			free(p);
 #endif
-			if (ret) {
+			if (mount_option->mo_subject == NULL) {
+				HERROR("not enough memory\n");
+				ret = -ENOMEM;
 				goto error;
 			}
 
-			subject_is_set = 1;
+			mount_option->mo_subject_is_set = 1;
 			break;
 		case opt_dirs:
 			if (dirs_is_set) {
@@ -171,7 +167,7 @@ int mtfs_parse_options(char *input, struct mount_option *mount_option)
 			if (ret) {
 				goto error;
 			}
-			/* Finally , everything is OK */
+
 			dirs_is_set = 1;
 			break;
 		default:
@@ -185,16 +181,6 @@ int mtfs_parse_options(char *input, struct mount_option *mount_option)
 		HERROR("lower directories are not set yet\n");
 		ret = -EINVAL;
 		goto error;
-	}
-
-	if (!subject_is_set) {
-		HDEBUG("subject is not seted, use default: %s\n", MTFS_DEFAULT_SUBJECT);
-		MTFS_STRDUP(mount_option->mo_subject, MTFS_DEFAULT_SUBJECT);
-		if (mount_option->mo_subject == NULL) {
-			HERROR("not enough memory\n");
-			ret = -ENOMEM;
-			goto error;
-		}
 	}
 
 	goto out;

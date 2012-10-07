@@ -26,7 +26,7 @@ device=/mnt/mtfs1:/mnt/mtfs2:/mnt/mtfs3:/mnt/mtfs4:/mnt/mtfs5:/mnt/mtfs6
 " OUT="
 bnum = 6
 /mnt/mtfs1:/mnt/mtfs2:/mnt/mtfs3:/mnt/mtfs4:/mnt/mtfs5:/mnt/mtfs6
-subject = high-reliability
+subject = (null)
 " expect 0
 
 #
@@ -38,7 +38,7 @@ device=:/mnt/mtfs1:/mnt/mtfs2:
 " OUT="
 bnum = 2
 /mnt/mtfs1:/mnt/mtfs2
-subject = high-reliability
+subject = (null)
 " expect 0
 
 #
@@ -63,10 +63,10 @@ device=:/mnt/mtfs1:/mnt/mtfs2:,device=:/mnt/mtfs1:/mnt/mtfs2:
 # Subject is set
 #
 IN="
-device=:/mnt/mtfs1:/mnt/mtfs2:,subject=statistic
+device=:/mnt/mtfs1:/mnt/mtfs2:,subject=high-reliability
 " OUT="
 bnum = 2
 /mnt/mtfs1:/mnt/mtfs2
-subject = statistic
+subject = high-reliability
 " expect 0
 

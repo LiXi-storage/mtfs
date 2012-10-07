@@ -16,6 +16,7 @@ struct mount_option {
 	int bnum;
 	struct mount_barnch *branch;
 	char *mo_subject;
+	int mo_subject_is_set;
 };
 
 static inline int mount_option_init(struct mount_option *mount_option, int bnum)
@@ -53,7 +54,8 @@ static inline int mount_option_fini(struct mount_option *option)
 		MTFS_FREE(option->branch, sizeof(*option->branch) * option->bnum);
 	}
 
-	if (option->mo_subject) {
+	if (option->mo_subject_is_set) {
+		HASSERT(option->mo_subject);
 		MTFS_FREE_STR(option->mo_subject);
 	}
 	memset(option, 0, sizeof(*option));
