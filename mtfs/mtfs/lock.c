@@ -205,6 +205,7 @@ struct mlock_interval *mlock_interval_detach(struct mlock *lock)
 
         return (mtfs_list_empty(&node->mli_group) ? node : NULL);
 }
+
 static int mlock_extent_init(struct mlock *lock, struct mlock_enqueue_info *einfo)
 {
 	struct mlock_interval *node = NULL;

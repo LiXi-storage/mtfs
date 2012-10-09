@@ -183,11 +183,7 @@ int mtfs_open_branch(struct inode *inode, struct file *file, mtfs_bindex_t binde
 		 * dentry_open will dput and mntput if error.
 		 * Otherwise fput() will do an dput and mntput for us upon file close.
 		 */
-#ifdef HAVE_DENTRY_OPEN_4ARGS
-		hidden_file = dentry_open(hidden_dentry, hidden_mnt, hidden_flags, current_cred());
-#else /* HAVE_DENTRY_OPEN_4ARGS */
-		hidden_file = dentry_open(hidden_dentry, hidden_mnt, hidden_flags);
-#endif /* HAVE_DENTRY_OPEN_4ARGS */
+		hidden_file = mtfs_dentry_open(hidden_dentry, hidden_mnt, hidden_flags, current_cred());
 		if (IS_ERR(hidden_file)) {
 			HDEBUG("open branch[%d] of file [%*s], flags = 0x%x, ret = %ld\n", 
 			       bindex, hidden_dentry->d_name.len, hidden_dentry->d_name.name,

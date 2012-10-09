@@ -10,16 +10,35 @@
 #include <linux/fs.h>
 #include <mtfs_common.h>
 
+/* On-disk configuration file. In host-endian order. */
+struct mtfs_config_info {
+	__u32         mci_magic;   /* Should be MCI_MAGIC */
+	__u64         mci_version; /* Rewrite count */
+	mtfs_bindex_t mci_bindex;  /* Branch index */
+	mtfs_bindex_t mci_bnum;    /* Branch number */
+};
+
+struct mtfs_config {
+	/* Info is valid or not */
+	__u32                   mc_valid;
+	/* Branch is latest or not */
+	int                     mc_blatest[MTFS_BRANCH_MAX];
+	mtfs_bindex_t           mc_nonlatest;
+	struct mtfs_config_info mc_info;
+};
+
 struct mtfs_sb_branch {
 	struct super_block *msb_sb;
 	struct vfsmount    *msb_mnt;
-	struct dentry      *msb_drecover;
 	struct dentry      *msb_dreserve;
+	struct dentry      *msb_drecover;
+	struct dentry      *msb_dconfig;
 };
 
 /* mtfs super-block data in memory */
 struct mtfs_sb_info {
 	struct mtfs_device   *msi_device;
+	struct mtfs_config   *msi_config;
 	mtfs_bindex_t         msi_bnum; /* branch number */
 	struct mtfs_sb_branch msi_barray[MTFS_BRANCH_MAX];
 };
@@ -30,12 +49,14 @@ struct mtfs_sb_info {
 
 #define mtfs_s2bnum(sb)              (mtfs_s2info(sb)->msi_bnum)
 #define mtfs_s2dev(sb)               (mtfs_s2info(sb)->msi_device)
+#define mtfs_s2config(sb)            (mtfs_s2info(sb)->msi_config)
 #define mtfs_s2barray(sb)            (mtfs_s2info(sb)->msi_barray)
 
 #define mtfs_s2branch(sb, bindex)    (mtfs_s2barray(sb)[bindex].msb_sb)
 #define mtfs_s2mntbranch(sb, bindex) (mtfs_s2barray(sb)[bindex].msb_mnt)
-#define mtfs_s2bdrecover(sb, bindex) (mtfs_s2barray(sb)[bindex].msb_drecover)
 #define mtfs_s2bdreserve(sb, bindex) (mtfs_s2barray(sb)[bindex].msb_dreserve)
+#define mtfs_s2bdrecover(sb, bindex) (mtfs_s2barray(sb)[bindex].msb_drecover)
+#define mtfs_s2bdconfig(sb, bindex)  (mtfs_s2barray(sb)[bindex].msb_dconfig)
 
 extern struct inode *mtfs_alloc_inode(struct super_block *sb);
 extern void mtfs_destroy_inode(struct inode *inode);

@@ -16,6 +16,7 @@
 #include "heal_internal.h"
 #include "device_internal.h"
 #include "io_internal.h"
+#include "file_internal.h"
 
 /* This definition must only appear after we include <linux/module.h> */
 #ifndef MODULE_LICENSE
@@ -64,17 +65,317 @@ int mtfs_init_super(struct super_block *sb, struct mtfs_device *device, struct d
 	HRETURN(ret);
 }
 
+#define MTFS_RESERVE_ROOT    ".mtfs"
+#define MTFS_RESERVE_RECOVER "RECOVER"
+#define MTFS_RESERVE_CONFIG  "CONFIG"
+#define MCI_MAGIC 0xEAC1C001
+
+static int mtfs_config_write_branch(struct super_block *sb,
+                                    struct mtfs_config *mc,
+                                    mtfs_bindex_t bindex)
+{
+	int ret = 0;
+	struct mtfs_config_info *mci = &mc->mc_info;
+	struct file *hidden_file = NULL;
+	struct dentry *hidden_dentry = mtfs_s2bdconfig(sb, bindex);
+	struct vfsmount *hidden_mnt = mtfs_s2mntbranch(sb, bindex);
+	ssize_t count = sizeof(*mci);
+	ssize_t size = 0;
+	loff_t off = 0;
+	mm_segment_t old_fs;
+	HENTRY();
+
+	hidden_file = mtfs_dentry_open(dget(hidden_dentry),
+	                               mntget(hidden_mnt),
+	                               O_RDWR,
+	                               current_cred());
+	if (IS_ERR(hidden_file)) {
+		ret = PTR_ERR(hidden_file);
+		HERROR("failed to open branch[%d] of file [%*s], ret = %ld\n", 
+		       bindex, hidden_dentry->d_name.len, hidden_dentry->d_name.name,
+		       ret);
+		goto out;
+	}
+
+	mci->mci_bindex = bindex;
+	HASSERT(hidden_file->f_op);
+	HASSERT(hidden_file->f_op->write);
+	old_fs = get_fs();
+	set_fs(get_ds());
+	size = hidden_file->f_op->write(hidden_file, (void *)mci, count, &off);
+	set_fs(old_fs);
+	if (size != count) {
+		HERROR("failed to write branch[%d] of file [%*s], ret = %d\n",
+		       bindex, hidden_dentry->d_name.len, hidden_dentry->d_name.name,
+		       size);
+		ret = -EINVAL;
+		goto out_close;
+	}
+
+out_close:
+	fput(hidden_file);
+out:
+	HRETURN(ret);
+}
+
+int mtfs_config_write(struct super_block *sb,
+                      struct mtfs_config *mc)
+{
+	int ret = 0;
+	mtfs_bindex_t bindex = 0;
+	struct mtfs_config_info *mci = &mc->mc_info;
+	HENTRY();
+
+	HASSERT(mci->mci_magic == MCI_MAGIC);
+	HASSERT(mc->mc_valid);
+	HASSERT(mci->mci_version > 0);
+
+	for (bindex = 0; bindex < mtfs_s2bnum(sb); bindex++) {
+		if (mc->mc_blatest[bindex]) {
+			HDEBUG("skip write latest branch[%d]", bindex);
+			continue;
+		}
+
+		HASSERT(mc->mc_nonlatest > 0);
+		ret = mtfs_config_write_branch(sb, mc, bindex);
+		if (ret) {
+			HERROR("failed to write config of branch[%d]\n", bindex);
+			goto out;
+		}
+		mc->mc_blatest[bindex] = 1;
+		mc->mc_nonlatest--;
+	}
+
+	HASSERT(mc->mc_nonlatest == 0);
+out:
+	HRETURN(ret);
+}
+
+static struct mtfs_config *mtfs_config_read_branch(struct super_block *sb,
+                                                   mtfs_bindex_t bindex)
+{
+	int ret = 0;
+	struct mtfs_config *mc = NULL;
+	struct mtfs_config_info *mci = NULL;
+	struct file *hidden_file = NULL;
+	struct dentry *hidden_dentry = mtfs_s2bdconfig(sb, bindex);
+	struct vfsmount *hidden_mnt = mtfs_s2mntbranch(sb, bindex);
+	ssize_t count = 0;
+	ssize_t size = 0;
+	loff_t off = 0;
+	mm_segment_t old_fs;
+	HENTRY();
+
+	MTFS_ALLOC_PTR(mc);
+	if (mc == NULL) {
+		ret = -ENOMEM;
+		HERROR("not enough memory\n");
+		goto out;
+	}
+	mci = &mc->mc_info;
+
+	hidden_file = mtfs_dentry_open(dget(hidden_dentry),
+	                               mntget(hidden_mnt),
+	                               O_RDONLY,
+	                               current_cred());
+	if (IS_ERR(hidden_file)) {
+		ret = PTR_ERR(hidden_file);
+		HERROR("failed to open branch[%d] of file [%*s], ret = %ld\n", 
+		       bindex, hidden_dentry->d_name.len, hidden_dentry->d_name.name,
+		       ret);
+		goto out_free_mc;
+	}
+
+	count = i_size_read(hidden_file->f_dentry->d_inode);
+	if (count != sizeof(*mci) && count != 0) {
+		HERROR("size of branch[%d] of file [%*s] does not match, " 
+		       "expected %lu, got %lu\n",
+		       bindex, hidden_dentry->d_name.len,
+		       hidden_dentry->d_name.name,
+		       sizeof(*mci), count);
+		ret = -EINVAL;
+		goto out_close;
+	}
+
+	if (count == 0) {
+		HDEBUG("size of branch[%d] of file [%*s] is zero\n",
+		       bindex, hidden_dentry->d_name.len,
+		       hidden_dentry->d_name.name);
+		goto out_close;
+	}
+
+	HASSERT(hidden_file->f_op);
+	HASSERT(hidden_file->f_op->read);
+	old_fs = get_fs();
+	set_fs(get_ds());
+	size = hidden_file->f_op->read(hidden_file, (void *)mci, count, &off);
+	set_fs(old_fs);
+	if (size != count) {
+		HERROR("failed to read branch[%d] of file [%*s], ret = %d\n",
+		       bindex, hidden_dentry->d_name.len,
+		       hidden_dentry->d_name.name,
+		       size);
+		ret = -EINVAL;
+		goto out_close;
+	}
+	ret = 0;
+
+	if (mci->mci_magic != MCI_MAGIC) {
+		HERROR("bad maigc of branch[%d] of file [%*s], "
+		       "expected %x, got %x\n",
+		       bindex, hidden_dentry->d_name.len,
+		       hidden_dentry->d_name.name,
+		       MCI_MAGIC, mci->mci_magic);
+		ret = -EINVAL;
+		goto out_close;
+	}
+
+	if (mci->mci_bnum != mtfs_s2bnum(sb)) {
+		HERROR("bad bnum of branch[%d] of file [%*s], "
+		       "expected %d, got %d\n",
+		       bindex, hidden_dentry->d_name.len,
+		       hidden_dentry->d_name.name,
+		       mtfs_s2bnum(sb), mci->mci_bnum);
+		ret = -EINVAL;
+		goto out_close;
+	}
+
+	if (mci->mci_bindex != bindex) {
+		HERROR("bad bindex of branch[%d] of file [%*s], "
+		       "expected %d, got %d\n",
+		       bindex, hidden_dentry->d_name.len,
+		       hidden_dentry->d_name.name,
+		       bindex, mci->mci_bindex);
+		ret = -EINVAL;
+		goto out_close;
+	}
+	mc->mc_valid = 1;
+out_close:
+	fput(hidden_file);
+out_free_mc:
+	if (ret) {
+		MTFS_FREE_PTR(mc);
+		mc = NULL;
+	}
+out:
+	if (ret) {
+		HASSERT(mc == NULL);
+		mc = ERR_PTR(ret);
+	}
+	HASSERT(mc != NULL);
+	HRETURN(mc);
+}
+
+/* If no config file is written, return NULL */
+struct mtfs_config *mtfs_config_read(struct super_block *sb)
+{
+	int ret = 0;
+	struct mtfs_config **mc_array = NULL;
+	struct mtfs_config *mc_chosen = NULL;
+	mtfs_bindex_t bnum = mtfs_s2bnum(sb);
+	mtfs_bindex_t bindex = 0;
+	__u64 highest_version = 0;
+	HENTRY();
+
+	MTFS_ALLOC(mc_array, sizeof(*mc_array) * bnum);
+	if (mc_array == NULL) {
+		ret = -ENOMEM;
+		HERROR("not enough memory\n");
+		goto out;
+	}
+
+	for (bindex = 0; bindex < bnum; bindex++) {
+		mc_array[bindex] = mtfs_config_read_branch(sb, bindex);
+		if (IS_ERR(mc_array[bindex])) {
+			HERROR("failed to read branch[%d]\n", bindex);
+			bindex--;
+			ret = PTR_ERR(mc_array[bindex]);
+			goto out_free;
+		}
+	}
+
+	for (bindex = 0; bindex < bnum; bindex++) {
+		if (mc_array[bindex]->mc_valid &&
+		    highest_version < mc_array[bindex]->mc_info.mci_version) {
+			highest_version = mc_array[bindex]->mc_info.mci_version;
+			mc_chosen = mc_array[bindex];
+		}
+	}
+
+	if (mc_chosen == NULL) {
+		goto out_free_all;
+	}
+
+	for (bindex = 0; bindex < bnum; bindex++) {
+		if (!mc_array[bindex]->mc_valid ||
+		    mc_array[bindex]->mc_info.mci_version < highest_version) {
+		    	mc_chosen->mc_nonlatest ++;
+			continue;
+		} else {
+			mc_chosen->mc_blatest[bindex] = 1;
+		}
+	}
+
+out_free_all:
+	bindex = bnum - 1;
+out_free:
+	for(; bindex >=0; bindex--) {
+		if (mc_array[bindex] != mc_chosen) {
+			MTFS_FREE_PTR(mc_array[bindex]);
+		}
+	}
+
+	MTFS_FREE(mc_array, sizeof(*mc_array) * bnum);
+out:
+	if (ret) {
+		mc_chosen = ERR_PTR(ret);
+	}
+	HRETURN(mc_chosen);
+}
+
+struct mtfs_config *mtfs_config_init(struct mount_option *mount_option)
+{
+	struct mtfs_config *mc = NULL;
+	struct mtfs_config_info *mci = NULL;
+	HENTRY();
+	
+	MTFS_ALLOC_PTR(mc);
+	if (mc == NULL) {
+		HERROR("not enough memory\n");
+		goto out;
+	}
+	mci = &mc->mc_info;
+
+	mci->mci_magic = MCI_MAGIC;
+	mci->mci_version = 1;
+	mci->mci_bindex= 0;
+	mci->mci_bnum = mount_option->bnum;
+	mc->mc_valid = 1;
+	mc->mc_nonlatest = mount_option->bnum;
+out:
+	HRETURN(mc);
+}
+
+void mtfs_config_dump(struct mtfs_config_info *mci)
+{
+	HPRINT("mci_magic = %x\n", mci->mci_magic);
+	HPRINT("mci_version = %llx\n", mci->mci_version);
+	HPRINT("mci_bindex = %d\n", mci->mci_bindex);
+	HPRINT("mci_bnum = %d\n", mci->mci_bnum);
+}
+
 int mtfs_reserve_init_branch(struct dentry *d_root, mtfs_bindex_t bindex)
 {
 	struct dentry *hidden_child = NULL;
 	struct dentry *hidden_parent = NULL;
 	char *name = NULL;
 	int ret = 0;
+	struct super_block *sb = d_root->d_sb;
 	HENTRY();
 
 	hidden_parent = mtfs_d2branch(d_root, bindex);
 	HASSERT(hidden_parent);
-	name = ".mtfs";
+	name = MTFS_RESERVE_ROOT;
 	hidden_child = mtfs_dchild_create(hidden_parent,
 	                                  name, strlen(name),
 	                                  S_IFDIR | S_IRWXU, 0, 0);
@@ -85,11 +386,11 @@ int mtfs_reserve_init_branch(struct dentry *d_root, mtfs_bindex_t bindex)
 		       hidden_parent->d_name.name, name, ret);
 		goto out;
 	}
-	mtfs_s2bdreserve(d_root->d_sb, bindex) = hidden_child;
+	mtfs_s2bdreserve(sb, bindex) = hidden_child;
 
-	hidden_parent = mtfs_s2bdreserve(d_root->d_sb, bindex);
+	hidden_parent = mtfs_s2bdreserve(sb, bindex);
 	HASSERT(hidden_parent);
-	name = "RECOVER";
+	name = MTFS_RESERVE_RECOVER;
 	hidden_child = mtfs_dchild_create(hidden_parent,
 	                                  name, strlen(name),
 	                                  S_IFDIR | S_IRWXU, 0, 0);
@@ -100,19 +401,40 @@ int mtfs_reserve_init_branch(struct dentry *d_root, mtfs_bindex_t bindex)
 		       hidden_parent->d_name.name, name, ret);
 		goto out_put_reserve;
 	}
-	mtfs_s2bdrecover(d_root->d_sb, bindex) = hidden_child;
+	mtfs_s2bdrecover(sb, bindex) = hidden_child;
+
+	hidden_parent = mtfs_s2bdreserve(sb, bindex);
+	HASSERT(hidden_parent);
+	name = MTFS_RESERVE_CONFIG;
+	hidden_child = mtfs_dchild_create(hidden_parent,
+	                                  name, strlen(name),
+	                                  S_IFREG | S_IRWXU, 0, 0);
+	if (IS_ERR(hidden_child)) {
+		ret = PTR_ERR(hidden_child);
+		HERROR("create branch[%d] of [%*s/%s] failed, ret = %d\n",
+		       bindex, hidden_parent->d_name.len,
+		       hidden_parent->d_name.name, name, ret);
+		goto out_put_recover;
+	}
+	mtfs_s2bdconfig(sb, bindex) = hidden_child;
 
 	goto out;
-
+out_put_recover:
+	dput(mtfs_s2bdrecover(sb, bindex));
+	mtfs_s2bdrecover(sb, bindex) = NULL;
 out_put_reserve:
-	dput(mtfs_s2bdreserve(d_root->d_sb, bindex));
-	mtfs_s2bdreserve(d_root->d_sb, bindex) = NULL;
+	dput(mtfs_s2bdreserve(sb, bindex));
+	mtfs_s2bdreserve(sb, bindex) = NULL;
 out:
 	HRETURN(ret);
 }
 
 void mtfs_reserve_fini_branch(struct super_block *sb, mtfs_bindex_t bindex)
 {
+	HASSERT(mtfs_s2bdconfig(sb, bindex));
+	dput(mtfs_s2bdconfig(sb, bindex));
+	mtfs_s2bdconfig(sb, bindex) = NULL;
+
 	HASSERT(mtfs_s2bdrecover(sb, bindex));
 	dput(mtfs_s2bdrecover(sb, bindex));
 	mtfs_s2bdrecover(sb, bindex) = NULL;
@@ -122,10 +444,12 @@ void mtfs_reserve_fini_branch(struct super_block *sb, mtfs_bindex_t bindex)
 	mtfs_s2bdreserve(sb, bindex) = NULL;
 }
 
-int mtfs_reserve_init(struct dentry *d_root)
+int mtfs_reserve_init(struct dentry *d_root, struct mount_option *mount_option)
 {
 	int ret = 0;
 	mtfs_bindex_t bindex = 0;
+	struct mtfs_config *mc = NULL;
+	struct super_block *sb = d_root->d_sb;
 	HENTRY();
 
 	HASSERT(d_root);
@@ -137,7 +461,37 @@ int mtfs_reserve_init(struct dentry *d_root)
 			goto out_fini;
 		}
 	}
+	bindex = mtfs_d2bnum(d_root) -1 ;
+
+	mc = mtfs_config_read(d_root->d_sb); 
+	if (IS_ERR(mc)) {
+		HERROR("failed to read config\n");
+		ret = PTR_ERR(mc);
+		goto out_fini;
+	}
+
+	if (mc == NULL) {
+		HDEBUG("generating config\n");
+		mc = mtfs_config_init(mount_option);
+		if (mc == NULL) {
+			HERROR("failed to init config\n");
+			goto out_fini;
+		}
+	}
+
+	if (mc->mc_nonlatest) {
+		ret = mtfs_config_write(d_root->d_sb, mc);
+		if (ret) {
+			HERROR("failed to write config, ret = %d\n", ret);
+			goto out_free_mc;
+		}
+	}
+
+	mtfs_s2config(sb) = mc;
+
 	goto out;
+out_free_mc:
+	MTFS_FREE_PTR(mc);
 out_fini:
 	for (; bindex >= 0; bindex--) {
 		mtfs_reserve_fini_branch(d_root->d_sb, bindex);
@@ -154,16 +508,8 @@ void mtfs_reserve_fini(struct super_block *sb)
 	for (bindex = 0; bindex < mtfs_s2bnum(sb); bindex++) {
 		mtfs_reserve_fini_branch(sb, bindex);
 	}
-}
 
-int mtfs_init_recover(struct dentry *d_root)
-{
-	return mtfs_reserve_init(d_root);
-}
-
-void mtfs_finit_recover(struct dentry *d_root)
-{
-	mtfs_reserve_fini(d_root->d_sb);
+	MTFS_FREE_PTR(mtfs_s2config(sb));
 }
 
 int mtfs_read_super(struct super_block *sb, void *input, int silent)
@@ -241,7 +587,7 @@ int mtfs_read_super(struct super_block *sb, void *input, int silent)
 	sb->s_root = d_root;
 	d_root->d_sb = sb;
 
-	ret = mtfs_init_recover(d_root);
+	ret = mtfs_reserve_init(d_root, &mount_option);
 	if (unlikely(ret)) {
 		goto out_put;
 	}
@@ -250,7 +596,7 @@ int mtfs_read_super(struct super_block *sb, void *input, int silent)
 	HASSERT(device);
 	if (IS_ERR(device)) {
 		ret = PTR_ERR(device);
-		goto out_finit_recover;
+		goto out_finit_reserve;
 	}
 
 	HASSERT(mtfs_s2bnum(sb) == bnum);
@@ -264,8 +610,8 @@ int mtfs_read_super(struct super_block *sb, void *input, int silent)
 	goto out_option_finit;
 out_free_dev:
 	mtfs_freedev(mtfs_s2dev(sb));
-out_finit_recover:
-	mtfs_finit_recover(d_root);
+out_finit_reserve:
+	mtfs_reserve_fini(sb);
 out_put:
 	for(; bindex >=0; bindex--) {
 		HASSERT(mtfs_d2branch(d_root, bindex));

@@ -206,6 +206,3 @@ struct super_operations mtfs_sops =
 	clear_inode:    mtfs_clear_inode,
 	show_options:   mtfs_show_options,
 };
-
-
-
