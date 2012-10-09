@@ -143,8 +143,8 @@ int mtfs_parse_options(char *input, struct mount_option *mount_option)
 				ret = -ENOMEM;
 				goto error;
 			}
-
 			mount_option->mo_subject_is_set = 1;
+
 			break;
 		case opt_dirs:
 			if (dirs_is_set) {

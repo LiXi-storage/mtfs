@@ -287,9 +287,10 @@ struct mtfs_config *mtfs_config_read(struct super_block *sb)
 	for (bindex = 0; bindex < bnum; bindex++) {
 		mc_array[bindex] = mtfs_config_read_branch(sb, bindex);
 		if (IS_ERR(mc_array[bindex])) {
-			HERROR("failed to read branch[%d]\n", bindex);
-			bindex--;
 			ret = PTR_ERR(mc_array[bindex]);
+			HERROR("failed to read branch[%d], ret = %d\n",
+			       bindex, ret);
+			bindex--;
 			goto out_free;
 		}
 	}

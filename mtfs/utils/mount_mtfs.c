@@ -45,6 +45,7 @@ void usage(FILE *out)
 	        "\t-n|--nomtab: do not update /etc/mtab after mount\n"
 	        "\t-v|--verbose: print verbose config settings\n"
 	        "\t<mntopt>: one or more comma separated of:\n"
+	        "\t\tsubject=<name>: subject name\n"
 	);
 }
 

@@ -10,12 +10,15 @@
 #include <linux/fs.h>
 #include <mtfs_common.h>
 
+#define MTFS_MAX_SUBJECT 64
+
 /* On-disk configuration file. In host-endian order. */
 struct mtfs_config_info {
-	__u32         mci_magic;   /* Should be MCI_MAGIC */
-	__u64         mci_version; /* Rewrite count */
-	mtfs_bindex_t mci_bindex;  /* Branch index */
-	mtfs_bindex_t mci_bnum;    /* Branch number */
+	__u32         mci_magic;                     /* Should be MCI_MAGIC */
+	__u64         mci_version;                   /* Rewrite count */
+	mtfs_bindex_t mci_bindex;                    /* Branch index */
+	mtfs_bindex_t mci_bnum;                      /* Branch number */
+	char          mci_subject[MTFS_MAX_SUBJECT]; /* Subject name */
 };
 
 struct mtfs_config {
