@@ -14,19 +14,24 @@
 
 int hide_dirs(char *source, int unhide)
 {
-	struct mount_option mount_option;
+	struct mount_option *mount_option = NULL;
 	int ret = 0;
 	mtfs_bindex_t bindex = 0;
 	char option[] = "";
 	int flags = 0;
 
-	ret = parse_dir_option(source, &mount_option);
-	if (ret) {
+	MTFS_ALLOC_PTR(mount_option);
+	if (mount_option == NULL) {
 		goto out;
 	}
 
-	for (bindex = 0; bindex < mount_option.bnum; bindex++) {
-		char *name = mount_option.branch[bindex].path;
+	ret = parse_dir_option(source, mount_option);
+	if (ret) {
+		goto out_free;
+	}
+
+	for (bindex = 0; bindex < mount_option->bnum; bindex++) {
+		char *name = mount_option->branch[bindex].path;
 
 		if (unhide) {
 			ret = umount(name);
@@ -40,7 +45,9 @@ int hide_dirs(char *source, int unhide)
 		}
 	}
 
-	mount_option_fini(&mount_option);
+	mount_option_fini(mount_option);
+out_free:
+	MTFS_FREE_PTR(mount_option);
 out:
 	return ret;
 }

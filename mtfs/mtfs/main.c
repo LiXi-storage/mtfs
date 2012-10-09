@@ -201,6 +201,7 @@ static struct mtfs_config *mtfs_config_read_branch(struct super_block *sb,
 		HDEBUG("size of branch[%d] of file [%*s] is zero\n",
 		       bindex, hidden_dentry->d_name.len,
 		       hidden_dentry->d_name.name);
+		mc->mc_valid = 0;
 		goto out_close;
 	}
 
@@ -219,36 +220,6 @@ static struct mtfs_config *mtfs_config_read_branch(struct super_block *sb,
 		goto out_close;
 	}
 	ret = 0;
-
-	if (mci->mci_magic != MCI_MAGIC) {
-		HERROR("bad maigc of branch[%d] of file [%*s], "
-		       "expected %x, got %x\n",
-		       bindex, hidden_dentry->d_name.len,
-		       hidden_dentry->d_name.name,
-		       MCI_MAGIC, mci->mci_magic);
-		ret = -EINVAL;
-		goto out_close;
-	}
-
-	if (mci->mci_bnum != mtfs_s2bnum(sb)) {
-		HERROR("bad bnum of branch[%d] of file [%*s], "
-		       "expected %d, got %d\n",
-		       bindex, hidden_dentry->d_name.len,
-		       hidden_dentry->d_name.name,
-		       mtfs_s2bnum(sb), mci->mci_bnum);
-		ret = -EINVAL;
-		goto out_close;
-	}
-
-	if (mci->mci_bindex != bindex) {
-		HERROR("bad bindex of branch[%d] of file [%*s], "
-		       "expected %d, got %d\n",
-		       bindex, hidden_dentry->d_name.len,
-		       hidden_dentry->d_name.name,
-		       bindex, mci->mci_bindex);
-		ret = -EINVAL;
-		goto out_close;
-	}
 	mc->mc_valid = 1;
 out_close:
 	fput(hidden_file);
@@ -264,6 +235,44 @@ out:
 	}
 	HASSERT(mc != NULL);
 	HRETURN(mc);
+}
+
+/* If ok, return 0 */
+int mtfs_config_check_branch(struct super_block *sb,
+                             struct mtfs_config *mc,
+                             mtfs_bindex_t bindex)
+{
+	struct mtfs_config_info *mci = &mc->mc_info;
+	int ret = 0;
+	HENTRY();
+
+	if (mci->mci_magic != MCI_MAGIC) {
+		HERROR("bad maigc, expected %x, got %x\n",
+		       MCI_MAGIC, mci->mci_magic);
+		ret = -EINVAL;
+		goto out;
+	}
+
+	if (mci->mci_bnum != mtfs_s2bnum(sb)) {
+		HERROR("bad bnum, expected %d, got %d\n",
+		       mtfs_s2bnum(sb), mci->mci_bnum);
+		ret = -EINVAL;
+		goto out;
+	}
+
+	if (bindex > 0 && mci->mci_bindex != bindex) {
+		HERROR("bad bindex, expected %d, got %d\n",
+		       bindex, mci->mci_bindex);
+		ret = -EINVAL;
+		goto out;
+	}
+out:
+	if (ret) {
+		mc->mc_valid = 0;
+	} else {
+		mc->mc_valid = 1;
+	}
+	HRETURN(ret);	
 }
 
 /* If no config file is written, return NULL */
@@ -288,9 +297,20 @@ struct mtfs_config *mtfs_config_read(struct super_block *sb)
 		mc_array[bindex] = mtfs_config_read_branch(sb, bindex);
 		if (IS_ERR(mc_array[bindex])) {
 			ret = PTR_ERR(mc_array[bindex]);
-			HERROR("failed to read branch[%d], ret = %d\n",
+			HERROR("failed to read config of branch[%d], ret = %d\n",
 			       bindex, ret);
 			bindex--;
+			goto out_free;
+		}
+
+		if (!mc_array[bindex]->mc_valid) {
+			continue;
+		}
+
+		ret = mtfs_config_check_branch(sb, mc_array[bindex], bindex);
+		if (ret) {
+			HERROR("failed to check config of branch[%d], ret = %d\n",
+			       bindex, ret);
 			goto out_free;
 		}
 	}
@@ -347,12 +367,27 @@ struct mtfs_config *mtfs_config_init(struct mount_option *mount_option)
 	}
 	mci = &mc->mc_info;
 
+	if (mount_option->mo_subject) {
+		if (strlen(mount_option->mo_subject) + 1 > MTFS_MAX_SUBJECT) {
+			HERROR("subject is too long\n");
+			goto out_free;
+		} else {
+			strcpy(mci->mci_subject, mount_option->mo_subject);
+		}
+	} else {
+		strcpy(mci->mci_subject, MTFS_DEFAULT_SUBJECT);
+	}
+
 	mci->mci_magic = MCI_MAGIC;
 	mci->mci_version = 1;
 	mci->mci_bindex= 0;
 	mci->mci_bnum = mount_option->bnum;
 	mc->mc_valid = 1;
 	mc->mc_nonlatest = mount_option->bnum;
+	goto out;
+out_free:
+	
+	mc = NULL;
 out:
 	HRETURN(mc);
 }
@@ -480,6 +515,15 @@ int mtfs_reserve_init(struct dentry *d_root, struct mount_option *mount_option)
 		}
 	}
 
+	HASSERT(mc->mc_valid);
+	if (mount_option->mo_subject &&
+	    strcmp(mc->mc_info.mci_subject, mount_option->mo_subject) != 0) {
+		HERROR("subject confilct, mounted %s, configured %s\n",
+		       mount_option->mo_subject, mc->mc_info.mci_subject);
+		ret = -EINVAL;
+		goto out_free_mc;
+	}
+
 	if (mc->mc_nonlatest) {
 		ret = mtfs_config_write(d_root->d_sb, mc);
 		if (ret) {
@@ -516,7 +560,7 @@ void mtfs_reserve_fini(struct super_block *sb)
 int mtfs_read_super(struct super_block *sb, void *input, int silent)
 {
 	int ret = 0;
-	struct mount_option mount_option;
+	struct mount_option *mount_option = NULL;
 	mtfs_bindex_t bnum = 0;
 	mtfs_bindex_t bindex = 0;
 	struct dentry *d_root = NULL;
@@ -524,20 +568,27 @@ int mtfs_read_super(struct super_block *sb, void *input, int silent)
 	struct mtfs_device *device = NULL;
 	HENTRY();
 
-	ret = mtfs_parse_options((char *)input, &mount_option);
-	if (unlikely(ret)) {
-		HERROR("fail to parse mount option\n");
+	MTFS_ALLOC_PTR(mount_option);
+	if (mount_option == NULL) {
+		ret = -ENOMEM;
+		HERROR("not enough memory\n");
 		goto out;
 	}
 
-	bnum = mount_option.bnum;
+	ret = mtfs_parse_options((char *)input, mount_option);
+	if (unlikely(ret)) {
+		HERROR("fail to parse mount option\n");
+		goto out_free_mnt_option;
+	}
+
+	bnum = mount_option->bnum;
 	HASSERT(bnum > 0);
 
 	d_root = d_alloc(NULL, &name);
 	if (unlikely(d_root == NULL)) {
 		ret = -ENOMEM;
 		HERROR("d_alloc failed\n");
-		goto out_option_finit;
+		goto out_option_fini;
 	}
 	/* Otherwise dput will crash, see d_alloc_root */
 	d_root->d_parent = d_root;
@@ -558,7 +609,7 @@ int mtfs_read_super(struct super_block *sb, void *input, int silent)
 		struct dentry *dentry = NULL;
 		struct vfsmount *mnt = NULL;
 
-		name = mount_option.branch[bindex].path;
+		name = mount_option->branch[bindex].path;
 		HASSERT(name);
 		HDEBUG("using directory: %s\n", name);
 		ret = path_lookup(name, LOOKUP_FOLLOW, &nd);
@@ -588,12 +639,12 @@ int mtfs_read_super(struct super_block *sb, void *input, int silent)
 	sb->s_root = d_root;
 	d_root->d_sb = sb;
 
-	ret = mtfs_reserve_init(d_root, &mount_option);
+	ret = mtfs_reserve_init(d_root, mount_option);
 	if (unlikely(ret)) {
 		goto out_put;
 	}
 
-	device = mtfs_newdev(sb, &mount_option);
+	device = mtfs_newdev(sb, mount_option);
 	HASSERT(device);
 	if (IS_ERR(device)) {
 		ret = PTR_ERR(device);
@@ -608,7 +659,7 @@ int mtfs_read_super(struct super_block *sb, void *input, int silent)
 	if (unlikely(ret)) {
 		goto out_free_dev;
 	}
-	goto out_option_finit;
+	goto out_option_fini;
 out_free_dev:
 	mtfs_freedev(mtfs_s2dev(sb));
 out_finit_reserve:
@@ -633,8 +684,10 @@ out_d_free:
 	mtfs_d_free(d_root);
 out_dput:
 	dput(d_root);
-out_option_finit:
-	mount_option_fini(&mount_option);
+out_option_fini:
+	mount_option_fini(mount_option);
+out_free_mnt_option:
+	MTFS_FREE_PTR(mount_option);
 out:
 	HRETURN(ret);
 }

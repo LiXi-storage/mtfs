@@ -106,7 +106,6 @@ int mtfs_parse_options(char *input, struct mount_option *mount_option)
 	int dirs_is_set = 0;
 
 	HASSERT(mount_option);
-	memset(mount_option, 0, sizeof(*mount_option));
 	if (!input) {
 		HERROR("Hidden dirs not seted\n");
 		ret = -EINVAL;
@@ -120,7 +119,7 @@ int mtfs_parse_options(char *input, struct mount_option *mount_option)
 		token = match_token(p, tokens, args);
 		switch (token) {
 		case opt_subject:
-			if (mount_option->mo_subject_is_set) {
+			if (mount_option->mo_subject) {
 				HERROR("unexpected multiple subject options\n");
 				ret = -EINVAL;
 				goto error;
@@ -143,8 +142,6 @@ int mtfs_parse_options(char *input, struct mount_option *mount_option)
 				ret = -ENOMEM;
 				goto error;
 			}
-			mount_option->mo_subject_is_set = 1;
-
 			break;
 		case opt_dirs:
 			if (dirs_is_set) {

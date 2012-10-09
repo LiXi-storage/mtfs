@@ -197,23 +197,28 @@ out:
 char *reslove_source_path(const char *origin_source)
 {
 	int ret = 0;
-	struct mount_option mount_option;
+	struct mount_option *mount_option = NULL;
 	mtfs_bindex_t bindex = 0;
 	char *path = NULL;
 	char *source = NULL;
 	char rpath[PATH_MAX] = {'\0'};
 	int source_len = 0;
 
-	source = strdup(origin_source);
-	ret = parse_dir_option(source, &mount_option);
-	free(source);
-	if (ret) {
-		source = NULL;
+	mount_option = calloc(1, sizeof(*mount_option));
+	if (mount_option == NULL) {
 		goto out;
 	}
 
+	source = strdup(origin_source);
+	ret = parse_dir_option(source, mount_option);
+	free(source);
+	if (ret) {
+		source = NULL;
+		goto out_free;
+	}
+
 	/* TODO: BUG if longer than a page? */
-	source_len = mount_option.bnum * (PATH_MAX + 1);
+	source_len = mount_option->bnum * (PATH_MAX + 1);
 	if (source_len > 4095) {
 		source_len = 4095;
 	}
@@ -222,8 +227,8 @@ char *reslove_source_path(const char *origin_source)
 		goto finit_option;
 	}
 
-	for (bindex = 0; bindex < mount_option.bnum; bindex++) {
-		path = mount_option.branch[bindex].path;
+	for (bindex = 0; bindex < mount_option->bnum; bindex++) {
+		path = mount_option->branch[bindex].path;
 		if (realpath(path, rpath) == NULL) {
 			fprintf(stderr, "Failed to get realpath for '%s' at branch[%d]: %s\n",
 			        path, bindex, strerror(errno));
@@ -237,7 +242,9 @@ char *reslove_source_path(const char *origin_source)
 		}
 	}
 finit_option:
-	mount_option_fini(&mount_option);
+	mount_option_fini(mount_option);
+out_free:
+	free(mount_option);
 out:
 	return source;
 }
