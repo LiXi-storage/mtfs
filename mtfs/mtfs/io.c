@@ -14,35 +14,35 @@ static int mtfs_io_init_oplist(struct mtfs_io *io)
 	struct dentry *dentry = NULL;
 	struct inode *inode = NULL;
 	struct mtfs_operation_list *oplist = &io->mi_oplist;
-	HENTRY();
+	MENTRY();
 
 	dentry = io->mi_oplist_dentry;
-	HASSERT(dentry);
+	MASSERT(dentry);
 	inode = dentry->d_inode;
-	HASSERT(inode);
+	MASSERT(inode);
 
 	mtfs_oplist_init(oplist, inode);
 	if (oplist->latest_bnum == 0) {
-		HERROR("[%*s] has no valid branch, please check it\n",
+		MERROR("[%*s] has no valid branch, please check it\n",
 		       dentry->d_name.len, dentry->d_name.name);
 		if (!(mtfs_i2dev(inode)->no_abort)) {
 			ret = -EIO;
 		}
 	}
 
-	HRETURN(ret);
+	MRETURN(ret);
 }
 
 static void mtfs_io_iter_end_oplist(struct mtfs_io *io)
 {
 	struct mtfs_operation_list *oplist = &io->mi_oplist;
-	HENTRY();
+	MENTRY();
 
 	mtfs_oplist_setbranch(oplist, io->mi_bindex,
 	                      io->mi_successful,
 	                      io->mi_result);
 
-	_HRETURN();
+	_MRETURN();
 }
 
 static void mtfs_io_fini_oplist(struct mtfs_io *io)
@@ -51,12 +51,12 @@ static void mtfs_io_fini_oplist(struct mtfs_io *io)
 	struct dentry *dentry = NULL;
 	struct inode *inode = NULL;
 	struct mtfs_operation_list *oplist = &io->mi_oplist;
-	HENTRY();
+	MENTRY();
 
 	dentry = io->mi_oplist_dentry;
-	HASSERT(dentry);
+	MASSERT(dentry);
 	inode = dentry->d_inode;
-	HASSERT(inode);
+	MASSERT(inode);
 
 	mtfs_oplist_merge(oplist);
 	io->mi_result = oplist->opinfo->result;
@@ -64,50 +64,50 @@ static void mtfs_io_fini_oplist(struct mtfs_io *io)
 
 	ret = mtfs_oplist_update(inode, oplist);
 	if (ret) {
-		HERROR("failed to update oplist for [%*s]\n",
+		MERROR("failed to update oplist for [%*s]\n",
 		       dentry->d_name.len, dentry->d_name.name);
-		HBUG();
+		MBUG();
 	}
 
-	_HRETURN();
+	_MRETURN();
 }
 
 static int mtfs_io_lock_mlock(struct mtfs_io *io)
 {
 	int ret = 0;
-	HENTRY();
+	MENTRY();
 
 	io->mi_mlock = mlock_enqueue(io->mi_resource, &io->mi_einfo);
 	if (io->mi_mlock == NULL) {
-		HERROR("failed to enqueue lock\n");
+		MERROR("failed to enqueue lock\n");
 		ret = -ENOMEM;
 	}
 
-	HRETURN(ret);
+	MRETURN(ret);
 }
 
 static void mtfs_io_unlock_mlock(struct mtfs_io *io)
 {
-	HENTRY();
+	MENTRY();
 
-	HASSERT(io->mi_mlock);
+	MASSERT(io->mi_mlock);
 	mlock_cancel(io->mi_mlock);
 
-	_HRETURN();
+	_MRETURN();
 }
 
 static int mtfs_io_iter_init_rw(struct mtfs_io *io)
 {
 	int ret = 0;
 	struct mtfs_io_rw *io_rw = &io->u.mi_rw;
-	HENTRY();
+	MENTRY();
 
 	memcpy((char *)io_rw->iov_tmp,
 	       (char *)io_rw->iov,
 	       sizeof(*(io_rw->iov)) * io_rw->nr_segs);
 	io_rw->pos_tmp = *(io_rw->ppos);
 
-	HRETURN(ret);
+	MRETURN(ret);
 }
 
 static void mtfs_io_iter_start_rw(struct mtfs_io *io)
@@ -115,7 +115,7 @@ static void mtfs_io_iter_start_rw(struct mtfs_io *io)
 	struct mtfs_io_rw *io_rw = &io->u.mi_rw;
 	mtfs_bindex_t global_bindex = io->mi_oplist.op_binfo[io->mi_bindex].bindex;
 	int is_write = 0;
-	HENTRY();
+	MENTRY();
 
 	is_write = (io->mi_type == MIT_WRITEV) ? 1 : 0;
 	io->mi_result.size = mtfs_file_rw_branch(is_write,
@@ -131,12 +131,12 @@ static void mtfs_io_iter_start_rw(struct mtfs_io *io)
 		io->mi_successful = 0;
 	}
 
-	_HRETURN();
+	_MRETURN();
 }
 
 static void mtfs_io_iter_fini_readv(struct mtfs_io *io, int init_ret)
 {
-	HENTRY();
+	MENTRY();
 
 	if (unlikely(init_ret)) {
 		if (io->mi_bindex == io->mi_bnum - 1) {
@@ -155,12 +155,12 @@ static void mtfs_io_iter_fini_readv(struct mtfs_io *io, int init_ret)
 	}
 
 out:
-	_HRETURN();
+	_MRETURN();
 }
 
 static void mtfs_io_iter_fini_writev(struct mtfs_io *io, int init_ret)
 {
-	HENTRY();
+	MENTRY();
 
 	if (unlikely(init_ret)) {
 		if (io->mi_bindex == io->mi_bnum - 1) {
@@ -174,7 +174,7 @@ static void mtfs_io_iter_fini_writev(struct mtfs_io *io, int init_ret)
 	if (io->mi_bindex == io->mi_oplist.latest_bnum - 1) {
 		mtfs_oplist_merge(&io->mi_oplist);
 		if (io->mi_oplist.success_latest_bnum <= 0) {
-			HDEBUG("operation failed for all latest %d branches\n",
+			MDEBUG("operation failed for all latest %d branches\n",
 			       io->mi_oplist.latest_bnum);
 			if (!(mtfs_i2dev(io->mi_oplist_dentry->d_inode)->no_abort)) {
 				io->mi_break = 1;
@@ -189,7 +189,7 @@ static void mtfs_io_iter_fini_writev(struct mtfs_io *io, int init_ret)
 		io->mi_bindex++;
 	}
 out:
-	_HRETURN();
+	_MRETURN();
 }
 
 const struct mtfs_io_operations mtfs_io_ops[] = {
@@ -218,116 +218,116 @@ const struct mtfs_io_operations mtfs_io_ops[] = {
 static int mtfs_io_init(struct mtfs_io *io)
 {
 	int ret = 0;
-	HENTRY();
+	MENTRY();
 
-	HASSERT(io->mi_ops);
+	MASSERT(io->mi_ops);
 	if (io->mi_ops->mio_init) {
 		ret = io->mi_ops->mio_init(io);
 	}
 
-	HRETURN(ret);
+	MRETURN(ret);
 }
 
 static void mtfs_io_fini(struct mtfs_io *io)
 {
-	HENTRY();
+	MENTRY();
 
-	HASSERT(io->mi_ops);
+	MASSERT(io->mi_ops);
 	if (io->mi_ops->mio_fini) {
 		io->mi_ops->mio_fini(io);
 	}
 
-	_HRETURN();
+	_MRETURN();
 }
 
 static int mtfs_io_lock(struct mtfs_io *io)
 {
 	int ret = 0;
-	HENTRY();
+	MENTRY();
 
-	HASSERT(io->mi_ops);
+	MASSERT(io->mi_ops);
 	if (io->mi_ops->mio_lock) {
 		ret = io->mi_ops->mio_lock(io);
 	}
 
-	HRETURN(ret);
+	MRETURN(ret);
 }
 
 static void mtfs_io_unlock(struct mtfs_io *io)
 {
-	HENTRY();
+	MENTRY();
 
-	HASSERT(io->mi_ops);
+	MASSERT(io->mi_ops);
 	if (io->mi_ops->mio_unlock) {
 		io->mi_ops->mio_unlock(io);
 	}
 
-	_HRETURN();
+	_MRETURN();
 }
 
 static int mtfs_io_iter_init(struct mtfs_io *io)
 {
 	int ret = 0;
-	HENTRY();
+	MENTRY();
 
-	HASSERT(io->mi_ops);
+	MASSERT(io->mi_ops);
 	if (io->mi_ops->mio_iter_init) {
 		ret = io->mi_ops->mio_iter_init(io);
 	}
 
-	HRETURN(ret);
+	MRETURN(ret);
 }
 
 static void mtfs_io_iter_start(struct mtfs_io *io)
 {
-	HENTRY();
+	MENTRY();
 
-	HASSERT(io->mi_ops);
+	MASSERT(io->mi_ops);
 	if (io->mi_ops->mio_iter_start) {
 		io->mi_ops->mio_iter_start(io);
 	}
 
-	_HRETURN();
+	_MRETURN();
 }
 
 static void mtfs_io_iter_end(struct mtfs_io *io)
 {
-	HENTRY();
+	MENTRY();
 
-	HASSERT(io->mi_ops);
+	MASSERT(io->mi_ops);
 	if (io->mi_ops->mio_iter_end) {
 		io->mi_ops->mio_iter_end(io);
 	}
 
-	_HRETURN();
+	_MRETURN();
 }
 
 static void mtfs_io_iter_fini(struct mtfs_io *io, int init_ret)
 {
-	HENTRY();
+	MENTRY();
 
-	HASSERT(io->mi_ops);
+	MASSERT(io->mi_ops);
 	if (io->mi_ops->mio_iter_fini) {
 		io->mi_ops->mio_iter_fini(io, init_ret);
 	}
 
-	_HRETURN();
+	_MRETURN();
 }
 
 int mtfs_io_loop(struct mtfs_io *io)
 {
 	int ret = 0;
-	HENTRY();
+	MENTRY();
 
 	ret = mtfs_io_init(io);
 	if (ret) {
-		HERROR("failed to init io\n");
+		MERROR("failed to init io\n");
 		goto out;
 	}
 
 	ret = mtfs_io_lock(io);
 	if (ret) {
-		HERROR("failed to lock for io\n");
+		MERROR("failed to lock for io\n");
 		goto out_fini;
 	}
 
@@ -344,5 +344,5 @@ int mtfs_io_loop(struct mtfs_io *io)
 out_fini:
 	mtfs_io_fini(io);
 out:
-	HRETURN(ret);
+	MRETURN(ret);
 }

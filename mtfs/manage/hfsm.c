@@ -56,11 +56,11 @@ static void fsmL_error(lua_State *L)
 		if (error_msg == NULL) {
 			error_msg = "error object is not a string";
 		}
-		HERROR("lua script returned error: %s\n", error_msg);
+		MERROR("lua script returned error: %s\n", error_msg);
 		lua_pop(L, 1);
 	} else {
 		error_msg = "no error msg";
-		HERROR("%s\n", error_msg);
+		MERROR("%s\n", error_msg);
 	}
 }
 
@@ -169,18 +169,18 @@ static int fsmL_loadfile(lua_State *L, const char *fname)
 {
 	struct stat st;
 	int ret = 0;
-	HENTRY();
+	MENTRY();
 
 	if (fname) {
 		if (stat(fname, &st) == -1) {
-			HERROR("failed to stat file [%s]: %s\n", fname, strerror(errno));
+			MERROR("failed to stat file [%s]: %s\n", fname, strerror(errno));
 			ret = errno;
 			goto out;
 		}
 	}
  	ret = luaL_loadfile(L, fname);
  out:
-	HRETURN(ret);
+	MRETURN(ret);
 }
 
 static int fsmL_traceback(lua_State *L)
@@ -204,7 +204,7 @@ static int fsmL_traceback(lua_State *L)
 static int fsmL_docall(lua_State *L, int narg, int clear) {
 	int status;
 	int base = lua_gettop(L) - narg;  /* function index */
-	HENTRY();
+	MENTRY();
 
 	lua_pushcfunction(L, fsmL_traceback);  /* push traceback function */
 	lua_insert(L, base);  /* put it under chunk and args */
@@ -216,7 +216,7 @@ static int fsmL_docall(lua_State *L, int narg, int clear) {
 		lua_gc(L, LUA_GCCOLLECT, 0);
 	}
 
-	HRETURN(status);
+	MRETURN(status);
 }
 
 void fsmL_dotty(lua_State *L) {
@@ -240,7 +240,7 @@ void fsmL_dotty(lua_State *L) {
 				const char *error_msg = lua_pushfstring(L,
 				       "error calling " LUA_QL("print") " (%s)",
 				       lua_tostring(L, -1));
-				HDEBUG("%s\n", error_msg);
+				MDEBUG("%s\n", error_msg);
 			}
 		}
 	}
@@ -357,7 +357,7 @@ static char **fsmL_command_completion(char *text, int start, int end)
 	 * **h**
 	 */
 	if (head != tail) {
-		HDEBUG("no completion\n");
+		MDEBUG("no completion\n");
 		/* This is not first command, no completion */
 		return rl_completion_matches(text, fsmL_command_nop_generator);
 	}
@@ -395,7 +395,7 @@ static int fsmL_register_libs(lua_State *L)
 		}
 	    fsmL_create_metatable(L, lib->metatable_name);
 		luaL_openlib(L, lib->name, lib->lib, 0);
-		HDEBUG("command [%s] loaded\n", lib->name);
+		MDEBUG("command [%s] loaded\n", lib->name);
 	}
 	return 0;
 }
@@ -414,14 +414,14 @@ static int fsmL_init(lua_State *L)
 static int fsmL_pmain(lua_State *L) {
 	int ret = 0;
 	struct Smain *s = (struct Smain *)lua_touserdata(L, 1);
-	HENTRY();
+	MENTRY();
 
 	if (s) {
 	}
 
 	ret = fsmL_init(L);
 	if (ret) {
-		HERROR("failed to init\n");
+		MERROR("failed to init\n");
 		goto out;
 	}
 
@@ -437,12 +437,12 @@ static int fsmL_pmain(lua_State *L) {
 			if (msg == NULL) {
 				msg = "(error object is not a string)";
 			}
-			HERROR("%s\n", msg);
+			MERROR("%s\n", msg);
 			lua_pop(L, 1);
 		}
 	}
 out:
-	HRETURN(ret);
+	MRETURN(ret);
 }
 
 static int fsmL_start(struct Smain *s)
@@ -452,7 +452,7 @@ static int fsmL_start(struct Smain *s)
 	
 	L = lua_open();
 	if (L == NULL) {
-		HERROR("cannot create state: not enough memory");
+		MERROR("cannot create state: not enough memory");
 		ret = -ENOMEM;
 		goto out;
 	}
@@ -490,7 +490,7 @@ char *fsmL_field_getstring(lua_State *L, int index, const char *name)
 	char *value = NULL;
 	lua_getfield(L, index, name);
 	if (!lua_isstring(L, -1)) {
-		HERROR("argument error:"
+		MERROR("argument error:"
 		       "%s is expected to be a string, got %s\n",
 		       name, luaL_typename(L, -1));
 		goto out;

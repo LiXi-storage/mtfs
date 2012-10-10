@@ -37,7 +37,7 @@ static inline int mtfs_rand_range(int lower_bound, int upper_bound)
 	int num = 0;
 	int range = upper_bound - lower_bound;
 	
-	HASSERT(range > 0 && range < RAND_MAX);
+	MASSERT(range > 0 && range < RAND_MAX);
 
 	num = mtfs_random(); /* [0, RAND_MAX] */
 	num %= range;        /* [0, range - 1] */ 

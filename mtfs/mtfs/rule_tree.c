@@ -55,11 +55,11 @@ int rule_tree_dump(rule_tree_t *root)
 	char key;
 	char teminate = '.';
 	
-	HASSERT(root != NULL);
+	MASSERT(root != NULL);
 	/* Easy to prove that queue length is no bigger than rule_number */
 	ret = queue_initialise(&tmp_queue, MAX_RULE_NUM);
 	if (ret) {
-		HERROR("queue initialise failed\n");
+		MERROR("queue initialise failed\n");
 		goto out;
 	}
 	
@@ -71,7 +71,7 @@ int rule_tree_dump(rule_tree_t *root)
 			for (i = 0; i < tmp_root->list_length; i++) {
 				ret = __queue_add(&tmp_queue, (void *)tmp_root->list[i], 0);
 				if (ret) {
-					HERROR("queue full\n");
+					MERROR("queue full\n");
 					goto free_all;
 				}
 			}
@@ -84,7 +84,7 @@ int rule_tree_dump(rule_tree_t *root)
 
 		if (tmp_root->depth > depth) {
 			if (depth != -1) {
-				HPRINT("\n");
+				MPRINT("\n");
 			}
 			former = 0;
 		}
@@ -93,22 +93,22 @@ int rule_tree_dump(rule_tree_t *root)
 		if (former < tmp_root->start) {
 			if (former == 0) {
 				depth =	tmp_root->depth;
-				HPRINT("%c", teminate);
+				MPRINT("%c", teminate);
 				former++;
 			}
 			for (i = former; i < tmp_root->start; i++) {
-				HPRINT("|%c", teminate);
+				MPRINT("|%c", teminate);
 			}
 		}
 		
 		if (tmp_root->depth > depth) {
-			HPRINT("%c", key);
+			MPRINT("%c", key);
 		} else {
-			HPRINT("|%c", key);
+			MPRINT("|%c", key);
 		}
 		
 		for(i = tmp_root->start + 1; i <= tmp_root->end; i++) {
-			HPRINT("_%c", key);
+			MPRINT("_%c", key);
 		}
 		
 		if (tmp_root->depth > depth) {
@@ -118,7 +118,7 @@ int rule_tree_dump(rule_tree_t *root)
 				
 		tmp_root = queue_remove(&tmp_queue);
 	}
-	HPRINT("\n");
+	MPRINT("\n");
 free_all:
 	queue_free(&tmp_queue);
 out:
@@ -132,7 +132,7 @@ out:
  */
 void rule_tree_node_free(rule_tree_t *node)
 {
-		HASSERT(node);
+		MASSERT(node);
 		if (node->list != NULL) {
 			MTFS_FREE(node->list, sizeof(*node->list) * node->list_length);
 		}
@@ -154,11 +154,11 @@ int rule_tree_destruct(rule_tree_t *root)
 	queue_t tmp_queue;
 	rule_tree_t *tmp_root = NULL;
 	
-	HASSERT(root != NULL);
+	MASSERT(root != NULL);
 	/* Easy to prove that queue length is no bigger than rule_number */
 	ret = queue_initialise(&tmp_queue, MAX_RULE_NUM);
 	if (ret) {
-		HERROR("queue initialise failed\n");
+		MERROR("queue initialise failed\n");
 		goto out;
 	}
 	
@@ -170,7 +170,7 @@ int rule_tree_destruct(rule_tree_t *root)
 			for (i = 0; i < tmp_root->list_length; i++) {
 				ret = __queue_add(&tmp_queue, (void *)tmp_root->list[i], 0);
 				if (ret) {
-					HERROR("queue full\n");
+					MERROR("queue full\n");
 					goto free_all;
 				}
 			}
@@ -182,7 +182,7 @@ int rule_tree_destruct(rule_tree_t *root)
 free_all:
 	while((tmp_root = queue_remove(&tmp_queue)) != NULL) {
 		rule_tree_node_free(tmp_root);
-		HERROR("memory leak deteced\n");
+		MERROR("memory leak deteced\n");
 	}	
 	queue_free(&tmp_queue);
 out:
@@ -207,13 +207,13 @@ rule_tree_t *__rule_tree_construct(const rule_t *rule_array, unsigned int rule_n
 	/* Easy to prove that queue length is no bigger than rule_number */
 	ret = queue_initialise(&queue, rule_number);
 	if (ret) {
-		HERROR("queue initialise failed\n");
+		MERROR("queue initialise failed\n");
 		goto out;
 	}
 	
 	ret = queue_initialise(&tmp_queue, rule_number);
 	if (ret) {
-		HERROR("temporary queue initialise failed\n");
+		MERROR("temporary queue initialise failed\n");
 		goto free_queue;
 	}	
 
@@ -264,7 +264,7 @@ rule_tree_t *__rule_tree_construct(const rule_t *rule_array, unsigned int rule_n
 			
 			ret = __queue_add(&tmp_queue, (void *)new, 0);
 			if (ret) {
-					HERROR("queue full\n");
+					MERROR("queue full\n");
 					MTFS_FREE_PTR(new);
 					goto free_all;
 			}
@@ -272,7 +272,7 @@ rule_tree_t *__rule_tree_construct(const rule_t *rule_array, unsigned int rule_n
 				list_length++;
 			} else {
 				/* No same rule allowed */
-				HASSERT(new->start == new->end);
+				MASSERT(new->start == new->end);
 				new->rule = rule_array[new->end].raid_type;
 			}
 		}
@@ -291,17 +291,17 @@ rule_tree_t *__rule_tree_construct(const rule_t *rule_array, unsigned int rule_n
 				i++;
 				ret = __queue_add(&queue, (void *)new, 0);
 				if (ret) {
-						HERROR("queue full\n");
+						MERROR("queue full\n");
 						MTFS_FREE_PTR(new);
 						goto free_all;
 				}
 			} else {
 				tmp_root->rule = new->rule;
-				HDEBUG("rule set\n");
+				MDEBUG("rule set\n");
 				MTFS_FREE_PTR(new);
 			}
 		}
-		HASSERT(i == list_length);
+		MASSERT(i == list_length);
 		
 		tmp_root = queue_remove(&queue);
 	}
@@ -343,13 +343,13 @@ raid_type_t rule_tree_search(rule_tree_t *root, const char *string)
 	const char *ptr = NULL;
 	const char *tmp_string = &string[strlen(string)];
 
-	HASSERT(root != NULL);
-	HASSERT(string != NULL);
+	MASSERT(root != NULL);
+	MASSERT(string != NULL);
 	
 	tmp_root = root;
 	while (tmp_root) {
 		if (tmp_root->rule != RAID_TYPE_NONE) {
-			HDEBUG("found one rule\n");
+			MDEBUG("found one rule\n");
 			rule = tmp_root->rule;
 		}
 
@@ -361,16 +361,16 @@ raid_type_t rule_tree_search(rule_tree_t *root, const char *string)
 		if (tmp_root->list_length == 0) {
 			break;
 		} else {
-			HASSERT(tmp_root->key != '\0');
-			HASSERT(tmp_root->list != NULL);
-			HASSERT(tmp_root->key_list != NULL);
-			HDEBUG("judge %c\n", *tmp_string);
+			MASSERT(tmp_root->key != '\0');
+			MASSERT(tmp_root->list != NULL);
+			MASSERT(tmp_root->key_list != NULL);
+			MDEBUG("judge %c\n", *tmp_string);
 			ptr = bsearch(tmp_string, tmp_root->key_list, tmp_root->list_length,
 										 sizeof(char), compare_char_pointer);
 			if (ptr == NULL) {
 				break;
 			}
-			HDEBUG("found %c\n", *tmp_string);
+			MDEBUG("found %c\n", *tmp_string);
 			tmp_root = tmp_root->list[ptr - tmp_root->key_list];
 		}
 	}
@@ -416,13 +416,13 @@ rule_tree_t *rule_tree_construct(rule_t *rule_array, unsigned int rule_number)
 	const rule_t *equal_rule = NULL;
 	int i = 0;
 
-	HASSERT(rule_array != NULL);
+	MASSERT(rule_array != NULL);
 	/* Judge for distruct */
-	HASSERT(rule_number < MAX_RULE_NUM);
+	MASSERT(rule_number < MAX_RULE_NUM);
 	
 	/* step1: reverse */
 	for (i = 0; i < rule_number; i ++) {
-		HASSERT(rule_array[i].string != NULL);
+		MASSERT(rule_array[i].string != NULL);
 		if (strlen(rule_array[i].string) > MAX_RULE_LEN) {
 			ret = -EINVAL;
 			goto out;
@@ -434,14 +434,14 @@ rule_tree_t *rule_tree_construct(rule_t *rule_array, unsigned int rule_number)
 	mtfs_sort(rule_array, rule_number, sizeof(rule_t), compare_rule_pointer);
 #if 0
 	for (i = 0; i < rule_number; i ++) {
-		HPRINT("%s->%s\n", rule_array[i].string, raid_type2string(rule_array[i].raid_type));
+		MPRINT("%s->%s\n", rule_array[i].string, raid_type2string(rule_array[i].raid_type));
 	}
 #endif
 	
 	/* step3: find equal */
 	equal_rule = have_equal_string(rule_array, rule_number);
 	if (equal_rule != NULL) {
-		HERROR("Found equal rule string: %s = %s\n", equal_rule->string, raid_type2string(equal_rule->raid_type));
+		MERROR("Found equal rule string: %s = %s\n", equal_rule->string, raid_type2string(equal_rule->raid_type));
 		ret = -EINVAL;
 		goto out;
 	}

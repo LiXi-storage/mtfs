@@ -23,8 +23,8 @@ static inline int mtfs_s_alloc(struct super_block *sb, mtfs_bindex_t bnum)
 	struct mtfs_sb_info *s_info = NULL;
 	int ret = 0;
 
-	HASSERT(sb);
-	HASSERT(bnum > 0 && bnum <= MTFS_BRANCH_MAX);
+	MASSERT(sb);
+	MASSERT(bnum > 0 && bnum <= MTFS_BRANCH_MAX);
 
 	MTFS_SLAB_ALLOC_PTR(s_info, mtfs_sb_info_cache);
 	if (unlikely(s_info == NULL)) {
@@ -43,13 +43,13 @@ static inline int mtfs_s_free(struct super_block *sb)
 	struct mtfs_sb_info *s_info = NULL;
 	int ret = 0;
 
-	HASSERT(sb);
+	MASSERT(sb);
 	s_info = mtfs_s2info(sb);
-	HASSERT(s_info);
+	MASSERT(s_info);
 
 	MTFS_SLAB_FREE_PTR(s_info, mtfs_sb_info_cache);
 	_mtfs_s2info(sb) = NULL;
-	HASSERT(_mtfs_s2info(sb) == NULL);
+	MASSERT(_mtfs_s2info(sb) == NULL);
 	return ret;
 }
 

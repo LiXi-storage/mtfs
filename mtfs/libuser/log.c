@@ -60,7 +60,7 @@ int mtfs_print_log(const char *file, const char *function, int line,
 				""};
 
 	if (!file || !function || !line || !fmt) {
-		HERROR("logging: %s:%s():%d: invalid argument\n", 
+		MERROR("logging: %s:%s():%d: invalid argument\n", 
 		       __FILE__, __PRETTY_FUNCTION__, __LINE__);
 		ret = -1;
 		goto arg_err;
@@ -119,12 +119,12 @@ arg_err:
 int _mtfs_log_init(mtfs_log_t *log, const char *file, mtfs_loglevel_t default_level)
 {
 	if (!log){
-		HERROR("no log specified\n");
+		MERROR("no log specified\n");
 		return -1;
 	}
 
 	if (!file){
-		HERROR("no filename specified\n");
+		MERROR("no filename specified\n");
 		return -1;
 	}
 
@@ -132,13 +132,13 @@ int _mtfs_log_init(mtfs_log_t *log, const char *file, mtfs_loglevel_t default_le
 
 	log->filename = strdup(file);
 	if (!log->filename) {
-		HERROR ("strdup error\n");
+		MERROR ("strdup error\n");
 		return -1;
 	}
 
 	log->logfile = fopen(file, "a");
 	if (log->logfile == NULL){
-		HERROR("failed to open logfile \"%s\": %s\n", file, strerror (errno));
+		MERROR("failed to open logfile \"%s\": %s\n", file, strerror (errno));
 		return -1;
 	}
 

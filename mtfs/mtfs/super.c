@@ -23,7 +23,7 @@ struct inode *mtfs_alloc_inode(struct super_block *sb)
 {
 	struct mtfs_inode_info *inode_info = NULL;
 	struct inode *inode = NULL;
-	HENTRY();
+	MENTRY();
 
 	inode_info = mtfs_ii_alloc();
 	if (unlikely(!inode_info)) {
@@ -36,36 +36,36 @@ struct inode *mtfs_alloc_inode(struct super_block *sb)
 	inode = &inode_info->mii_inode;
 
 out:
-	HRETURN(inode);
+	MRETURN(inode);
 }
 EXPORT_SYMBOL(mtfs_alloc_inode);
 
 void mtfs_destroy_inode(struct inode *inode)
 {
 	struct mtfs_inode_info *inode_info = mtfs_i2info(inode);
-	HENTRY();
+	MENTRY();
 
 	mtfs_ii_free(inode_info);
-	_HRETURN();
+	_MRETURN();
 }
 EXPORT_SYMBOL(mtfs_destroy_inode);
 
 void mtfs_put_super(struct super_block *sb)
 {
 	mtfs_bindex_t bindex = 0;
-	HENTRY();
+	MENTRY();
 
 	if (mtfs_s2info(sb)) {
 		for (bindex = 0; bindex < mtfs_s2bnum(sb); bindex++) {
 			mntput(mtfs_s2mntbranch(sb, bindex));
 		}
 		mtfs_reserve_fini(sb);
-		HASSERT(mtfs_s2dev(sb));
+		MASSERT(mtfs_s2dev(sb));
 		mtfs_freedev(mtfs_s2dev(sb));
 		mtfs_s_free(sb);
 	}
 
-	_HRETURN();
+	_MRETURN();
 }
 EXPORT_SYMBOL(mtfs_put_super);
 
@@ -83,7 +83,7 @@ int mtfs_statfs(struct dentry *dentry, struct kstatfs *buf)
 #ifdef HAVE_VFS_STATFS_PATH
 	struct path hidden_path;
 #endif /* HAVE_VFS_STATFS_PATH */
-	HENTRY();
+	MENTRY();
 
 	MTFS_ALLOC(hidden_s_dev, sizeof(*hidden_s_dev) * mtfs_s2bnum(sb));
 	if (!hidden_s_dev) {
@@ -137,7 +137,7 @@ int mtfs_statfs(struct dentry *dentry, struct kstatfs *buf)
 	MTFS_FREE(hidden_s_dev, sizeof(*hidden_s_dev) * mtfs_s2bnum(sb));
 
 out:
-	HRETURN(ret);
+	MRETURN(ret);
 }
 EXPORT_SYMBOL(mtfs_statfs);
 
@@ -153,7 +153,7 @@ void mtfs_clear_inode(struct inode *inode)
 	mtfs_bindex_t bnum = 0;
 	struct inode *hidden_inode = NULL;
 	struct lowerfs_operations *lowerfs_ops = NULL;
-	HENTRY();
+	MENTRY();
 
 	for (bindex = 0; bindex < mtfs_i2bnum(inode); bindex++) {
 		if (mtfs_i2branch(inode, bindex) == NULL) {
@@ -174,17 +174,17 @@ void mtfs_clear_inode(struct inode *inode)
 		iput(hidden_inode);
 	}
 
-	_HRETURN();
+	_MRETURN();
 }
 EXPORT_SYMBOL(mtfs_clear_inode);
 
 int mtfs_show_options(struct seq_file *m, struct vfsmount *mnt)
 {
-	HENTRY();
+	MENTRY();
 
 	seq_printf(m, ",only_for_test");
 
-	HRETURN(0);
+	MRETURN(0);
 }
 EXPORT_SYMBOL(mtfs_show_options);
 

@@ -102,8 +102,8 @@ mtfs_debug_str2mask(int *mask, const char *str, int is_subsys);
 
 #define DEBUG_SUBSYSTEM S_MTFS
 
-#define MTFS_DEBUG_MSG_DATA_DECL(dataname, mask, cdls)    \
-        static struct mtfs_debug_msg_data dataname = {    \
+#define MTFS_DEBUG_MSG_DATA_DECL(dataname, mask, cdls)      \
+        static struct mtfs_debug_msg_data dataname = {      \
                .msg_subsys = DEBUG_SUBSYSTEM,               \
                .msg_file   = __FILE__,                      \
                .msg_fn     = __FUNCTION__,                  \
@@ -122,52 +122,52 @@ static inline int mtfs_debug_show(unsigned int mask, unsigned int subsystem)
 
 #define __MDEBUG(cdls, mask, format, ...)                               \
 do {                                                                    \
-        MTFS_DEBUG_MSG_DATA_DECL(msgdata, mask, cdls);                \
+        MTFS_DEBUG_MSG_DATA_DECL(msgdata, mask, cdls);                  \
                                                                         \
-        MTFS_CHECK_STACK(&msgdata, mask, cdls);                          \
+        MTFS_CHECK_STACK(&msgdata, mask, cdls);                         \
                                                                         \
         if (mtfs_debug_show(mask, DEBUG_SUBSYSTEM))                     \
-                mtfs_debug_msg(&msgdata, format, ## __VA_ARGS__);     \
+                mtfs_debug_msg(&msgdata, format, ## __VA_ARGS__);       \
 } while (0)
 
-#define MDEBUG(mask, format, ...) __MDEBUG(NULL, mask, format, ## __VA_ARGS__)
+#define MDEBUG_NOLIMIT(mask, format, ...) __MDEBUG(NULL, mask, format, ## __VA_ARGS__)
 
-#define MDEBUG_LIMIT(mask, format, ...)         \
-do {                                            \
-        static mtfs_debug_limit_state_t cdls;    \
-                                                \
-        __MDEBUG(&cdls, mask, format, ## __VA_ARGS__);\
+#define MDEBUG_LIMIT(mask, format, ...)                \
+do {                                                   \
+        static mtfs_debug_limit_state_t cdls;          \
+                                                       \
+        __MDEBUG(&cdls, mask, format, ## __VA_ARGS__); \
 } while (0)
 
 /* Has there been an BUG? */
 extern unsigned int mtfs_catastrophe;
 
-#define MDEBUG_MEM(format, args...) MDEBUG(D_MALLOC, format, ##args)
-#define MTRACE(format, args...)     MDEBUG(D_TRACE, format, ##args)
-#define MWARN(format, args...)      MDEBUG(D_WARNING, format, ##args)
-#define HDEBUG(format, args...)     MDEBUG(D_INFO, format, ##args)
-#define HERROR(format, args...)     MDEBUG(D_ERROR, format, ##args)
-#define HPRINT(format, args...)     MDEBUG(D_INFO, format, ##args)
+#define MDEBUG_MEM(format, args...) MDEBUG_LIMIT(D_MALLOC, format, ##args)
+#define MTRACE(format, args...)     MDEBUG_LIMIT(D_TRACE, format, ##args)
+#define MWARN(format, args...)      MDEBUG_LIMIT(D_WARNING, format, ##args)
+#define MERROR(format, args...)     MDEBUG_LIMIT(D_ERROR, format, ##args)
+#define MDEBUG(format, args...)     MDEBUG_LIMIT(D_INFO, format, ##args)
+#define MERROR(format, args...)     MDEBUG_LIMIT(D_ERROR, format, ##args)
+#define MPRINT(format, args...)     MDEBUG_LIMIT(D_INFO, format, ##args)
 
 #include <linux/err.h>
 #include <linux/string.h>
 #include <linux/kernel.h>
 
-#define HBUG()                                       \
+#define MBUG()                                       \
 do {                                                 \
-    HERROR("a bug found!\n");                        \
+    MERROR("a bug found!\n");                        \
     panic("MTFS BUG");                               \
 } while(0)
 
+#define MASSERT(cond) MASSERTF(cond, "\n")
 
-#define HASSERT(cond) HASSERTF(cond, "\n")
-
-#define HASSERTF(cond, format, args...)              \
+#define MASSERTF(cond, format, args...)              \
 do {                                                 \
     if (!(cond)) {                                   \
-    	HERROR("ASSERTION( %s ) failed: "            \
+    	MERROR("ASSERTION( %s ) failed: "            \
                format, #cond, ##args);               \
-        HBUG();                                      \
+        MBUG();                                      \
     }                                                \
 } while(0)
 
@@ -177,17 +177,17 @@ do {                                                 \
 #include <assert.h>
 #include <asm/types.h>
 
-#define HASSERT(cond) assert(cond)
+#define MASSERT(cond) assert(cond)
 #if 0
 #define MTRACE(format, args...) fprintf(stderr, "DEBUG: %s(%d) %s(): " format, __FILE__,  __LINE__, __FUNCTION__, ##args)
 #else
 #define MTRACE(format, args...)
 #endif
-#define HDEBUG(format, args...) fprintf(stderr, "DEBUG: %s(%d) %s(): " format, __FILE__,  __LINE__, __FUNCTION__, ##args)
-#define HERROR(format, args...) fprintf(stderr, "ERROR: %s(%d) %s(): " format, __FILE__,  __LINE__, __FUNCTION__, ##args)
+#define MDEBUG(format, args...) fprintf(stderr, "DEBUG: %s(%d) %s(): " format, __FILE__,  __LINE__, __FUNCTION__, ##args)
+#define MERROR(format, args...) fprintf(stderr, "ERROR: %s(%d) %s(): " format, __FILE__,  __LINE__, __FUNCTION__, ##args)
 #define MWARN(format, args...)  fprintf(stderr, "WARN: %s(%d) %s(): " format, __FILE__,  __LINE__, __FUNCTION__, ##args)
-#define HPRINT(format, args...) fprintf(stdout, format, ##args)
-#define HFLUSH() fflush(stdout)
+#define MPRINT(format, args...) fprintf(stdout, format, ##args)
+#define MFLUSH() fflush(stdout)
 
 #define IS_ERR(a) ((unsigned long)(a) > (unsigned long)-1000L)
 #define PTR_ERR(a) ((long)(a))
@@ -196,18 +196,18 @@ do {                                                 \
 #endif /* !(defined (__linux__) && defined(__KERNEL__)) */
 
 #if defined(__GNUC__)
-#define HENTRY()                                                        \
+#define MENTRY()                                                        \
 do {                                                                    \
         MTRACE("entered\n");                                            \
 } while (0)
 
-#define _HRETURN()                                                      \
+#define _MRETURN()                                                      \
 do {                                                                    \
         MTRACE("leaving\n");                                            \
         return;                                                         \
 } while (0)
 
-#define HRETURN(ret)                                                    \
+#define MRETURN(ret)                                                    \
 do {                                                                    \
         typeof(ret) RETURN__ret = (ret);                                \
         MTRACE("leaving (ret = %lu:%ld:0x%lx)\n",                       \

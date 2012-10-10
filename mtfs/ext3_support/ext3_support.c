@@ -14,16 +14,16 @@ struct dentry *mtfs_ext3_lookup(struct inode *dir, struct dentry *dentry, struct
 {
 	struct dentry *ret = NULL;
 	int rc = 0;
-	HENTRY();
+	MENTRY();
 
-	HASSERT(inode_is_locked(dir));
-	HASSERT(!IS_ROOT(dentry));
+	MASSERT(inode_is_locked(dir));
+	MASSERT(!IS_ROOT(dentry));
 
 	rc = mtfs_lookup_backend(dir, dentry, INTERPOSE_LOOKUP);
 
 	ret = ERR_PTR(rc);
 
-	HRETURN(ret);
+	MRETURN(ret);
 }
 
 struct super_operations mtfs_ext3_sops =
@@ -157,17 +157,17 @@ static int ext3_support_init(void)
 {
 	int ret = 0;
 
-	HDEBUG("registering mtfs_ext3 support\n");
+	MDEBUG("registering mtfs_ext3 support\n");
 
 	ret = lowerfs_register_ops(&lowerfs_ext3_ops);
 	if (ret) {
-		HERROR("failed to register lowerfs operation: error %d\n", ret);
+		MERROR("failed to register lowerfs operation: error %d\n", ret);
 		goto out;
 	}	
 
 	ret = junction_register(&mtfs_ext3_junction);
 	if (ret) {
-		HERROR("failed to register junction: error %d\n", ret);
+		MERROR("failed to register junction: error %d\n", ret);
 		goto out_unregister_lowerfs_ops;
 	}
 	goto out;
@@ -179,7 +179,7 @@ out:
 
 static void ext3_support_exit(void)
 {
-	HDEBUG("unregistering mtfs_ext3 support\n");
+	MDEBUG("unregistering mtfs_ext3 support\n");
 	lowerfs_unregister_ops(&lowerfs_ext3_ops);
 
 	junction_unregister(&mtfs_ext3_junction);

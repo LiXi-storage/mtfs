@@ -31,7 +31,7 @@ void graphviz_print(const char *msg)
 	printf(msg);
 	ret = write(graphviz_fd, msg, size);
 	if (ret != size) {
-		HERROR("write error: expected to write %ld, written %ld\n", size, ret);
+		MERROR("write error: expected to write %ld, written %ld\n", size, ret);
 	}
 	fsync(graphviz_fd);
 }

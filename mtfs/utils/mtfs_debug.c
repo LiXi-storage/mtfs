@@ -29,7 +29,7 @@ int dbg_open_ctlhandle(const char *str)
 	int fd;
 	fd = open(str, O_WRONLY);
 	if (fd < 0) {
-		HERROR("open %s failed: %s\n", str,
+		MERROR("open %s failed: %s\n", str,
 		       strerror(errno));
 		return -1;
 	}
@@ -147,7 +147,7 @@ int parse_buffer(int fdin, int fdout)
 	struct dbg_line **linev = NULL;
 	int linev_len = 0;
 	int rc;
-	HENTRY();
+	MENTRY();
  
 	hdr = (void *)buf;
   
@@ -220,14 +220,14 @@ int parse_buffer(int fdin, int fdout)
 		line = malloc(sizeof(*line));
 		if (line == NULL) {
 			 if (linev) {
-				HERROR("error: line malloc(%u): "
+				MERROR("error: line malloc(%u): "
 					"printing accumulated records\n",
 					(unsigned int)sizeof(*line));
 				print_rec(&linev, kept, fdout);
 
 				goto retry_alloc;
 			}
-			HERROR("error: line malloc(%u): exiting\n",
+			MERROR("error: line malloc(%u): exiting\n",
 				(unsigned int)sizeof(*line));
 			break;
 		}
@@ -236,14 +236,14 @@ int parse_buffer(int fdin, int fdout)
 		if (line->hdr == NULL) {
 			free(line);
 			if (linev) {
-				HERROR("error: hdr malloc(%u): "
+				MERROR("error: hdr malloc(%u): "
 				       "printing accumulated records\n",
 				       hdr->ph_len + 1);
 				print_rec(&linev, kept, fdout);
  
 				goto retry_alloc;
 			}
-			HERROR("error: hdr malloc(%u): exiting\n",
+			MERROR("error: hdr malloc(%u): exiting\n",
 			       hdr->ph_len + 1);
 			break;
 		}
@@ -262,14 +262,14 @@ int parse_buffer(int fdin, int fdout)
 	retry_add:
 		if (add_rec(line, &linev, &linev_len, kept) < 0) {
 			if (linev) {
-				HERROR("error: add_rec[%u] failed; "
+				MERROR("error: add_rec[%u] failed; "
 				       "print accumulated records\n",
 				       linev_len);
 				print_rec(&linev, kept, fdout);
 
 				goto retry_add;
 			}
-			HERROR("error: add_rec[0] failed; exiting\n");
+			MERROR("error: add_rec[0] failed; exiting\n");
 			break;
 		}
 		kept++;
@@ -282,7 +282,7 @@ print:
 	printf("Debug log: %lu lines, %lu kept, %lu dropped, %lu bad.\n",
 		dropped + kept + bad, kept, dropped, bad);
 
-	HRETURN(0);
+	MRETURN(0);
 }
 
 #define MTFS_DEBUG_FILE_PATH_DEFAULT "/tmp/lustre-log"
@@ -298,18 +298,18 @@ int mtfsctl_api_debug_kernel(const char *out_file, struct mtfs_param *param)
 	int fdin = 0;
  	int fdout = 0;
  	int save_errno = 0;
- 	HENTRY();
+ 	MENTRY();
 
 	MTFS_STRDUP(tmp_file, MTFS_DEBUG_FILE_PATH_DEFAULT);
 	if (tmp_file == NULL) {
-		HERROR("not enough memory\n");
+		MERROR("not enough memory\n");
 		ret = -ENOMEM;
 		goto out;
 	}
 
 	if (stat(tmp_file, &st) == 0) {
 		if (! S_ISREG(st.st_mode)) {
-			HERROR("%s exists, and is not a regular file\n",
+			MERROR("%s exists, and is not a regular file\n",
 			       tmp_file);
 			ret = -EEXIST;
 			goto out_free_file;
@@ -317,14 +317,14 @@ int mtfsctl_api_debug_kernel(const char *out_file, struct mtfs_param *param)
 
 		ret = unlink(tmp_file);
 		if (ret) {
-			HERROR("failed to unlink %s\n",
+			MERROR("failed to unlink %s\n",
 			       tmp_file);
 			goto out_free_file;
 		}
 	}
 	fdin = dbg_open_ctlhandle(MTFS_DUMP_KERNEL_CTL_NAME);
         if (fdin < 0) {
-                HERROR("open(dump_kernel) failed: %s\n",
+                MERROR("open(dump_kernel) failed: %s\n",
                        strerror(errno));
                 ret = -errno;
                 goto out_free_file;
@@ -334,7 +334,7 @@ int mtfsctl_api_debug_kernel(const char *out_file, struct mtfs_param *param)
 	save_errno = errno;
 	dbg_close_ctlhandle(fdin);
 	if (ret != 0) {
-		HERROR("write(%s) failed: %s\n", tmp_file,
+		MERROR("write(%s) failed: %s\n", tmp_file,
 		       strerror(save_errno));
 		ret = -save_errno;
 		goto out_free_file;    
@@ -347,7 +347,7 @@ int mtfsctl_api_debug_kernel(const char *out_file, struct mtfs_param *param)
 			ret = 0;
 			return 0;
 		}
-		HERROR("fopen(%s) failed: %s\n", tmp_file,
+		MERROR("fopen(%s) failed: %s\n", tmp_file,
 		        strerror(errno));
 		ret = -errno;
 		goto out_free_file;
@@ -357,7 +357,7 @@ int mtfsctl_api_debug_kernel(const char *out_file, struct mtfs_param *param)
 		fdout = open(out_file, O_WRONLY | O_CREAT | O_TRUNC,
 		             S_IRUSR | S_IWUSR);
 		if (fdout < 0) {
-			HERROR("fopen(%s) failed: %s\n", out_file,
+			MERROR("fopen(%s) failed: %s\n", out_file,
 			       strerror(errno));
 			goto out_close_fdin;
 		}
@@ -371,12 +371,12 @@ int mtfsctl_api_debug_kernel(const char *out_file, struct mtfs_param *param)
 	}
 
 	if (ret) {
-		HERROR("parse_buffer failed; leaving tmp file %s"
+		MERROR("parse_buffer failed; leaving tmp file %s"
 		       "behind.\n", tmp_file);
 	} else {
 		ret = unlink(tmp_file);
 		if (ret) {
-                        HERROR("dumped successfully, but couldn't "
+                        MERROR("dumped successfully, but couldn't "
 			       "unlink tmp file %s: %s\n", tmp_file,
 			       strerror(errno));
 			goto out_close_fdin;
@@ -387,5 +387,5 @@ out_close_fdin:
 out_free_file:
 	MTFS_FREE_STR(tmp_file);
 out:
-	HRETURN(ret);
+	MRETURN(ret);
 }

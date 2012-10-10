@@ -46,7 +46,7 @@ static inline __u64 mtfs_interval_high(struct mtfs_interval_node *node)
 static inline void mtfs_interval_set(struct mtfs_interval_node *node,
                                      __u64 start, __u64 end)
 {
-	HASSERT(start <= end);
+	MASSERT(start <= end);
 	node->in_extent.start = start;
 	node->in_extent.end = end;
 	node->in_max_high = end;

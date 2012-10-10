@@ -15,7 +15,7 @@ static struct component *component_workspace = NULL;
 int component_root_init()
 {
 	int ret = 0;
-	HENTRY();
+	MENTRY();
 
 	MTFS_STRDUP(component_root.name, "/");
 	if (component_root.name == NULL) {
@@ -29,21 +29,21 @@ int component_root_init()
 	MTFS_INIT_LIST_HEAD(&component_root.this_graph.subcomponents);
 	component_workspace = &component_root;
 out:
-	HRETURN(ret);
+	MRETURN(ret);
 }
 
 int component_root_finit()
 {
-	HENTRY();
+	MENTRY();
 	MTFS_FREE_STR(component_root.name);
-	HRETURN(0);
+	MRETURN(0);
 }
 
 static int workspace_list_wrap(lua_State *L)
 {
 	int top = 0;
 	int i = 0;
-	HENTRY();
+	MENTRY();
 
 	top = lua_gettop(L);
 	if (top == 0) {
@@ -54,54 +54,54 @@ static int workspace_list_wrap(lua_State *L)
 
 	for(i = 1; i <= top; i++) {
 		if (!lua_isstring(L, i)) {
-			HERROR("argument error: argument[%d] is expected to be a string, got %s\n", i, luaL_typename(L, i));
+			MERROR("argument error: argument[%d] is expected to be a string, got %s\n", i, luaL_typename(L, i));
 		} else {
 			struct component *component = NULL;
 			const char *name = NULL;
 
 			name = lua_tostring(L, i);
-			HASSERT(name);
+			MASSERT(name);
 			component = component_search(component_workspace, name);
 			if (component) {
 				component_dump(component);
 			} else {
-				HERROR("%s: No such component\n", name);
+				MERROR("%s: No such component\n", name);
 			}
 		}
 	}
 out:
-	HRETURN(0);
+	MRETURN(0);
 }
 
 static int workspace_pwd_wrap(lua_State *L)
 {
 	char *path = NULL;
 	int top = 0;
-	HENTRY();
+	MENTRY();
 
 	top = lua_gettop(L);
 	if (top != 0) {
-		HERROR("argument error: too many arguments\n");
+		MERROR("argument error: too many arguments\n");
 		goto out;
 	}
 
 	path = component_path(component_workspace);
 	if (path == NULL) {
-		HERROR("failed to get path\n");
+		MERROR("failed to get path\n");
 		goto out;
 	}
 	
 	printf("%s\n", path);
 	free(path);
 out:
-	HRETURN(0);
+	MRETURN(0);
 }
 
 static int workspace_cd(const char *name)
 {
 	struct component *found = NULL;
 	int ret = 0;
-	HENTRY();
+	MENTRY();
 
 	if (strcmp(name, "..") == 0) {
 		component_workspace = component_workspace->parent;
@@ -111,10 +111,10 @@ static int workspace_cd(const char *name)
 	found = component_search(component_workspace, name);
 	if (found == NULL || !found->is_graph) {
 		if (found == NULL) {
-			HERROR("sub graph not found\n");
+			MERROR("sub graph not found\n");
 			ret = -ENOMEM; /* Which errno? */
 		} else {
-			HERROR("Not a graph\n");
+			MERROR("Not a graph\n");
 			ret = -ENOMEM; /* Which errno? */
 		}
 		goto out;
@@ -122,7 +122,7 @@ static int workspace_cd(const char *name)
 		component_workspace = found;
 	}
 out:
-	HRETURN(ret);
+	MRETURN(ret);
 }
 
 static int workspace_cd_wrap(lua_State *L)
@@ -130,33 +130,33 @@ static int workspace_cd_wrap(lua_State *L)
 	const char *name = NULL;
 	int ret = 0;
 	int top = 0;
-	HENTRY();
+	MENTRY();
 
 	top = lua_gettop(L);
 	if (top != 1) {
-		HERROR("argument error: too %s arguments\n", top > 1 ? "many" : "few" );
+		MERROR("argument error: too %s arguments\n", top > 1 ? "many" : "few" );
 		goto out;
 	}
 
 	if (!lua_isstring(L, 1)) {
-		HERROR("argument error: argument[%d] is expected to be a string, got %s\n", 1, luaL_typename(L, 1));
+		MERROR("argument error: argument[%d] is expected to be a string, got %s\n", 1, luaL_typename(L, 1));
 	} else {
 		name = lua_tostring(L, 1);
-		HASSERT(name);
+		MASSERT(name);
 		ret = workspace_cd(name);
 	}
 
 out:
-	HRETURN(0);
+	MRETURN(0);
 }
 
 static int workspace_type_wrap(lua_State *L)
 {
-	HENTRY();
+	MENTRY();
 	workspace_cd("types");
 	workspace_list_wrap(L);
 	workspace_cd("..");
-	HRETURN(0);
+	MRETURN(0);
 }
 
 static int workspace_copy_wrap(lua_State *L)
@@ -167,19 +167,19 @@ static int workspace_copy_wrap(lua_State *L)
 	struct component *old_component = NULL;
 	int ret = 0;
 	int top = 0;
-	HENTRY();
+	MENTRY();
 
 	top = lua_gettop(L);
 	if (top != 2) {
-		HERROR("argument error: too %s arguments\n", top > 2 ? "many" : "few" );
+		MERROR("argument error: too %s arguments\n", top > 2 ? "many" : "few" );
 		goto out;
 	}
 
 	if (!lua_isstring(L, 1) || !lua_isstring(L, 2)) {
 		if (lua_isstring(L, 1)) {
-			HERROR("argument error: argument[%d] is expected to be a string, got %s\n", 1, luaL_typename(L, 1));
+			MERROR("argument error: argument[%d] is expected to be a string, got %s\n", 1, luaL_typename(L, 1));
 		} else {
-			HERROR("argument error: argument[%d] is expected to be a string, got %s\n", 2, luaL_typename(L, 2));
+			MERROR("argument error: argument[%d] is expected to be a string, got %s\n", 2, luaL_typename(L, 2));
 		}
 		goto out;
 	} else {
@@ -187,25 +187,25 @@ static int workspace_copy_wrap(lua_State *L)
 		new_name = lua_tostring(L, 2);
 	}
 
-	HASSERT(old_name);
-	HASSERT(new_name);
+	MASSERT(old_name);
+	MASSERT(new_name);
 
 	new_component = component_search(component_workspace, new_name);
 	if (new_component != NULL) {
-		HERROR("failed to copy, %s already exists\n", new_name);
+		MERROR("failed to copy, %s already exists\n", new_name);
 		ret = -ENOMEM; /* Which errno? */
 		goto out;
 	}
 
 	old_component = component_search(component_workspace, old_name);
 	if (old_component == NULL) {
-		HERROR("failed to copy, %s does not exist\n", old_name);
+		MERROR("failed to copy, %s does not exist\n", old_name);
 		ret = -ENOMEM; /* Which errno? */
 		goto out;
 	}
 	new_component = component_copy(old_component, component_workspace, new_name);
 out:
-	HRETURN(0);
+	MRETURN(0);
 }
 
 static int workspace_rename_wrap(lua_State *L)
@@ -216,19 +216,19 @@ static int workspace_rename_wrap(lua_State *L)
 	struct component *old_component = NULL;
 	int ret = 0;
 	int top = 0;
-	HENTRY();
+	MENTRY();
 
 	top = lua_gettop(L);
 	if (top != 2) {
-		HERROR("argument error: too %s arguments\n", top > 2 ? "many" : "few" );
+		MERROR("argument error: too %s arguments\n", top > 2 ? "many" : "few" );
 		goto out;
 	}
 
 	if (!lua_isstring(L, 1) || !lua_isstring(L, 2)) {
 		if (!lua_isstring(L, 1)) {
-			HERROR("argument error: argument[%d] is expected to be a string, got %s\n", 1, luaL_typename(L, 1));
+			MERROR("argument error: argument[%d] is expected to be a string, got %s\n", 1, luaL_typename(L, 1));
 		} else {
-			HERROR("argument error: argument[%d] is expected to be a string, got %s\n", 2, luaL_typename(L, 2));
+			MERROR("argument error: argument[%d] is expected to be a string, got %s\n", 2, luaL_typename(L, 2));
 		}
 		goto out;
 	}
@@ -236,38 +236,38 @@ static int workspace_rename_wrap(lua_State *L)
 	old_name = lua_tostring(L, 1);
 	new_name = lua_tostring(L, 2);
 
-	HASSERT(old_name);
-	HASSERT(new_name);
+	MASSERT(old_name);
+	MASSERT(new_name);
 
 	new_component = component_search(component_workspace, new_name);
 	if (new_component != NULL) {
-		HERROR("failed to rename, %s already exist\n", new_name);
+		MERROR("failed to rename, %s already exist\n", new_name);
 		ret = -ENOMEM; /* Which errno? */
 		goto out;
 	}
 
 	old_component = component_search(component_workspace, old_name);
 	if (old_component == NULL) {
-		HERROR("failed to rename, %s does not exist\n", old_name);
+		MERROR("failed to rename, %s does not exist\n", old_name);
 		ret = -ENOMEM; /* Which errno? */
 		goto out;
 	}
 	ret = component_rename(old_component, new_name);
 out:
-  HRETURN(ret);
+  MRETURN(ret);
 }
 
 static int digit_number(unsigned int number)
 {
 	int digit = 1;
 	unsigned int max_number = 9;
-	HENTRY();
+	MENTRY();
 
 	while(number > max_number) {
 		max_number = max_number * 10 + 9;
 		digit++;
 	}
-	HRETURN(digit);
+	MRETURN(digit);
 }
 
 #define MAX_NAME_LENGTH (1024)
@@ -277,7 +277,7 @@ static int workspace_declare_graph(lua_State *L, const char *name)
 	char *type = NULL;
 	int ret = 0;
 	struct component *component = NULL;
-	HENTRY();
+	MENTRY();
 
 	type = fsmL_field_getstring(L, 1, "type");
 	if (type == NULL) {
@@ -287,20 +287,20 @@ static int workspace_declare_graph(lua_State *L, const char *name)
 
 	component = component_search(component_workspace, name);
 	if (component == NULL) {
-		HERROR("failed to decalre: %s does not exists\n", name);
+		MERROR("failed to decalre: %s does not exists\n", name);
 		ret = -EINVAL;
 		goto out_free_type;
 	}
 
 	if (component->type) {
-		HERROR("failed to decalre: component %s already has a type %s\n",
+		MERROR("failed to decalre: component %s already has a type %s\n",
 		       component->name, component->type->name);
 		ret = -EINVAL;
 		goto out_free_type;
 	}
 
 	if (component->pins == NULL) {
-		HERROR("failed to decalre: component %s does not have any pins\n",
+		MERROR("failed to decalre: component %s does not have any pins\n",
 		       component->name);
 		ret = -EINVAL;
 		goto out_free_type;
@@ -310,7 +310,7 @@ static int workspace_declare_graph(lua_State *L, const char *name)
 out_free_type:
 	MTFS_FREE_STR(type);
 out:
-	HRETURN(ret);
+	MRETURN(ret);
 }
 
 static int workspace_declare_filter(lua_State *L)
@@ -323,7 +323,7 @@ static int workspace_declare_filter(lua_State *L)
 	int outpin_num = 0;
 	int ret = 0;
 	int i = 0;
-	HENTRY();
+	MENTRY();
 
 	type = fsmL_field_getstring(L, 1, "type");
 	if (type == NULL) {
@@ -335,11 +335,11 @@ static int workspace_declare_filter(lua_State *L)
 		MTFS_STRDUP(inpin_name, lua_tostring(L, -1));
 		lua_remove(L, -1);
 	} else if(lua_isnil(L, -1)) {
-		HDEBUG("inpin_name not given, using in_0\n");
+		MDEBUG("inpin_name not given, using in_0\n");
 		MTFS_STRDUP(inpin_name, "in_0");
 		lua_remove(L, -1);
 	} else {
-		HERROR("argument error: inpin_name is expected to be a string, got %s\n", luaL_typename(L, -1));
+		MERROR("argument error: inpin_name is expected to be a string, got %s\n", luaL_typename(L, -1));
 		lua_remove(L, -1);
 		goto out_free_type;
 	}
@@ -349,18 +349,18 @@ static int workspace_declare_filter(lua_State *L)
 		out_num = lua_tointeger(L, -1);
 		lua_remove(L, -1);
 		if (out_num <= 0) {
-			HERROR("argument error: out_num is expected to greater than 0, got %d\n", out_num);
+			MERROR("argument error: out_num is expected to greater than 0, got %d\n", out_num);
 			goto out_free_inpin;
 		}
 	} else {
-		HERROR("argument error: out_num is expected to be a number, got %s\n", luaL_typename(L, -1));
+		MERROR("argument error: out_num is expected to be a number, got %s\n", luaL_typename(L, -1));
 		lua_remove(L, -1);
 		goto out_free_inpin;
 	}
 
 	MTFS_ALLOC(outpin_names, sizeof(*outpin_names) * out_num);
 	if (outpin_names == NULL) {
-		HERROR("not enough memory\n");
+		MERROR("not enough memory\n");
 		goto out_free_inpin;
 	}
 
@@ -368,7 +368,7 @@ static int workspace_declare_filter(lua_State *L)
 	if (lua_istable(L, -1)) {
 		outpin_num = lua_objlen(L, -1);
 		if (outpin_num < 0 || outpin_num > out_num) {
-			HERROR("argument error: too many outpin_names given, expected number is less or equal to %d\n", out_num);
+			MERROR("argument error: too many outpin_names given, expected number is less or equal to %d\n", out_num);
 			/* Pop outpin_names */
 			lua_remove(L, -1);
 			goto out_free_outpin_names;		
@@ -381,7 +381,7 @@ static int workspace_declare_filter(lua_State *L)
 				MTFS_STRDUP(outpin_names[i], lua_tostring(L, -1));
 				lua_remove(L, -1);
 			} else {
-				HERROR("argument error: outpin_names[%d] is expected to be a string, got %s\n", i, luaL_typename(L, -1));
+				MERROR("argument error: outpin_names[%d] is expected to be a string, got %s\n", i, luaL_typename(L, -1));
 				lua_remove(L, -1);
 				/* Pop outpin_names */
 				lua_remove(L, -1);
@@ -390,7 +390,7 @@ static int workspace_declare_filter(lua_State *L)
 
 			for (j = 0; j < i; j ++) {
 				if (strcmp(outpin_names[i], outpin_names[j]) == 0) {
-					HERROR("argument error: outpin_names[%d] is the same with outpin_names[%d] %s\n",
+					MERROR("argument error: outpin_names[%d] is the same with outpin_names[%d] %s\n",
                            j, i, outpin_names[j]);
 					lua_remove(L, -1);
 					/* Pop outpin_names */
@@ -399,7 +399,7 @@ static int workspace_declare_filter(lua_State *L)
 				}
 			}
 			if (strcmp(outpin_names[i], inpin_name) == 0) {
-				HERROR("argument error: outpin_names[%d] is the same with inpin_name %s\n",
+				MERROR("argument error: outpin_names[%d] is the same with inpin_name %s\n",
 				       i, inpin_name);
 				lua_remove(L, -1);
 				/* Pop outpin_names */
@@ -408,13 +408,13 @@ static int workspace_declare_filter(lua_State *L)
 			}
 		}
 	} else {
-		HDEBUG("no outpin_names setted, using default out_*\n");
+		MDEBUG("no outpin_names setted, using default out_*\n");
 		i = 0;
 	}
 	/* Pop outpin_names */
 	lua_remove(L, -1);
 
-	HDEBUG("lua_rawgeti out\n");
+	MDEBUG("lua_rawgeti out\n");
 	if (i < out_num) {
 		int number = digit_number(out_num - 1);
 		for(; i < out_num; i++) {
@@ -423,7 +423,7 @@ static int workspace_declare_filter(lua_State *L)
 
 			outpin_names[i] = calloc(1, MAX_NAME_LENGTH);
 			if (outpin_names[i] == NULL) {
-				HERROR("not enough memory\n");
+				MERROR("not enough memory\n");
 				goto out_free_outpin;
 			}
 			snprintf(outpin_names[i], MAX_NAME_LENGTH, "out_");
@@ -436,9 +436,9 @@ static int workspace_declare_filter(lua_State *L)
 		}
 	}
 
-	HDEBUG("inpin_names[0]: %s\n", inpin_name);
+	MDEBUG("inpin_names[0]: %s\n", inpin_name);
 	for(i = 0; i < out_num; i++) {
-		HDEBUG("outpin_names[%d] = %s\n", i, outpin_names[i]);
+		MDEBUG("outpin_names[%d] = %s\n", i, outpin_names[i]);
 	}
 
 	lua_getfield(L, 1, "selector");
@@ -446,7 +446,7 @@ static int workspace_declare_filter(lua_State *L)
 		/* Pop selector when ref */
 		selector = luaL_ref(L, LUA_REGISTRYINDEX);
 	} else {
-		HERROR("argument error: selector is expected to be a funtion, got %s\n", luaL_typename(L, -1));
+		MERROR("argument error: selector is expected to be a funtion, got %s\n", luaL_typename(L, -1));
 		/* Pop selector */
 		lua_remove(L, -1);
 		goto out_free_outpin;
@@ -482,23 +482,23 @@ out_free_inpin:
 out_free_type:
 	MTFS_FREE_STR(type);
 out:
-	HRETURN(0);
+	MRETURN(0);
 }
 
 static int workspace_declare_wrap(lua_State *L)
 {
 	int top = 0;
 	const char *name = NULL;
-	HENTRY();
+	MENTRY();
 
 	top = lua_gettop(L);
 	if (top != 1) {
-		HERROR("argument error: argument number is expected to be 1, got %d\n", top);
+		MERROR("argument error: argument number is expected to be 1, got %d\n", top);
 		goto out;
 	}
 
 	if (!lua_istable(L, 1)) {
-		HERROR("argument error: table expected, got %s\n", luaL_typename(L, 1));
+		MERROR("argument error: table expected, got %s\n", luaL_typename(L, 1));
 		goto out;
 	}
 
@@ -509,11 +509,11 @@ static int workspace_declare_wrap(lua_State *L)
 	} else if (lua_isnil(L, -1)) {
 		workspace_declare_filter(L);
 	} else {
-		HERROR("argument error: type is expected to be a string, got %s\n", luaL_typename(L, -1));
+		MERROR("argument error: type is expected to be a string, got %s\n", luaL_typename(L, -1));
 	}
 	lua_remove(L, -1);
 out:
-	HRETURN(0);
+	MRETURN(0);
 }
 
 static int workspace_new_wrap(lua_State *L)
@@ -522,16 +522,16 @@ static int workspace_new_wrap(lua_State *L)
 	const char *instance_name = NULL;
 	int top = 0;
 	int ret = 0;
-	HENTRY();
+	MENTRY();
 
 	top = lua_gettop(L);
 	if (top != 1) {
-		HERROR("component new: bad argument number, expected 1 got %d\n", top);
+		MERROR("component new: bad argument number, expected 1 got %d\n", top);
 		goto out;
 	}
 
 	if (!lua_istable(L, 1)) {
-		HERROR("argument error: table expected, got %s\n", luaL_typename(L, 1));
+		MERROR("argument error: table expected, got %s\n", luaL_typename(L, 1));
 		goto out;
 	}
 
@@ -539,10 +539,10 @@ static int workspace_new_wrap(lua_State *L)
 	if (lua_isstring(L, -1)) {
 		type_name = lua_tostring(L, -1);
 	} else if(lua_isnil(L, -1)) {
-		HDEBUG("type_name not given, newing a component without type\n");
+		MDEBUG("type_name not given, newing a component without type\n");
 		type_name = NULL;
 	} else {
-		HERROR("argument error: type is expected to be a string, got %s\n", luaL_typename(L, -1));
+		MERROR("argument error: type is expected to be a string, got %s\n", luaL_typename(L, -1));
 		goto out_remove_type_name;
 	}
 
@@ -550,12 +550,12 @@ static int workspace_new_wrap(lua_State *L)
 	if (lua_isstring(L, -1)) {
 		instance_name = lua_tostring(L, -1);
 	} else {
-		HERROR("argument error: type is expected to be a string, got %s\n", luaL_typename(L, -1));
+		MERROR("argument error: type is expected to be a string, got %s\n", luaL_typename(L, -1));
 		goto out_remove_instance_name;
 	}
 
 	if(instance_name == NULL) {
-		HERROR("component new: bad name\n");
+		MERROR("component new: bad name\n");
 		ret = -ENOMEM; /* Which errno? */
 	} else {
 		struct component *new_component = NULL;
@@ -573,12 +573,12 @@ out_remove_instance_name:
 out_remove_type_name:
 	lua_remove(L, -1);
 out:
-	HRETURN(0);
+	MRETURN(0);
 }
 
 static int workspace_help_wrap(lua_State *L)
 {
-	HENTRY();
+	MENTRY();
 	printf("Filter commands:\n"
 	       "    help(): show this message\n"
 	       "    new({type=<type>, name=<name>}): alloc a component in workspace\n"
@@ -586,7 +586,7 @@ static int workspace_help_wrap(lua_State *L)
 	       "    ls(): list all sub graphs and sub components in workspace\n"
 	       "    type(): list all component types declared\n"
 	       "    declare({type=<type>, out_num=<out_num>, selector=<selector>}): declare a component type\n");
-	HRETURN(0);
+	MRETURN(0);
 }
 
 static int workspace_link_wrap(lua_State *L)
@@ -600,17 +600,17 @@ static int workspace_link_wrap(lua_State *L)
 	int ret = 0;
 	int i = 0;
 	int top = 0;
-	HENTRY();
+	MENTRY();
 
 	top = lua_gettop(L);
 	if (top != 4) {
-		HERROR("argument error: too %s arguments\n", top > 4 ? "many" : "few" );
+		MERROR("argument error: too %s arguments\n", top > 4 ? "many" : "few" );
 		goto out;
 	}
 
 	for (i = 1; i <= 4; i++) {
 		if (!lua_isstring(L, i)) {
-			HERROR("argument error: argument[%d] is expected to be a string, got %s\n", i, luaL_typename(L, i));
+			MERROR("argument error: argument[%d] is expected to be a string, got %s\n", i, luaL_typename(L, i));
 			goto out;
 		}
 	}
@@ -620,32 +620,32 @@ static int workspace_link_wrap(lua_State *L)
 	dest_name = lua_tostring(L, 3);
 	dest_pin = lua_tostring(L, 4);
 
-	HASSERT(source_name);
-	HASSERT(source_pin);
-	HASSERT(dest_name);
-	HASSERT(dest_pin);
+	MASSERT(source_name);
+	MASSERT(source_pin);
+	MASSERT(dest_name);
+	MASSERT(dest_pin);
 	
 	if (strcmp(source_name, dest_name) == 0) {
-		HERROR("argument error: linking component %s to itself is not allowed\n", source_name);
+		MERROR("argument error: linking component %s to itself is not allowed\n", source_name);
 		goto out;
 	}	
 
 	source_component = component_search(component_workspace, source_name);
 	if (source_component == NULL) {
-		HERROR("failed to link, %s does not exists\n", source_name);
+		MERROR("failed to link, %s does not exists\n", source_name);
 		ret = -ENOMEM; /* Which errno? */
 		goto out;
 	}
 
 	dest_component = component_search(component_workspace, dest_name);
 	if (dest_component == NULL) {
-		HERROR("failed to link, %s does not exist\n", dest_name);
+		MERROR("failed to link, %s does not exist\n", dest_name);
 		ret = -ENOMEM; /* Which errno? */
 		goto out;
 	}
 	ret = component_link(source_component, source_pin, dest_component, dest_pin);
 out:
-	HRETURN(0);
+	MRETURN(0);
 }
 
 static int workspace_unlink_wrap(lua_State *L)
@@ -659,17 +659,17 @@ static int workspace_unlink_wrap(lua_State *L)
 	int ret = 0;
 	int i = 0;
 	int top = 0;
-	HENTRY();
+	MENTRY();
 
 	top = lua_gettop(L);
 	if (top != 4) {
-		HERROR("argument error: too %s arguments\n", top > 4 ? "many" : "few" );
+		MERROR("argument error: too %s arguments\n", top > 4 ? "many" : "few" );
 		goto out;
 	}
 
 	for (i = 1; i <= 4; i++) {
 		if (!lua_isstring(L, i)) {
-			HERROR("argument error: argument[%d] is expected to be a string, got %s\n", i, luaL_typename(L, i));
+			MERROR("argument error: argument[%d] is expected to be a string, got %s\n", i, luaL_typename(L, i));
 			goto out;
 		}
 	}
@@ -679,32 +679,32 @@ static int workspace_unlink_wrap(lua_State *L)
 	dest_name = lua_tostring(L, 3);
 	dest_pin = lua_tostring(L, 4);
 
-	HASSERT(source_name);
-	HASSERT(source_pin);
-	HASSERT(dest_name);
-	HASSERT(dest_pin);
+	MASSERT(source_name);
+	MASSERT(source_pin);
+	MASSERT(dest_name);
+	MASSERT(dest_pin);
 	
 	if (strcmp(source_name, dest_name) == 0) {
-		HERROR("argument error: linking component %s to itself is not allowed\n", source_name);
+		MERROR("argument error: linking component %s to itself is not allowed\n", source_name);
 		goto out;
 	}	
 
 	source_component = component_search(component_workspace, source_name);
 	if (source_component == NULL) {
-		HERROR("failed to link, %s does not exists\n", source_name);
+		MERROR("failed to link, %s does not exists\n", source_name);
 		ret = -ENOMEM; /* Which errno? */
 		goto out;
 	}
 
 	dest_component = component_search(component_workspace, dest_name);
 	if (dest_component == NULL) {
-		HERROR("failed to link, %s does not exist\n", dest_name);
+		MERROR("failed to link, %s does not exist\n", dest_name);
 		ret = -ENOMEM; /* Which errno? */
 		goto out;
 	}
 	ret = component_unlink(source_component, source_pin, dest_component, dest_pin);
 out:
-	HRETURN(0);
+	MRETURN(0);
 }
 
 static int workspace_general_wrap(lua_State *L, int (*func)(struct component *subcomponent))
@@ -712,42 +712,42 @@ static int workspace_general_wrap(lua_State *L, int (*func)(struct component *su
 	int top = 0;
 	int i = 0;
 	int ret = 0;
-	HENTRY();
+	MENTRY();
 
 	top = lua_gettop(L);
 	if (top == 0) {
-		HERROR("argument error: too few arguments\n");
+		MERROR("argument error: too few arguments\n");
 		goto out;
 	}
 
 	for(i = 1; i <= top; i++) {
 		if (!lua_isstring(L, i)) {
-			HERROR("argument error: argument[%d] is expected to be a string, got %s\n", i, luaL_typename(L, i));
+			MERROR("argument error: argument[%d] is expected to be a string, got %s\n", i, luaL_typename(L, i));
 		} else {
 			struct component *component = NULL;
 			const char *name = NULL;
 
 			name = lua_tostring(L, i);
-			HASSERT(name);
+			MASSERT(name);
 			component = component_search(component_workspace, name);
 			if (component) {
 				ret = func(component);
 			} else {
-				HERROR("%s: No such component\n", name);
+				MERROR("%s: No such component\n", name);
 			}
 		}
 	}
 out:
-	HRETURN(0);
+	MRETURN(0);
 }
 
 static int workspace_remove_wrap(lua_State *L)
 {
 	int ret = 0;
-	HENTRY();
+	MENTRY();
 
 	ret = workspace_general_wrap(L, component_remove);
-	HRETURN(0);
+	MRETURN(0);
 }
 
 #define MAX_BUFF_SIZE (2048)
@@ -766,7 +766,7 @@ static int component_instance_dump2graphviz(struct component *component)
 {
 	char *buff = NULL;
 	int ret = 0;
-	HENTRY();
+	MENTRY();
 
 	MTFS_ALLOC(buff, MAX_BUFF_SIZE);
 	if (buff == NULL) {
@@ -779,14 +779,14 @@ static int component_instance_dump2graphviz(struct component *component)
 	code_line_print(buff);
 	MTFS_FREE(buff, MAX_BUFF_SIZE);
 out:
-	HRETURN(ret);
+	MRETURN(ret);
 }
 
 static int component_outlinks2brother_dump2graphviz(struct component *component)
 {
 	char *buff = NULL;
 	int ret = 0;
-	HENTRY();
+	MENTRY();
 
 	MTFS_ALLOC(buff, MAX_BUFF_SIZE);
 	if (buff == NULL) {
@@ -820,14 +820,14 @@ static int component_outlinks2brother_dump2graphviz(struct component *component)
 
 	MTFS_FREE(buff, MAX_BUFF_SIZE);
 out:
-	HRETURN(ret);
+	MRETURN(ret);
 }
 
 static int workspace_dump2graphviz_wrap(lua_State *L)
 {
 	int top = 0;
 	int i = 0;
-	HENTRY();
+	MENTRY();
 
 	code_line_print("digraph G {");
 	graphviz_indent++;
@@ -840,26 +840,26 @@ static int workspace_dump2graphviz_wrap(lua_State *L)
 
 	for(i = 1; i <= top; i++) {
 		if (!lua_isstring(L, i)) {
-			HERROR("argument error: argument[%d] is expected to be a string, got %s\n", i, luaL_typename(L, i));
+			MERROR("argument error: argument[%d] is expected to be a string, got %s\n", i, luaL_typename(L, i));
 		} else {
 			struct component *component = NULL;
 			const char *name = NULL;
 
 			name = lua_tostring(L, i);
-			HASSERT(name);
+			MASSERT(name);
 			component = component_search(component_workspace, name);
 			if (component) {
 				component_instance_dump2graphviz(component);
 			} else {
-				HERROR("%s: No such component\n", name);
+				MERROR("%s: No such component\n", name);
 			}
 		}
 	}
 out:
 	graphviz_indent--;
 	code_line_print("}");
-	HASSERT(graphviz_indent == 0);
-	HRETURN(0);
+	MASSERT(graphviz_indent == 0);
+	MRETURN(0);
 }
 
 static int workspace_pack_wrap(lua_State *L)
@@ -870,16 +870,16 @@ static int workspace_pack_wrap(lua_State *L)
 	int i = 0;
 	struct pin_map_table *pin_tables = NULL;
 	struct component* component = NULL;
-	HENTRY();
+	MENTRY();
 
 	top = lua_gettop(L);
 	if (top != 1) {
-		HERROR("component new: bad argument number, expected 1 got %d\n", top);
+		MERROR("component new: bad argument number, expected 1 got %d\n", top);
 		goto out;
 	}
 
 	if (!lua_istable(L, 1)) {
-		HERROR("argument error: table expected, got %s\n", luaL_typename(L, 1));
+		MERROR("argument error: table expected, got %s\n", luaL_typename(L, 1));
 		goto out;
 	}
 
@@ -890,23 +890,23 @@ static int workspace_pack_wrap(lua_State *L)
 
 	lua_getfield(L, 1, "pins");
 	if (!lua_istable(L, -1)) {
-		HERROR("argument error: type is expected to be a table, got %s\n", luaL_typename(L, -1));
+		MERROR("argument error: type is expected to be a table, got %s\n", luaL_typename(L, -1));
 		lua_remove(L, -1);
 		goto out_free_name;
 	}
 
 	pin_num = lua_objlen(L, -1);
 	if (pin_num <= 0) {
-		HERROR("argument error: pin number expected to be greater than zero, got %d\n", pin_num);
+		MERROR("argument error: pin number expected to be greater than zero, got %d\n", pin_num);
 		/* Pop pin_tables */
 		lua_remove(L, -1);
 		goto out_free_name;
 	}
 
-	HDEBUG("pin_tables: %d\n", pin_num);
+	MDEBUG("pin_tables: %d\n", pin_num);
 	MTFS_ALLOC(pin_tables, sizeof(*pin_tables) * pin_num);
 	if (pin_tables == NULL) {
-		HERROR("not enough memory\n");
+		MERROR("not enough memory\n");
 		/* Pop pin_tables */
 		lua_remove(L, -1);
 		goto out_free_name;
@@ -915,10 +915,10 @@ static int workspace_pack_wrap(lua_State *L)
 	for(i = 0; i < pin_num; i++) {
 		int j = 0;
 
-		HDEBUG("pin_tables[%d]\n", i);
+		MDEBUG("pin_tables[%d]\n", i);
 		lua_rawgeti(L, -1, i + 1);
 		if (!lua_istable(L, -1)) {
-			HERROR("argument error: table expected, got %s\n", luaL_typename(L, -1));
+			MERROR("argument error: table expected, got %s\n", luaL_typename(L, -1));
 			/* Pop pin_table */
 			lua_remove(L, -1);
 			/* Pop pin_tables */
@@ -934,7 +934,7 @@ static int workspace_pack_wrap(lua_State *L)
 			lua_remove(L, -1);
 			goto out_free_tables;
 		}
-		HDEBUG("pin_tables[%d].sub_component_name = %s\n", i, pin_tables[i].sub_component_name);
+		MDEBUG("pin_tables[%d].sub_component_name = %s\n", i, pin_tables[i].sub_component_name);
 
 		pin_tables[i].sub_pin_name = fsmL_field_getstring(L, -1, "pin");
 		if (pin_tables[i].sub_pin_name == NULL) {
@@ -944,7 +944,7 @@ static int workspace_pack_wrap(lua_State *L)
 			lua_remove(L, -1);
 			goto out_free_tables;
 		}
-		HDEBUG("pin_tables[%d].sub_pin_name = %s\n", i, pin_tables[i].sub_pin_name);
+		MDEBUG("pin_tables[%d].sub_pin_name = %s\n", i, pin_tables[i].sub_pin_name);
 
 		pin_tables[i].pin_name = fsmL_field_getstring(L, -1, "name");
 		if (pin_tables[i].pin_name == NULL) {
@@ -954,13 +954,13 @@ static int workspace_pack_wrap(lua_State *L)
 			lua_remove(L, -1);
 			goto out_free_tables;
 		}
-		HDEBUG("pin_tables[%d].pin_name = %s\n", i, pin_tables[i].pin_name);
+		MDEBUG("pin_tables[%d].pin_name = %s\n", i, pin_tables[i].pin_name);
 		/* Pop pin_table */
 		lua_remove(L, -1);
 
 		for(j = 0; j < i; j++) {
 			if (strcmp(pin_tables[i].pin_name, pin_tables[j].pin_name) == 0) {
-				HERROR("pin_tables[%d] have same pin name with pin_tables[%d]\n", i, j);
+				MERROR("pin_tables[%d] have same pin name with pin_tables[%d]\n", i, j);
 				/* Pop pin_tables */
 				lua_remove(L, -1);
 				goto out_free_tables;
@@ -971,7 +971,7 @@ static int workspace_pack_wrap(lua_State *L)
 	lua_remove(L, -1);
 	component = component_search(component_workspace, name);
 	if (component == NULL) {
-		HERROR("failed to pack, %s does not exists\n", name);
+		MERROR("failed to pack, %s does not exists\n", name);
 		goto out_free_tables;
 	}
 	component_pack(component, pin_num, pin_tables);
@@ -991,7 +991,7 @@ out_free_tables:
 out_free_name:
 	MTFS_FREE_STR(name);
 out:
-	HRETURN(0);
+	MRETURN(0);
 }
 
 const struct luaL_reg workspacelib[] = {

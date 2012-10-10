@@ -20,11 +20,11 @@ static int mtfs_writepage_branch(struct page *page, struct inode *inode, mtfs_bi
 	struct page *lower_page = NULL;
 	char *kaddr = NULL;
 	char *lower_kaddr = NULL;
-	HENTRY();
+	MENTRY();
 
 	ret = mtfs_device_branch_errno(mtfs_i2dev(inode), bindex, BOPS_MASK_WRITE);
 	if (ret) {
-		HDEBUG("branch[%d] is abandoned\n", bindex);
+		MDEBUG("branch[%d] is abandoned\n", bindex);
 		goto out; 
 	}
 
@@ -47,7 +47,7 @@ static int mtfs_writepage_branch(struct page *page, struct inode *inode, mtfs_bi
 	 * So wait until it finishs.
 	 */
 	wait_on_page_writeback(lower_page);
-	HASSERT(!PageWriteback(lower_page));
+	MASSERT(!PageWriteback(lower_page));
 
 	/* Copy data to lower_page */
 	kaddr = kmap(page);
@@ -60,24 +60,24 @@ static int mtfs_writepage_branch(struct page *page, struct inode *inode, mtfs_bi
 	set_page_dirty(lower_page);
 
 	if (!clear_page_dirty_for_io(lower_page)) {
-		HERROR("page(%p) is not dirty\n", lower_page);
+		MERROR("page(%p) is not dirty\n", lower_page);
 		unlock_page(lower_page);
 		page_cache_release(lower_page);
-		HBUG();
+		MBUG();
 		goto out;
 	}
 
 	/* This will unlock_page */
 	ret = lower_inode->i_mapping->a_ops->writepage(lower_page, wbc);
 	if (ret == AOP_WRITEPAGE_ACTIVATE) {
-		HDEBUG("lowerfs choose to not start writepage\n");
+		MDEBUG("lowerfs choose to not start writepage\n");
 		unlock_page(lower_page);
 		ret = 0;
 	}
 
 	page_cache_release(lower_page); /* because read_cache_page increased refcnt */
 out:
-	HRETURN(ret);
+	MRETURN(ret);
 }
 
 int mtfs_writepage(struct page *page, struct writeback_control *wbc)
@@ -88,17 +88,17 @@ int mtfs_writepage(struct page *page, struct writeback_control *wbc)
 	mtfs_bindex_t bindex = 0;
 	struct mtfs_operation_list *list = NULL;
 	mtfs_operation_result_t result = {0};
-	HENTRY();
+	MENTRY();
 
 	list = mtfs_oplist_build(inode);
 	if (unlikely(list == NULL)) {
-		HERROR("failed to build operation list\n");
+		MERROR("failed to build operation list\n");
 		ret = -ENOMEM;
 		goto out;
 	}
 
 	if (list->latest_bnum == 0) {
-		HERROR("page has no valid branch, please check it\n");
+		MERROR("page has no valid branch, please check it\n");
 		if (!(mtfs_i2dev(inode)->no_abort)) {
 			ret = -EIO;
 			goto out_free_oplist;
@@ -113,7 +113,7 @@ int mtfs_writepage(struct page *page, struct writeback_control *wbc)
 		if (i == list->latest_bnum - 1) {
 			mtfs_oplist_check(list);
 			if (list->success_latest_bnum <= 0) {
-				HDEBUG("operation failed for all latest branches\n");
+				MDEBUG("operation failed for all latest branches\n");
 				if (!(mtfs_i2dev(inode)->no_abort)) {
 					ret = -EIO;
 					goto out_free_oplist;
@@ -131,8 +131,8 @@ int mtfs_writepage(struct page *page, struct writeback_control *wbc)
 
 	ret = mtfs_oplist_update(inode, list);
 	if (ret) {
-		HERROR("failed to update inode\n");
-		HBUG();
+		MERROR("failed to update inode\n");
+		MBUG();
 	}
 
 	if (ret) {
@@ -145,7 +145,7 @@ out_free_oplist:
 	mtfs_oplist_free(list);
 out:
 	unlock_page(page);
-	HRETURN(ret);
+	MRETURN(ret);
 }
 EXPORT_SYMBOL(mtfs_writepage);
 
@@ -181,12 +181,12 @@ static int mtfs_readpage_branch(struct file *file, char *page_data, mtfs_bindex_
 	struct inode *inode = NULL;
 	struct inode *hidden_inode = NULL;
 	struct page *hidden_page = NULL;
-	HENTRY();
+	MENTRY();
 
 	dentry = file->f_dentry;
 	inode = dentry->d_inode;
 
-	HASSERT(mtfs_f2info(file));
+	MASSERT(mtfs_f2info(file));
 	hidden_file = mtfs_f2branch(file, bindex);
 	hidden_inode = mtfs_i2branch(inode, bindex);
 
@@ -200,7 +200,7 @@ static int mtfs_readpage_branch(struct file *file, char *page_data, mtfs_bindex_
 	page_cache_release(hidden_page);
 
 out:
-	HRETURN(ret);
+	MRETURN(ret);
 }
 
 static int mtfs_readpage_nounlock(struct file *file, struct page *page)
@@ -208,11 +208,11 @@ static int mtfs_readpage_nounlock(struct file *file, struct page *page)
 	int ret = 0;
 	mtfs_bindex_t bindex = 0;
 	void *page_data = NULL;
-	HENTRY();
+	MENTRY();
 
 	ret = mtfs_i_choose_bindex(page->mapping->host, MTFS_DATA_VALID, &bindex);
 	if (ret) {
-		HERROR("choose bindex failed, ret = %d\n", ret);
+		MERROR("choose bindex failed, ret = %d\n", ret);
 		goto out;
 	}
 
@@ -227,22 +227,22 @@ static int mtfs_readpage_nounlock(struct file *file, struct page *page)
 	}
 
 out:
-	HRETURN(ret);
+	MRETURN(ret);
 }
 
 int mtfs_readpage(struct file *file, struct page *page)
 {
 	int ret = 0;
-	HENTRY();
+	MENTRY();
 
-	HASSERT(PageLocked(page));
-	HASSERT(!PageUptodate(page));
-	HASSERT(atomic_read(&file->f_dentry->d_inode->i_count) > 0);
+	MASSERT(PageLocked(page));
+	MASSERT(!PageUptodate(page));
+	MASSERT(atomic_read(&file->f_dentry->d_inode->i_count) > 0);
 
 	ret = mtfs_readpage_nounlock(file, page);
 	unlock_page(page);
 
-	HRETURN(ret);
+	MRETURN(ret);
 }
 EXPORT_SYMBOL(mtfs_readpage);
 
@@ -258,7 +258,7 @@ ssize_t mtfs_direct_IO(int rw, struct kiocb *kiocb,
 	struct file *hidden_file = NULL;
 	struct file *file = kiocb->ki_filp;
 	struct kiocb new_kiocb;
-	HENTRY();
+	MENTRY();
 	
 	MTFS_ALLOC(iov_new, length);
 	if (!iov_new) {
@@ -277,13 +277,13 @@ ssize_t mtfs_direct_IO(int rw, struct kiocb *kiocb,
 		for (bindex = 0; bindex < mtfs_f2bnum(file); bindex++) {
 			hidden_file = mtfs_f2branch(file, bindex);
 			if (!hidden_file) {
-				HDEBUG("direct_IO of barnch[%d] file [%*s] is not supported\n",
+				MDEBUG("direct_IO of barnch[%d] file [%*s] is not supported\n",
 				       bindex, file->f_dentry->d_name.len, file->f_dentry->d_name.name);
 				continue;
 			}
-			HASSERT(hidden_file->f_mapping);
-			HASSERT(hidden_file->f_mapping->a_ops);	
-			HASSERT(hidden_file->f_mapping->a_ops->direct_IO);	
+			MASSERT(hidden_file->f_mapping);
+			MASSERT(hidden_file->f_mapping->a_ops);	
+			MASSERT(hidden_file->f_mapping->a_ops->direct_IO);	
 
 			memcpy((char *)iov_tmp, (char *)iov_new, length); 
 			new_kiocb.ki_filp = hidden_file;
@@ -302,7 +302,7 @@ ssize_t mtfs_direct_IO(int rw, struct kiocb *kiocb,
 out_new_alloced:
 	MTFS_FREE(iov_new, length);
 out:
-	HRETURN(ret);
+	MRETURN(ret);
 }
 EXPORT_SYMBOL(mtfs_direct_IO);
 
@@ -310,10 +310,10 @@ EXPORT_SYMBOL(mtfs_direct_IO);
 int mtfs_fault(struct vm_area_struct *vma, struct vm_fault *vmf)
 {
 	int ret = 0;
-	HENTRY();
+	MENTRY();
 
 	ret = filemap_fault(vma, vmf);
-	HRETURN(ret);
+	MRETURN(ret);
 }
 EXPORT_SYMBOL(mtfs_fault);
 #else /* ! HAVE_VM_OP_FAULT */
@@ -321,13 +321,13 @@ struct page *mtfs_nopage(struct vm_area_struct *vma, unsigned long address,
                          int *type)
 {
 	struct page *page = NULL;
-	HENTRY();
+	MENTRY();
 
 	page = filemap_nopage(vma, address, type);
 	if (page == NOPAGE_SIGBUS || page == NOPAGE_OOM) {
-		HERROR("got addr %lu type %lx - SIGBUS\n", address, (long)type);
+		MERROR("got addr %lu type %lx - SIGBUS\n", address, (long)type);
 	}
-	HRETURN(page);
+	MRETURN(page);
 }
 EXPORT_SYMBOL(mtfs_nopage);
 #endif /* ! HAVE_VM_OP_FAULT */

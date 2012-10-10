@@ -16,16 +16,16 @@ struct dentry *mtfs_ext2_lookup(struct inode *dir, struct dentry *dentry, struct
 {
 	struct dentry *ret = NULL;
 	int rc = 0;
-	HENTRY();
+	MENTRY();
 
-	HASSERT(inode_is_locked(dir));
-	HASSERT(!IS_ROOT(dentry));
+	MASSERT(inode_is_locked(dir));
+	MASSERT(!IS_ROOT(dentry));
 
 	rc = mtfs_lookup_backend(dir, dentry, INTERPOSE_LOOKUP);
 
 	ret = ERR_PTR(rc);
 
-	HRETURN(ret);
+	MRETURN(ret);
 }
 
 struct super_operations mtfs_ext2_sops =
@@ -83,9 +83,9 @@ struct inode_operations mtfs_ext2_main_iops =
 int mtfs_d_revalidate_local(struct dentry *dentry, struct nameidata *nd)
 {
 	int ret = 0;
-	HENTRY();
+	MENTRY();
 
-	HDEBUG("d_revalidate [%*s]\n", dentry->d_name.len, dentry->d_name.name);
+	MDEBUG("d_revalidate [%*s]\n", dentry->d_name.len, dentry->d_name.name);
 
 	if (dentry->d_flags & DCACHE_MTFS_INVALID) {
 		ret = 0;
@@ -93,7 +93,7 @@ int mtfs_d_revalidate_local(struct dentry *dentry, struct nameidata *nd)
 	}
 	ret = 1;
 out:
-	HRETURN(ret);
+	MRETURN(ret);
 }
 
 struct dentry_operations mtfs_ext2_dops = {
@@ -149,7 +149,7 @@ static int mtfs_ext2_setflags(struct inode *inode, struct file *file, unsigned l
 {
 	int ret = 0;
 	int flags = 0;
-	HENTRY();
+	MENTRY();
 
 	ret = mtfs_ioctl_write(inode, file, EXT2_IOC_SETFLAGS, arg, 0);
 	if (ret < 0) {
@@ -158,20 +158,20 @@ static int mtfs_ext2_setflags(struct inode *inode, struct file *file, unsigned l
 
 	ret = get_user(flags, (int *)arg);
 	if (ret) {
-		HERROR("failed to get_user, ret = %d\n", ret);
+		MERROR("failed to get_user, ret = %d\n", ret);
 		goto out;
 	}
 
 	inode->i_flags = ext2_to_inode_flags(flags | EXT2_RESERVED_FL);
 out:
-	HRETURN(ret);
+	MRETURN(ret);
 }
 
 static int mtfs_ext2_getflags(struct inode *inode, struct file *file, unsigned long arg)
 {
 	int ret = 0;
 	int flags = 0;
-	HENTRY();
+	MENTRY();
 
 	ret = mtfs_ioctl_read(inode, file, EXT2_IOC_GETFLAGS, (unsigned long)&flags, 1);
 	if (ret < 0) {
@@ -179,13 +179,13 @@ static int mtfs_ext2_getflags(struct inode *inode, struct file *file, unsigned l
 	}
 	ret = put_user(flags, (int __user *)arg);
 out:
-	HRETURN(ret);
+	MRETURN(ret);
 }
 
 int mtfs_ext2_ioctl(struct inode *inode, struct file *file, unsigned int cmd, unsigned long arg)
 {
 	int ret = 0;
-	HENTRY();
+	MENTRY();
 
 	switch (cmd) {
 	case EXT2_IOC_SETFLAGS:
@@ -199,7 +199,7 @@ int mtfs_ext2_ioctl(struct inode *inode, struct file *file, unsigned int cmd, un
 		break;
 	}
 
-	HRETURN(ret);
+	MRETURN(ret);
 }
 
 struct mtfs_operations mtfs_ext2_operations = {
@@ -243,17 +243,17 @@ static int ext2_support_init(void)
 {
 	int ret = 0;
 
-	HDEBUG("registering mtfs_ext2 support\n");
+	MDEBUG("registering mtfs_ext2 support\n");
 
 	ret = lowerfs_register_ops(&lowerfs_ext2_ops);
 	if (ret) {
-		HERROR("failed to register lowerfs operation: error %d\n", ret);
+		MERROR("failed to register lowerfs operation: error %d\n", ret);
 		goto out;
 	}	
 
 	ret = junction_register(&mtfs_ext2_junction);
 	if (ret) {
-		HERROR("failed to register junction: error %d\n", ret);
+		MERROR("failed to register junction: error %d\n", ret);
 		goto out_unregister_lowerfs_ops;
 	}
 	goto out;
@@ -265,7 +265,7 @@ out:
 
 static void ext2_support_exit(void)
 {
-	HDEBUG("unregistering mtfs_ext2 support\n");
+	MDEBUG("unregistering mtfs_ext2 support\n");
 	lowerfs_unregister_ops(&lowerfs_ext2_ops);
 
 	junction_unregister(&mtfs_ext2_junction);

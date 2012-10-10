@@ -79,7 +79,7 @@ static inline int mtfs_valid_flags_is_valid(__u32 valid_flags)
 {
 	int valid = 1;
 	if ((valid_flags & (~MTFS_ALL_VALID)) != 0) {
-		HERROR("valid_flags is not valid, unused bits is setted\n");
+		MERROR("valid_flags is not valid, unused bits is setted\n");
 		valid = 0;
 		goto out;
 	}
@@ -100,10 +100,10 @@ static inline int mtfs_i_choose_bindex(struct inode *inode, __u32 valid_flags, m
 {
 	mtfs_bindex_t i = 0;
 	int ret = 0;
-	HENTRY();
+	MENTRY();
 	
-	HASSERT(inode);
-	HASSERT(mtfs_valid_flags_is_valid(valid_flags));
+	MASSERT(inode);
+	MASSERT(mtfs_valid_flags_is_valid(valid_flags));
 
 	for (i = 0; i < mtfs_i2bnum(inode); i++) {
 		ret = mtfs_branch_is_valid(inode, i, valid_flags);
@@ -115,11 +115,11 @@ static inline int mtfs_i_choose_bindex(struct inode *inode, __u32 valid_flags, m
 			continue;
 		}
 	}
-	HERROR("None branch choosed\n");
+	MERROR("None branch choosed\n");
 	ret = -EINVAL;
 
 out:
-	HRETURN(ret);
+	MRETURN(ret);
 }
 
 static inline struct inode *mtfs_i_choose_branch(struct inode *inode, __u32 valid_flags)
@@ -127,7 +127,7 @@ static inline struct inode *mtfs_i_choose_branch(struct inode *inode, __u32 vali
 	mtfs_bindex_t bindex = -1;
 	struct inode *hidden_inode = NULL;
 	int ret = 0;
-	HENTRY();
+	MENTRY();
 
 	ret = mtfs_i_choose_bindex(inode, valid_flags, &bindex);
 	if (ret) {
@@ -135,24 +135,24 @@ static inline struct inode *mtfs_i_choose_branch(struct inode *inode, __u32 vali
 		goto out;
 	}
 
-	HASSERT(bindex >= 0 && bindex < mtfs_i2bnum(inode));
+	MASSERT(bindex >= 0 && bindex < mtfs_i2bnum(inode));
 	hidden_inode = mtfs_i2branch(inode, bindex);
-	HASSERT(hidden_inode);
+	MASSERT(hidden_inode);
 out:
-	HRETURN(hidden_inode);
+	MRETURN(hidden_inode);
 }
 
 static inline mtfs_bindex_t mtfs_d_choose_bindex(struct dentry *dentry, __u64 valid_flags, mtfs_bindex_t *bindex)
 {
 	int ret = 0;
-	HENTRY();
+	MENTRY();
 
-	HASSERT(dentry);
-	HASSERT(mtfs_valid_flags_is_valid(valid_flags));
+	MASSERT(dentry);
+	MASSERT(mtfs_valid_flags_is_valid(valid_flags));
 
 	ret = mtfs_i_choose_bindex(dentry->d_inode, valid_flags, bindex);
 
-	HRETURN(ret);
+	MRETURN(ret);
 }
 
 static inline struct dentry *mtfs_d_choose_branch(struct dentry *dentry, __u64 valid_flags)
@@ -160,7 +160,7 @@ static inline struct dentry *mtfs_d_choose_branch(struct dentry *dentry, __u64 v
 	mtfs_bindex_t bindex = -1;
 	struct dentry *hidden_dentry = NULL;
 	int ret = 0;
-	HENTRY();
+	MENTRY();
 
 	ret = mtfs_d_choose_bindex(dentry, valid_flags, &bindex);
 	if (ret) {
@@ -168,24 +168,24 @@ static inline struct dentry *mtfs_d_choose_branch(struct dentry *dentry, __u64 v
 		goto out;
 	}
 
-	HASSERT(bindex >=0 && bindex < mtfs_d2bnum(dentry));
+	MASSERT(bindex >=0 && bindex < mtfs_d2bnum(dentry));
 	hidden_dentry = mtfs_d2branch(dentry, bindex);
-	HASSERT(hidden_dentry);
+	MASSERT(hidden_dentry);
 out:
-	HRETURN(hidden_dentry);
+	MRETURN(hidden_dentry);
 }
 
 static inline mtfs_bindex_t mtfs_f_choose_bindex(struct file *file, __u64 valid_flags, mtfs_bindex_t *bindex)
 {
 	int ret = 0;
-	HENTRY();
+	MENTRY();
 
-	HASSERT(file);
-	HASSERT(mtfs_valid_flags_is_valid(valid_flags));
+	MASSERT(file);
+	MASSERT(mtfs_valid_flags_is_valid(valid_flags));
 
 	ret = mtfs_i_choose_bindex(file->f_dentry->d_inode, valid_flags, bindex);
 
-	HRETURN(ret);
+	MRETURN(ret);
 }
 
 static inline struct file *mtfs_f_choose_branch(struct file *file, __u64 valid_flags)
@@ -193,7 +193,7 @@ static inline struct file *mtfs_f_choose_branch(struct file *file, __u64 valid_f
 	mtfs_bindex_t bindex = -1;
 	struct file *hidden_file = NULL;
 	int ret = 0;
-	HENTRY();
+	MENTRY();
 
 	ret = mtfs_f_choose_bindex(file, valid_flags, &bindex);
 	if (ret) {
@@ -201,10 +201,10 @@ static inline struct file *mtfs_f_choose_branch(struct file *file, __u64 valid_f
 		goto out;
 	}
 
-	HASSERT(bindex >=0 && bindex < mtfs_f2bnum(file));
+	MASSERT(bindex >=0 && bindex < mtfs_f2bnum(file));
 	hidden_file = mtfs_f2branch(file, bindex);
 out:
-	HRETURN(hidden_file);
+	MRETURN(hidden_file);
 }
 
 extern int lowerfs_inode_get_flag_xattr(struct inode *inode, __u32 *mtfs_flag, const char *xattr_name);

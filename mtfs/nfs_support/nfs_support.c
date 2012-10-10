@@ -16,16 +16,16 @@ struct dentry *mtfs_nfs_lookup(struct inode *dir, struct dentry *dentry, struct 
 {
 	struct dentry *ret = NULL;
 	int rc = 0;
-	HENTRY();
+	MENTRY();
 
-	HASSERT(inode_is_locked(dir));
-	HASSERT(!IS_ROOT(dentry));
+	MASSERT(inode_is_locked(dir));
+	MASSERT(!IS_ROOT(dentry));
 
 	rc = mtfs_lookup_backend(dir, dentry, INTERPOSE_LOOKUP);
 
 	ret = ERR_PTR(rc);
 
-	HRETURN(ret);
+	MRETURN(ret);
 }
 
 struct super_operations mtfs_nfs_sops =
@@ -125,7 +125,7 @@ struct address_space_operations mtfs_nfs_aops =
 int mtfs_nfs_ioctl(struct inode *inode, struct file *file, unsigned int cmd, unsigned long arg)
 {
 	int ret = 0;
-	HENTRY();
+	MENTRY();
 
 	switch (cmd) {
 	default:
@@ -133,7 +133,7 @@ int mtfs_nfs_ioctl(struct inode *inode, struct file *file, unsigned int cmd, uns
 		break;
 	}
 
-	HRETURN(ret);
+	MRETURN(ret);
 }
 
 struct mtfs_operations mtfs_nfs_operations = {
@@ -176,17 +176,17 @@ static int nfs_support_init(void)
 {
 	int ret = 0;
 
-	HDEBUG("registering mtfs_nfs support\n");
+	MDEBUG("registering mtfs_nfs support\n");
 
 	ret = lowerfs_register_ops(&lowerfs_nfs_ops);
 	if (ret) {
-		HERROR("failed to register lowerfs operation: error %d\n", ret);
+		MERROR("failed to register lowerfs operation: error %d\n", ret);
 		goto out;
 	}	
 
 	ret = junction_register(&mtfs_nfs_junction);
 	if (ret) {
-		HERROR("failed to register junction: error %d\n", ret);
+		MERROR("failed to register junction: error %d\n", ret);
 		goto out_unregister_lowerfs_ops;
 	}
 	goto out;
@@ -198,7 +198,7 @@ out:
 
 static void nfs_support_exit(void)
 {
-	HDEBUG("unregistering mtfs_nfs support\n");
+	MDEBUG("unregistering mtfs_nfs support\n");
 	lowerfs_unregister_ops(&lowerfs_nfs_ops);
 
 	junction_unregister(&mtfs_nfs_junction);

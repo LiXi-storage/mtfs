@@ -50,7 +50,7 @@ Index: lustre-2.1.52/lustre/llite/file.c
 +void mtfs_env_vector_free(struct mtfs_env_vector *vector)
 +{
 +        mtfs_bindex_t bindex;
-+        HENTRY();
++        MENTRY();
 +
 +        for (bindex = 0; bindex < vector->bnum; bindex ++) {
 +                if (vector->mtfs_env[bindex].env != NULL) {
@@ -62,7 +62,7 @@ Index: lustre-2.1.52/lustre/llite/file.c
 +               MTFS_FREE(vector->mtfs_env, sizeof(*vector->mtfs_env) * vector->bnum);
 +        }
 +        MTFS_FREE(vector, sizeof(*vector));
-+        _HRETURN();
++        _MRETURN();
 +}
 +
 +void mtfs_env_vector_init(struct mtfs_env_vector *vector, struct iovec *iov, unsigned long nr_segs)
@@ -70,17 +70,17 @@ Index: lustre-2.1.52/lustre/llite/file.c
 +        mtfs_bindex_t       bindex;
 +        struct vvp_io_args *args;
 +        struct lu_env      *env;
-+        HENTRY();
++        MENTRY();
 +
 +        for (bindex = 0; bindex < vector->bnum; bindex ++) {
 +                env = vector->mtfs_env[bindex].env;
-+                HASSERT(env);
++                MASSERT(env);
 +                args = vvp_env_args(env, IO_NORMAL);
 +                args->u.normal.via_iov = iov;
 +                args->u.normal.via_nrsegs = nr_segs;
 +        }
 +
-+        _HRETURN();
++        _MRETURN();
 +}
 +
 +struct mtfs_env_vector *mtfs_env_vector_alloc(mtfs_bindex_t bnum)
@@ -89,7 +89,7 @@ Index: lustre-2.1.52/lustre/llite/file.c
 +        mtfs_bindex_t           bindex = 0;
 +        struct lu_env          *env = NULL;
 +        int result = 0;
-+        HENTRY();
++        MENTRY();
 +
 +        MTFS_ALLOC(vector, sizeof(*vector));
 +        if (vector == NULL) {
@@ -127,7 +127,7 @@ Index: lustre-2.1.52/lustre/llite/file.c
 +        if (result) {
 +                vector = ERR_PTR(result);
 +        }
-+        HRETURN(vector);
++        MRETURN(vector);
 +}
 +
 +static int mtfs_ll_file_io_init_branch(const struct lu_env *env,
@@ -140,9 +140,9 @@ Index: lustre-2.1.52/lustre/llite/file.c
 +        struct ccc_io        *cio = NULL;
 +        struct ll_inode_info *lli = ll_i2info(lustre_file->f_dentry->d_inode);
 +        struct vvp_io_args   *args = NULL;
-+        HENTRY();
++        MENTRY();
 +
-+        HASSERT(iot == CIT_WRITE);
++        MASSERT(iot == CIT_WRITE);
 +        io = ccc_env_thread_io(env);
 +        ll_io_init(io, lustre_file, iot == CIT_WRITE);
 +        result = cl_io_rw_init(env, io, iot, *ppos, count);
@@ -150,7 +150,7 @@ Index: lustre-2.1.52/lustre/llite/file.c
 +                /* cl_io_rw_init() handled IO */
 +                result = io->ci_result;
 +        }
-+        HASSERT(io->ci_type == CIT_WRITE);
++        MASSERT(io->ci_type == CIT_WRITE);
 +
 +        args = vvp_env_args(env, IO_NORMAL);
 +
@@ -192,7 +192,7 @@ Index: lustre-2.1.52/lustre/llite/file.c
 +out_fini:
 +        cl_io_fini(env, io);
 +out:
-+        HRETURN(result);
++        MRETURN(result);
 +}
 +
 +static ssize_t mtfs_ll_file_io_fini_branch(const struct lu_env *env,
@@ -204,9 +204,9 @@ Index: lustre-2.1.52/lustre/llite/file.c
 +        struct cl_io         *io = NULL;
 +        ssize_t               result = 0;
 +        struct vvp_io_args   *args = NULL;
-+        HENTRY();
++        MENTRY();
 +
-+        HASSERT(iot == CIT_WRITE);
++        MASSERT(iot == CIT_WRITE);
 +        lli = ll_i2info(lustre_file->f_dentry->d_inode);
 +        cio = ccc_env_io(env);
 +        io = &ccc_env_info(env)->cti_io;;
@@ -223,7 +223,7 @@ Index: lustre-2.1.52/lustre/llite/file.c
 +                result = io->ci_nob;
 +        }
 +        cl_io_fini(env, io);
-+        HRETURN(result);
++        MRETURN(result);
 +}
 +
 +static int mtfs_ll_file_io_init(struct mtfs_env_vector *env_vector,
@@ -235,7 +235,7 @@ Index: lustre-2.1.52/lustre/llite/file.c
 +        mtfs_bindex_t bnum = mtfs_f2bnum(mtfs_file);
 +        struct file  *lustre_file = NULL;
 +        const struct  lu_env *env = NULL;
-+        HENTRY();
++        MENTRY();
 +
 +        for (bindex = 0; bindex < bnum; bindex++) {
 +                lustre_file = mtfs_f2branch(mtfs_file, bindex);
@@ -244,7 +244,7 @@ Index: lustre-2.1.52/lustre/llite/file.c
 +                        result = mtfs_ll_file_io_init_branch(env,
 +                                        lustre_file, iot, ppos, count);
 +                        if (result) {
-+                                HERROR("failed to init io for branch[%d] of file [%*s],"
++                                MERROR("failed to init io for branch[%d] of file [%*s],"
 +                                       " ret = %d\n",
 +                                       bindex, mtfs_file->f_dentry->d_name.len,
 +                                       mtfs_file->f_dentry->d_name.name, result);
@@ -252,7 +252,7 @@ Index: lustre-2.1.52/lustre/llite/file.c
 +                                goto out_fini;
 +                        }
 +                } else {
-+                        HERROR("branch[%d] of file [%*s] is NULL, skipping\n",
++                        MERROR("branch[%d] of file [%*s] is NULL, skipping\n",
 +                                bindex, mtfs_file->f_dentry->d_name.len,
 +                                mtfs_file->f_dentry->d_name.name);
 +                }
@@ -265,7 +265,7 @@ Index: lustre-2.1.52/lustre/llite/file.c
 +                mtfs_ll_file_io_fini_branch(env, lustre_file, iot);
 +        }
 +out:
-+        HRETURN(result);
++        MRETURN(result);
 +}
 +
 +static int mtfs_ll_file_io_fini(struct mtfs_env_vector *env_vector,
@@ -280,7 +280,7 @@ Index: lustre-2.1.52/lustre/llite/file.c
 +        struct file  *lustre_file = NULL;
 +        const struct  lu_env *env = NULL;
 +        mtfs_operation_result_t op_result = {0};
-+        HENTRY();
++        MENTRY();
 +
 +        /* Should unlock backward in case of dead lock */
 +        for (bindex = bnum - 1; bindex >= 0; bindex--) {
@@ -292,7 +292,7 @@ Index: lustre-2.1.52/lustre/llite/file.c
 +                        op_result.size = size;
 +                        mtfs_oplist_setbranch(oplist, bindex, (size >= 0 ? 1 : 0), op_result);
 +                        if (size <= 0) {
-+                                HERROR("failed to finish io for branch[%d] of file [%*s],"
++                                MERROR("failed to finish io for branch[%d] of file [%*s],"
 +                                       " ret = %ld\n",
 +                                       bindex, mtfs_file->f_dentry->d_name.len,
 +                                       mtfs_file->f_dentry->d_name.name, size);
@@ -300,13 +300,13 @@ Index: lustre-2.1.52/lustre/llite/file.c
 +                } else {
 +                        op_result.size = -ENOENT;
 +                        mtfs_oplist_setbranch(oplist, bindex, 0, op_result);
-+                        HERROR("branch[%d] of file [%*s] is NULL, skipping\n",
++                        MERROR("branch[%d] of file [%*s] is NULL, skipping\n",
 +                                bindex, mtfs_file->f_dentry->d_name.len,
 +                                mtfs_file->f_dentry->d_name.name);
 +                }
 +        }
 +
-+        HRETURN(result);
++        MRETURN(result);
 +}
 +
 +static int mtfs_first_bindex(struct file *mtfs_file, mtfs_bindex_t *first_bindex)
@@ -314,7 +314,7 @@ Index: lustre-2.1.52/lustre/llite/file.c
 +        int           result = -ENOMEM;
 +        mtfs_bindex_t bindex = 0;
 +        mtfs_bindex_t bnum = mtfs_f2bnum(mtfs_file);
-+        HENTRY();
++        MENTRY();
 +
 +        for (bindex = 0; bindex < bnum; bindex++) {
 +                if (mtfs_f2branch(mtfs_file, bindex) != NULL) {
@@ -323,7 +323,7 @@ Index: lustre-2.1.52/lustre/llite/file.c
 +                        break;
 +                }
 +        }
-+        HRETURN(result);
++        MRETURN(result);
 +}
 +
 +static int mtfs_cl_io_lock_secondary(struct mtfs_env_vector *env_vector,
@@ -337,7 +337,7 @@ Index: lustre-2.1.52/lustre/llite/file.c
 +        mtfs_bindex_t  bnum = mtfs_f2bnum(mtfs_file);
 +        struct lu_env *env = NULL;
 +        struct cl_io  *io = NULL;
-+        HENTRY();
++        MENTRY();
 +
 +        for (bindex = first_bindex + 1; bindex < bnum; bindex++) {
 +                if (mtfs_f2branch(mtfs_file, bindex) != NULL) {
@@ -363,12 +363,12 @@ Index: lustre-2.1.52/lustre/llite/file.c
 +                        cl_env_reenter();
 +
 +                } else {
-+                        HERROR("branch[%d] of file [%*s] is NULL, skipping\n",
++                        MERROR("branch[%d] of file [%*s] is NULL, skipping\n",
 +                                bindex, mtfs_file->f_dentry->d_name.len,
 +                                mtfs_file->f_dentry->d_name.name);
 +                }
 +        }
-+        HRETURN(result);
++        MRETURN(result);
 +}
 +
 +static int mtfs_cl_io_finsh_secondary_reverse(struct mtfs_env_vector *env_vector,
@@ -382,7 +382,7 @@ Index: lustre-2.1.52/lustre/llite/file.c
 +        struct lu_env *env = NULL;
 +        struct cl_io  *io = NULL;
 +        size_t         nob = 0;
-+        HENTRY();
++        MENTRY();
 +
 +        for (bindex = bnum - 1; bindex > first_bindex; bindex--) {
 +                if (mtfs_f2branch(mtfs_file, bindex) != NULL) {
@@ -394,7 +394,7 @@ Index: lustre-2.1.52/lustre/llite/file.c
 +                        io->u.ci_wr.wr.crw_count = first_io->u.ci_wr.wr.crw_count;
 +                        result = cl_io_start(env, io);
 +                        if (result) {
-+                                HERROR("start branch[%d] of file [%*s] failed"
++                                MERROR("start branch[%d] of file [%*s] failed"
 +                                       ", ret = %d\n",
 +                                       bindex, mtfs_file->f_dentry->d_name.len,
 +                                       mtfs_file->f_dentry->d_name.name,
@@ -405,12 +405,12 @@ Index: lustre-2.1.52/lustre/llite/file.c
 +                        cl_io_rw_advance(env, io, io->ci_nob - nob);
 +                        cl_env_reenter();
 +                } else {
-+                        HERROR("branch[%d] of file [%*s] is NULL, skipping\n",
++                        MERROR("branch[%d] of file [%*s] is NULL, skipping\n",
 +                                bindex, mtfs_file->f_dentry->d_name.len,
 +                                mtfs_file->f_dentry->d_name.name);
 +                }
 +        }
-+        HRETURN(result);
++        MRETURN(result);
 +}
 +
 +static int mtfs_cl_io_loop(struct mtfs_env_vector *env_vector, struct file *mtfs_file)
@@ -419,11 +419,11 @@ Index: lustre-2.1.52/lustre/llite/file.c
 +        const struct  lu_env *first_env = NULL;
 +        struct cl_io *first_io = NULL;
 +        mtfs_bindex_t first_bindex = 0;
-+        HENTRY();
++        MENTRY();
 +
 +        result = mtfs_first_bindex(mtfs_file, &first_bindex);
 +        if (result) {
-+                HERROR("failed to choose first bindex\n");
++                MERROR("failed to choose first bindex\n");
 +                goto out;
 +        }
 +
@@ -441,7 +441,7 @@ Index: lustre-2.1.52/lustre/llite/file.c
 +                         * important signals.
 +                         */
 +                        if (cfs_signal_pending()) {
-+                                HERROR("fatal signal pending, breaking\n");
++                                MERROR("fatal signal pending, breaking\n");
 +                                result = -EINTR;
 +                        }
 +                        cfs_block_sigs(blocked_sigs);
@@ -486,7 +486,7 @@ Index: lustre-2.1.52/lustre/llite/file.c
 +
 +        } while (result == 0 && first_io->ci_continue);
 +out:
-+        HRETURN(result);
++        MRETURN(result);
 +}
 +
 +static int mtfs_ll_file_io_generic(struct mtfs_env_vector *env_vector,
@@ -494,11 +494,11 @@ Index: lustre-2.1.52/lustre/llite/file.c
 +                size_t count, struct mtfs_operation_list *oplist)
 +{
 +        int result = 0;
-+        HENTRY();
++        MENTRY();
 +
 +        result = mtfs_ll_file_io_init(env_vector, mtfs_file, iot, ppos, count);
 +        if (result) {
-+                HERROR("failed to init io for file [%*s], ret = %d\n",
++                MERROR("failed to init io for file [%*s], ret = %d\n",
 +                       mtfs_file->f_dentry->d_name.len,
 +                       mtfs_file->f_dentry->d_name.name, result);
 +                goto out;
@@ -508,13 +508,13 @@ Index: lustre-2.1.52/lustre/llite/file.c
 +
 +        result = mtfs_ll_file_io_fini(env_vector, mtfs_file, iot, oplist);
 +        if (result) {
-+                HERROR("failed to finish io for file [%*s], ret = %d\n",
++                MERROR("failed to finish io for file [%*s], ret = %d\n",
 +                       mtfs_file->f_dentry->d_name.len,
 +                       mtfs_file->f_dentry->d_name.name, result);
 +                goto out;
 +        }
 +out:
-+        HRETURN(result);
++        MRETURN(result);
 +}
 +
 +int mtfs_ll_file_writev(struct file *mtfs_file, const struct iovec *iov,
@@ -525,18 +525,18 @@ Index: lustre-2.1.52/lustre/llite/file.c
 +        int                     result;
 +        mtfs_bindex_t           bnum = mtfs_f2bnum(mtfs_file);
 +        struct mtfs_env_vector *env_vector = NULL;
-+        HENTRY();
++        MENTRY();
 +
 +        result = ll_file_get_iov_count(iov, &nr_segs, &count);
 +        if (result) {
-+                HERROR("iov count is error\n");
++                MERROR("iov count is error\n");
 +                goto out;
 +        }
 +
 +        env_vector = mtfs_env_vector_alloc(bnum);
 +        if (IS_ERR(env_vector)) {
 +                result = PTR_ERR(env_vector);
-+                HERROR("failed to alloc env vector\n");
++                MERROR("failed to alloc env vector\n");
 +                goto out;
 +        }
 +
@@ -547,7 +547,7 @@ Index: lustre-2.1.52/lustre/llite/file.c
 +out_put:
 +        mtfs_env_vector_free(env_vector);
 +out:
-+        HRETURN(result);
++        MRETURN(result);
 +}
 +EXPORT_SYMBOL(mtfs_ll_file_writev);
 +#endif /* !DISABLE_MTFS_SUPPORT */

@@ -25,9 +25,9 @@ static inline void thread_add_flags(struct mtfs_thread *thread, __u32 flags)
 static int mtfs_service_main(void *arg)
 {
 	int ret = 0;
-	HENTRY();
+	MENTRY();
 
-	HRETURN(ret);
+	MRETURN(ret);
 }
 
 #define MTFS_MAX_THREAD_NAME_LENGTH 32
@@ -38,23 +38,23 @@ int mtfs_start_thread(struct mtfs_service *svc)
 	int ret = 0;
 	char name[MTFS_MAX_THREAD_NAME_LENGTH];
 	struct mtfs_svc_data d;
-	HENTRY();
+	MENTRY();
 
 	if (unlikely(svc->srv_is_stopping)) {
-		HERROR("this service is stopping\n");
+		MERROR("this service is stopping\n");
 		ret = -ESRCH;
 		goto out;
 	}
 
 	if (!mtfs_threads_increasable(svc)) {
-		HERROR("this service can not increase threads\n");
+		MERROR("this service can not increase threads\n");
 		ret = -EMFILE;
 		goto out;
 	}
 
 	MTFS_ALLOC_PTR(thread);
 	if (thread == NULL) {
-		HERROR("not enough memory\n");
+		MERROR("not enough memory\n");
 		ret = -ENOMEM;
 		goto out;
 	}
@@ -65,7 +65,7 @@ int mtfs_start_thread(struct mtfs_service *svc)
 	{
 		if (!mtfs_threads_increasable(svc)) {
 			spin_unlock(&svc->srv_lock);
-			HERROR("this service can not increase threads\n");
+			MERROR("this service can not increase threads\n");
 			ret = -EMFILE;
 			goto out_free_thread;
 		}
@@ -83,10 +83,10 @@ int mtfs_start_thread(struct mtfs_service *svc)
 	d.name = name;
 	d.thread = thread;
 
-	HDEBUG("starting thread '%s'\n", name);
+	MDEBUG("starting thread '%s'\n", name);
 	ret = mtfs_create_thread(mtfs_service_main, &d, 0);
 	if (ret < 0) {
-		HERROR("cannot start thread '%s', ret = %d\n", name, ret);
+		MERROR("cannot start thread '%s', ret = %d\n", name, ret);
 		goto out_delete_thread;
 	}
 
@@ -105,5 +105,5 @@ out_delete_thread:
 out_free_thread:
 	MTFS_FREE_PTR(thread);
 out:
-	HRETURN(ret);
+	MRETURN(ret);
 }

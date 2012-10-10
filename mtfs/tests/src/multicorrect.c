@@ -32,7 +32,7 @@ static inline block_t *alloc_block(int block_size)
 {
 	block_t *block = NULL;
 	
-	HASSERT(block_size > 0);
+	MASSERT(block_size > 0);
 	
 	MTFS_ALLOC_PTR(block);
 	if (block == NULL) {
@@ -83,7 +83,7 @@ int random_fill_block(block_t *block)
 			fill_char = 1;
 			fill_max = 0xFF;
 		}
-		//HASSERT(fill_char);
+		//MASSERT(fill_char);
 	}
 	
 	fill_time = char_number / fill_char;
@@ -108,24 +108,24 @@ int dump_block(block_t *block)
 {
 	int i = 0;
 
-	HPRINT("block_size: %lu\n", block->block_size);
+	MPRINT("block_size: %lu\n", block->block_size);
 	for(i = 0; i < block->block_size; i++) {
-		HPRINT("%02X", (uint8_t)(block->data[i]));
+		MPRINT("%02X", (uint8_t)(block->data[i]));
 	}
-	HPRINT("\n");
+	MPRINT("\n");
 	return 0;
 }
 
 int cmp_block(block_t *s1, block_t *s2)
 {
-	HASSERT(s1->block_size == s2->block_size);
+	MASSERT(s1->block_size == s2->block_size);
 
 	return memcmp(s1->data, s2->data, s1->block_size);
 }
 
 off_t random_get_offset()
 {
-	HASSERT(MAX_LSEEK_OFFSET >= 1);
+	MASSERT(MAX_LSEEK_OFFSET >= 1);
 	return mtfs_rand_range(0, MAX_LSEEK_OFFSET);
 }
 
@@ -148,13 +148,13 @@ void *write_little_proc(thread_info_t *thread_info)
 
 	ret = prctl(PR_SET_NAME, thread_info->identifier, 0, 0, 0);
 	if (ret) {
-		HERROR("failed to set thead name\n");
+		MERROR("failed to set thead name\n");
 		goto out;
 	}	
 
 	block = alloc_block(block_size);
 	if (block == NULL) {
-		HERROR("Not enough memory\n");
+		MERROR("Not enough memory\n");
 		goto out;
 	}
 
@@ -164,15 +164,15 @@ void *write_little_proc(thread_info_t *thread_info)
 		{
 			count = block_size;
 			offset = random_get_offset();
-			HPRINT("writing %ld at %ld\n", count, offset);
+			MPRINT("writing %ld at %ld\n", count, offset);
 			writed = pwrite(fd, block->data, count, offset);
 			if (writed != count) {
-				HERROR("failed to write, "
+				MERROR("failed to write, "
 				       "expected %ld, got %ld\n", 
 				       count, writed);
 				exit(0);
 			}
-			HPRINT("writed %ld at %ld\n", writed, offset);
+			MPRINT("writed %ld at %ld\n", writed, offset);
 		}
 		pthread_rwlock_unlock(&rwlock);
 		sleep_random();
@@ -194,13 +194,13 @@ void *write_proc(thread_info_t *thread_info)
 
 	ret = prctl(PR_SET_NAME, thread_info->identifier, 0, 0, 0);
 	if (ret) {
-		HERROR("failed to set thead name\n");
+		MERROR("failed to set thead name\n");
 		goto out;
 	}	
 
 	block = alloc_block(block_size);
 	if (block == NULL) {
-		HERROR("Not enough memory\n");
+		MERROR("Not enough memory\n");
 		goto out;
 	}
 
@@ -210,15 +210,15 @@ void *write_proc(thread_info_t *thread_info)
 		{
 			count = block_size;
 			offset = 0;
-			HPRINT("writing %ld at %ld\n", count, offset);
+			MPRINT("writing %ld at %ld\n", count, offset);
 			writed = pwrite(fd, block->data, count, offset);
 			if (writed != count) {
-				HERROR("failed to write, "
+				MERROR("failed to write, "
 				       "expected %ld, got %ld\n", 
 				       count, writed);
 				exit(0);
 			}
-			HPRINT("writed %ld at %ld\n", writed, offset);
+			MPRINT("writed %ld at %ld\n", writed, offset);
 			begin = 0;
 		}
 		pthread_rwlock_unlock(&rwlock);
@@ -245,65 +245,65 @@ void *check_proc(thread_info_t *thread_info)
 
 	ret = prctl(PR_SET_NAME, thread_info->identifier, 0, 0, 0);
 	if (ret) {
-		HERROR("failed to set thead name\n");
+		MERROR("failed to set thead name\n");
 		goto out;
 	}	
 
 	MTFS_ALLOC(buf, count);
 	if (buf == NULL) {
-		HERROR("not enough memory\n");
+		MERROR("not enough memory\n");
 		goto out;
 	}
 
 	MTFS_ALLOC(first_buf, count);
 	if (first_buf == NULL) {
-		HERROR("not enough memory\n");
+		MERROR("not enough memory\n");
 		goto out;
 	}
 
 	MTFS_ALLOC_PTR(stat_buf);
 	if (stat_buf == NULL) {
-		HERROR("not enough memory\n");
+		MERROR("not enough memory\n");
 		goto out;
 	}
 
 	MTFS_ALLOC_PTR(first_stat_buf);
 	if (first_stat_buf == NULL) {
-		HERROR("not enough memory\n");
+		MERROR("not enough memory\n");
 		goto out;
 	}
 
 	while (1) {
 		pthread_rwlock_wrlock(&rwlock);
 		{
-			HPRINT("checking\n");
+			MPRINT("checking\n");
 			ret = stat(branch_path[0], first_stat_buf);
 			if (ret) {
-				HERROR("failed to stat\n");
+				MERROR("failed to stat\n");
 				goto out;
 			}
 
 			ret = lseek(branch_fd[0], 0, SEEK_SET);
 			if (ret) {
-				HERROR("failed to lseek\n");
+				MERROR("failed to lseek\n");
 				goto out;
 			}
 
 			for (i = 1; i < bnum; i++) {
 				ret = stat(branch_path[i], stat_buf);
 				if (ret) {
-					HERROR("failed to stat\n");
+					MERROR("failed to stat\n");
 					goto out;
 				}
 
 				if (stat_buf->st_size != first_stat_buf->st_size) {
-					HERROR("size differ\n");
+					MERROR("size differ\n");
 					goto out;
 				}
 
 				ret = lseek(branch_fd[i], 0, SEEK_SET);
 				if (ret) {
-					HERROR("failed to lseek\n");
+					MERROR("failed to lseek\n");
 					goto out;
 				}
 			}
@@ -312,29 +312,29 @@ void *check_proc(thread_info_t *thread_info)
 			do {
 				first_read_count = read(branch_fd[0], first_buf, count);
 				if (first_read_count < 0) {
-					HERROR("failed to read\n");
+					MERROR("failed to read\n");
 					goto out;
 				}
 
 				for (i = 1; i < bnum; i++) {
 					read_count = read(branch_fd[i], buf, count);
 					if (read_count < 0) {
-						HERROR("failed to read\n");
+						MERROR("failed to read\n");
 						goto out;
 					}
 
 					if (read_count != first_read_count) {
-						HERROR("read count differ\n");
+						MERROR("read count differ\n");
 						goto out;
 					}
 
 					if (memcmp(first_buf, buf, read_count) != 0) {
-						HERROR("buff differ\n");
+						MERROR("buff differ\n");
 						goto out;
 					}
 				}
 			} while (first_read_count != 0);
-			HPRINT("checked\n");
+			MPRINT("checked\n");
 		}
 		pthread_rwlock_unlock(&rwlock);
 		sleep(10);
@@ -387,7 +387,7 @@ int main(int argc, char *argv[])
 			if (i && end != NULL && *end == '\0') {
 				seconds = i;
 			} else {
-				HERROR("bad seconds: '%s'\n", optarg);
+				MERROR("bad seconds: '%s'\n", optarg);
 				usage(argv[0]);
 				return 1;
 			}
@@ -410,7 +410,7 @@ int main(int argc, char *argv[])
 	path = argv[optind];
 	fd = open(path, O_WRONLY | O_CREAT | O_TRUNC);
 	if (fd < 0) {
-		HERROR("failed to open %s: %s\n", path, strerror(errno));
+		MERROR("failed to open %s: %s\n", path, strerror(errno));
 		ret = errno;
 		goto out;
 	}
@@ -423,7 +423,7 @@ int main(int argc, char *argv[])
 		printf("bfile[%d] = %s\n", i, branch_path[i]);
 		branch_fd[i] = open(branch_path[i], O_RDONLY);
 		if (branch_fd[i] < 0) {
-			HERROR("failed to open %s: %s\n", branch_path[i], strerror(errno));
+			MERROR("failed to open %s: %s\n", branch_path[i], strerror(errno));
 			ret = errno;
 			goto out;
 		}
@@ -453,8 +453,8 @@ int main(int argc, char *argv[])
 
 	for (i = 0; i < seconds; i+=10) {
 		sleep(10);
-		HPRINT(".");
-		HFLUSH();
+		MPRINT(".");
+		MFLUSH();
 	}
 	pthread_rwlock_destroy(&rwlock);
 out:

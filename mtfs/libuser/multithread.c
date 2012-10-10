@@ -23,7 +23,7 @@ thread_info_t *create_thread_info(const char *identifier)
 	
 	thread_info = calloc(1, sizeof(*thread_info));
 	if (thread_info == NULL) {
-		HERROR("Not enough memory\n");
+		MERROR("Not enough memory\n");
 		goto out;
 	}
 	
@@ -43,7 +43,7 @@ int add_thread_info(thread_info_t *thread_info)
 	int ret = 0;
 	
 	if(find_thread_info(thread_info->identifier) != NULL) {
-		HERROR("found existed thread info, unexpted\n");
+		MERROR("found existed thread info, unexpted\n");
 		ret = -1;
 		goto out;
 	}
@@ -76,7 +76,7 @@ thread_info_t *find_thread_info(const char *identifier)
 	
 	mtfs_hlist_for_each_entry(thread_info, pos, &thread_head, hnode) {
 		if (strcmp(thread_info->identifier, identifier) == 0) {
-			HDEBUG("thread %s found\n", thread_info->identifier);
+			MDEBUG("thread %s found\n", thread_info->identifier);
 			return thread_info;
 			break;
 		}
@@ -90,13 +90,13 @@ int create_thread(const char *identifier, void *(*start_routine)(thread_info_t *
 		
 	ret = add_thread_info(thread_info);
 	if (ret == -1) {
-		HERROR("fail to add thread information for thread %s\n", identifier);
+		MERROR("fail to add thread information for thread %s\n", identifier);
 		goto out;		
 	}	
 	
 	ret = pthread_create(&thread_info->thread, NULL, (void *(*)(void *))start_routine, (void *)thread_info);
 	if (ret != 0) {
-		HERROR("fail to create thread %s\n", identifier);
+		MERROR("fail to create thread %s\n", identifier);
 		ret = -1;
 		goto thread_info_added_err;				
 	}
@@ -121,20 +121,20 @@ int thread_setaffinity(pthread_t thread, int cpu)
 	CPU_SET(cpu, &cpuset);
 
 	if (pthread_setaffinity_np(thread, sizeof(cpu_set_t), &cpuset)) {
-		HERROR("fail to pthread_setaffinity_np\n");
+		MERROR("fail to pthread_setaffinity_np\n");
 		ret = -1;
 		goto out;
 	}
 
 	if (pthread_getaffinity_np(thread, sizeof(cpu_set_t), &cpuset)) {
-		HERROR("fail to pthread_getaffinity_np\n");
+		MERROR("fail to pthread_getaffinity_np\n");
 		ret = -1;
 		goto out;
 	}
 
 	for (i = 0; i < CORE_NUM; i++) {
 		if (CPU_ISSET(i, &cpuset)) {
-			HDEBUG("thread runing on CPU %d\n", i);
+			MDEBUG("thread runing on CPU %d\n", i);
 			break;
 		}
 	}
@@ -152,7 +152,7 @@ int create_thread_group(const thread_group_t *thread_group, thread_data_t *threa
 	
 	if (thread_group == NULL || thread_group->thread_number == 0
 		|| thread_group->start_routine == NULL) {
-		HERROR("thread group illegal\n");
+		MERROR("thread group illegal\n");
 		ret = -1;
 		goto out;
 	}
@@ -161,7 +161,7 @@ int create_thread_group(const thread_group_t *thread_group, thread_data_t *threa
 		snprintf(identifier, sizeof(identifier), "%s[%u]", thread_group->identifier, i);
 		thread_info = create_thread_info(identifier);
 		if (thread_info == NULL) {
-			HERROR("fail to create thread information for thread %s\n", identifier);
+			MERROR("fail to create thread information for thread %s\n", identifier);
 			ret = -1;
 			goto out;
 		}
@@ -173,7 +173,7 @@ int create_thread_group(const thread_group_t *thread_group, thread_data_t *threa
 		
 		ret = create_thread(identifier, thread_group->start_routine, thread_info);
 		if (ret == -1) {
-			HERROR("fail to create thread for thread %s\n", identifier);
+			MERROR("fail to create thread for thread %s\n", identifier);
 			destroy_thread_info(thread_info);
 			goto out;
 		}
@@ -189,7 +189,7 @@ int create_thread_groups(const thread_group_t *thread_groups, const int group_nu
 	for (i = 0; i < group_number; i++) {
 		ret = create_thread_group(&(thread_groups[i]), NULL);
 		if (ret == -1) {
-			HERROR("fail to create thread group %s\n", thread_groups[i].identifier);
+			MERROR("fail to create thread group %s\n", thread_groups[i].identifier);
 			goto out;
 		}
 	}

@@ -17,8 +17,8 @@ static inline int mtfs_d_alloc(struct dentry *dentry, mtfs_bindex_t bnum)
 	struct mtfs_dentry_info *d_info = NULL;
 	int ret = 0;
 	
-	HASSERT(dentry);
-	HASSERT(bnum > 0 && bnum <= MTFS_BRANCH_MAX);
+	MASSERT(dentry);
+	MASSERT(bnum > 0 && bnum <= MTFS_BRANCH_MAX);
 	MTFS_SLAB_ALLOC_PTR(d_info, mtfs_dentry_info_cache);
 	if (unlikely(d_info == NULL)) {
 		ret = -ENOMEM;
@@ -36,13 +36,13 @@ static inline int mtfs_d_free(struct dentry *dentry)
 	struct mtfs_dentry_info *d_info = NULL;
 	int ret = 0;
 	
-	HASSERT(dentry);
+	MASSERT(dentry);
 	d_info = mtfs_d2info(dentry);
-	HASSERT(d_info);
+	MASSERT(d_info);
 	
 	MTFS_SLAB_FREE_PTR(d_info, mtfs_dentry_info_cache);
 	_mtfs_d2info(dentry) = NULL;
-	HASSERT(_mtfs_d2info(dentry) == NULL);
+	MASSERT(_mtfs_d2info(dentry) == NULL);
 	return ret;
 }
 
@@ -58,9 +58,9 @@ static inline struct dentry *lock_parent(struct dentry *dentry)
 {
 	struct dentry *dir = NULL;
 	
-	HASSERT(dentry);
-	HASSERT(dentry->d_parent);
-	HASSERT(dentry->d_parent->d_inode);
+	MASSERT(dentry);
+	MASSERT(dentry->d_parent);
+	MASSERT(dentry->d_parent->d_inode);
 	dir = dget(dentry->d_parent);
 	mutex_lock(&dir->d_inode->i_mutex);
 	return dir;
@@ -72,8 +72,8 @@ static inline struct dentry *get_parent(struct dentry *dentry) {
 
 static inline void unlock_dir(struct dentry *dir)
 {
-	HASSERT(dir);
-	HASSERT(dir->d_inode);
+	MASSERT(dir);
+	MASSERT(dir->d_inode);
 	mutex_unlock(&dir->d_inode->i_mutex);
 	dput(dir);
 }
@@ -85,7 +85,7 @@ static inline int mtfs_d_is_positive(struct dentry *dentry)
 	mtfs_bindex_t bnum = mtfs_d2bnum(dentry);
 	mtfs_bindex_t positive_bnum = 0;
 
-	HASSERT(dentry);
+	MASSERT(dentry);
 
 	for (bindex = 0; bindex < bnum; bindex++) {
 		hidden_dentry = mtfs_d2branch(dentry, bindex);

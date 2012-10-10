@@ -27,12 +27,12 @@ int mtfs_file_dump(struct file *file)
 	struct dentry *dentry = NULL;
 
 	if (!file || IS_ERR(file)) {
-		HDEBUG("file: error = %ld\n", PTR_ERR(file));
+		MDEBUG("file: error = %ld\n", PTR_ERR(file));
 		ret = -1;
 		goto out;
 	}
 
-	HDEBUG("file: f_mode = 0x%x, f_flags = 0%o, f_count = %ld, "
+	MDEBUG("file: f_mode = 0x%x, f_flags = 0%o, f_count = %ld, "
 		"f_version = %llu, f_pos = %llu\n",
 		file->f_mode, file->f_flags, (long)file_count(file),
 		(u64)file->f_version, file->f_pos);
@@ -50,8 +50,8 @@ static int mtfs_f_alloc(struct file *file, int bnum)
 	struct mtfs_file_info *f_info = NULL;
 	int ret = 0;
 	
-	HASSERT(file);
-	HASSERT(bnum > 0 && bnum <= MTFS_BRANCH_MAX);
+	MASSERT(file);
+	MASSERT(bnum > 0 && bnum <= MTFS_BRANCH_MAX);
 
 	MTFS_SLAB_ALLOC_PTR(f_info, mtfs_file_info_cache);
 	if (unlikely(f_info == NULL)) {
@@ -70,13 +70,13 @@ static int mtfs_f_free(struct file *file)
 	struct mtfs_file_info *f_info = NULL;
 	int ret = 0;
 	
-	HASSERT(file);
+	MASSERT(file);
 	f_info = mtfs_f2info(file);
-	HASSERT(f_info);
+	MASSERT(f_info);
 
 	MTFS_SLAB_FREE_PTR(f_info, mtfs_file_info_cache);
 	_mtfs_f2info(file) = NULL;
-	HASSERT(_mtfs_f2info(file) == NULL);
+	MASSERT(_mtfs_f2info(file) == NULL);
 	return ret;
 }
 
@@ -84,20 +84,20 @@ int mtfs_readdir_branch(struct file *file, void *dirent, filldir_t filldir, mtfs
 {
 	int ret = 0;
 	struct file *hidden_file = mtfs_f2branch(file, bindex);
-	HENTRY();
+	MENTRY();
 
 	if (hidden_file) {
 		hidden_file->f_pos = file->f_pos;
 		ret = vfs_readdir(hidden_file, filldir, dirent);
 		file->f_pos = hidden_file->f_pos;
 	} else {
-		HDEBUG("branch[%d] of file [%*s] is %s\n",
+		MDEBUG("branch[%d] of file [%*s] is %s\n",
 		       bindex, file->f_dentry->d_name.len, file->f_dentry->d_name.name,
 		       "NULL");
 		ret = -ENOENT;
 	}
 
-	HRETURN(ret);
+	MRETURN(ret);
 }
 
 int mtfs_readdir(struct file *file, void *dirent, filldir_t filldir)
@@ -107,19 +107,19 @@ int mtfs_readdir(struct file *file, void *dirent, filldir_t filldir)
 	struct mtfs_operation_list *list = NULL;
 	mtfs_bindex_t bindex = 0;
 	mtfs_bindex_t i = 0;
-	HENTRY();
+	MENTRY();
 
-	HDEBUG("readdir [%*s]\n", file->f_dentry->d_name.len, file->f_dentry->d_name.name);
+	MDEBUG("readdir [%*s]\n", file->f_dentry->d_name.len, file->f_dentry->d_name.name);
 
 	list = mtfs_oplist_build(file->f_dentry->d_inode);
 	if (unlikely(list == NULL)) {
-		HERROR("failed to build operation list\n");
+		MERROR("failed to build operation list\n");
 		ret = -ENOMEM;
 		goto out;
 	}
 
 	if (list->latest_bnum == 0) {
-		HERROR("dir [%*s] has no valid branch, try to read broken branches\n",
+		MERROR("dir [%*s] has no valid branch, try to read broken branches\n",
 		       file->f_dentry->d_name.len, file->f_dentry->d_name.name);
 	}
 
@@ -131,7 +131,7 @@ int mtfs_readdir(struct file *file, void *dirent, filldir_t filldir)
 		}
 
 		if (list->latest_bnum > 0 && i == list->latest_bnum - 1) {
-			HERROR("dir [%*s] has no readable valid branch, try to read broken branches\n",
+			MERROR("dir [%*s] has no readable valid branch, try to read broken branches\n",
 			       file->f_dentry->d_name.len, file->f_dentry->d_name.name);
 		}
 	}
@@ -143,7 +143,7 @@ int mtfs_readdir(struct file *file, void *dirent, filldir_t filldir)
 //out_free_oplist:
 	mtfs_oplist_free(list);
 out:
-	HRETURN(ret);
+	MRETURN(ret);
 }
 EXPORT_SYMBOL(mtfs_readdir);
 
@@ -174,7 +174,7 @@ int mtfs_open_branch(struct inode *inode, struct file *file, mtfs_bindex_t binde
 	int hidden_flags = file->f_flags;
 	struct file *hidden_file = NULL;
 	int ret = 0;
-	HENTRY();
+	MENTRY();
 
 	if (hidden_dentry && hidden_dentry->d_inode) {
 		dget(hidden_dentry);
@@ -185,7 +185,7 @@ int mtfs_open_branch(struct inode *inode, struct file *file, mtfs_bindex_t binde
 		 */
 		hidden_file = mtfs_dentry_open(hidden_dentry, hidden_mnt, hidden_flags, current_cred());
 		if (IS_ERR(hidden_file)) {
-			HDEBUG("open branch[%d] of file [%*s], flags = 0x%x, ret = %ld\n", 
+			MDEBUG("open branch[%d] of file [%*s], flags = 0x%x, ret = %ld\n", 
 			       bindex, hidden_dentry->d_name.len, hidden_dentry->d_name.name,
 			       hidden_flags, PTR_ERR(hidden_file));
 			ret = PTR_ERR(hidden_file);
@@ -193,13 +193,13 @@ int mtfs_open_branch(struct inode *inode, struct file *file, mtfs_bindex_t binde
 			mtfs_f2branch(file, bindex) = hidden_file;
 		}
 	} else {
-		HDEBUG("branch[%d] of dentry [%*s] is %s\n",
+		MDEBUG("branch[%d] of dentry [%*s] is %s\n",
 		       bindex, dentry->d_name.len, dentry->d_name.name,
 		       hidden_dentry == NULL ? "NULL" : "negative");
 		ret = -ENOENT;
 	}
 
-	HRETURN(ret);
+	MRETURN(ret);
 }
 
 int mtfs_open(struct inode *inode, struct file *file)
@@ -211,20 +211,20 @@ int mtfs_open(struct inode *inode, struct file *file)
 	mtfs_bindex_t bnum = 0;
 	struct mtfs_operation_list *list = NULL;
 	mtfs_operation_result_t result = {0};
-	HENTRY();
+	MENTRY();
 
-	HASSERT(inode);
-	HASSERT(file->f_dentry);
+	MASSERT(inode);
+	MASSERT(file->f_dentry);
 
 	list = mtfs_oplist_build(inode);
 	if (unlikely(list == NULL)) {
-		HERROR("failed to build operation list\n");
+		MERROR("failed to build operation list\n");
 		ret = -ENOMEM;
 		goto out;
 	}
 
 	if (list->latest_bnum == 0) {
-		HERROR("file [%*s] has no valid branch, please check it\n",
+		MERROR("file [%*s] has no valid branch, please check it\n",
 		       file->f_dentry->d_name.len, file->f_dentry->d_name.name);
 		if (!(mtfs_i2dev(inode)->no_abort)) {
 			ret = -EIO;
@@ -246,7 +246,7 @@ int mtfs_open(struct inode *inode, struct file *file)
 		if (i == list->latest_bnum - 1) {
 			mtfs_oplist_check(list);
 			if (list->success_latest_bnum <= 0) {
-				HDEBUG("operation failed for all latest branches\n");
+				MDEBUG("operation failed for all latest branches\n");
 				if (!(mtfs_i2dev(inode)->no_abort)) {
 					result = mtfs_oplist_result(list);
 					ret = result.ret;
@@ -277,7 +277,7 @@ out_free_file:
 out_free_oplist:
 	mtfs_oplist_free(list);
 out:
-	HRETURN(ret);
+	MRETURN(ret);
 }
 EXPORT_SYMBOL(mtfs_open);
 
@@ -285,37 +285,37 @@ int mtfs_flush_branch(struct file *file, fl_owner_t id, mtfs_bindex_t bindex)
 {
 	struct file *hidden_file = mtfs_f2branch(file, bindex);
 	int ret = 0;
-	HENTRY();
+	MENTRY();
 
 	if (hidden_file) {
-		HASSERT(hidden_file->f_op);
-		HASSERT(hidden_file->f_op->flush);
+		MASSERT(hidden_file->f_op);
+		MASSERT(hidden_file->f_op->flush);
 		ret = hidden_file->f_op->flush(hidden_file, id);
 		if (ret) {
-			HDEBUG("failed to open branch[%d] of file [%*s], ret = %d\n", 
+			MDEBUG("failed to open branch[%d] of file [%*s], ret = %d\n", 
 			       bindex, file->f_dentry->d_name.len, file->f_dentry->d_name.name,
 			       ret);
 		}
 	} else {
-		HDEBUG("branch[%d] of file [%*s] is NULL\n",
+		MDEBUG("branch[%d] of file [%*s] is NULL\n",
 		       bindex, file->f_dentry->d_name.len, file->f_dentry->d_name.name);
 		ret = -ENOENT;
 	}
-	HRETURN(ret);
+	MRETURN(ret);
 }
 
 int mtfs_flush(struct file *file, fl_owner_t id)
 {
 	int ret = 0;
 	mtfs_bindex_t bindex;
-	HENTRY();
+	MENTRY();
 
-	HASSERT(mtfs_f2info(file));
+	MASSERT(mtfs_f2info(file));
 	for (bindex = 0; bindex < mtfs_f2bnum(file); bindex++) {
 		ret = mtfs_flush_branch(file, id, bindex);
 	}
 
-	HRETURN(ret);
+	MRETURN(ret);
 }
 EXPORT_SYMBOL(mtfs_flush);
 
@@ -323,7 +323,7 @@ int mtfs_release_branch(struct inode *inode, struct file *file, mtfs_bindex_t bi
 {
 	struct file *hidden_file = mtfs_f2branch(file, bindex);
 	int ret = 0;
-	HENTRY();
+	MENTRY();
 
 	if (hidden_file) {
 		/*
@@ -333,12 +333,12 @@ int mtfs_release_branch(struct inode *inode, struct file *file, mtfs_bindex_t bi
 		 */
 		fput(hidden_file);
 	} else {
-		HDEBUG("branch[%d] of file [%*s] is NULL\n",
+		MDEBUG("branch[%d] of file [%*s] is NULL\n",
 		       bindex, file->f_dentry->d_name.len, file->f_dentry->d_name.name);
 		ret = -ENOENT;
 	}
 
-	HRETURN(ret);
+	MRETURN(ret);
 }
 
 int mtfs_release(struct inode *inode, struct file *file)
@@ -346,14 +346,14 @@ int mtfs_release(struct inode *inode, struct file *file)
 	int ret = 0;
 	mtfs_bindex_t bindex = 0;
 	mtfs_bindex_t bnum = 0;
-	HENTRY();
+	MENTRY();
 
-	HDEBUG("release file [%*s]\n",
+	MDEBUG("release file [%*s]\n",
 	       file->f_dentry->d_name.len, file->f_dentry->d_name.name);
 
 	/* #BUG(posix:80): empty symlink */
 	if (mtfs_f2info(file) == NULL) {
-		HERROR("file [%*s] has no private data\n",
+		MERROR("file [%*s] has no private data\n",
 		       file->f_dentry->d_name.len, file->f_dentry->d_name.name);
 		goto out;
 	}
@@ -366,7 +366,7 @@ int mtfs_release(struct inode *inode, struct file *file)
 	mtfs_f_free(file);
 
 out:
-	HRETURN(ret);
+	MRETURN(ret);
 }
 EXPORT_SYMBOL(mtfs_release);
 
@@ -375,44 +375,44 @@ int mtfs_fsync_branch(struct file *file, struct dentry *dentry, int datasync, mt
 	int ret = 0;
 	struct file *hidden_file = mtfs_f2branch(file, bindex);
 	struct dentry *hidden_dentry = mtfs_d2branch(dentry, bindex);
-	HENTRY();
+	MENTRY();
 
 	if (hidden_file && hidden_dentry) {
-		HASSERT(hidden_file->f_op);
-		HASSERT(hidden_file->f_op->fsync);
+		MASSERT(hidden_file->f_op);
+		MASSERT(hidden_file->f_op->fsync);
 		mutex_lock(&hidden_dentry->d_inode->i_mutex);
 		ret = hidden_file->f_op->fsync(hidden_file, hidden_dentry, datasync);
 		mutex_unlock(&hidden_dentry->d_inode->i_mutex);
 		if (unlikely(ret)) {
-			HDEBUG("failed to fsync branch[%d] of file [%*s], ret = %d\n", 
+			MDEBUG("failed to fsync branch[%d] of file [%*s], ret = %d\n", 
 			       bindex, file->f_dentry->d_name.len, file->f_dentry->d_name.name,
 			       ret);
 		}
 	} else {
-		HASSERT(hidden_file == NULL);
-		HASSERT(hidden_dentry == NULL);
-		HDEBUG("branch[%d] of file [%*s] is NULL\n",
+		MASSERT(hidden_file == NULL);
+		MASSERT(hidden_dentry == NULL);
+		MDEBUG("branch[%d] of file [%*s] is NULL\n",
 		       bindex, dentry->d_name.len, dentry->d_name.name);
 	}
 
-	HRETURN(ret);
+	MRETURN(ret);
 }
 
 int mtfs_fsync(struct file *file, struct dentry *dentry, int datasync)
 {
 	int ret = -EINVAL;
 	mtfs_bindex_t bindex = 0;
-	HENTRY();
+	MENTRY();
 
-	HASSERT(inode_is_locked(file->f_mapping->host));
-	HASSERT(inode_is_locked(dentry->d_inode));
-	HASSERT(mtfs_f2info(file));
+	MASSERT(inode_is_locked(file->f_mapping->host));
+	MASSERT(inode_is_locked(dentry->d_inode));
+	MASSERT(mtfs_f2info(file));
 
 	for (bindex = 0; bindex < mtfs_f2bnum(file); bindex++) {
 		ret = mtfs_fsync_branch(file, dentry, datasync, bindex);
 	}
 
-	HRETURN(ret);
+	MRETURN(ret);
 }
 EXPORT_SYMBOL(mtfs_fsync);
 
@@ -420,31 +420,31 @@ int mtfs_fasync_branch(int fd, struct file *file, int flag, mtfs_bindex_t bindex
 {
 	int ret = 0;
 	struct file *hidden_file = mtfs_f2branch(file, bindex);
-	HENTRY();
+	MENTRY();
 
 	if (hidden_file) {
-		HASSERT(hidden_file->f_op);
-		HASSERT(hidden_file->f_op->fasync);
+		MASSERT(hidden_file->f_op);
+		MASSERT(hidden_file->f_op->fasync);
 		ret = hidden_file->f_op->fasync(fd, hidden_file, flag);
 	} else {
-		HDEBUG("branch[%d] of file [%*s] is NULL\n",
+		MDEBUG("branch[%d] of file [%*s] is NULL\n",
 		       bindex, file->f_dentry->d_name.len, file->f_dentry->d_name.name);
 	}
-	HRETURN(ret);
+	MRETURN(ret);
 }
 
 int mtfs_fasync(int fd, struct file *file, int flag)
 {
 	int ret = 0;
 	mtfs_bindex_t bindex = 0;
-	HENTRY();
+	MENTRY();
 
-	HASSERT(mtfs_f2info(file));
+	MASSERT(mtfs_f2info(file));
 	for (bindex = 0; bindex < mtfs_f2bnum(file); bindex++) {
 		ret = mtfs_fasync_branch(fd, file, flag, bindex);
 	}
 
-	HRETURN(ret);
+	MRETURN(ret);
 }
 EXPORT_SYMBOL(mtfs_fasync);
 
@@ -453,24 +453,24 @@ int mtfs_lock(struct file *file, int cmd, struct file_lock *fl)
 	int ret = 0;
 	struct file *hidden_file = NULL;
 	mtfs_bindex_t bindex = 0;
-	HENTRY();
+	MENTRY();
 
-	HASSERT(mtfs_f2info(file));
+	MASSERT(mtfs_f2info(file));
 	for (bindex = 0; bindex < mtfs_f2bnum(file); bindex++) {
 		hidden_file = mtfs_f2branch(file, bindex);
 		if (hidden_file) {
-			HASSERT(hidden_file->f_op);
-			HASSERT(hidden_file->f_op->lock);
+			MASSERT(hidden_file->f_op);
+			MASSERT(hidden_file->f_op->lock);
 			if (hidden_file->f_op->lock) {
 				ret = hidden_file->f_op->lock(hidden_file, F_GETLK, fl);
 			}
 		} else {
-			HDEBUG("branch[%d] of file [%*s] is NULL\n",
+			MDEBUG("branch[%d] of file [%*s] is NULL\n",
 			       bindex, file->f_dentry->d_name.len, file->f_dentry->d_name.name);
 		}
 	}
 
-	HRETURN(ret);
+	MRETURN(ret);
 }
 EXPORT_SYMBOL(mtfs_lock);
 
@@ -479,25 +479,25 @@ int mtfs_flock(struct file *file, int cmd, struct file_lock *fl)
 	int ret = 0;
 	struct file *hidden_file = NULL;
 	mtfs_bindex_t bindex = 0;
-	HENTRY();
+	MENTRY();
 
-	HASSERT(mtfs_f2info(file));
+	MASSERT(mtfs_f2info(file));
 	for (bindex = 0; bindex < mtfs_f2bnum(file); bindex++) {
 		hidden_file = mtfs_f2branch(file, bindex);
 		if (hidden_file) {
-			HASSERT(hidden_file->f_op);
-			HASSERT(hidden_file->f_op->flock);
+			MASSERT(hidden_file->f_op);
+			MASSERT(hidden_file->f_op->flock);
 			ret = hidden_file->f_op->flock(hidden_file, cmd, fl);
 			if (ret) {
 				/* What to do? */
 			}
 		} else {
-			HDEBUG("branch[%d] of file [%*s] is NULL\n",
+			MDEBUG("branch[%d] of file [%*s] is NULL\n",
 			       bindex, file->f_dentry->d_name.len, file->f_dentry->d_name.name);
 		}
 	}
 
-	HRETURN(ret);
+	MRETURN(ret);
 }
 EXPORT_SYMBOL(mtfs_flock);
 
@@ -533,17 +533,17 @@ static ssize_t _do_readv_writev(int is_write, struct file *file, const struct io
                                 unsigned long nr_segs, loff_t *ppos)
 {
 	ssize_t ret = 0;
-	HENTRY();
+	MENTRY();
 
 	if (is_write) {
-		HASSERT(file->f_op->writev);
+		MASSERT(file->f_op->writev);
 		ret = file->f_op->writev(file, iov, nr_segs, ppos);
 	} else {
-		HASSERT(file->f_op->readv);
+		MASSERT(file->f_op->readv);
 		ret = file->f_op->readv(file, iov, nr_segs, ppos);
 	}
 
-	HRETURN(ret);
+	MRETURN(ret);
 }
 #else  /* !HAVE_FILE_READV */
 static ssize_t _do_readv_writev(int is_write, struct file *file, const struct iovec *iov,
@@ -551,21 +551,21 @@ static ssize_t _do_readv_writev(int is_write, struct file *file, const struct io
 {
 	ssize_t ret = 0;
 	mm_segment_t old_fs;
-	HENTRY();
+	MENTRY();
 
 	old_fs = get_fs();
 	set_fs(get_ds());
 	if (is_write) {
 		/* Not possible to call ->aio_write or ->aio_read directly */
-		HASSERT(file->f_op->aio_write);
+		MASSERT(file->f_op->aio_write);
 		ret = vfs_writev(file, iov, nr_segs, ppos);
 	} else {
-		HASSERT(file->f_op->aio_read);
+		MASSERT(file->f_op->aio_read);
 		ret = vfs_readv(file, iov, nr_segs, ppos);
 	}
 	set_fs(old_fs);
 
-	HRETURN(ret);
+	MRETURN(ret);
 }
 #endif /* !HAVE_FILE_READV */
 
@@ -576,7 +576,7 @@ ssize_t mtfs_file_rw_branch(int is_write, struct file *file, const struct iovec 
 	struct file *hidden_file = mtfs_f2branch(file, bindex);
 	struct inode *inode = NULL;
 	struct inode *hidden_inode = NULL;
-	HENTRY();
+	MENTRY();
 
 	if (is_write) {
 		ret = mtfs_device_branch_errno(mtfs_f2dev(file), bindex, BOPS_MASK_WRITE);
@@ -585,19 +585,19 @@ ssize_t mtfs_file_rw_branch(int is_write, struct file *file, const struct iovec 
 	}
 
 	if (ret) {
-		HDEBUG("branch[%d] is abandoned\n", bindex);
+		MDEBUG("branch[%d] is abandoned\n", bindex);
 		goto out; 
 	}
 
 	if (hidden_file == NULL) {
-		HERROR("branch[%d] of file [%*s] is NULL\n",
+		MERROR("branch[%d] of file [%*s] is NULL\n",
 		       bindex, file->f_dentry->d_name.len,
 		       file->f_dentry->d_name.name);
 		ret = -ENOENT;
 		goto out;
 	}
 
-	HASSERT(hidden_file->f_op);
+	MASSERT(hidden_file->f_op);
 	ret = _do_readv_writev(is_write, hidden_file, iov, nr_segs, ppos);
 	if (ret > 0) {
 		/*
@@ -605,14 +605,14 @@ ssize_t mtfs_file_rw_branch(int is_write, struct file *file, const struct iovec 
 		 * TODO: Do not update unless file growes bigger.
 		 */
 		inode = file->f_dentry->d_inode;
-		HASSERT(inode);
+		MASSERT(inode);
 		hidden_inode = mtfs_i2branch(inode, bindex);
-		HASSERT(hidden_inode);
+		MASSERT(hidden_inode);
 		fsstack_copy_inode_size(inode, hidden_inode);
 	}
 
 out:
-	HRETURN(ret);
+	MRETURN(ret);
 }
 
 static int mtfs_io_init_rw(struct mtfs_io *io, int is_write,
@@ -622,7 +622,7 @@ static int mtfs_io_init_rw(struct mtfs_io *io, int is_write,
 	int ret = 0;
 	mtfs_io_type_t type;
 	struct mtfs_io_rw *io_rw = &io->u.mi_rw;
-	HENTRY();
+	MENTRY();
 
 	type = is_write ? MIT_WRITEV : MIT_READV;
 	io->mi_ops = &mtfs_io_ops[type];
@@ -645,24 +645,24 @@ static int mtfs_io_init_rw(struct mtfs_io *io, int is_write,
 	io_rw->iov_length = sizeof(*iov) * nr_segs;
 	MTFS_ALLOC(io_rw->iov_tmp, io_rw->iov_length);
 	if (io_rw->iov_tmp == NULL) {
-		HERROR("not enough memory\n");
+		MERROR("not enough memory\n");
 		ret = -ENOMEM;
 		goto out;
 	}
 	memcpy((char *)io_rw->iov_tmp, (char *)iov, io_rw->iov_length); 
 
 out:
-	HRETURN(ret);
+	MRETURN(ret);
 }
 
 static void mtfs_io_fini_rw(struct mtfs_io *io)
 {
 	struct mtfs_io_rw *io_rw = &io->u.mi_rw;
-	HENTRY();
+	MENTRY();
 
 	MTFS_FREE(io_rw->iov_tmp, io_rw->iov_length);
 
-	_HRETURN();
+	_MRETURN();
 }
 
 static ssize_t mtfs_file_rw(int is_write, struct file *file, const struct iovec *iov,
@@ -672,7 +672,7 @@ static ssize_t mtfs_file_rw(int is_write, struct file *file, const struct iovec 
 	int ret = 0;
 	struct mtfs_io *io = NULL;
 	size_t rw_size = 0;
-	HENTRY();
+	MENTRY();
 
 	rw_size = get_iov_count(iov, &nr_segs);
 	if (rw_size <= 0) {
@@ -682,7 +682,7 @@ static ssize_t mtfs_file_rw(int is_write, struct file *file, const struct iovec 
 
 	MTFS_SLAB_ALLOC_PTR(io, mtfs_io_cache);
 	if (io == NULL) {
-		HERROR("not enough memory\n");
+		MERROR("not enough memory\n");
 		size = -ENOMEM;
 		goto out;
 	}
@@ -695,7 +695,7 @@ static ssize_t mtfs_file_rw(int is_write, struct file *file, const struct iovec 
 
 	ret = mtfs_io_loop(io);
 	if (ret) {
-		HERROR("failed to loop on io\n");
+		MERROR("failed to loop on io\n");
 		size = ret;
 	} else {
 		size = io->mi_result.size;
@@ -706,7 +706,7 @@ static ssize_t mtfs_file_rw(int is_write, struct file *file, const struct iovec 
 out_free_io:
 	MTFS_SLAB_FREE_PTR(io, mtfs_io_cache);
 out:
-	HRETURN(size);
+	MRETURN(size);
 }
 
 #ifdef HAVE_FILE_READV
@@ -714,11 +714,11 @@ ssize_t mtfs_file_readv(struct file *file, const struct iovec *iov,
                         unsigned long nr_segs, loff_t *ppos)
 {
 	ssize_t size = 0;
-	HENTRY();
+	MENTRY();
 
 	size = mtfs_file_rw(READ, file, iov, nr_segs, ppos);
 
-	HRETURN(size);
+	MRETURN(size);
 }
 EXPORT_SYMBOL(mtfs_file_readv);
 
@@ -735,11 +735,11 @@ ssize_t mtfs_file_writev(struct file *file, const struct iovec *iov,
                         unsigned long nr_segs, loff_t *ppos)
 {
 	ssize_t size = 0;
-	HENTRY();
+	MENTRY();
 
 	size = mtfs_file_rw(WRITE, file, iov, nr_segs, ppos);
 
-	HRETURN(size);
+	MRETURN(size);
 }
 EXPORT_SYMBOL(mtfs_file_writev);
 
@@ -747,8 +747,8 @@ ssize_t mtfs_file_write(struct file *file, const char __user *buf, size_t len, l
 {
 	struct iovec local_iov = { .iov_base = (void __user *)buf,
 	                           .iov_len = len };
-	HASSERT(file->f_op);
-	HASSERT(file->f_op->writev);
+	MASSERT(file->f_op);
+	MASSERT(file->f_op->writev);
 	return file->f_op->writev(file, &local_iov, 1, ppos);	
 }
 EXPORT_SYMBOL(mtfs_file_write);
@@ -760,14 +760,14 @@ ssize_t mtfs_file_aio_read(struct kiocb *iocb, const struct iovec *iov,
 {
 	ssize_t size = 0;
 	struct file *file = iocb->ki_filp;
-	HENTRY();
+	MENTRY();
 
 	size = mtfs_file_rw(READ, file, iov, nr_segs, &pos);
 	if (size > 0) {
 		iocb->ki_pos = pos + size;
 	}
 
-	HRETURN(size);
+	MRETURN(size);
 }
 EXPORT_SYMBOL(mtfs_file_aio_read);
 
@@ -777,19 +777,19 @@ ssize_t mtfs_file_read(struct file *file, char __user *buf, size_t len, loff_t *
 	                           .iov_len = len };
 	struct kiocb kiocb;
 	ssize_t ret = 0;
-	HENTRY();
+	MENTRY();
 
 	init_sync_kiocb(&kiocb, file);
 	kiocb.ki_pos = *ppos;
 	kiocb.ki_left = len;
-	HASSERT(file->f_op);
-	HASSERT(file->f_op->aio_read);
+	MASSERT(file->f_op);
+	MASSERT(file->f_op->aio_read);
 	ret = file->f_op->aio_read(&kiocb, &local_iov, 1, *ppos);
 	if (ret > 0) {
 		*ppos = *ppos + ret;
 	}
 
-	HRETURN(ret);
+	MRETURN(ret);
 }
 EXPORT_SYMBOL(mtfs_file_read);
 
@@ -798,14 +798,14 @@ ssize_t mtfs_file_aio_write(struct kiocb *iocb, const struct iovec *iov,
 {
 	ssize_t size = 0;
 	struct file *file = iocb->ki_filp;
-	HENTRY();
+	MENTRY();
 
 	size = mtfs_file_rw(WRITE, file, iov, nr_segs, &pos);
 	if (size > 0) {
 		iocb->ki_pos = pos + size;
 	}
 
-	HRETURN(size);
+	MRETURN(size);
 }
 EXPORT_SYMBOL(mtfs_file_aio_write);
 
@@ -815,19 +815,19 @@ ssize_t mtfs_file_write(struct file *file, const char __user *buf, size_t len, l
 	                           .iov_len = len };
 	struct kiocb kiocb;
 	ssize_t ret = 0;
-	HENTRY();
+	MENTRY();
 
 	init_sync_kiocb(&kiocb, file);
 	kiocb.ki_pos = *ppos;
 	kiocb.ki_left = len;
-	HASSERT(file->f_op);
-	HASSERT(file->f_op->aio_write);
+	MASSERT(file->f_op);
+	MASSERT(file->f_op->aio_write);
 	ret = file->f_op->aio_write(&kiocb, &local_iov, 1, *ppos);
 	if (ret > 0) {
 		*ppos = *ppos + ret;
 	}
 
-	HRETURN(ret);
+	MRETURN(ret);
 }
 EXPORT_SYMBOL(mtfs_file_write);
 
@@ -840,11 +840,11 @@ static ssize_t mtfs_file_write_nonwritev_branch(struct file *file, const char __
 	struct file *hidden_file = mtfs_f2branch(file, bindex);
 	struct inode *inode = NULL;
 	struct inode *hidden_inode = NULL;
-	HENTRY();
+	MENTRY();
 
 	if (hidden_file) {
-		HASSERT(hidden_file->f_op);
-		HASSERT(hidden_file->f_op->write);
+		MASSERT(hidden_file->f_op);
+		MASSERT(hidden_file->f_op->write);
 		ret = hidden_file->f_op->write(hidden_file, buf, len, ppos);
 		if (ret > 0) {
 			/*
@@ -852,18 +852,18 @@ static ssize_t mtfs_file_write_nonwritev_branch(struct file *file, const char __
 			 * TODO: Do not update unless file growes bigger.
 			 */
 			inode = file->f_dentry->d_inode;
-			HASSERT(inode);
+			MASSERT(inode);
 			hidden_inode = mtfs_i2branch(inode, bindex);
-			HASSERT(hidden_inode);
+			MASSERT(hidden_inode);
 			fsstack_copy_inode_size(inode, hidden_inode);
 		}
 	} else {
-		HERROR("branch[%d] of file [%*s] is NULL\n",
+		MERROR("branch[%d] of file [%*s] is NULL\n",
 		       bindex, file->f_dentry->d_name.len, file->f_dentry->d_name.name);
 		ret = -ENOENT;
 	}
 
-	HRETURN(ret);
+	MRETURN(ret);
 }
 
 ssize_t mtfs_file_write_nonwritev(struct file *file, const char __user *buf, size_t len, loff_t *ppos)
@@ -873,14 +873,14 @@ ssize_t mtfs_file_write_nonwritev(struct file *file, const char __user *buf, siz
 	mtfs_bindex_t bindex = 0;
 	loff_t tmp_pos = 0;
 	loff_t success_pos = 0;
-	HENTRY();
+	MENTRY();
 	
 	
-	HASSERT(mtfs_f2info(file));
+	MASSERT(mtfs_f2info(file));
 	for (bindex = 0; bindex < mtfs_f2bnum(file); bindex++) {
 		tmp_pos = *ppos;
 		ret = mtfs_file_write_nonwritev_branch(file, buf, len, &tmp_pos, bindex);
-		HDEBUG("writed branch[%d] of file [%*s] at pos = %llu, ret = %ld\n",
+		MDEBUG("writed branch[%d] of file [%*s] at pos = %llu, ret = %ld\n",
 		       bindex, file->f_dentry->d_name.len, file->f_dentry->d_name.name,
 		       *ppos, ret);
 		/* TODO: set data flags */
@@ -895,7 +895,7 @@ ssize_t mtfs_file_write_nonwritev(struct file *file, const char __user *buf, siz
 		*ppos = success_pos;
 	}
 
-	HRETURN(ret);
+	MRETURN(ret);
 }
 EXPORT_SYMBOL(mtfs_file_write_nonwritev);
 
@@ -906,11 +906,11 @@ static ssize_t mtfs_file_read_nonreadv_branch(struct file *file, char __user *bu
 	struct file *hidden_file = mtfs_f2branch(file, bindex);
 	struct inode *inode = NULL;
 	struct inode *hidden_inode = NULL;
-	HENTRY();
+	MENTRY();
 
 	if (hidden_file) {
-		HASSERT(hidden_file->f_op);
-		HASSERT(hidden_file->f_op->read);
+		MASSERT(hidden_file->f_op);
+		MASSERT(hidden_file->f_op->read);
 		ret = hidden_file->f_op->read(hidden_file, buf, len, ppos);
 		if (ret > 0) {
 			/*
@@ -918,18 +918,18 @@ static ssize_t mtfs_file_read_nonreadv_branch(struct file *file, char __user *bu
 			 * TODO: Do not update unless file growes bigger.
 			 */
 			inode = file->f_dentry->d_inode;
-			HASSERT(inode);
+			MASSERT(inode);
 			hidden_inode = mtfs_i2branch(inode, bindex);
-			HASSERT(hidden_inode);
+			MASSERT(hidden_inode);
 			fsstack_copy_inode_size(inode, hidden_inode);
 		}
 	} else {
-		HERROR("branch[%d] of file [%*s] is NULL\n",
+		MERROR("branch[%d] of file [%*s] is NULL\n",
 		       bindex, file->f_dentry->d_name.len, file->f_dentry->d_name.name);
 		ret = -ENOENT;
 	}
 
-	HRETURN(ret);
+	MRETURN(ret);
 }
 
 ssize_t mtfs_file_read_nonreadv(struct file *file, char __user *buf, size_t len,
@@ -938,13 +938,13 @@ ssize_t mtfs_file_read_nonreadv(struct file *file, char __user *buf, size_t len,
 	ssize_t ret = 0;
 	mtfs_bindex_t bindex = 0;
 	loff_t tmp_pos = 0;
-	HENTRY();
+	MENTRY();
 
-	HASSERT(mtfs_f2info(file));
+	MASSERT(mtfs_f2info(file));
 	for (bindex = 0; bindex < mtfs_f2bnum(file); bindex++) {
 		tmp_pos = *ppos;
 		ret = mtfs_file_read_nonreadv_branch(file, buf, len, &tmp_pos, bindex);
-		HDEBUG("readed branch[%d] of file [%*s] at pos = %llu, ret = %ld\n",
+		MDEBUG("readed branch[%d] of file [%*s] at pos = %llu, ret = %ld\n",
 		       bindex, file->f_dentry->d_name.len, file->f_dentry->d_name.name,
 		       *ppos, ret);
 		if (ret >= 0) { 
@@ -953,18 +953,18 @@ ssize_t mtfs_file_read_nonreadv(struct file *file, char __user *buf, size_t len,
 		}
 	}
 
-	HRETURN(ret);
+	MRETURN(ret);
 }
 EXPORT_SYMBOL(mtfs_file_read_nonreadv);
 
 loff_t mtfs_file_llseek(struct file *file, loff_t offset, int origin)
 {
 	loff_t ret = 0;
-	HENTRY();
+	MENTRY();
 
 	ret = generic_file_llseek(file, offset, origin);
 
-	HRETURN(ret);
+	MRETURN(ret);
 }
 EXPORT_SYMBOL(mtfs_file_llseek);
 
@@ -972,7 +972,7 @@ int mtfs_file_mmap(struct file *file, struct vm_area_struct * vma)
 {
 	int ret = 0;
 	struct mtfs_operations *operations = NULL;
-	HENTRY();
+	MENTRY();
 
 	ret = generic_file_mmap(file, vma);
 	if (ret) {
@@ -983,13 +983,13 @@ int mtfs_file_mmap(struct file *file, struct vm_area_struct * vma)
 	if (operations->vm_ops) {
 		vma->vm_ops = operations->vm_ops;
 	} else {
-		HDEBUG("vm operations not supplied, use default\n");
+		MDEBUG("vm operations not supplied, use default\n");
 		vma->vm_ops = &mtfs_file_vm_ops;
 	}
 
 	/* Lusre will update the inode's size and mtime */
 out:
-	HRETURN(ret);
+	MRETURN(ret);
 }
 EXPORT_SYMBOL(mtfs_file_mmap);
 
@@ -997,7 +997,7 @@ int mtfs_file_mmap_nowrite(struct file *file, struct vm_area_struct * vma)
 {
 	int ret = 0;
 	struct mtfs_operations *operations = NULL;
-	HENTRY();
+	MENTRY();
 
 	if ((vma->vm_flags & VM_WRITE) != 0) {
 		ret = -EOPNOTSUPP;
@@ -1013,13 +1013,13 @@ int mtfs_file_mmap_nowrite(struct file *file, struct vm_area_struct * vma)
 	if (operations->vm_ops) {
 		vma->vm_ops = operations->vm_ops;
 	} else {
-		HDEBUG("vm operations not supplied, use default\n");
+		MDEBUG("vm operations not supplied, use default\n");
 		vma->vm_ops = &mtfs_file_vm_ops;
 	}
 
 	/* Lustre will update the inode's size and mtime */
 out:
-	HRETURN(ret);
+	MRETURN(ret);
 }
 EXPORT_SYMBOL(mtfs_file_mmap_nowrite);
 
@@ -1031,16 +1031,16 @@ ssize_t mtfs_file_sendfile(struct file *in_file, loff_t *ppos,
 	loff_t pos_tmp = 0;
 	struct file *hidden_file = NULL;
 	mtfs_bindex_t bindex = 0;
-	HENTRY();
+	MENTRY();
 
-	HASSERT(mtfs_f2info(in_file));
+	MASSERT(mtfs_f2info(in_file));
 
 	for (bindex = 0; bindex < mtfs_f2bnum(in_file); bindex++) {
 		hidden_file = mtfs_f2branch(in_file, bindex);
 
 		if (hidden_file) {
-			HASSERT(hidden_file->f_op);
-			HASSERT(hidden_file->f_op->sendfile);
+			MASSERT(hidden_file->f_op);
+			MASSERT(hidden_file->f_op->sendfile);
 			pos_tmp = *ppos;
 			ret = hidden_file->f_op->sendfile(hidden_file, &pos_tmp, len, actor, target);
 			if (ret >= 0) { 
@@ -1048,12 +1048,12 @@ ssize_t mtfs_file_sendfile(struct file *in_file, loff_t *ppos,
 				break;
 			}
 		} else {
-			HDEBUG("branch[%d] of file [%*s] is NULL\n",
+			MDEBUG("branch[%d] of file [%*s] is NULL\n",
 			       bindex, in_file->f_dentry->d_name.len, in_file->f_dentry->d_name.name);
 		}
 	}
 	// generic_file_sendfile?
-	HRETURN(ret);
+	MRETURN(ret);
 }
 EXPORT_SYMBOL(mtfs_file_sendfile);
 #endif /* HAVE_KERNEL_SENDFILE */

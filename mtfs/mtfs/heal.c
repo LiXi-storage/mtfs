@@ -18,12 +18,12 @@ struct dentry *mtfs_dchild_rename2new(struct dentry *dparent, struct dentry *dch
 {
 	struct dentry *dchild_new = NULL;
 	int ret = 0;
-	HENTRY();
+	MENTRY();
 
-	HASSERT(inode_is_locked(dparent->d_inode));
+	MASSERT(inode_is_locked(dparent->d_inode));
 	dchild_new = lookup_one_len(name_new, dparent, len);
 	if (IS_ERR(dchild_new)) {
-		HERROR("lookup [%*s/%s] failed, ret = %d\n",
+		MERROR("lookup [%*s/%s] failed, ret = %d\n",
 		       dparent->d_name.len, dparent->d_name.name, name_new, ret);
 		goto out;
 	}
@@ -34,7 +34,7 @@ struct dentry *mtfs_dchild_rename2new(struct dentry *dparent, struct dentry *dch
 		goto out;
 	}
 
-	HDEBUG("renaming [%*s/%*s] to [%*s/%*s]\n",
+	MDEBUG("renaming [%*s/%*s] to [%*s/%*s]\n",
 	       dparent->d_name.len, dparent->d_name.name,
 	       dchild_old->d_name.len, dchild_old->d_name.name,
 	       dparent->d_name.len, dparent->d_name.name,
@@ -51,18 +51,18 @@ struct dentry *mtfs_dchild_rename2new(struct dentry *dparent, struct dentry *dch
 	}
 
 out:
-	HRETURN(dchild_new);
+	MRETURN(dchild_new);
 }
 
 struct dentry *_mtfs_dchild_add_ino(struct dentry *dparent, struct dentry *dchild_old)
 {
 	char *name_new = NULL;
 	struct dentry *dchild_new = NULL;
-	HENTRY();
+	MENTRY();
 
-	HASSERT(dparent);
-	HASSERT(dparent->d_inode);
-	HASSERT(inode_is_locked(dparent->d_inode));
+	MASSERT(dparent);
+	MASSERT(dparent->d_inode);
+	MASSERT(inode_is_locked(dparent->d_inode));
 	MTFS_ALLOC(name_new, PATH_MAX);
 	if (unlikely(name_new == NULL)) {
 		dchild_new = ERR_PTR(-ENOMEM);
@@ -75,7 +75,7 @@ struct dentry *_mtfs_dchild_add_ino(struct dentry *dparent, struct dentry *dchil
 
 	MTFS_FREE(name_new, PATH_MAX);
 out:
-	HRETURN(dchild_new);
+	MRETURN(dchild_new);
 }
 
 /*
@@ -86,13 +86,13 @@ struct dentry *_mtfs_dchild_create(struct dentry *dparent, const unsigned char *
 {
 	int ret = 0;
 	struct dentry *dchild = NULL;
-	HENTRY();
+	MENTRY();
 
-	HASSERT(inode_is_locked(dparent->d_inode));
+	MASSERT(inode_is_locked(dparent->d_inode));
 
 	dchild = lookup_one_len(name, dparent, len);
 	if (IS_ERR(dchild)) {
-		HERROR("lookup [%s] under [%*s] failed, ret = %d\n",
+		MERROR("lookup [%s] under [%*s] failed, ret = %d\n",
 		       name, dparent->d_name.len, dparent->d_name.name, ret);
 		ret = PTR_ERR(dchild);
 		goto out;
@@ -100,22 +100,22 @@ struct dentry *_mtfs_dchild_create(struct dentry *dparent, const unsigned char *
 
 	if (dchild->d_inode) {
 		if ((dchild->d_inode->i_mode & S_IFMT) == (mode & S_IFMT)) {
-			HDEBUG("[%*s/%*s] already existed\n",
+			MDEBUG("[%*s/%*s] already existed\n",
 			       dparent->d_name.len, dparent->d_name.name, len, name);
 			if ((dchild->d_inode->i_mode & S_IALLUGO) != (mode & S_IALLUGO)) {
-				HDEBUG("permission mode of [%*s/%*s] is 0%04o, "
+				MDEBUG("permission mode of [%*s/%*s] is 0%04o, "
 				       "which should be 0%04o for security\n",
 				       dparent->d_name.len, dparent->d_name.name, len, name,
 				       dchild->d_inode->i_mode & S_IALLUGO, S_IRWXU);
 			}
 			goto out;
 		} else {
-			HDEBUG("[%*s/%*s] already existed, and is a %s, not a %s\n",
+			MDEBUG("[%*s/%*s] already existed, and is a %s, not a %s\n",
 			       dparent->d_name.len, dparent->d_name.name, len, name,
 			       mtfs_mode2type(dchild->d_inode->i_mode), mtfs_mode2type(mode));
 			if (rename) {
 				struct dentry *dchild_new = NULL;
-				HDEBUG("Trying to rename [%*s/%*s]\n",
+				MDEBUG("Trying to rename [%*s/%*s]\n",
 				       dparent->d_name.len, dparent->d_name.name, len, name);
 				dchild_new = _mtfs_dchild_add_ino(dparent, dchild);
 				if (IS_ERR(dchild_new)) {
@@ -146,13 +146,13 @@ struct dentry *_mtfs_dchild_create(struct dentry *dparent, const unsigned char *
 		ret = vfs_mknod(dparent->d_inode, dchild, mode, rdev);
 		break;
 	default:
-		HDEBUG("bad file type 0%o\n", mode & S_IFMT);
+		MDEBUG("bad file type 0%o\n", mode & S_IFMT);
 		ret = -EINVAL;
 	}
 	if (ret) {
 		goto out_put;
 	} else {
-		HASSERT(dchild->d_inode);
+		MASSERT(dchild->d_inode);
 	}
 	goto out;
 out_put:
@@ -161,7 +161,7 @@ out:
 	if (ret) {
 		dchild = ERR_PTR(ret);
 	}
-	HRETURN(dchild);
+	MRETURN(dchild);
 }
 
 /*
@@ -171,11 +171,11 @@ struct dentry *mtfs_dchild_create(struct dentry *dparent, const unsigned char *n
                                   unsigned int len, umode_t mode, dev_t rdev, int repeat)
 {
 	struct dentry *dchild = NULL;
-	HENTRY();
+	MENTRY();
 
-	HASSERT(dparent);
-	HASSERT(name);
-	HASSERT(dparent->d_inode);
+	MASSERT(dparent);
+	MASSERT(name);
+	MASSERT(dparent->d_inode);
 	mutex_lock(&dparent->d_inode->i_mutex);
 	dchild = _mtfs_dchild_create(dparent, name, len, mode, rdev, repeat);
 	if (IS_ERR(dchild)) {
@@ -184,7 +184,7 @@ struct dentry *mtfs_dchild_create(struct dentry *dparent, const unsigned char *n
 		}
 	}
 	mutex_unlock(&dparent->d_inode->i_mutex);
-	HRETURN(dchild);
+	MRETURN(dchild);
 }
 
 struct dentry *mtfs_dchild_add_ino(struct dentry *dparent, const unsigned char *name, unsigned int len)
@@ -192,17 +192,17 @@ struct dentry *mtfs_dchild_add_ino(struct dentry *dparent, const unsigned char *
 	int ret = 0;
 	struct dentry *dchild_old = NULL;
 	struct dentry *dchild_new = NULL;
-	HENTRY();
+	MENTRY();
 
-	HASSERT(dparent);
-	HASSERT(dparent->d_inode);
-	HASSERT(name);
+	MASSERT(dparent);
+	MASSERT(dparent->d_inode);
+	MASSERT(name);
 	dget(dparent);
 	mutex_lock(&dparent->d_inode->i_mutex);
 
 	dchild_old = lookup_one_len(name, dparent, len);
 	if (IS_ERR(dchild_old)) {
-		HERROR("lookup [%*s/%s] failed, ret = %d\n",
+		MERROR("lookup [%*s/%s] failed, ret = %d\n",
 		       dparent->d_name.len, dparent->d_name.name, name, ret);
 		ret = PTR_ERR(dchild_old);
 		goto out_unlock;
@@ -223,7 +223,7 @@ out_unlock:
 	if (ret) {
 		dchild_new = ERR_PTR(ret);
 	}
-	HRETURN(dchild_new);
+	MRETURN(dchild_new);
 }
 
 struct dentry *mtfs_dentry_list_mkpath(struct dentry *d_parent, mtfs_list_t *dentry_list)
@@ -231,7 +231,7 @@ struct dentry *mtfs_dentry_list_mkpath(struct dentry *d_parent, mtfs_list_t *den
 	struct mtfs_dentry_list *tmp_entry = NULL;
 	struct dentry *d_child = NULL;
 	struct dentry *d_parent_tmp = d_parent;
-	HENTRY();
+	MENTRY();
 
 	mtfs_list_for_each_entry(tmp_entry, dentry_list, list) {
 		d_child = mtfs_dchild_create(d_parent_tmp, tmp_entry->dentry->d_name.name,
@@ -240,7 +240,7 @@ struct dentry *mtfs_dentry_list_mkpath(struct dentry *d_parent, mtfs_list_t *den
 			dput(d_parent_tmp);
 		}	
 		if (IS_ERR(d_child)) {
-			HERROR("create [%*s/%*s] failed\n",
+			MERROR("create [%*s/%*s] failed\n",
 			       d_parent_tmp->d_name.len, d_parent_tmp->d_name.name,
 			       tmp_entry->dentry->d_name.len, tmp_entry->dentry->d_name.name);
 			goto out;
@@ -250,10 +250,10 @@ struct dentry *mtfs_dentry_list_mkpath(struct dentry *d_parent, mtfs_list_t *den
 out:
 	if (d_child == NULL) {
 		d_child = ERR_PTR(-ENOENT);
-		HERROR("unexpected: dentry_list is empty\n");
-		HBUG();
+		MERROR("unexpected: dentry_list is empty\n");
+		MBUG();
 	}
-	HRETURN(d_child);
+	MRETURN(d_child);
 }
 
 static inline void mtfs_dentry_list_cleanup(mtfs_list_t *dentry_list)
@@ -274,16 +274,16 @@ struct dentry *mtfs_dchild_remove(struct dentry *dparent, const char *name)
 {
 	int ret = 0;
 	struct dentry *dchild = NULL;
-	HENTRY();
+	MENTRY();
 
-	HASSERT(dparent);
-	HASSERT(name);
+	MASSERT(dparent);
+	MASSERT(name);
 	dget(dparent);
 	mutex_lock(&dparent->d_inode->i_mutex);
 
 	dchild = lookup_one_len(name, dparent, strlen(name));
 	if (IS_ERR(dchild)) {
-		HERROR("lookup [%s] under [%*s] failed, ret = %d\n",
+		MERROR("lookup [%s] under [%*s] failed, ret = %d\n",
 		       name, dparent->d_name.len, dparent->d_name.name, ret);
 		ret = PTR_ERR(dchild);
 		goto out;
@@ -295,7 +295,7 @@ struct dentry *mtfs_dchild_remove(struct dentry *dparent, const char *name)
 		goto out;
 	}
 
-	HDEBUG("removing [%*s/%*s]\n",
+	MDEBUG("removing [%*s/%*s]\n",
 	       dparent->d_name.len, dparent->d_name.name, dchild->d_name.len, dchild->d_name.name);
 	switch (dchild->d_inode->i_mode & S_IFMT) {
 	case S_IFDIR:
@@ -307,10 +307,10 @@ struct dentry *mtfs_dchild_remove(struct dentry *dparent, const char *name)
 	case S_IFIFO:
 	case S_IFSOCK:
 		ret = vfs_unlink(dparent->d_inode, dchild);
-		HDEBUG("vfs_unlink, ret = %d\n", ret);
+		MDEBUG("vfs_unlink, ret = %d\n", ret);
 		break;
 	default:
-		HERROR("bad file type 0%o\n", dchild->d_inode->i_mode & S_IFMT);
+		MERROR("bad file type 0%o\n", dchild->d_inode->i_mode & S_IFMT);
 		ret = -EINVAL;
 	}
 
@@ -318,7 +318,7 @@ struct dentry *mtfs_dchild_remove(struct dentry *dparent, const char *name)
 		dput(dchild);
 	} else {
 		/* This is not true, but why? */
-		//HASSERT(dchild->d_inode == NULL);
+		//MASSERT(dchild->d_inode == NULL);
 	}
 
 out:
@@ -327,7 +327,7 @@ out:
 	if (ret) {
 		dchild = ERR_PTR(ret);
 	}
-	HRETURN(dchild);
+	MRETURN(dchild);
 }
 
 static inline int mutex_lock_if_needed(struct mutex *lock)
@@ -399,21 +399,21 @@ int mtfs_backup_branch(struct dentry *dentry, mtfs_bindex_t bindex)
 	int ret = 0;
 	struct dentry *hidden_d_parent_new = NULL;
 	struct dentry *hidden_d_parent_old = NULL;
-	HENTRY();
+	MENTRY();
 
-	HASSERT(hidden_d_old);
+	MASSERT(hidden_d_old);
 
 	dget(hidden_d_old);
 	hidden_d_recover = mtfs_d_recover_branch(dentry, bindex);
 	if (hidden_d_recover == NULL) {
-		HERROR("failed to get d_recover for branch[%d]\n", bindex);
+		MERROR("failed to get d_recover for branch[%d]\n", bindex);
 		ret = -ENOENT;
 		goto out;
 	}
 
 	hidden_d_root = mtfs_d_root_branch(dentry, bindex);
 	if (hidden_d_root == NULL) {
-		HERROR("failed to get d_root for branch[%d]\n", bindex);
+		MERROR("failed to get d_root for branch[%d]\n", bindex);
 		ret = -ENOENT;
 		goto out;
 	}
@@ -426,17 +426,17 @@ int mtfs_backup_branch(struct dentry *dentry, mtfs_bindex_t bindex)
 		}
 
 		if (hidden_d_tmp == hidden_d_recover) {
-			HERROR("[%*s] is already under recover directory, skipping\n",
+			MERROR("[%*s] is already under recover directory, skipping\n",
 			       dentry->d_name.len, dentry->d_name.name);
 			dput(hidden_d_tmp);
 			goto out_free_list;
 		}
 
 		if (hidden_d_tmp == hidden_d_tmp->d_parent) {
-			HERROR("back to the d_root [%*s] of branch[%d]\n",
+			MERROR("back to the d_root [%*s] of branch[%d]\n",
 			       hidden_d_tmp->d_name.len, hidden_d_tmp->d_name.name, bindex);
 			dput(hidden_d_tmp);
-			HBUG();
+			MBUG();
 			goto out_free_list;
 		}
 
@@ -444,7 +444,7 @@ int mtfs_backup_branch(struct dentry *dentry, mtfs_bindex_t bindex)
 		if (tmp_entry == NULL) {
 			ret = -ENOMEM;
 			dput(hidden_d_tmp);
-			HBUG();
+			MBUG();
 			goto out_free_list;
 		}
 		tmp_entry->dentry = hidden_d_tmp;
@@ -456,7 +456,7 @@ int mtfs_backup_branch(struct dentry *dentry, mtfs_bindex_t bindex)
 	} else {
 		hidden_d_parent_new = mtfs_dentry_list_mkpath(hidden_d_recover, &dentry_list);
 		if (IS_ERR(hidden_d_parent_new)) {
-			HBUG();
+			MBUG();
 			goto out_free_list;
 		}
 	}
@@ -479,27 +479,27 @@ out_dput:
 	dput(hidden_d_parent_new);
 out_free_list:
 	mtfs_list_for_each_entry_safe(tmp_entry, n, &dentry_list, list) {
-		HDEBUG("branch[%d]: dentry [%*s]\n", bindex,
+		MDEBUG("branch[%d]: dentry [%*s]\n", bindex,
 		       tmp_entry->dentry->d_name.len, tmp_entry->dentry->d_name.name);
 	}
 	mtfs_dentry_list_cleanup(&dentry_list);
 out:
 	dput(hidden_d_old);
-	HRETURN(ret);
+	MRETURN(ret);
 }
 
 struct dentry *mtfs_cleanup_branch(struct inode *dir, struct dentry *dentry, mtfs_bindex_t bindex)
 {
 	int ret = 0;
 	struct dentry *hidden_dentry = mtfs_d2branch(dentry, bindex);
-	HENTRY();
+	MENTRY();
 
-	HASSERT(inode_is_locked(dir));
+	MASSERT(inode_is_locked(dir));
 
 	if (hidden_dentry != NULL) {
 		ret = mtfs_backup_branch(dentry, bindex);
 		if (ret) {
-			HERROR("failed to backup branch[%d] of dentry [%*s], ret = %d\n",
+			MERROR("failed to backup branch[%d] of dentry [%*s], ret = %d\n",
 			       bindex, dentry->d_name.len, dentry->d_name.name, ret);
 			hidden_dentry = ERR_PTR(ret);
 			goto out;
@@ -516,7 +516,7 @@ struct dentry *mtfs_cleanup_branch(struct inode *dir, struct dentry *dentry, mtf
 		mtfs_d2branch(dentry, bindex) = hidden_dentry;
 	}
 out:
-	HRETURN(hidden_dentry);
+	MRETURN(hidden_dentry);
 }
 
 int heal_discard_dentry_sync(struct inode *dir, struct dentry *dentry, struct mtfs_operation_list *list)
@@ -525,16 +525,16 @@ int heal_discard_dentry_sync(struct inode *dir, struct dentry *dentry, struct mt
 	mtfs_bindex_t  bindex = 0;
 	mtfs_bindex_t  i = 0;
 	struct dentry *hidden_dentry = NULL;
-	HENTRY();
+	MENTRY();
 
-	HASSERT(inode_is_locked(dir));
+	MASSERT(inode_is_locked(dir));
 	for (i = list->latest_bnum; i < list->bnum; i++) {
 		if (list->op_binfo[i].is_suceessful) {
 			bindex = list->op_binfo[i].bindex;
 			hidden_dentry = mtfs_cleanup_branch(dir, dentry, bindex);
 			if (IS_ERR(hidden_dentry)) {
 				ret = PTR_ERR(hidden_dentry);
-				HERROR("failed to cleanup branch[%d] of dentry [%*s], ret = %d\n",
+				MERROR("failed to cleanup branch[%d] of dentry [%*s], ret = %d\n",
 				       bindex, dentry->d_name.len, dentry->d_name.name, ret);
 				goto out;
 			}
@@ -542,7 +542,7 @@ int heal_discard_dentry_sync(struct inode *dir, struct dentry *dentry, struct mt
 		}
 	}
 out:
-	HRETURN(ret);
+	MRETURN(ret);
 }
 EXPORT_SYMBOL(heal_discard_dentry_sync);
 
@@ -550,17 +550,17 @@ int heal_discard_dentry_async(struct inode *dir, struct dentry *dentry, struct m
 {
 	int ret = 0;
 	struct mtfs_request *request = NULL;
-	HENTRY();
+	MENTRY();
 
 	request = selfheal_request_pack();
 	if (IS_ERR(request)) {
-		HERROR("failed to alloc request\n");
+		MERROR("failed to alloc request\n");
 		goto out;
 	}
 	selfheal_add_req(request, MDL_POLICY_ROUND, -1);
 
 out:
-	HRETURN(ret);
+	MRETURN(ret);
 }
 EXPORT_SYMBOL(heal_discard_dentry_async);
 
@@ -568,16 +568,16 @@ int heal_discard_dentry(struct inode *dir, struct dentry *dentry, struct mtfs_op
 {
 	int ret = 0;
 	struct mtfs_operations *operations = NULL;
-	HENTRY();
+	MENTRY();
 
-	HASSERT(inode_is_locked(dir));
+	MASSERT(inode_is_locked(dir));
 	operations = mtfs_i2ops(dir);
 	if (operations->heal_ops && operations->heal_ops->ho_discard_dentry) {
 		ret = operations->heal_ops->ho_discard_dentry(dir, dentry, list);
 	} else {
-		HDEBUG("discard_dentry operation not supplied, use default\n");
+		MDEBUG("discard_dentry operation not supplied, use default\n");
 		ret = heal_discard_dentry_sync(dir, dentry, list);
 	}
 
-	HRETURN(ret);
+	MRETURN(ret);
 }

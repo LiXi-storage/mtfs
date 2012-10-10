@@ -40,10 +40,10 @@ static int _lowerfs_register_ops(struct lowerfs_operations *fs_ops)
 
 	if ((found = _lowerfs_search_type(fs_ops->lowerfs_type))) {
 		if (found != fs_ops) {
-			HERROR("try to register multiple operations for type %s\n",
+			MERROR("try to register multiple operations for type %s\n",
 			        fs_ops->lowerfs_type);
 		} else {
-			HERROR("operation of type %s has already been registered\n",
+			MERROR("operation of type %s has already been registered\n",
 			        fs_ops->lowerfs_type);
 		}
 		ret = -EALREADY;
@@ -93,7 +93,7 @@ struct lowerfs_operations *lowerfs_get_ops(const char *type)
 {
 	struct lowerfs_operations *fs_ops = NULL;
 	int ret = 0;
-	HENTRY();
+	MENTRY();
 
 	fs_ops = lowerfs_search_type(type);
 	if (fs_ops == NULL) {
@@ -104,10 +104,10 @@ struct lowerfs_operations *lowerfs_get_ops(const char *type)
 
 		if (request_module(name) != 0) {
 			ret = -ENODEV;
-			HERROR("failed to load module '%s'\n", name);
+			MERROR("failed to load module '%s'\n", name);
 			goto out;
 		} else {
-			HDEBUG("loaded module '%s'\n", name);
+			MDEBUG("loaded module '%s'\n", name);
 			fs_ops = lowerfs_search_type(type);
 			if (fs_ops == NULL) {
 				ret = -EOPNOTSUPP;
@@ -129,7 +129,7 @@ out:
 	if (ret) {
 		fs_ops = ERR_PTR(ret);
 	}
-	HRETURN(fs_ops);
+	MRETURN(fs_ops);
 }
 
 void lowerfs_put_ops(struct lowerfs_operations *fs_ops)

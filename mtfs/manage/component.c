@@ -13,7 +13,7 @@ static struct component component_types;
 int component_types_init()
 {
 	int ret = 0;
-	HENTRY();
+	MENTRY();
 
 	MTFS_STRDUP(component_types.name, "types");
 	component_types.is_graph = 1;
@@ -23,14 +23,14 @@ int component_types_init()
 	MTFS_INIT_LIST_HEAD(&component_types.this_graph.subcomponents);
 	ret = component_insert(&component_root, &component_types);
 	if (ret) {
-		HERROR("failed to insert component types\n");
+		MERROR("failed to insert component types\n");
 		goto out_free_name;
 	}
 	goto out;
 out_free_name:
 	MTFS_FREE_STR(component_types.name);
 out:
-	HRETURN(ret);
+	MRETURN(ret);
 }
 
 struct component *component_search_type(const char *type_name)
@@ -41,12 +41,12 @@ struct component *component_search_type(const char *type_name)
 static int component_register_type(struct component *component, const char *type_name, int need_copy)
 {
 	int ret = 0;
-	HENTRY();
+	MENTRY();
 
-	HASSERT(component);
-	HASSERT(type_name);
-	HASSERT(component->type == NULL);
-	HASSERT(component->pins);
+	MASSERT(component);
+	MASSERT(type_name);
+	MASSERT(component->type == NULL);
+	MASSERT(component->pins);
 
 	if (need_copy) {
 		struct component *found = NULL;
@@ -55,10 +55,10 @@ static int component_register_type(struct component *component, const char *type
 		found = component_search_type(type_name);
 		if (found != NULL) {
 			if (found != component) {
-				HERROR("try to register type %s for multiple times\n",
+				MERROR("try to register type %s for multiple times\n",
 				       type_name);
 			} else {
-				HERROR("%s has already been registered\n",
+				MERROR("%s has already been registered\n",
 				       component->name);
 			}
 			ret = -EALREADY;
@@ -76,48 +76,48 @@ static int component_register_type(struct component *component, const char *type
 		component->type = component;
 	}
 out:
-	HRETURN(ret);
+	MRETURN(ret);
 }
 
 int component_unregister_type(struct component *type)
 {
 	int ret = 0;
-	HENTRY();
+	MENTRY();
 
 	if (type->ref != 1) {
-		HERROR("%s is being used by some instances\n",
+		MERROR("%s is being used by some instances\n",
 		       type->name);
 		ret = -EBUSY;
 		goto out;
 	}
 	component_type_put(type);
 out:
-	HRETURN(ret);
+	MRETURN(ret);
 }
 
 struct component *component_get(struct component *parent, const char *type_name)
 {
 	struct component *component = NULL;
-	HENTRY();
+	MENTRY();
 
 	component = component_search(parent, type_name);
 	if (component) {
 		component->ref ++;
 	}
 
-	HRETURN(component);
+	MRETURN(component);
 }
 
 void component_put(struct component *component)
 {
-	HENTRY();
-	HASSERT(component->ref > 0);
+	MENTRY();
+	MASSERT(component->ref > 0);
 	component->ref --;
 
 	if (component->ref == 0) {
 		component_remove(component);
 	}
-	_HRETURN();
+	_MRETURN();
 }
 
 struct component *component_type_get(const char *type_name)
@@ -127,67 +127,67 @@ struct component *component_type_get(const char *type_name)
 
 void component_type_put(struct component *type)
 {
-	HENTRY();
+	MENTRY();
 	component_put(type);
-	_HRETURN();
+	_MRETURN();
 }
 
 int component_dump(struct component *component)
 {
 	int i = 0;
-	HENTRY();
+	MENTRY();
 
-	HASSERT(component);
-	HPRINT("%s: ", component->name);
+	MASSERT(component);
+	MPRINT("%s: ", component->name);
 	if (component->type == NULL) {
-		HPRINT("type=NULL, ");
+		MPRINT("type=NULL, ");
 	} else {
-		HPRINT("type=\"%s\", ", component->type->name);
+		MPRINT("type=\"%s\", ", component->type->name);
 	}
 
 	if (component->pins) {
-		HPRINT("pins={");
+		MPRINT("pins={");
 		for(i = 0; i < component->pin_num - 1; i++) {
-			HPRINT("\"%s\", ", component->pins[i].name);
+			MPRINT("\"%s\", ", component->pins[i].name);
 		}
-		HPRINT("\"%s\"}, ", component->pins[component->pin_num - 1].name);
+		MPRINT("\"%s\"}, ", component->pins[component->pin_num - 1].name);
 	} else {
-		HPRINT("pins=NULL, ");
+		MPRINT("pins=NULL, ");
 	}
-	HPRINT("%s\n", component->is_graph ? "is_graph" : "is_filter");
+	MPRINT("%s\n", component->is_graph ? "is_graph" : "is_filter");
 
-	HRETURN(0);
+	MRETURN(0);
 }
 
 static struct pin *component_alloc_pins(int pin_num)
 {
 	struct pin *pins = NULL;
-	HENTRY();
+	MENTRY();
 
 	MTFS_ALLOC(pins, sizeof(*pins) * pin_num);
 	if (pins == NULL) {
-		HERROR("not enough memory\n");
+		MERROR("not enough memory\n");
 		goto out;
 	}
 out:
-	HRETURN(pins);
+	MRETURN(pins);
 }
 
 struct component *component_alloc(int pin_num)
 {
 	struct component *component = NULL;
-	HENTRY();
+	MENTRY();
 
 	MTFS_ALLOC_PTR(component);
 	if (component == NULL) {
-		HERROR("not enough memory\n");
+		MERROR("not enough memory\n");
 		goto out;
 	}
 
 	component->pin_num = pin_num;
 	component->pins = component_alloc_pins(pin_num);
 	if (component->pins == NULL) {
-		HERROR("not enough memory\n");
+		MERROR("not enough memory\n");
 		goto out_free_instance;
 	}
 
@@ -197,13 +197,13 @@ out_free_instance:
 	MTFS_FREE_PTR(component);
 	component = NULL;
 out:
-	HRETURN(component);
+	MRETURN(component);
 }
 
 void component_free(struct component *component)
 {
 	int i = 0;
-	HENTRY();
+	MENTRY();
 
 	if (component->name) {
 		MTFS_FREE_STR(component->name);
@@ -219,7 +219,7 @@ void component_free(struct component *component)
 	}
 
 	MTFS_FREE_PTR(component);
-	_HRETURN();
+	_MRETURN();
 }
 
 struct component *component_instance_new(struct component *type, const char *instance_name)
@@ -227,12 +227,12 @@ struct component *component_instance_new(struct component *type, const char *ins
 	struct component *instance = NULL;
 	int i = 0;
 	int ret = 0;
-	HENTRY();
+	MENTRY();
 
 	instance = component_alloc(type->pin_num);
 	if (instance == NULL) {
 		ret = -ENOMEM;
-		HERROR("not enough memory\n");
+		MERROR("not enough memory\n");
 		goto out;
 	}
 	instance->ref = 1;
@@ -277,14 +277,14 @@ out:
 	if (IS_ERR(ret)) {
 		instance = ERR_PTR(ret);
 	}
-	HRETURN(instance);
+	MRETURN(instance);
 }
 
 int component_rename(struct component *component, const char *name)
 {
 	char *old_name = component->name;
 	int ret = 0;
-	HENTRY();
+	MENTRY();
 
 	MTFS_STRDUP(component->name, name);
 	if (component->name) {
@@ -294,7 +294,7 @@ int component_rename(struct component *component, const char *name)
 		ret = -ENOMEM;
 	}	
 
-	HRETURN(ret);
+	MRETURN(ret);
 }
 
 struct component *component_new_notype(struct component *parent, const char *name)
@@ -302,7 +302,7 @@ struct component *component_new_notype(struct component *parent, const char *nam
 	struct component *component = NULL;
 	struct graph *graph = NULL;
 	int ret = 0;
-	HENTRY();
+	MENTRY();
 
 	MTFS_ALLOC_PTR(component);
 	if (component == NULL) {
@@ -334,7 +334,7 @@ out:
 	if (ret) {
 		component = ERR_PTR(ret);
 	}
-	HRETURN(component);
+	MRETURN(component);
 }
 
 struct component *component_new(struct component *parent, const char *type_name, const char *instance_name)
@@ -342,7 +342,7 @@ struct component *component_new(struct component *parent, const char *type_name,
 	int ret = 0;
 	struct component *type = NULL;
 	struct component *instance = NULL;
-	HENTRY();
+	MENTRY();
 
 	if(type_name == NULL || instance_name == NULL) {
 		ret = -EINVAL;
@@ -351,14 +351,14 @@ struct component *component_new(struct component *parent, const char *type_name,
 
 	type = component_type_get(type_name);
 	if (type == NULL) {
-		HERROR("type %s not exist\n", type_name);
+		MERROR("type %s not exist\n", type_name);
 		ret = -EINVAL; /* Which errno? */
 		goto out;
 	}
 
 	instance = component_instance_new(type, instance_name);
 	if (IS_ERR(instance)) {
-		HERROR("failed to get instance for type %s\n", type_name);
+		MERROR("failed to get instance for type %s\n", type_name);
 		ret = PTR_ERR(instance); /* Which errno? */
 		goto out_put_type;
 	}
@@ -378,14 +378,14 @@ out:
 	if (ret) {
 		instance = ERR_PTR(ret);
 	}
-	HRETURN(instance);
+	MRETURN(instance);
 }
 
 static int component_list_delete(struct component *component)
 {
 	struct mtfs_list_head *p = NULL;
 	struct component *parent = component->parent;
-	HENTRY();
+	MENTRY();
 
 	mtfs_list_for_each(p, &parent->this_graph.subcomponents) {
 		struct component *found;
@@ -397,17 +397,17 @@ static int component_list_delete(struct component *component)
 		}
 	}
 
-	HRETURN(0);
+	MRETURN(0);
 }
 
 int component_declare_graph(struct component *component, const char *type_name)
 {
 	int ret = 0;
-	HENTRY();
+	MENTRY();
 
 	ret = component_register_type(component, type_name, 1);
 
-	HRETURN(ret);
+	MRETURN(ret);
 }
 
 int component_declare_filter(const char *type_name, const char *inpin_name, int out_num, const char **outpin_names, int selector)
@@ -415,14 +415,14 @@ int component_declare_filter(const char *type_name, const char *inpin_name, int 
 	int ret = 0;
 	struct component *type = NULL;
 	int i = 0;
-	HENTRY();
+	MENTRY();
 
-	HASSERT(type_name);
-	HASSERT(out_num > 0);
+	MASSERT(type_name);
+	MASSERT(out_num > 0);
 
 	type = component_alloc(1 + out_num);
 	if (type == NULL) {
-		HERROR("not enough memory\n");
+		MERROR("not enough memory\n");
 		ret = -ENOMEM;
 		goto out;
 	}
@@ -448,14 +448,14 @@ int component_declare_filter(const char *type_name, const char *inpin_name, int 
 
 	ret = component_register_type(type, type_name, 0);
 	if (ret) {
-		HERROR("failed to register type: %s\n", type_name);
+		MERROR("failed to register type: %s\n", type_name);
 		goto out_free_type;
 	}
 	goto out;
 out_free_type:
 	component_free(type);
 out:
-	HRETURN(ret);
+	MRETURN(ret);
 }
 
 int component_types_eachdo(int (*func)(struct component *subcomponent))
@@ -466,9 +466,9 @@ int component_types_eachdo(int (*func)(struct component *subcomponent))
 static int componen_output_pin_unlink(struct pin *output_pin)
 {
 	int ret = 0;
-	HENTRY();
+	MENTRY();
 
-	HASSERT(!output_pin->is_input);
+	MASSERT(!output_pin->is_input);
 	if (output_pin->next == NULL) {
 		goto out;
 	}
@@ -477,7 +477,7 @@ static int componen_output_pin_unlink(struct pin *output_pin)
 	output_pin->next = NULL;
 
 out:
-	HRETURN(ret);
+	MRETURN(ret);
 }
 
 /* 
@@ -490,29 +490,29 @@ int componen_input_pin_unlink(struct pin *input_pin)
 	struct mtfs_list_head *p = NULL;
 	struct mtfs_list_head *tmp = NULL;
 	int ret = 0;
-	HENTRY();
+	MENTRY();
 
-	HASSERT(input_pin->is_input);
+	MASSERT(input_pin->is_input);
 
-	HDEBUG("unlink prevs of input pin %s which belong to %s\n", input_pin->name, input_pin->parent->name);
+	MDEBUG("unlink prevs of input pin %s which belong to %s\n", input_pin->name, input_pin->parent->name);
 	mtfs_list_for_each_safe(p, tmp, &input_pin->prevs) {
 		prev_pin = mtfs_list_entry(p, struct pin, pin_list);
 		prev_component = prev_pin->parent;
-		HDEBUG("doing of component %s\n", prev_component->name);
+		MDEBUG("doing of component %s\n", prev_component->name);
 		componen_output_pin_unlink(prev_pin);
 		if (ret) {
 			goto out;
 		}
-		HDEBUG("done\n");
+		MDEBUG("done\n");
 	}
 out:
-	HRETURN(ret);
+	MRETURN(ret);
 }
 
 int componen_remove_links(struct component *component)
 {
 	int ret = 0;
-	HENTRY();
+	MENTRY();
 	if (component->pins) {
 		int i = 0;
 		for (i = 0; i < component->pin_num; i++) {
@@ -523,7 +523,7 @@ int componen_remove_links(struct component *component)
 			}
 		}
 	}
-	HRETURN(ret);
+	MRETURN(ret);
 }
 /*
  * This is a recursive remove funtion.
@@ -531,7 +531,7 @@ int componen_remove_links(struct component *component)
 int component_remove(struct component *component)
 {
 	int ret = 0;
-	HENTRY();
+	MENTRY();
 
 	if (component->is_graph) {
 		ret = component_subs_eachdo(component, component_remove);
@@ -548,17 +548,17 @@ int component_remove(struct component *component)
 	}
 
 	component_list_delete(component);
-	HDEBUG("removed %s from %s\n", component->name, component->parent->name);	
+	MDEBUG("removed %s from %s\n", component->name, component->parent->name);	
 	component_free(component);
 
 out:
-	HRETURN(ret);
+	MRETURN(ret);
 }
 
 static void component_free_pins(struct component *component)
 {
 	int i = 0;
-	HENTRY();
+	MENTRY();
 
 	for (i = 0; i < component->pin_num; i++) {
 		if (component->pins[i].name) {
@@ -568,18 +568,18 @@ static void component_free_pins(struct component *component)
 	MTFS_FREE(component->pins, sizeof(*component->pins) * component->pin_num);
 	component->pin_num = 0;
 
-	_HRETURN();
+	_MRETURN();
 }
 
 int component_copy_pins(struct component *old_component, struct component *new_component)
 {
 	int i = 0;
 	int ret = 0;
-	HENTRY();
+	MENTRY();
 
-	HASSERT(old_component);
-	HASSERT(new_component);
-	HASSERT(old_component->pins);
+	MASSERT(old_component);
+	MASSERT(new_component);
+	MASSERT(old_component->pins);
 	new_component->pin_num = old_component->pin_num;
 	new_component->pins = component_alloc_pins(new_component->pin_num);
 	for(i = 0; i < new_component->pin_num; i ++) {
@@ -596,7 +596,7 @@ int component_copy_pins(struct component *old_component, struct component *new_c
 out_free_pins:
 	component_free_pins(new_component);
 out:
-	HRETURN(ret);
+	MRETURN(ret);
 }
 /*
  * This is a recursive funtion.
@@ -606,12 +606,12 @@ struct component *component_copy(struct component *old_component, struct compone
 {
 	int ret = 0;
 	struct component *new_component = NULL;
-	HENTRY();
+	MENTRY();
 
 	if (old_component->type) {
 		new_component = component_new(parent, old_component->type->name, new_name);
 	} else {
-		HASSERT(old_component->is_graph);
+		MASSERT(old_component->is_graph);
 		new_component = component_new_notype(parent, new_name);
 		if (IS_ERR(new_component)) {
 			ret = PTR_ERR(new_component);
@@ -635,7 +635,7 @@ out:
 	if (ret) {
 		new_component = ERR_PTR(ret);
 	}
-	HRETURN(new_component);
+	MRETURN(new_component);
 }
 
 char *component_path(struct component *component)
@@ -643,7 +643,7 @@ char *component_path(struct component *component)
 	char *path = NULL;
 	char *parent = NULL;
 	int length = 0;
-	HENTRY();
+	MENTRY();
 
 	if (component->parent == component) {
 		path = malloc(2);
@@ -671,13 +671,13 @@ char *component_path(struct component *component)
 		free(parent);
 	}
 out:
-	HRETURN(path);
+	MRETURN(path);
 }
 
 int component_print(struct component *component)
 {
 	const char *type = NULL;
-	HENTRY();
+	MENTRY();
 
 	if (component->is_graph) {
 		type = "graph";
@@ -686,32 +686,32 @@ int component_print(struct component *component)
 	}
 	printf("%s (%s)\n", component->name, type);
 
-	HRETURN(0);
+	MRETURN(0);
 }
 
 struct component *component_search(struct component *parent, const char *name)
 {
 	struct component *found = NULL;
 	struct mtfs_list_head *p = NULL;
-	HENTRY();
+	MENTRY();
 
 	if (!parent->is_graph) {
-		HERROR("Not a graph\n");
+		MERROR("Not a graph\n");
 		found = ERR_PTR(-ENOMEM); /* which errno? */
 		goto out;
 	}
 
 	mtfs_list_for_each(p, &parent->this_graph.subcomponents) {
 		found = mtfs_list_entry(p, struct component, component_list);
-		HASSERT(found->name);
-		HASSERT(found);
+		MASSERT(found->name);
+		MASSERT(found);
 		if (strcmp(found->name, name) == 0) {
 			goto out;
 		}
 	}
 	found = NULL;
 out:
-	HRETURN(found);
+	MRETURN(found);
 }
 
 /* 
@@ -723,22 +723,22 @@ int component_subs_eachdo(struct component *parent, int (*func)(struct component
 	struct mtfs_list_head *p = NULL;
 	struct mtfs_list_head *tmp = NULL;
 	int ret = 0;
-	HENTRY();
+	MENTRY();
 
-	HASSERT(parent->is_graph);
+	MASSERT(parent->is_graph);
 
-	HDEBUG("eachdo subcomponents of %s\n", parent->name);
+	MDEBUG("eachdo subcomponents of %s\n", parent->name);
 	mtfs_list_for_each_safe(p, tmp, &parent->this_graph.subcomponents) {
 		found = mtfs_list_entry(p, struct component, component_list);
-		HDEBUG("doing %s\n", found->name);
+		MDEBUG("doing %s\n", found->name);
 		ret = func(found);
 		if (ret) {
 			goto out;
 		}
-		HDEBUG("done\n");
+		MDEBUG("done\n");
 	}
 out:
-	HRETURN(ret);
+	MRETURN(ret);
 }
 
 int component_copy_subs(struct component *old_parent, struct component *parent)
@@ -747,12 +747,12 @@ int component_copy_subs(struct component *old_parent, struct component *parent)
 	struct component *sub = NULL;
 	struct mtfs_list_head *p = NULL;
 	int ret = 0;
-	HENTRY();
+	MENTRY();
 
-	HASSERT(parent->is_graph);
-	HASSERT(old_parent->is_graph);
+	MASSERT(parent->is_graph);
+	MASSERT(old_parent->is_graph);
 
-	HDEBUG("copy subcomponents of %s to %s\n", old_parent->name, parent->name);
+	MDEBUG("copy subcomponents of %s to %s\n", old_parent->name, parent->name);
 	mtfs_list_for_each(p, &old_parent->this_graph.subcomponents) {
 		sub = mtfs_list_entry(p, struct component, component_list);
 		new_sub = component_copy(sub, parent, sub->name);
@@ -762,30 +762,30 @@ int component_copy_subs(struct component *old_parent, struct component *parent)
 		}
 	}
 out:
-	HRETURN(ret);
+	MRETURN(ret);
 }
 
 int component_insert(struct component *component, struct component *subcomponent)
 {
 	int ret = 0;
 	struct component *found = NULL;
-	HENTRY();
+	MENTRY();
 
 	if (!component->is_graph) {
-		HERROR("Not a graph\n");
+		MERROR("Not a graph\n");
 		ret = -ENOMEM; /* which errno? */
 		goto out;
 	}
 
 	if (component->type) {
-		HERROR("Have a type\n");
+		MERROR("Have a type\n");
 		ret = -ENOMEM; /* which errno? */
 		goto out;
 	}
 
 	found = component_search(component, subcomponent->name);
 	if (found) {
-		HERROR("name %s has already been used in component %s\n",
+		MERROR("name %s has already been used in component %s\n",
 		       subcomponent->name, component->name);
 		ret = -EALREADY;
 		goto out;
@@ -794,7 +794,7 @@ int component_insert(struct component *component, struct component *subcomponent
 	mtfs_list_add(&(subcomponent->component_list), &component->this_graph.subcomponents);
 	subcomponent->parent = component;
 out:
-	HRETURN(ret);
+	MRETURN(ret);
 }
 
 struct pin *component_search_pin(struct component *component, const char *pin_name)
@@ -802,7 +802,7 @@ struct pin *component_search_pin(struct component *component, const char *pin_na
 	struct pin *found = NULL;
 	struct pin *pin = NULL;
 	int i = 0;
-	HENTRY();
+	MENTRY();
 
 	if (component->pins) {
 		for (i = 0; i < component->pin_num; i++) {
@@ -814,7 +814,7 @@ struct pin *component_search_pin(struct component *component, const char *pin_na
 		}
 	}
 out:
-	HRETURN(found);
+	MRETURN(found);
 }
 
 int component_link(struct component *source_component, const char *source_pin_name,
@@ -823,40 +823,40 @@ int component_link(struct component *source_component, const char *source_pin_na
 	int ret = 0;
 	struct pin *source_pin = NULL;
 	struct pin *dest_pin = NULL;
-	HENTRY();
+	MENTRY();
 
-	HASSERT(source_component);
-	HASSERT(dest_component);
+	MASSERT(source_component);
+	MASSERT(dest_component);
 	if (source_component == dest_component) {
-		HERROR("try to link pins of the same compoent %s\n", source_component->name);
+		MERROR("try to link pins of the same compoent %s\n", source_component->name);
 		ret = -ENOMEM; /* Which errno? */
 		goto out;
 	}
 
 	source_pin = component_search_pin(source_component, source_pin_name);
 	if (source_pin == NULL) {
-		HERROR("compoent %s have no outpin called %s\n", source_component->name, source_pin_name);
+		MERROR("compoent %s have no outpin called %s\n", source_component->name, source_pin_name);
 		ret = -EINVAL;
 		goto out;
 	} else if (source_pin->is_input) {
-		HERROR("pin %s of compoent %s is a input pin\n", source_pin_name, source_component->name);
+		MERROR("pin %s of compoent %s is a input pin\n", source_pin_name, source_component->name);
 		ret = -EINVAL;
 		goto out;
 	}
 
 	dest_pin = component_search_pin(dest_component, dest_pin_name);
 	if (dest_pin == NULL) {
-		HERROR("compoent %s have no inpin called %s\n", dest_component->name, dest_pin_name);
+		MERROR("compoent %s have no inpin called %s\n", dest_component->name, dest_pin_name);
 		ret = -EINVAL;
 		goto out;
 	} else if (!dest_pin->is_input) {
-		HERROR("pin %s of compoent %s is a output pin\n", dest_pin_name, dest_component->name);
+		MERROR("pin %s of compoent %s is a output pin\n", dest_pin_name, dest_component->name);
 		ret = -EINVAL;
 		goto out;
 	}
 
 	if (source_pin->next) {
-		HERROR("the pin %s of component %s is already linked to the pin %s of component %s\n",
+		MERROR("the pin %s of component %s is already linked to the pin %s of component %s\n",
 		       source_pin_name, source_component->name, source_pin->next->name, source_pin->next->parent->name);
 		ret = -ENOMEM; /* Which errno? */
 		goto out;
@@ -865,7 +865,7 @@ int component_link(struct component *source_component, const char *source_pin_na
 	mtfs_list_add(&(source_pin->pin_list), &dest_pin->prevs);
 	source_pin->next = dest_pin;
 out:
-	HRETURN(ret);
+	MRETURN(ret);
 }
 
 int component_unlink(struct component *source_component, const char *source_pin_name,
@@ -874,40 +874,40 @@ int component_unlink(struct component *source_component, const char *source_pin_
 	int ret = 0;
 	struct pin *source_pin = NULL;
 	struct pin *dest_pin = NULL;
-	HENTRY();
+	MENTRY();
 
-	HASSERT(source_component);
-	HASSERT(dest_component);
+	MASSERT(source_component);
+	MASSERT(dest_component);
 	if (source_component == dest_component) {
-		HERROR("try to unlink pins of the same compoent %s\n", source_component->name);
+		MERROR("try to unlink pins of the same compoent %s\n", source_component->name);
 		ret = -ENOMEM; /* Which errno? */
 		goto out;
 	}
 
 	source_pin = component_search_pin(source_component, source_pin_name);
 	if (source_pin == NULL) {
-		HERROR("compoent %s have no outpin called %s\n", source_component->name, source_pin_name);
+		MERROR("compoent %s have no outpin called %s\n", source_component->name, source_pin_name);
 		ret = -EINVAL;
 		goto out;
 	} else if (source_pin->is_input) {
-		HERROR("pin %s of compoent %s is a input pin\n", source_pin_name, source_component->name);
+		MERROR("pin %s of compoent %s is a input pin\n", source_pin_name, source_component->name);
 		ret = -EINVAL;
 		goto out;
 	}
 
 	dest_pin = component_search_pin(dest_component, dest_pin_name);
 	if (dest_pin == NULL) {
-		HERROR("compoent %s have no inpin called %s\n", dest_component->name, dest_pin_name);
+		MERROR("compoent %s have no inpin called %s\n", dest_component->name, dest_pin_name);
 		ret = -EINVAL;
 		goto out;
 	} else if (!dest_pin->is_input) {
-		HERROR("pin %s of compoent %s is a output pin\n", dest_pin_name, dest_component->name);
+		MERROR("pin %s of compoent %s is a output pin\n", dest_pin_name, dest_component->name);
 		ret = -EINVAL;
 		goto out;
 	}
 
 	if (source_pin->next == NULL) {
-		HERROR("the pin %s of component %s is not linked to any component\n",
+		MERROR("the pin %s of component %s is not linked to any component\n",
 		       source_pin_name, source_component->name);
 		ret = -ENOMEM; /* Which errno? */
 		goto out;
@@ -915,28 +915,28 @@ int component_unlink(struct component *source_component, const char *source_pin_
 
 	ret = componen_output_pin_unlink(source_pin);
 out:
-	HRETURN(ret);
+	MRETURN(ret);
 }
 
 int component_pack(struct component *component, int table_number, struct pin_map_table *tables)
 {
 	int ret = 0;
 	int i = 0;
-	HENTRY();
+	MENTRY();
 
 	if (!component->is_graph) {
-		HERROR("component %s is not a graph\n", component->name);
+		MERROR("component %s is not a graph\n", component->name);
 		ret = -EINVAL;
 		goto out;
 	}
 
 	if (component->pins != NULL) {
-		HERROR("component %s already have pins\n", component->name);
+		MERROR("component %s already have pins\n", component->name);
 		ret = -EINVAL;
 		goto out;
 	}
 	
-	HASSERT(table_number > 0);
+	MASSERT(table_number > 0);
 
 	component->pin_num = table_number;
 	component->pins = component_alloc_pins(table_number);
@@ -947,16 +947,16 @@ int component_pack(struct component *component, int table_number, struct pin_map
 
 		sub_component = component_search(component, tables[i].sub_component_name);
 		if (sub_component == NULL) {
-			HERROR("component %s have no subcomponent %s\n",
+			MERROR("component %s have no subcomponent %s\n",
 			       component->name, tables[i].sub_component_name);
 			ret = -EINVAL;
 			goto out_free_pins;
 		}
 
-		HDEBUG("searching %s\n", tables[i].sub_pin_name);
+		MDEBUG("searching %s\n", tables[i].sub_pin_name);
 		pin = component_search_pin(sub_component, tables[i].sub_pin_name);
 		if (pin == NULL) {
-			HERROR("component %s have no pin %s\n", sub_component->name, tables[i].sub_pin_name);
+			MERROR("component %s have no pin %s\n", sub_component->name, tables[i].sub_pin_name);
 			ret = -EINVAL;
 			goto out_free_pins;
 		}
@@ -974,5 +974,5 @@ int component_pack(struct component *component, int table_number, struct pin_map
 out_free_pins:
 	component_free_pins(component);
 out:
-	HRETURN(ret);
+	MRETURN(ret);
 }

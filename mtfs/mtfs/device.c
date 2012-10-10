@@ -18,7 +18,7 @@ static struct mtfs_device *mtfs_device_alloc(struct mount_option *mount_option)
 	mtfs_bindex_t bindex = 0;
 	mtfs_bindex_t bnum = mount_option->bnum;
 
-	HASSERT(bnum > 0 && bnum <= MTFS_BRANCH_MAX);
+	MASSERT(bnum > 0 && bnum <= MTFS_BRANCH_MAX);
 	MTFS_SLAB_ALLOC_PTR(device, mtfs_device_cache);
 	if (device == NULL) {
 		goto out;
@@ -57,7 +57,7 @@ out_free_path:
 	}
 //out_free_branch:
 	MTFS_SLAB_FREE_PTR(device, mtfs_device_cache);
-	HASSERT(device == NULL);
+	MASSERT(device == NULL);
 out:
 	return device;
 }
@@ -66,7 +66,7 @@ static void mtfs_device_free(struct mtfs_device *device)
 {
 	mtfs_bindex_t bindex = 0;
 	mtfs_bindex_t bnum = mtfs_dev2bnum(device);
-	HASSERT(device != NULL);
+	MASSERT(device != NULL);
 
 	for(bindex = 0; bindex < bnum; bindex++) {
 		MTFS_FREE(mtfs_dev2bpath(device, bindex), mtfs_dev2blength(device, bindex));
@@ -93,7 +93,7 @@ static struct mtfs_device *_mtfs_search_device(struct mtfs_device *device)
 		found = list_entry(p, typeof(*found), device_list);
 		d_root_tmp = found->sb->s_root;
 
-		HASSERT(d_root_tmp);
+		MASSERT(d_root_tmp);
 		bnum = device->bnum;
 		if (bnum > found->bnum) {
 			bnum = found->bnum;
@@ -145,10 +145,10 @@ static int _mtfs_register_device(struct mtfs_device *device)
 	found = _mtfs_search_device(device);
 	if (found != NULL) {
 		if (found == device) {
-			HERROR("try to register same devices %s for mutiple times\n",
+			MERROR("try to register same devices %s for mutiple times\n",
 			        device->device_name);
 		} else {
-			HERROR("try to register multiple devices for %s\n",
+			MERROR("try to register multiple devices for %s\n",
 			        device->device_name);
 		}
 		ret = -EEXIST;
@@ -234,7 +234,7 @@ static int mtfs_device_branch_proc_write_errno(struct file *file, const char *bu
 	int sign = 1;
 	int var = 0;
 	struct mtfs_device_branch *dev_branch = (struct mtfs_device_branch *)data;
-	HENTRY();
+	MENTRY();
 
 	if (count > (sizeof(kern_buf) - 1)) {
 		ret = -EINVAL;
@@ -272,9 +272,9 @@ static int mtfs_device_branch_proc_write_errno(struct file *file, const char *bu
 	dev_branch->debug.errno = var;
 out:
 	if (ret) {
-		HRETURN(ret);
+		MRETURN(ret);
 	}
-	HRETURN(count);
+	MRETURN(count);
 }
 
 const char *mtfs_bops_bit2str(__u32 bit)
@@ -301,7 +301,7 @@ int mtfs_device_proc_bops_emask_read(char *page, char **start, off_t off, int co
 	__u64 bit = 0;
 	int i = 0;
 	int first = 1;
-	HENTRY();
+	MENTRY();
 
 	*eof = 1;
 	for (i = 0; i < 32; i++) {
@@ -316,7 +316,7 @@ int mtfs_device_proc_bops_emask_read(char *page, char **start, off_t off, int co
 			continue;
 		}
 
-		HERROR("matched %d\n", i);
+		MERROR("matched %d\n", i);
 		if (first) {
 			ret += snprintf(ptr + ret, count - ret, "%s", token);
 			first = 0;
@@ -326,7 +326,7 @@ int mtfs_device_proc_bops_emask_read(char *page, char **start, off_t off, int co
 	}
 	ret += snprintf(ptr + ret, count - ret, "\n");
 
-	HRETURN(ret);
+	MRETURN(ret);
 }
 
 int mtfs_bops_str2bit(const char *str, size_t length, __u64 *mask)
@@ -335,10 +335,10 @@ int mtfs_bops_str2bit(const char *str, size_t length, __u64 *mask)
 	int i = 0;
 	int ret = 0;
 	__u64 bit = 0;;
-	HENTRY();
+	MENTRY();
 
-	HASSERT(str);
-	HASSERT(length > 0);
+	MASSERT(str);
+	MASSERT(length > 0);
 	for (i = 0; i < 32; i++) {
 		bit = 1 << i;
 
@@ -360,7 +360,7 @@ int mtfs_bops_str2bit(const char *str, size_t length, __u64 *mask)
 	}
 	ret = -EINVAL;
 out:
-	HRETURN(ret);
+	MRETURN(ret);
 }
 
 /*
@@ -378,7 +378,7 @@ int mtfs_bops_str2mask(const char *str, __u32 *mask)
 	int matched = 0;
 	__u64 mask_bit = 0;
 	int n = 0;
-	HENTRY();
+	MENTRY();
 
 	while (*str != 0) {
 		while (isspace(*str)) {
@@ -412,7 +412,7 @@ int mtfs_bops_str2mask(const char *str, __u32 *mask)
 
 		/* find token length */
 		for (n = 0; str[n] != 0 && !isspace(str[n]); n++);
-		HASSERT(n > 0);
+		MASSERT(n > 0);
 
 		/* match token */
 		ret = mtfs_bops_str2bit(str, n, &mask_bit);
@@ -436,7 +436,7 @@ int mtfs_bops_str2mask(const char *str, __u32 *mask)
 		*mask = 0;
 	}
 out:
-	HRETURN(ret);
+	MRETURN(ret);
 }
 
 static int mtfs_device_proc_bops_emask_write(struct file *file, const char *buffer,
@@ -445,7 +445,7 @@ static int mtfs_device_proc_bops_emask_write(struct file *file, const char *buff
 	int ret = 0;
 	char *kern_buf = NULL;
 	struct mtfs_device_branch *dev_branch = (struct mtfs_device_branch *)data;
-	HENTRY();
+	MENTRY();
 
 	MTFS_ALLOC(kern_buf, count + 1);
 	if (kern_buf == NULL) {
@@ -464,9 +464,9 @@ out_free_buf:
 	MTFS_FREE(kern_buf, count + 1);
 out:
 	if (ret) {
-		HRETURN(ret);
+		MRETURN(ret);
 	}
-	HRETURN(count);
+	MRETURN(count);
 }
 
 struct mtfs_proc_vars mtfs_proc_vars_device_branch[] = {
@@ -485,7 +485,7 @@ int mtfs_device_proc_register(struct mtfs_device *device)
 
 	MTFS_ALLOC(name, PATH_MAX);
 	if (name == NULL) {
-		HERROR("not enough memory\n");
+		MERROR("not enough memory\n");
 		ret = -ENOMEM;
 		goto out;
 	}
@@ -495,7 +495,7 @@ int mtfs_device_proc_register(struct mtfs_device *device)
 	device->proc_entry = mtfs_proc_register(name, mtfs_proc_device,
                                           mtfs_proc_vars_device, device);
 	if (unlikely(device->proc_entry == NULL)) {
-		HERROR("failed to register proc for device %s\n",
+		MERROR("failed to register proc for device %s\n",
 		       device->device_name);
 		ret = -ENOMEM;
 		goto out;
@@ -507,7 +507,7 @@ int mtfs_device_proc_register(struct mtfs_device *device)
 		dev_branch->proc_entry = mtfs_proc_register(name, device->proc_entry,
                                                 mtfs_proc_vars_device_branch, dev_branch);
 		if (unlikely(dev_branch->proc_entry == NULL)) {
-			HERROR("failed to register proc for %s of device %s\n",
+			MERROR("failed to register proc for %s of device %s\n",
 			       name, device->device_name);
 			bindex--;
 			ret = -ENOMEM;
@@ -532,7 +532,7 @@ void mtfs_device_proc_unregister(struct mtfs_device *device)
 {
 	mtfs_bindex_t bindex = 0;
 
-	HASSERT(device->proc_entry);
+	MASSERT(device->proc_entry);
 	for (bindex = 0; bindex < mtfs_dev2bnum(device); bindex++) {
 		mtfs_proc_remove(&mtfs_dev2bproc(device, bindex));
 	}
@@ -582,7 +582,7 @@ struct mtfs_device *mtfs_newdev(struct super_block *sb, struct mount_option *mou
 	const char *primary_type = NULL;
 	const char **secondary_types = NULL;
 	int secondary_number = 0;
-	HENTRY();
+	MENTRY();
 
 	MTFS_ALLOC(secondary_types, sizeof(*secondary_types) * bnum);
 	if (secondary_types == NULL) {
@@ -612,7 +612,7 @@ struct mtfs_device *mtfs_newdev(struct super_block *sb, struct mount_option *mou
 		}
 		lowerfs_ops = lowerfs_get_ops(hidden_sb->s_type->name);
 		if (IS_ERR(lowerfs_ops)) {
-			HERROR("lowerfs type [%s] not supported yet\n", hidden_sb->s_type->name);
+			MERROR("lowerfs type [%s] not supported yet\n", hidden_sb->s_type->name);
 			ret = PTR_ERR(lowerfs_ops);
 			goto out_put_module;
 		}
@@ -622,7 +622,7 @@ struct mtfs_device *mtfs_newdev(struct super_block *sb, struct mount_option *mou
 
 	newdev->junction = junction_get("HA", primary_type, secondary_types);
 	if (IS_ERR(newdev->junction)) {
-		HERROR("junction type [%s] not supported yet\n", primary_type); /* TODO: print secondary type */
+		MERROR("junction type [%s] not supported yet\n", primary_type); /* TODO: print secondary type */
 		ret = PTR_ERR(newdev->junction);
 		goto out_put_module;
 	}
@@ -660,7 +660,7 @@ out:
 		newdev = ERR_PTR(ret);
 	}
 
-	HRETURN(newdev);
+	MRETURN(newdev);
 }
 
 void mtfs_freedev(struct mtfs_device *device)
@@ -673,7 +673,7 @@ void mtfs_freedev(struct mtfs_device *device)
 	mtfs_unregister_device(device);
 	for (bindex = 0; bindex < bnum; bindex++) {
 		lowerfs_ops = mtfs_dev2bops(device, bindex);
-		HASSERT(lowerfs_ops);
+		MASSERT(lowerfs_ops);
 		lowerfs_put_ops(lowerfs_ops);
 	}
 	junction_put(device->junction);
@@ -711,7 +711,7 @@ int mtfs_device_branch_errno(struct mtfs_device *device, mtfs_bindex_t bindex, _
 
 	if ((emask & dev_branch->debug.bops_emask) != 0) {
 		if (dev_branch->debug.active) {
-			HASSERT(dev_branch->debug.errno < 0);
+			MASSERT(dev_branch->debug.errno < 0);
 			errno = dev_branch->debug.errno;
 		}
 		return errno;

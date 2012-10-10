@@ -11,9 +11,9 @@
 
 static void mtfs_hideen_put_super(struct super_block *sb)
 {
-	HENTRY();
+	MENTRY();
 
-	_HRETURN();
+	_MRETURN();
 }
 
 static struct super_operations mtfs_hidden_sops =
@@ -26,7 +26,7 @@ static int mtfs_hideen_read_super(struct super_block *sb, void *input, int silen
 {
 	int ret = 0;
 	struct inode *root = NULL;
-	HENTRY();
+	MENTRY();
 
 	sb->s_blocksize = 4096;
 	sb->s_blocksize_bits = 12;
@@ -37,7 +37,7 @@ static int mtfs_hideen_read_super(struct super_block *sb, void *input, int silen
 
 	root = new_inode(sb);
 	if (root == NULL) {
-		HERROR("Can't make root inode\n");
+		MERROR("Can't make root inode\n");
 		ret = -ENOMEM;
 		goto out;
 	}
@@ -49,13 +49,13 @@ static int mtfs_hideen_read_super(struct super_block *sb, void *input, int silen
 
 	sb->s_root = d_alloc_root(root);
 	if (sb->s_root == NULL) {
-		HERROR("Can't make root dentry\n");
+		MERROR("Can't make root dentry\n");
 		iput(root);
 		ret = -ENOMEM;
 		goto out;
 	}
 out:
-	HRETURN(ret);
+	MRETURN(ret);
 }
 
 static int mtfs_hideen_get_sb(struct file_system_type *fs_type,

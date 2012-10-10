@@ -22,8 +22,8 @@ static inline int mount_option_init(struct mount_option *mount_option, int bnum)
 {
 	int ret = 0;
 
-	HASSERT(bnum > 0);
-	HASSERT(mount_option);
+	MASSERT(bnum > 0);
+	MASSERT(mount_option);
 
 	mount_option->bnum = bnum;
 
@@ -41,7 +41,7 @@ static inline int mount_option_fini(struct mount_option *option)
 	int ret = 0;
 	int i = 0;
 	
-	HASSERT(option);
+	MASSERT(option);
 
 	if (option->branch) {
 		for(i = 0; i < option->bnum; i++) {
@@ -68,38 +68,38 @@ static inline struct mount_option *mount_option_alloc(void)
 	if (option == NULL) {
 		goto out;
 	}
-	HASSERT(option);
-	HASSERT(option->bnum == 0);
+	MASSERT(option);
+	MASSERT(option->bnum == 0);
 out:
 	return option;
 }
 
 static inline void mount_option_free(struct mount_option *option)
 {
-	HASSERT(option);
+	MASSERT(option);
 	mount_option_fini(option);
 	MTFS_FREE_PTR(option);
-	HASSERT(!option);
+	MASSERT(!option);
 }
 
 static inline void mount_option_dump(struct mount_option *option)
 {
 	int i = 0;
-	HASSERT(option);
-	HASSERT(option->branch);
-	HASSERT(option->bnum > 0);
+	MASSERT(option);
+	MASSERT(option->branch);
+	MASSERT(option->bnum > 0);
 	
-	HPRINT("bnum = %d\n", option->bnum);
+	MPRINT("bnum = %d\n", option->bnum);
 	for(i = 0; i < option->bnum; i++) {
-		HASSERT(option->branch[i].path);
-		HPRINT("%s", option->branch[i].path);
+		MASSERT(option->branch[i].path);
+		MPRINT("%s", option->branch[i].path);
 		if (i < option->bnum - 1) {
-			HPRINT(":");
+			MPRINT(":");
 		}
 	}
-	HPRINT("\n");
-	HPRINT("subject = %s\n", option->mo_subject);
-	HPRINT("\n");
+	MPRINT("\n");
+	MPRINT("subject = %s\n", option->mo_subject);
+	MPRINT("\n");
 }
 
 static inline void append_dir(char *dirs, const char *one)

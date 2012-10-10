@@ -222,7 +222,7 @@ static ssize_t mtfs_proc_fops_read(struct file *f, char __user *buf, size_t size
 		goto out;
 
 	/* For proc read, the read count must be less than PAGE_SIZE */
-	HASSERT(eof == 1);
+	MASSERT(eof == 1);
 
 	if (start == NULL) {
 		rc -= *ppos;
@@ -318,7 +318,7 @@ int mtfs_proc_add_vars(struct proc_dir_entry *root, struct mtfs_proc_vars *list,
 			if (*cur =='\0') /* skip double/trailing "/" */
 				continue;
 			proc = mtfs_proc_search(cur_root, cur);
-			HDEBUG("cur_root=%s, cur=%s, next=%s, (%s)\n",
+			MDEBUG("cur_root=%s, cur=%s, next=%s, (%s)\n",
 			       cur_root->name, cur, next,
 			       (proc ? "exists" : "new"));
 			if (next != NULL) {
@@ -342,7 +342,7 @@ int mtfs_proc_add_vars(struct proc_dir_entry *root, struct mtfs_proc_vars *list,
 			MTFS_FREE(pathcopy, pathsize);
 
 		if (cur_root == NULL || proc == NULL) {
-			HERROR("No memory to create /proc entry %s",
+			MERROR("No memory to create /proc entry %s",
 			       list->name);
 			return -ENOMEM;
 		}
@@ -371,7 +371,7 @@ void mtfs_proc_remove(struct proc_dir_entry **rooth)
 	*rooth = NULL;
 
 	parent = root->parent;
-	HASSERT(parent != NULL);
+	MASSERT(parent != NULL);
 	down_write(&mtfs_proc_lock); /* search vs remove race */
 
 	while (1) {
@@ -385,7 +385,7 @@ void mtfs_proc_remove(struct proc_dir_entry **rooth)
 		 * Memory corruption once caused this to fail, and
 		 * without this LASSERT we would loop here forever.
 		 */
-		HASSERT(strlen(rm_entry->name) == rm_entry->namelen);
+		MASSERT(strlen(rm_entry->name) == rm_entry->namelen);
 #ifdef HAVE_PROMTFS_USERS
 		/*
 		 * if promtfs uses user count to synchronize deletion of
@@ -425,7 +425,7 @@ struct proc_dir_entry *mtfs_proc_register(const char *name,
 
 	newchild = mtfs_proc_search(parent, name);
 	if (newchild != NULL) {
-		HERROR("Attempting to register %s more than once \n",
+		MERROR("Attempting to register %s more than once \n",
 		       name);
 		return ERR_PTR(-EALREADY);
 	}

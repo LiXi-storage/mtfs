@@ -29,7 +29,7 @@ static inline struct mtfs_inode_info *mtfs_ii_alloc(void)
 static inline void mtfs_ii_free(struct mtfs_inode_info *i_info)
 {
 	MTFS_SLAB_FREE_PTR(i_info, mtfs_inode_info_cache);
-	HASSERT(i_info == NULL);
+	MASSERT(i_info == NULL);
 }
 
 /*

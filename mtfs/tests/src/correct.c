@@ -19,7 +19,7 @@ static inline block_t *alloc_block(int block_size)
 {
 	block_t *block = NULL;
 	
-	HASSERT(block_size > 0);
+	MASSERT(block_size > 0);
 	
 	MTFS_ALLOC_PTR(block);
 	if (block == NULL) {
@@ -70,7 +70,7 @@ int random_fill_block(block_t *block)
 			fill_char = 1;
 			fill_max = 0xFF;
 		}
-		//HASSERT(fill_char);
+		//MASSERT(fill_char);
 	}
 	
 	fill_time = char_number / fill_char;
@@ -95,30 +95,30 @@ int dump_block(block_t *block)
 {
 	int i = 0;
 	
-	HPRINT("block_size: %lu\n", block->block_size);
+	MPRINT("block_size: %lu\n", block->block_size);
 	for(i = 0; i < block->block_size; i++) {
-		HPRINT("%02X", (uint8_t)(block->data[i]));
+		MPRINT("%02X", (uint8_t)(block->data[i]));
 	}
-	HPRINT("\n");
+	MPRINT("\n");
 	return 0;
 }
 
 int cmp_block(block_t *s1, block_t *s2)
 {
-	HASSERT(s1->block_size == s2->block_size);
+	MASSERT(s1->block_size == s2->block_size);
 	
 	return memcmp(s1->data, s2->data, s1->block_size);
 }
 
 size_t random_get_block_size()
 {
-	HASSERT(MAX_BLOCK_SIZE >= 1);
+	MASSERT(MAX_BLOCK_SIZE >= 1);
 	return mtfs_rand_range(1, MAX_BLOCK_SIZE);
 }
 
 size_t random_get_lseek_offset()
 {
-	HASSERT(MAX_LSEEK_OFFSET >= 1);
+	MASSERT(MAX_LSEEK_OFFSET >= 1);
 	return mtfs_rand_range(0, MAX_LSEEK_OFFSET);
 }
 
@@ -138,13 +138,13 @@ void *rw_test_init(char *file_path)
 	
 	MTFS_ALLOC_PTR(rw_info);
 	if (rw_info == NULL) {
-		HERROR("Not enough memory\n");
+		MERROR("Not enough memory\n");
 		goto out;
 	}
 	
 	rw_info->fd = open(file_path, O_CREAT | O_RDWR, 0600);
 	if (rw_info->fd < 0) {
-		HERROR("Failed to open file %s\n", file_path);
+		MERROR("Failed to open file %s\n", file_path);
 		goto free_info;
 	}
 	
@@ -164,33 +164,33 @@ int rw_test_run(block_t *orgin_block, block_t *dest_block, rw_test_info_t *rw_in
 	size_t block_size = orgin_block->block_size;
 	off_t offset = 0;
 
-	HASSERT(block_size == dest_block->block_size);
+	MASSERT(block_size == dest_block->block_size);
 	
 	/* lseek to a random place */
 	offset = lseek(rw_info->fd, random_get_lseek_offset(), SEEK_SET);
 	if (offset < 0) {
-		HERROR("Failed to lseek file %s: rc = %d\n", rw_info->file_path, errno);
+		MERROR("Failed to lseek file %s: rc = %d\n", rw_info->file_path, errno);
 		ret = -1;
 		goto out;
 	}
 
 	size = write(rw_info->fd, orgin_block->data, block_size);
 	if (size != block_size) {
-		HERROR("Failed to write file %s: writed %ld expect %ld\n", rw_info->file_path, size, block_size);
+		MERROR("Failed to write file %s: writed %ld expect %ld\n", rw_info->file_path, size, block_size);
 		ret = -1;
 		goto out;
 	}
 
 	offset = lseek(rw_info->fd, 0 - block_size, SEEK_CUR);
 	if (offset < 0) {
-		HERROR("Failed to lseek file %s: rc = %d\n", rw_info->file_path, errno);
+		MERROR("Failed to lseek file %s: rc = %d\n", rw_info->file_path, errno);
 		ret = -1;
 		goto out;
 	}
 
 	size = read(rw_info->fd, dest_block->data, block_size);
 	if (size != block_size) {
-		HERROR("Failed to read file %s: read %ld expect %ld\n", rw_info->file_path, size, block_size);
+		MERROR("Failed to read file %s: read %ld expect %ld\n", rw_info->file_path, size, block_size);
 		ret = -1;
 		goto out;
 	}
@@ -237,7 +237,7 @@ int main(int argc, char *argv[])
 			if (i && end != NULL && *end == '\0') {
 				block_size = i;
 			} else {
-				HERROR("bad block size '%s'\n", optarg);
+				MERROR("bad block size '%s'\n", optarg);
 				usage(argv[0]);
 				return 1;
 			}
@@ -247,7 +247,7 @@ int main(int argc, char *argv[])
 			if (i && end != NULL && *end == '\0') {
 				loop_count = i;
 			} else {
-				HERROR("bad loop count '%s'\n", optarg);
+				MERROR("bad loop count '%s'\n", optarg);
 				usage(argv[0]);
 				return 1;
 			}
@@ -267,7 +267,7 @@ int main(int argc, char *argv[])
 
 	test_info = rw_test_init(argv[optind]);
 	if (test_info == NULL) {
-		HERROR("Failed to init test\n");
+		MERROR("Failed to init test\n");
 		goto out;
 	}	
 
@@ -278,14 +278,14 @@ int main(int argc, char *argv[])
 
 	orgin_block = alloc_block(block_size);
 	if (orgin_block == NULL) {
-		HERROR("Not enough memory\n");
+		MERROR("Not enough memory\n");
 		goto finit_info;
 	}
 	random_fill_block(orgin_block);
 
 	dest_block = alloc_block(block_size);
 	if (dest_block == NULL) {
-		HERROR("Not enough memory\n");
+		MERROR("Not enough memory\n");
 		goto free_orgin_block;
 	}
 
@@ -293,13 +293,13 @@ int main(int argc, char *argv[])
 	{
 		ret = rw_test_run(orgin_block, dest_block, test_info);
 		if (ret) {
-			HERROR("Fail to run test %d\n", i);
+			MERROR("Fail to run test %d\n", i);
 			break;
 		}
 
 		ret = cmp_block(dest_block, orgin_block);
 		if (ret) {
-			HERROR("Data diff!\n");
+			MERROR("Data diff!\n");
 			break;
 		}
 	}

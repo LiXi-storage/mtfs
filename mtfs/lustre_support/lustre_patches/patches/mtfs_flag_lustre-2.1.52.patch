@@ -130,10 +130,10 @@ Index: lustre-2.1.52/lustre/llite/llite_lib.c
 +                struct mtfs_ll_inode_info *mtfs_info = &(lli->lli_mtfs_info);
 +
 +                if (unlikely(!mtfs_flag_is_valid(mtfs_flag))) {
-+                        HERROR("mtfs_flag 0x%x is not valid\n", mtfs_flag);
++                        MERROR("mtfs_flag 0x%x is not valid\n", mtfs_flag);
 +                }
 +                mtfs_info->mtfs_flag = mtfs_flag;
-+                HDEBUG("updating inode's mtfs_flag to 0x%x\n", mtfs_flag);
++                MDEBUG("updating inode's mtfs_flag to 0x%x\n", mtfs_flag);
 +        }
 +#endif /* !DISABLE_MTFS_SUPPORT */
  }
@@ -167,7 +167,7 @@ Index: lustre-2.1.52/lustre/llite/llite_lib.c
 +        rc = md_getattr(sbi->ll_md_exp, op_data, &req);
 +        ll_finish_md_op_data(op_data);
 +        if (rc) {
-+                HERROR("failed to get flag of inode %lu: %d\n",
++                MERROR("failed to get flag of inode %lu: %d\n",
 +                       inode->i_ino, rc);
 +                goto out;
 +        }
@@ -178,13 +178,13 @@ Index: lustre-2.1.52/lustre/llite/llite_lib.c
 +        if (body->valid & OBD_MD_FLMTFSFLAG) {
 +                flag = body->MTFS_MDT_BODY_FLAG;
 +                if (unlikely(!mtfs_flag_is_valid(flag))) {
-+                        HERROR("get an error flag of inode %lu\n",
++                        MERROR("get an error flag of inode %lu\n",
 +                               inode->i_ino);
 +                        rc = -EPERM;
 +                        goto out;
 +                }
 +        } else {
-+                HERROR("failed to get flag of inode %lu: no data returned\n",
++                MERROR("failed to get flag of inode %lu: no data returned\n",
 +                       inode->i_ino);
 +                rc = -ENODATA;
 +                goto out;
@@ -209,7 +209,7 @@ Index: lustre-2.1.52/lustre/llite/llite_lib.c
 +        struct md_op_data *op_data = NULL;
 +        struct md_open_data *mod = NULL;
 +        int rc = 0, rc1 = 0;
-+        HENTRY();
++        MENTRY();
 +
 +        if (unlikely(!mtfs_flag_is_valid(mtfs_flag))) {
 +                rc = -EPERM;
@@ -244,7 +244,7 @@ Index: lustre-2.1.52/lustre/llite/llite_lib.c
 +                }
 +                ll_finish_md_op_data(op_data);
 +        }
-+        HRETURN(rc);
++        MRETURN(rc);
 +}
 +EXPORT_SYMBOL(mtfs_ll_inode_set_flag);
 +#endif /* !DISABLE_MTFS_SUPPORT */
@@ -285,7 +285,7 @@ Index: lustre-2.1.52/lustre/mdt/mdt_handler.c
                         PFID(fid), (unsigned long long)b->size);
 +#ifndef DISABLE_MTFS_SUPPORT
 +        if (attr->la_mtfs_disk_flag != 0) {
-+                HASSERT(mtfs_disk_flag_is_valid(attr->la_mtfs_disk_flag));
++                MASSERT(mtfs_disk_flag_is_valid(attr->la_mtfs_disk_flag));
 +                b->MTFS_MDT_BODY_FLAG = attr->la_mtfs_disk_flag & MTFS_FLAG_DISK_MASK;
 +                b->valid |= OBD_MD_FLMTFSFLAG;
 +        }
@@ -299,7 +299,7 @@ Index: lustre-2.1.52/lustre/mdt/mdt_handler.c
  
 +#ifndef DISABLE_MTFS_SUPPORT
 +        if (reqbody->valid & OBD_MD_FLMTFSFLAG) {
-+                HDEBUG("getting flag\n");
++                MDEBUG("getting flag\n");
 +                ma->ma_need |= MA_MTFS;
 +        }
 +#endif /* DISABLE_MTFS_SUPPORT */
@@ -325,21 +325,21 @@ Index: lustre-2.1.52/lustre/mdd/mdd_object.c
 +        int rc = 0;
 +        __u32 disk_flag = 0;
 +        int flag_size = sizeof(disk_flag);
-+        HENTRY();
++        MENTRY();
 +
 +        rc = mdd_get_md(env, mdd_obj, &disk_flag, &flag_size,
 +                        XATTR_NAME_MTFS_FLAG);
 +        if (unlikely(rc < 0)) {
-+                HERROR("failed to get mtfs flag, rc = %d, "
++                MERROR("failed to get mtfs flag, rc = %d, "
 +                "flag_size = %d\n", rc, flag_size);
 +                ma->ma_attr.la_mtfs_disk_flag = 0;
 +                goto out;
 +        } else if (rc == 0) {
-+        	HDEBUG("flag is not set\n");
++        	MDEBUG("flag is not set\n");
 +        	ma->ma_attr.la_mtfs_disk_flag = MTFS_FLAG_DISK_SYMBOL;
 +        	goto out;
 +        } else if (flag_size != sizeof(disk_flag)) {
-+        	HDEBUG("got an invalid size of disk flag,"
++        	MDEBUG("got an invalid size of disk flag,"
 +        	       " expect %ld, got %d\n",
 +        	       sizeof(disk_flag), flag_size);
 +        	ma->ma_attr.la_mtfs_disk_flag = 0;
@@ -347,7 +347,7 @@ Index: lustre-2.1.52/lustre/mdd/mdd_object.c
 +        }
 +
 +        if (unlikely(!mtfs_disk_flag_is_valid(disk_flag))) {
-+                HERROR("got an invalid disk flag\n");
++                MERROR("got an invalid disk flag\n");
 +                ma->ma_attr.la_mtfs_disk_flag = 0;
 +                goto out;
 +        }
@@ -355,7 +355,7 @@ Index: lustre-2.1.52/lustre/mdd/mdd_object.c
 +        ma->ma_attr.la_mtfs_disk_flag = disk_flag;
 +out:
 +        rc = 0;
-+        HRETURN(rc);
++        MRETURN(rc);
 +}
 +#endif /* !DISABLE_MTFS_SUPPORT */
 +
@@ -402,12 +402,12 @@ Index: lustre-2.1.52/lustre/mdd/mdd_object.c
 +        int             rc = 0;
 +        struct lu_buf  *buf = NULL;
 +        struct lu_attr *la = &((struct md_attr *)ma)->ma_attr;
-+        HENTRY();
++        MENTRY();
 +
-+        HASSERT(mtfs_disk_flag_is_valid(la->la_mtfs_disk_flag));
++        MASSERT(mtfs_disk_flag_is_valid(la->la_mtfs_disk_flag));
 +        buf = mdd_buf_get(env, &la->la_mtfs_disk_flag, sizeof(la->la_mtfs_disk_flag));
 +        rc = mdd_xattr_set_txn(env, mdd_obj, buf, XATTR_NAME_MTFS_FLAG, 0, handle);
-+        HRETURN(rc);
++        MRETURN(rc);
 +}
 +#endif /* !DISABLE_MTFS_SUPPORT */
 +
@@ -501,7 +501,7 @@ Index: lustre-2.1.52/lustre/mdt/mdt_lib.c
 +#ifndef DISABLE_MTFS_SUPPORT
 +        if (rec->sa_valid & MTFS_MDT_SET_FLAG) {
 +                CERROR("setting mtfs flag %u\n", rec->sa_mtfs_flag);
-+                HASSERT(mtfs_flag_is_valid(rec->sa_mtfs_flag));
++                MASSERT(mtfs_flag_is_valid(rec->sa_mtfs_flag));
 +                la->la_mtfs_disk_flag = rec->sa_mtfs_flag | MTFS_FLAG_DISK_SYMBOL;
 +                ma->ma_valid |= MA_MTFS;
 +        }

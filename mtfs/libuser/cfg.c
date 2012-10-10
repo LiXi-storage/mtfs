@@ -30,7 +30,7 @@ int cfg_load(const char *configfname, int _lu) {
 
 	fd = fopen(configfname, "r");
 	if (fd == NULL) {
-		HERROR("cannot load config file: %s\n",configfname);
+		MERROR("cannot load config file: %s\n",configfname);
 		ret = -1;
 		goto err;
 	}
@@ -106,7 +106,7 @@ type cfg_get##fname(const char *name,type def) { \
 		} \
 	} \
 	if (logundefined) { \
-		HDEBUG("config: using default value for option '%s' - '" format "'\n",name,def); \
+		MDEBUG("config: using default value for option '%s' - '" format "'\n",name,def); \
 	} \
 	return COPY_##convname(def); \
 }

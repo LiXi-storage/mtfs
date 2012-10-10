@@ -34,7 +34,7 @@ static struct mtfs_junction *_junction_search(const char *subject,
 	struct list_head *p = NULL;
 	const char **tmp_type = secondary_types;
 
-	HASSERT(primary_type);
+	MASSERT(primary_type);
 	list_for_each(p, &mtfs_junctions) {
 		junction = list_entry(p, struct mtfs_junction, junction_list);
 		if (strcmp(junction->mj_subject, subject) == 0 &&
@@ -89,20 +89,20 @@ static int _junction_register(struct mtfs_junction *junction)
 {
 	struct mtfs_junction *found = NULL;
 	int ret = 0;
-	HENTRY();
+	MENTRY();
 
 	ret = junction_check(junction);
 	if (ret){
-		HERROR("junction is not valid\n");
+		MERROR("junction is not valid\n");
 		goto out;
 	}
 
 	if ((found = _junction_search(junction->mj_subject, junction->primary_type, junction->secondary_types))) {
 		if (found != junction) {
-			HERROR("try to register multiple operations for type %s\n",
+			MERROR("try to register multiple operations for type %s\n",
 			        junction->junction_name);
 		} else {
-			HERROR("operation of type %s has already been registered\n",
+			MERROR("operation of type %s has already been registered\n",
 			        junction->junction_name);
 		}
 		ret = -EALREADY;
@@ -111,7 +111,7 @@ static int _junction_register(struct mtfs_junction *junction)
 	}
 
 out:
-	HRETURN(ret);
+	MRETURN(ret);
 }
 
 int junction_register(struct mtfs_junction *junction)
@@ -154,12 +154,12 @@ struct mtfs_junction *junction_get(const char *subject,
 {
 	struct mtfs_junction *junction = NULL;
 	int ret = 0;
-	HENTRY();
+	MENTRY();
 
 	junction = junction_search(subject, primary_type, secondary_types);
 	if (junction == NULL) {
 		ret = -EOPNOTSUPP;
-		HERROR("failed to find proper junction for type '%s'\n", primary_type); /* TODO: secondary*/
+		MERROR("failed to find proper junction for type '%s'\n", primary_type); /* TODO: secondary*/
 		goto out;
 	}
 
@@ -176,7 +176,7 @@ out:
 	if (ret) {
 		junction = ERR_PTR(ret);
 	}
-	HRETURN(junction);
+	MRETURN(junction);
 }
 
 void junction_put(struct mtfs_junction *junction)

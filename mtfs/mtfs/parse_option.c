@@ -31,8 +31,8 @@ int parse_dir_option(char *dir_option, struct mount_option *mount_option)
 	int branch_number = 0;
 	int tmp_branch_number = 0;
 
-	HASSERT(dir_option);
-	HASSERT(mount_option);
+	MASSERT(dir_option);
+	MASSERT(mount_option);
 	
 	/* We don't want to go off the end of our dir arguments later on. */
 	for (end = start; *end; end++) ;
@@ -49,7 +49,7 @@ int parse_dir_option(char *dir_option, struct mount_option *mount_option)
 	} 
 
 	if (end <= start || *start == '\0') {
-		HERROR("dir not given\n");
+		MERROR("dir not given\n");
 		ret = -EINVAL;
 		goto out;
 	}
@@ -74,7 +74,7 @@ int parse_dir_option(char *dir_option, struct mount_option *mount_option)
 		mount_option->branch[tmp_branch_number].length = strlen(start) + 1;
 		MTFS_ALLOC(mount_option->branch[tmp_branch_number].path, mount_option->branch[tmp_branch_number].length);
 		if (mount_option->branch[tmp_branch_number].path == NULL) {
-			HERROR("unable to strdup dir name [%s] when parsing [%d]th dir", start, tmp_branch_number);
+			MERROR("unable to strdup dir name [%s] when parsing [%d]th dir", start, tmp_branch_number);
 			tmp_branch_number--;
 			goto free_array;
 		}
@@ -83,12 +83,12 @@ int parse_dir_option(char *dir_option, struct mount_option *mount_option)
 		tmp_branch_number++;
 		start = tmp + 1;
 	}
-	HASSERT(tmp_branch_number == branch_number);
+	MASSERT(tmp_branch_number == branch_number);
 	goto out;
 free_array:
-	HASSERT(mount_option->branch);
+	MASSERT(mount_option->branch);
 	for(; tmp_branch_number >= 0; tmp_branch_number++) {
-		HASSERT(mount_option->branch[tmp_branch_number].path);
+		MASSERT(mount_option->branch[tmp_branch_number].path);
 		MTFS_FREE(mount_option->branch[tmp_branch_number].path, mount_option->branch[tmp_branch_number].length);
 	}
 	MTFS_FREE(mount_option->branch, sizeof(*mount_option->branch) * mount_option->bnum);
@@ -105,9 +105,9 @@ int mtfs_parse_options(char *input, struct mount_option *mount_option)
 	substring_t args[MAX_OPT_ARGS];
 	int dirs_is_set = 0;
 
-	HASSERT(mount_option);
+	MASSERT(mount_option);
 	if (!input) {
-		HERROR("Hidden dirs not seted\n");
+		MERROR("Hidden dirs not seted\n");
 		ret = -EINVAL;
 		goto out;
 	}
@@ -120,13 +120,13 @@ int mtfs_parse_options(char *input, struct mount_option *mount_option)
 		switch (token) {
 		case opt_subject:
 			if (mount_option->mo_subject) {
-				HERROR("unexpected multiple subject options\n");
+				MERROR("unexpected multiple subject options\n");
 				ret = -EINVAL;
 				goto error;
 			}
 			p = match_strdup(&args[0]);
 			if (p == NULL) {
-				HERROR("not enough memory\n");
+				MERROR("not enough memory\n");
 				ret = -ENOMEM;
 				goto error;
 			}
@@ -138,20 +138,20 @@ int mtfs_parse_options(char *input, struct mount_option *mount_option)
 			free(p);
 #endif
 			if (mount_option->mo_subject == NULL) {
-				HERROR("not enough memory\n");
+				MERROR("not enough memory\n");
 				ret = -ENOMEM;
 				goto error;
 			}
 			break;
 		case opt_dirs:
 			if (dirs_is_set) {
-				HERROR("unexpected multiple dir options\n");
+				MERROR("unexpected multiple dir options\n");
 				ret = -EINVAL;
 				goto error;
 			}
 			p = match_strdup(&args[0]);
 			if (p == NULL) {
-				HERROR("not enough memory\n");
+				MERROR("not enough memory\n");
 				ret = -ENOMEM;
 				goto error;
 			}
@@ -168,14 +168,14 @@ int mtfs_parse_options(char *input, struct mount_option *mount_option)
 			dirs_is_set = 1;
 			break;
 		default:
-			HERROR("unexpected option\n");
+			MERROR("unexpected option\n");
 			ret = -EINVAL;
 			goto error;
 		}
 	}
 	
 	if (!dirs_is_set) {
-		HERROR("lower directories are not set yet\n");
+		MERROR("lower directories are not set yet\n");
 		ret = -EINVAL;
 		goto error;
 	}

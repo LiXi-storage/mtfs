@@ -50,7 +50,7 @@ static inline int mtfs_oplist_setbranch(struct mtfs_operation_list *list,
                           int is_successful,
                           mtfs_operation_result_t result)
 {
-	HASSERT(bindex >= 0 && bindex < list->bnum);
+	MASSERT(bindex >= 0 && bindex < list->bnum);
 	list->op_binfo[bindex].valid = 1;
 	list->op_binfo[bindex].is_suceessful = is_successful;
 	list->op_binfo[bindex].result = result;

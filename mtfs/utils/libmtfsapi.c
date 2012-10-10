@@ -20,13 +20,13 @@ void mtfs_dump_state(struct mtfs_user_flag *state)
 {
 	mtfs_bindex_t bindex = 0;
 
-	HASSERT(state);
+	MASSERT(state);
 
-	HPRINT("bnum: %d\n", state->bnum);
+	MPRINT("bnum: %d\n", state->bnum);
 	/* Besure to make enough space for data */
-	HPRINT(SPACE4 "bindex" SPACE4  SPACE4 "flag\n");
+	MPRINT(SPACE4 "bindex" SPACE4  SPACE4 "flag\n");
 	for(bindex = 0; bindex < state->bnum; bindex++) {
-		HPRINT(SPACE4 "%6u" SPACE4 "%#8x\n", bindex, state->state[bindex].flag);
+		MPRINT(SPACE4 "%6u" SPACE4 "%#8x\n", bindex, state->state[bindex].flag);
 	}
 	return;
 }
@@ -40,7 +40,7 @@ int mtfs_api_getstate(char *path, struct mtfs_param *param)
 	struct mtfs_user_flag *state = NULL;
 
 	if (len > PATH_MAX) {
-		HERROR("Path name '%s' is too long\n", path);
+		MERROR("Path name '%s' is too long\n", path);
 		ret = -EINVAL;
 		goto out;
 	}
@@ -54,20 +54,20 @@ int mtfs_api_getstate(char *path, struct mtfs_param *param)
 
 	fd = open(path, O_RDONLY);
 	if (fd < 0) {
-		HERROR("Fail to open '%s': %s\n", path, strerror(errno));
+		MERROR("Fail to open '%s': %s\n", path, strerror(errno));
 		ret = errno;
 		goto out_free_state;
 	}
 	
 	ret = ioctl(fd, MTFS_IOCTL_GET_FLAG, (void *)state);
 	if (ret) {
-		HERROR("Fail to getstate '%s'\n", path);
+		MERROR("Fail to getstate '%s'\n", path);
 		goto out_close_file;
 	}
 
-	HPRINT("%s\n", path);
+	MPRINT("%s\n", path);
 	mtfs_dump_state(state);
-	HPRINT("\n");
+	MPRINT("\n");
 out_close_file:
 	close(fd);
 out_free_state:
@@ -86,13 +86,13 @@ int mtfs_api_setraid(char *path, raid_type_t raid_type, struct mtfs_param *param
 	mtfs_bindex_t bindex = 0;
 
 	if (len > PATH_MAX) {
-		HERROR("path name '%s' is too long\n", path);
+		MERROR("path name '%s' is too long\n", path);
 		ret = -EINVAL;
 		goto out;
 	}
 	
 	if (!raid_type_is_valid(raid_type)) {
-		HERROR("raid pattern '%d' is not valid\n", raid_type);
+		MERROR("raid pattern '%d' is not valid\n", raid_type);
 		ret = -EINVAL;
 		goto out;
 	}
@@ -106,19 +106,19 @@ int mtfs_api_setraid(char *path, raid_type_t raid_type, struct mtfs_param *param
 	
 	fd = open(path, O_RDONLY);
 	if (fd < 0) {
-		HERROR("fail to open '%s': %s\n", path, strerror(errno));
+		MERROR("fail to open '%s': %s\n", path, strerror(errno));
 		ret = errno;
 		goto free_state;
 	}
 
 	ret = ioctl(fd, MTFS_IOCTL_GET_FLAG, (void *)state);
 	if (ret) {
-		HERROR("fail to getstate '%s', ret = %d\n", path, ret);
+		MERROR("fail to getstate '%s', ret = %d\n", path, ret);
 		goto free_state;
 	}
 	
-	HPRINT("%s\n", path);
-	HPRINT("Before set:\n");
+	MPRINT("%s\n", path);
+	MPRINT("Before set:\n");
 	mtfs_dump_state(state);
 
 	for (bindex = 0; bindex < state->bnum; bindex++) {
@@ -129,13 +129,13 @@ int mtfs_api_setraid(char *path, raid_type_t raid_type, struct mtfs_param *param
 
 	ret = ioctl(fd, MTFS_IOCTL_SET_FLAG, (void *)state);
 	if (ret) {
-		HERROR("fail to setstate '%s', ret = %d\n", path, ret);
+		MERROR("fail to setstate '%s', ret = %d\n", path, ret);
 		goto free_state;
 	}	
 	
-	HPRINT("After set:\n");
+	MPRINT("After set:\n");
 	mtfs_dump_state(state);	
-	HPRINT("\n");
+	MPRINT("\n");
 free_state:
 	MTFS_FREE(state, state_size);
 out:
@@ -151,7 +151,7 @@ int mtfs_api_setbranch(const char *path, mtfs_bindex_t bindex, struct mtfs_branc
 	struct mtfs_user_flag *state = NULL;
 
 	if (len > PATH_MAX) {
-		HERROR("path name '%s' is too long\n", path);
+		MERROR("path name '%s' is too long\n", path);
 		ret = -EINVAL;
 		goto out;
 	}
@@ -165,24 +165,24 @@ int mtfs_api_setbranch(const char *path, mtfs_bindex_t bindex, struct mtfs_branc
 	
 	fd = open(path, O_RDONLY);
 	if (fd < 0) {
-		HERROR("fail to open '%s': %s\n", path, strerror(errno));
+		MERROR("fail to open '%s': %s\n", path, strerror(errno));
 		ret = errno;
 		goto free_state;
 	}
 
 	ret = ioctl(fd, MTFS_IOCTL_GET_FLAG, (void *)state);
 	if (ret) {
-		HERROR("fail to setbranch %d of '%s', ret = %d\n",
+		MERROR("fail to setbranch %d of '%s', ret = %d\n",
 		       bindex, path, ret);
 		goto free_state;
 	}
 
-	HPRINT("%s\n", path);
-	HPRINT("Before set:\n");
+	MPRINT("%s\n", path);
+	MPRINT("Before set:\n");
 	mtfs_dump_state(state);
 
 	if (bindex >= state->bnum) {
-		HERROR("bindex %d is illegal, bnum of %s is %d\n",
+		MERROR("bindex %d is illegal, bnum of %s is %d\n",
 		       bindex, path, state->bnum);
 		ret = -EINVAL;
 		goto free_state;
@@ -194,7 +194,7 @@ int mtfs_api_setbranch(const char *path, mtfs_bindex_t bindex, struct mtfs_branc
 		} else if (valid->data_valid == MTFS_BSTATE_INVALID) {
 			state->state[bindex].flag |= MTFS_FLAG_DATABAD;
 		} else {
-			HERROR("Invalid data_valid\n");
+			MERROR("Invalid data_valid\n");
 			ret = -EINVAL;
 			goto free_state;
 		}
@@ -207,7 +207,7 @@ int mtfs_api_setbranch(const char *path, mtfs_bindex_t bindex, struct mtfs_branc
 		} else if (valid->attr_valid == MTFS_BSTATE_INVALID) {
 			state->state[bindex].flag |= MTFS_FLAG_DATABAD;
 		} else {
-			HERROR("Invalid data_valid\n");
+			MERROR("Invalid data_valid\n");
 			ret = -EINVAL;
 			goto free_state;
 		}
@@ -220,7 +220,7 @@ int mtfs_api_setbranch(const char *path, mtfs_bindex_t bindex, struct mtfs_branc
 		} else if (valid->xattr_valid == MTFS_BSTATE_INVALID) {
 			state->state[bindex].flag |= MTFS_FLAG_DATABAD;
 		} else {
-			HERROR("Invalid data_valid\n");
+			MERROR("Invalid data_valid\n");
 			ret = -EINVAL;
 			goto free_state;
 		}
@@ -229,13 +229,13 @@ int mtfs_api_setbranch(const char *path, mtfs_bindex_t bindex, struct mtfs_branc
         state->state[bindex].flag |= MTFS_FLAG_SETED;
 	ret = ioctl(fd, MTFS_IOCTL_SET_FLAG, (void *)state);
 	if (ret) {
-		HERROR("fail to setstate '%s', ret = %d\n", path, ret);
+		MERROR("fail to setstate '%s', ret = %d\n", path, ret);
 		goto free_state;
 	}	
 	
-	HPRINT("After set:\n");
+	MPRINT("After set:\n");
 	mtfs_dump_state(state);	
-	HPRINT("\n");
+	MPRINT("\n");
 free_state:
 	MTFS_FREE(state, state_size);
 out:
@@ -281,7 +281,7 @@ int mtfs_api_rmbranch(const char *path, mtfs_bindex_t bindex, struct mtfs_param 
 	struct mtfs_remove_branch_info *remove_info = NULL;
 
 	if (len > PATH_MAX) {
-		HERROR("path name '%s' is too long\n", path);
+		MERROR("path name '%s' is too long\n", path);
 		ret = -EINVAL;
 		goto out;
 	}

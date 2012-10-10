@@ -89,37 +89,37 @@ struct page *mtfs_lustre_nopage_branch(struct vm_area_struct *vma, unsigned long
 	struct file *hidden_file = NULL;
 	struct vm_operations_struct *vm_ops = NULL;
 	int ret = 0;
-	HENTRY();
+	MENTRY();
 
 	file = vma->vm_file;
-	HASSERT(file);
+	MASSERT(file);
 	hidden_file = mtfs_f_choose_branch(file, MTFS_DATA_VALID);
 	if (IS_ERR(hidden_file)) {
 		ret = PTR_ERR(hidden_file);
-		HERROR("choose branch failed, ret = %d\n", ret);
+		MERROR("choose branch failed, ret = %d\n", ret);
 		goto out;
 	}
 
 	vm_ops = mtfs_ll_get_vm_ops();
-	HASSERT(vm_ops);
+	MASSERT(vm_ops);
 	vma->vm_file = hidden_file;
 	page = vm_ops->nopage(vma, address, type);
 	vma->vm_file = file;
 out:
-	HRETURN(page);
+	MRETURN(page);
 }
 
 struct page *mtfs_lustre_nopage(struct vm_area_struct *vma, unsigned long address,
                          int *type)
 {
 	struct page *page = NULL;	
-	HENTRY();
+	MENTRY();
 
 	page = mtfs_lustre_nopage_branch(vma, address, type, mtfs_get_primary_bindex());
 	if (page == NOPAGE_SIGBUS || page == NOPAGE_OOM) {
-		HERROR("got addr %lu type %lx - SIGBUS\n", address, (long)type);
+		MERROR("got addr %lu type %lx - SIGBUS\n", address, (long)type);
 	}
-	HRETURN(page);
+	MRETURN(page);
 }
 
 struct vm_operations_struct mtfs_lustre_vm_ops = {
@@ -135,19 +135,19 @@ ssize_t mtfs_lustre_file_writev(struct file *file, const struct iovec *iov,
 	mtfs_operation_result_t result;
 	struct mtfs_operation_list *oplist = NULL;
 	struct inode *inode = NULL;
-	HENTRY();
+	MENTRY();
 
 	inode = file->f_dentry->d_inode;
         oplist = mtfs_oplist_build_keep_order(inode);
 	if (unlikely(oplist == NULL)) {
-		HERROR("failed to build operation list\n");
+		MERROR("failed to build operation list\n");
 		ret = -ENOMEM;
 		goto out;
 	}
 
 	ret = mtfs_ll_file_writev(file, iov, nr_segs, ppos, oplist);
 	if (ret) {
-		HERROR("failed to writev, ret = %d\n", ret);
+		MERROR("failed to writev, ret = %d\n", ret);
 	}
 
 	mtfs_oplist_check(oplist);
@@ -159,11 +159,11 @@ ssize_t mtfs_lustre_file_writev(struct file *file, const struct iovec *iov,
 
 	ret = mtfs_oplist_update(file->f_dentry->d_inode, oplist);
 	if (ret) {
-		HERROR("failed to update inode\n");
-		HBUG();
+		MERROR("failed to update inode\n");
+		MBUG();
 	}
 
-	HASSERT(oplist->success_bnum > 0);
+	MASSERT(oplist->success_bnum > 0);
 	result = mtfs_oplist_result(oplist);
 	size = result.size;
 	*ppos = *ppos + size;
@@ -174,7 +174,7 @@ out:
         if (ret) {
                 size = ret;
         }
-	HRETURN(size);
+	MRETURN(size);
 }
 
 struct file_operations mtfs_lustre_main_fops =
@@ -214,36 +214,36 @@ static int mtfs_lustre_getflags(struct inode *inode, struct file *file, unsigned
 	struct inode *hidden_inode = NULL;
 	int flags = 0;
 	mm_segment_t old_fs;
-	HENTRY();
+	MENTRY();
 
 	ret = mtfs_i_choose_bindex(inode, MTFS_ATTR_VALID, &bindex);
 	if (ret) {
-		HERROR("choose bindex failed, ret = %d\n", ret);
+		MERROR("choose bindex failed, ret = %d\n", ret);
 		goto out;
 	}
 
-	HASSERT(bindex >=0 && bindex < mtfs_i2bnum(inode));
+	MASSERT(bindex >=0 && bindex < mtfs_i2bnum(inode));
 	hidden_file = mtfs_f2branch(file, bindex);
 	hidden_inode = mtfs_i2branch(inode, bindex);
-	HASSERT(hidden_file);
-	HASSERT(hidden_inode);
+	MASSERT(hidden_file);
+	MASSERT(hidden_inode);
 
 
 	old_fs = get_fs();
 	set_fs(get_ds());
-	HASSERT(hidden_file);
-	HASSERT(hidden_file->f_op);
+	MASSERT(hidden_file);
+	MASSERT(hidden_file->f_op);
 #ifdef HAVE_UNLOCKED_IOCTL
-	HASSERT(hidden_file->f_op->unlocked_ioctl);
+	MASSERT(hidden_file->f_op->unlocked_ioctl);
 	ret = hidden_file->f_op->unlocked_ioctl(hidden_file, FSFILT_IOC_GETFLAGS, (long)&flags);
 #else
-	HASSERT(hidden_file->f_op->ioctl);
+	MASSERT(hidden_file->f_op->ioctl);
 	ret = hidden_file->f_op->ioctl(hidden_inode, hidden_file, FSFILT_IOC_GETFLAGS, (long)&flags);
 #endif
 
 	set_fs(old_fs);
 	if (ret) {
-		HERROR("ioctl getflags branch[%d] of file [%*s] failed, ret = %d\n",
+		MERROR("ioctl getflags branch[%d] of file [%*s] failed, ret = %d\n",
 		       bindex, file->f_dentry->d_name.len, file->f_dentry->d_name.name, ret);
 		goto out;
 	}
@@ -251,13 +251,13 @@ static int mtfs_lustre_getflags(struct inode *inode, struct file *file, unsigned
 
 	fsstack_copy_attr_all(inode, hidden_inode, mtfs_get_nlinks);
 out:
-	HRETURN(ret);
+	MRETURN(ret);
 }
 
 int mtfs_lustre_ioctl(struct inode *inode, struct file *file, unsigned int cmd, unsigned long arg)
 {
 	int ret = 0;
-	HENTRY();
+	MENTRY();
 
 	switch (cmd) {
 	case FSFILT_IOC_SETFLAGS:
@@ -271,7 +271,7 @@ int mtfs_lustre_ioctl(struct inode *inode, struct file *file, unsigned int cmd, 
 		break;
 	}
 
-	HRETURN(ret);
+	MRETURN(ret);
 }
 
 struct mtfs_operations mtfs_lustre_operations = {
@@ -316,17 +316,17 @@ static int lustre_support_init(void)
 {
 	int ret = 0;
 
-	HDEBUG("registering mtfs_lustre support\n");
+	MDEBUG("registering mtfs_lustre support\n");
 
 	ret = lowerfs_register_ops(&lowerfs_lustre_ops);
 	if (ret) {
-		HERROR("failed to register lowerfs operation: error %d\n", ret);
+		MERROR("failed to register lowerfs operation: error %d\n", ret);
 		goto out;
 	}	
 
 	ret = junction_register(&mtfs_lustre_junction);
 	if (ret) {
-		HERROR("failed to register junction: error %d\n", ret);
+		MERROR("failed to register junction: error %d\n", ret);
 		goto out_unregister_lowerfs_ops;
 	}
 	goto out;
@@ -338,7 +338,7 @@ out:
 
 static void lustre_support_exit(void)
 {
-	HDEBUG("Unregistering mtfs_lustre support\n");
+	MDEBUG("Unregistering mtfs_lustre support\n");
 	lowerfs_unregister_ops(&lowerfs_lustre_ops);
 
 	junction_unregister(&mtfs_lustre_junction);

@@ -59,7 +59,7 @@ do {                                                                          \
 #define MTFS_FREE(ptr, size)                                                  \
 do {                                                                          \
     int _size = (size);                                                       \
-    HASSERT(ptr);                                                             \
+    MASSERT(ptr);                                                             \
     MDEBUG_MEM("mtfs_kfreed '" #ptr "': %d at %p.\n",                         \
                _size, (ptr));                                                 \
     POISON((ptr), 0x5a, _size);                                               \
@@ -72,7 +72,7 @@ do {                                                                          \
 
 #define MTFS_SLAB_ALLOC_GFP(ptr, slab, size, gfp_mask)                        \
 do {                                                                          \
-    HASSERT(!in_interrupt());                                                 \
+    MASSERT(!in_interrupt());                                                 \
     (ptr) = kmem_cache_alloc(slab, (gfp_mask));                               \
     if (likely((ptr) != NULL)) {                                              \
         mtfs_kmem_inc((ptr), (size));                                         \
@@ -87,7 +87,7 @@ do {                                                                          \
 
 #define MTFS_SLAB_FREE(ptr, slab, size)                                       \
 do {                                                                          \
-    HASSERT(ptr);                                                             \
+    MASSERT(ptr);                                                             \
     MDEBUG_MEM("mtfs_slab-freed '" #ptr "': %d at %p.\n",                     \
                (int)(size), ptr);                                             \
     POISON(ptr, 0x5a, size);                                                  \
@@ -129,7 +129,7 @@ do {                                                                          \
 
 #define MTFS_FREE(ptr, size)                                                  \
 do {                                                                          \
-    HASSERT(ptr);                                                             \
+    MASSERT(ptr);                                                             \
     POISON(ptr, 0x5a, size);                                                  \
     free(ptr);                                                                \
     (ptr) = NULL;                                                             \

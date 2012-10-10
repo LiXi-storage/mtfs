@@ -15,44 +15,44 @@
 struct mtfs_request *mtfs_request_alloc(void)
 {
 	struct mtfs_request *request = NULL;
-	HENTRY();
+	MENTRY();
 
 	/* TODO: pool */
 	MTFS_ALLOC_PTR(request);
 	if (request == NULL) {
-		HERROR("request allocation out of memory\n");
+		MERROR("request allocation out of memory\n");
 		goto out;
 	}
 out:
-        HRETURN(request);
+        MRETURN(request);
 }
 
 void mtfs_request_free(struct mtfs_request *request)
 {
-	HENTRY();
+	MENTRY();
 	MTFS_FREE_PTR(request);
-	_HRETURN();
+	_MRETURN();
 }
 
 /* Return 1 if freed */
 static int selfheal_req_finished(struct mtfs_request *request)
 {
 	int ret = 0;
-	HENTRY();
+	MENTRY();
 
 	if (atomic_dec_and_test(&request->rq_refcount)) {
 		mtfs_request_free(request);
 		ret = 1;
 	}
 
-	HRETURN(ret);
+	MRETURN(ret);
 }
 
 struct mtfs_request *selfheal_request_pack(void)
 {
 	struct mtfs_request *request = NULL;
 	int ret = 0;
-	HENTRY();
+	MENTRY();
 
 	request = mtfs_request_alloc();
 	if (request == NULL) {
@@ -67,23 +67,23 @@ out:
 	if (ret) {
 		request = ERR_PTR(ret);
 	}
-	HRETURN(request);
+	MRETURN(request);
 }
 EXPORT_SYMBOL(selfheal_request_pack);
 
 static int mtfs_req_interpret(struct mtfs_request *req)
 {
 	int ret = 0;
-	HENTRY();
+	MENTRY();
 
-	HERROR("interpreting req: %p\n", req);
-	HRETURN(ret);
+	MERROR("interpreting req: %p\n", req);
+	MRETURN(ret);
 }
 
 static int mtfs_reqphase_move(struct mtfs_request *req, enum rq_phase new_phase)
 {
 	int ret = 0;
-	HENTRY();
+	MENTRY();
 
 	if (req->rq_phase == new_phase) {
 		goto out;
@@ -91,7 +91,7 @@ static int mtfs_reqphase_move(struct mtfs_request *req, enum rq_phase new_phase)
 
 	req->rq_phase = new_phase;
 out:
-	HRETURN(ret);
+	MRETURN(ret);
 }
 
 /*
@@ -102,7 +102,7 @@ static int selfheal_check_set(struct selfheal_request_set *set)
 	int ret = 0;
 	mtfs_list_t *tmp = NULL;
 	struct mtfs_request *req = NULL;
-	HENTRY();
+	MENTRY();
 
 	if (atomic_read(&set->set_remaining) == 0) {
 		ret = 1;
@@ -120,7 +120,7 @@ static int selfheal_check_set(struct selfheal_request_set *set)
 	}
 	ret = atomic_read(&set->set_remaining) == 0;
 out:
-	HRETURN(ret);
+	MRETURN(ret);
 }
 
 static int selfheal_check(struct selfheal_daemon_ctl *sc)
@@ -130,7 +130,7 @@ static int selfheal_check(struct selfheal_daemon_ctl *sc)
 	mtfs_list_t *tmp = NULL;
 	mtfs_list_t *pos = NULL;
 	struct mtfs_request *req = NULL;
-	HENTRY();
+	MENTRY();
 
 	ret = mtfs_test_bit(MTFS_DAEMON_STOP, &sc->sc_flags);
 	if (ret) {
@@ -187,7 +187,7 @@ static int selfheal_check(struct selfheal_daemon_ctl *sc)
 	}
 
 out:
-	HRETURN(ret);
+	MRETURN(ret);
 }
 
 static int selfheal_max_nthreads = 0;
@@ -200,9 +200,9 @@ static struct selfheal_daemon_ctl*
 selfheal_select_pc(struct mtfs_request *req, mdl_policy_t policy, int index)
 {
 	int idx = 0;
-	HENTRY();
+	MENTRY();
 
-	HASSERT(req != NULL);
+	MASSERT(req != NULL);
 
 	switch (policy) {
 	case MDL_POLICY_SAME:
@@ -227,7 +227,7 @@ selfheal_select_pc(struct mtfs_request *req, mdl_policy_t policy, int index)
 		selfheal_daemons->sd_index = idx;
 		break;
 	}
-	HRETURN(&selfheal_daemons->sd_threads[idx]);
+	MRETURN(&selfheal_daemons->sd_threads[idx]);
 }
 
 int selfheal_set_add_new_req(struct selfheal_daemon_ctl *sc,
@@ -236,10 +236,10 @@ int selfheal_set_add_new_req(struct selfheal_daemon_ctl *sc,
 	struct selfheal_request_set *set = sc->sc_set;
 	int ret = 0;
 	int count = 0;
-	HENTRY();
+	MENTRY();
 
-	HASSERT(req->rq_set == NULL);
-	HASSERT(mtfs_test_bit(MTFS_DAEMON_STOP, &sc->sc_flags) == 0);
+	MASSERT(req->rq_set == NULL);
+	MASSERT(mtfs_test_bit(MTFS_DAEMON_STOP, &sc->sc_flags) == 0);
 	spin_lock(&set->set_new_req_lock);
 	{
 		req->rq_set = set;
@@ -253,19 +253,19 @@ int selfheal_set_add_new_req(struct selfheal_daemon_ctl *sc,
 		wake_up(&set->set_waitq);
 		/* TODO: partners */
 	}
-	HRETURN(ret);
+	MRETURN(ret);
 }
 
 int selfheal_add_req(struct mtfs_request *req, mdl_policy_t policy, int idx)
 {
 	struct selfheal_daemon_ctl *sc = NULL;
 	int ret = 0;
-	HENTRY();
+	MENTRY();
 
-	HERROR("adding request: %p\n", req);
+	MERROR("adding request: %p\n", req);
 	sc = selfheal_select_pc(req, policy, idx);
 	selfheal_set_add_new_req(sc, req);
-	HRETURN(ret);
+	MRETURN(ret);
 }
 EXPORT_SYMBOL(selfheal_add_req);
 
@@ -287,14 +287,14 @@ static int selfheal_daemon_main(void *arg)
 	struct selfheal_daemon_ctl *sc = arg;
 	struct selfheal_request_set *set = sc->sc_set;
 	int exit = 0;
-	HENTRY();
+	MENTRY();
 
 	mtfs_daemonize_ctxt(sc->sc_name);
 #if defined(CONFIG_SMP)
 	if (mtfs_test_bit(MTFS_DAEMON_BIND, &sc->sc_flags)) {
 		int index = sc->sc_index;
 
-		HASSERT(index  >= 0 && index < num_possible_cpus());
+		MASSERT(index  >= 0 && index < num_possible_cpus());
 		while (!cpu_online(index)) {
 			if (++index >= num_possible_cpus()) {
 				index = 0;
@@ -320,7 +320,7 @@ static int selfheal_daemon_main(void *arg)
 			}
 			exit++;
 		}
-		HDEBUG("selfheal daemon loop again\n");
+		MDEBUG("selfheal daemon loop again\n");
 	} while (!exit);
 
 	complete(&sc->sc_finishing);
@@ -328,13 +328,13 @@ static int selfheal_daemon_main(void *arg)
 	mtfs_clear_bit(MTFS_DAEMON_STOP, &sc->sc_flags);
 	mtfs_clear_bit(MTFS_DAEMON_FORCE, &sc->sc_flags);
 	mtfs_clear_bit(MTFS_DAEMON_BIND, &sc->sc_flags);
-	HRETURN(ret);
+	MRETURN(ret);
 }
 
 struct selfheal_request_set *selfheal_prep_set(void)
 {
 	struct selfheal_request_set *set = NULL;
-	HENTRY();
+	MENTRY();
 
 	MTFS_ALLOC_PTR(set);
 	if (set == NULL) {
@@ -350,7 +350,7 @@ struct selfheal_request_set *selfheal_prep_set(void)
 	MTFS_INIT_LIST_HEAD(&set->set_new_requests);
 
 out:
-	HRETURN(set);
+	MRETURN(set);
 }
 
 void selfheal_put_get(struct selfheal_request_set *set)
@@ -374,10 +374,10 @@ int selfheal_daemon_start(int index, const char *name, int no_bind, struct selfh
 {
 	int ret = 0;
 	struct selfheal_request_set *set = NULL;
-	HENTRY();
+	MENTRY();
 
 	if (mtfs_test_and_set_bit(MTFS_DAEMON_START, &sc->sc_flags)) {
-		HERROR("thread [%s] is already started\n",
+		MERROR("thread [%s] is already started\n",
                        name);
 		goto out;
         }
@@ -400,7 +400,7 @@ int selfheal_daemon_start(int index, const char *name, int no_bind, struct selfh
 
 	ret = mtfs_create_thread(selfheal_daemon_main, sc, 0);
 	if (ret < 0) {
-		HERROR("failed to create thread [%s]", name);
+		MERROR("failed to create thread [%s]", name);
 		goto out_destroy_set;
 	}
 	ret = 0;
@@ -418,18 +418,18 @@ out_destroy_set:
 	mtfs_clear_bit(MTFS_DAEMON_BIND, &sc->sc_flags);
 	mtfs_clear_bit(MTFS_DAEMON_START, &sc->sc_flags);
 out:
-	HRETURN(ret);
+	MRETURN(ret);
 }
 
 void selfheal_daemon_stop(struct selfheal_daemon_ctl *sc, int force)
 {
 	struct selfheal_request_set *set = NULL;
-	HENTRY();
+	MENTRY();
 
-	HDEBUG("Stoping\n");
+	MDEBUG("Stoping\n");
 	if (!mtfs_test_bit(MTFS_DAEMON_START, &sc->sc_flags)) {
-                HERROR("Thread for pc %p was not started\n", sc);
-		HBUG();
+                MERROR("Thread for pc %p was not started\n", sc);
+		MBUG();
                 goto out;
         }
 
@@ -448,17 +448,17 @@ void selfheal_daemon_stop(struct selfheal_daemon_ctl *sc, int force)
 	selfheal_set_destroy(set);
 
 out:
-	_HRETURN();
+	_MRETURN();
 }
 
 void selfheal_daemon_fini(void)
 {
 	int i = 0;
-	HENTRY();
+	MENTRY();
 
 	if (selfheal_daemons == NULL) {
-		HERROR("selfheal daemons is not inited yet\n");
-		HBUG();
+		MERROR("selfheal daemons is not inited yet\n");
+		MBUG();
 		goto out;
 	}
 
@@ -469,7 +469,7 @@ void selfheal_daemon_fini(void)
 	selfheal_daemons = NULL;
 
 out:
-	_HRETURN();
+	_MRETURN();
 }
 
 int selfheal_daemon_init(void)
@@ -479,7 +479,7 @@ int selfheal_daemon_init(void)
 	int size = 0;
 	int ret = 0;
 	int i = 0;
-	HENTRY();
+	MENTRY();
 
 	if (selfheal_max_nthreads > 0 && selfheal_max_nthreads < nthreads) {
                 nthreads = selfheal_max_nthreads;
@@ -491,7 +491,7 @@ int selfheal_daemon_init(void)
 	size = offsetof(struct selfheal_daemon, sd_threads[nthreads]);
 	MTFS_ALLOC(selfheal_daemons, size);
 	if (selfheal_daemons == NULL) {
-		HERROR("not enough memory\n");
+		MERROR("not enough memory\n");
 		ret = -ENOMEM;
 		goto out;
 	}
@@ -501,7 +501,7 @@ int selfheal_daemon_init(void)
 		ret = selfheal_daemon_start(i, name, 0,
 		                            &selfheal_daemons->sd_threads[i]);
 		if (ret) {
-			HERROR("failed to start selfheal daemon[%d]\n", i);
+			MERROR("failed to start selfheal daemon[%d]\n", i);
 			i--;
 			goto out_stop;
 		}
@@ -518,7 +518,7 @@ out_stop:
 	MTFS_FREE(selfheal_daemons, size);
 	selfheal_daemons = NULL;
 out:
-	HRETURN(ret);
+	MRETURN(ret);
 }
 
 static int __init mtfs_selfheal_init(void)

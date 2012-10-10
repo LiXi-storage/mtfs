@@ -28,63 +28,63 @@ int main()
 	int ret = 0;
 
         if (cfg_load("/dev/stdin", logundefined) == -1) {
-                HERROR("can't load config file - using defaults\n");
+                MERROR("can't load config file - using defaults\n");
                 ret = -EINVAL;
                 goto out;
         }
 
 	type = cfg_getstr("type", "unknown");
 	if (strcmp(type, "unknown") == 0) {
-		HERROR("type is unknown\n");
+		MERROR("type is unknown\n");
 		ret = -EINVAL;
 		goto out;
 	}
 
 	param = cfg_getstr("param", "unknown");
 	if (strcmp(param, "unknown") == 0) {
-		HERROR("type is unknown\n");
+		MERROR("type is unknown\n");
 		ret = -EINVAL;
 		goto out;
 	}
 
-	HDEBUG("type %s, param %s\n", type, param);
+	MDEBUG("type %s, param %s\n", type, param);
 
 	if (strcmp(type, "string") == 0) {
 		string = cfg_getstr(param, "XXXXXXX");
-		HPRINT("%s = %s\n", param, string);
+		MPRINT("%s = %s\n", param, string);
 		free(string);
 	} else if (strcmp(type, "number") == 0) {
 		number = cfg_getnum(param, -66666666);
-		HPRINT("%s = %d\n", param, number);
+		MPRINT("%s = %d\n", param, number);
 	} else if (strcmp(type, "int8") == 0) {
 		int8 = cfg_getint8(param, -66);
-		HPRINT("%s = %"PRId8"\n", param, int8);
+		MPRINT("%s = %"PRId8"\n", param, int8);
 	} else if (strcmp(type, "uint8") == 0) {
 		uint8 = cfg_getuint8(param, 66);
-		HPRINT("%s = %"PRIu8"\n", param, uint8);	
+		MPRINT("%s = %"PRIu8"\n", param, uint8);	
 	} else if (strcmp(type, "int16") == 0) {
 		int16 = cfg_getint16(param, -6666);
-		HPRINT("%s = %"PRId16"\n", param, int16);
+		MPRINT("%s = %"PRId16"\n", param, int16);
 	} else if (strcmp(type, "uint16") == 0) {
 		uint16 = cfg_getuint16(param, 6666);
-		HPRINT("%s = %"PRIu16"\n", param, uint16);
+		MPRINT("%s = %"PRIu16"\n", param, uint16);
 	} else if (strcmp(type, "int32") == 0) {
 		int32 = cfg_getint32(param, -66666666);
-		HPRINT("%s = %"PRId32"\n", param, int32);
+		MPRINT("%s = %"PRId32"\n", param, int32);
 	} else if (strcmp(type, "uint32") == 0) {
 		uint32 = cfg_getuint32(param, 66666666);	
-		HPRINT("%s = %"PRIu32"\n", param, uint32);
+		MPRINT("%s = %"PRIu32"\n", param, uint32);
 	} else if (strcmp(type, "int64") == 0) {
 		int64 = cfg_getint64(param, -6666666666666666);	
-		HPRINT("%s = %"PRId64"\n", param, int64);
+		MPRINT("%s = %"PRId64"\n", param, int64);
 	} else if (strcmp(type, "uint64") == 0) {
 		uint64 = cfg_getuint64(param, 6666666666666666);
-		HPRINT("%s = %"PRIu64"\n", param, uint64);	
+		MPRINT("%s = %"PRIu64"\n", param, uint64);	
 	} else if (strcmp(type, "double") == 0) {
 		double1 = cfg_getdouble(param, -0.6666666666666666);
-		HPRINT("%s = %.3lf\n", param, double1);
+		MPRINT("%s = %.3lf\n", param, double1);
 	} else {
-		HERROR("unknown type %s\n", type);
+		MERROR("unknown type %s\n", type);
 	}
 	free(type);
 	free(param);

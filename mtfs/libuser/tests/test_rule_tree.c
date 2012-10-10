@@ -11,11 +11,11 @@
 void list_dump(cfs_list_t *head)
 {
 	cfs_list_t *pos;
-	HPRINT("HEAD");
+	MPRINT("HEAD");
 	cfs_list_for_each(pos, head) {
-		HPRINT"->%c", ((rule_tree_t *)(cfs_list_entry(pos, node_t, list)->data))->key);
+		MPRINT"->%c", ((rule_tree_t *)(cfs_list_entry(pos, node_t, list)->data))->key);
 	}
-	HPRINT("\n");
+	MPRINT("\n");
 }
 
 void queue_dump(queue_t *queue)
@@ -28,7 +28,7 @@ void string_dump(char **string, unsigned int string_number)
 {
 	int i;
 	for (i = 0; i < string_number; i ++) {
-		HPRINT("%s\n", string[i]);
+		MPRINT("%s\n", string[i]);
 	}
 }
 #endif
@@ -71,7 +71,7 @@ int main()
 	root = rule_tree_construct(rule_array, str_num);
 	if (IS_ERR(root)) {
 		ret = PTR_ERR(root);
-		HERROR("construct rule tree failed\n");
+		MERROR("construct rule tree failed\n");
 		goto free_all;
 	}
 	
@@ -82,7 +82,7 @@ int main()
 		fscanf(stdin, "%s", check_str);
 		raid_type = rule_tree_search(root, check_str);
 		raid = raid_type;
-		HPRINT("%d\n", raid);
+		MPRINT("%d\n", raid);
 	}
 	
 	ret = rule_tree_destruct(root);

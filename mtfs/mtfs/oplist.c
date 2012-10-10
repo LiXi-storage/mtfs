@@ -13,7 +13,7 @@ struct mtfs_operation_list *mtfs_oplist_alloc(mtfs_bindex_t bnum)
 {
 	struct mtfs_operation_list *list = NULL;
 
-	HASSERT(bnum > 0 && bnum <= MTFS_BRANCH_MAX);
+	MASSERT(bnum > 0 && bnum <= MTFS_BRANCH_MAX);
 	MTFS_SLAB_ALLOC_PTR(list, mtfs_oplist_cache);	
 	if (unlikely(list == NULL)) {
 		goto out;
@@ -35,10 +35,10 @@ static inline void mtfs_oplist_dump(struct mtfs_operation_list *list)
 {
 	mtfs_bindex_t bindex = 0;
 
-	HPRINT("oplist bnum = %d\n", list->bnum);
-	HPRINT("oplist latest_bnum = %d\n", list->latest_bnum);
+	MPRINT("oplist bnum = %d\n", list->bnum);
+	MPRINT("oplist latest_bnum = %d\n", list->latest_bnum);
 	for (bindex = 0; bindex < list->bnum; bindex++) {
-		HPRINT("branch[%d]: %d\n", bindex, list->op_binfo[bindex].bindex);
+		MPRINT("branch[%d]: %d\n", bindex, list->op_binfo[bindex].bindex);
 	}
 }
 
@@ -71,7 +71,7 @@ int mtfs_oplist_init(struct mtfs_operation_list *oplist, struct inode *inode)
 	int is_valid = 1;
 	struct mtfs_operation_binfo *binfo = NULL;
 	int ret = 0;
-	HENTRY();
+	MENTRY();
 
 	/* NOT a good implementation, change me */
 	for (bindex = 0; bindex < bnum; bindex++) {
@@ -88,7 +88,7 @@ int mtfs_oplist_init(struct mtfs_operation_list *oplist, struct inode *inode)
 	oplist->latest_bnum = bfirst;
 	oplist->bnum = bnum;
 
-	HRETURN(ret);
+	MRETURN(ret);
 }
 EXPORT_SYMBOL(mtfs_oplist_init);
 
@@ -97,7 +97,7 @@ struct mtfs_operation_list *mtfs_oplist_build(struct inode *inode)
 	struct mtfs_operation_list *oplist = NULL;
 	mtfs_bindex_t bnum = mtfs_i2bnum(inode);
 	int ret = 0;
-	HENTRY();
+	MENTRY();
 	
 	oplist = mtfs_oplist_alloc(bnum);
 	if (unlikely(oplist == NULL)) {
@@ -110,7 +110,7 @@ struct mtfs_operation_list *mtfs_oplist_build(struct inode *inode)
 		oplist = NULL;
 	}	
 out:
-	HRETURN(oplist);
+	MRETURN(oplist);
 }
 EXPORT_SYMBOL(mtfs_oplist_build);
 
@@ -118,16 +118,16 @@ int mtfs_oplist_check(struct mtfs_operation_list *list)
 {
 	mtfs_bindex_t bindex = 0;
 	int ret = 0;
-	HENTRY();
+	MENTRY();
 
 	if (list->checked_bnum == 0) {
-		HASSERT(list->valid_bnum == 0);
-		HASSERT(list->success_bnum == 0);
-		HASSERT(list->success_latest_bnum == 0);
-		HASSERT(list->success_nonlatest_bnum == 0);
-		HASSERT(list->fault_bnum == 0);
-		HASSERT(list->fault_latest_bnum == 0);
-		HASSERT(list->fault_nonlatest_bnum == 0);
+		MASSERT(list->valid_bnum == 0);
+		MASSERT(list->success_bnum == 0);
+		MASSERT(list->success_latest_bnum == 0);
+		MASSERT(list->success_nonlatest_bnum == 0);
+		MASSERT(list->fault_bnum == 0);
+		MASSERT(list->fault_latest_bnum == 0);
+		MASSERT(list->fault_nonlatest_bnum == 0);
 	}
 
 	for (bindex = list->checked_bnum; bindex < list->bnum; bindex++) {
@@ -153,12 +153,12 @@ int mtfs_oplist_check(struct mtfs_operation_list *list)
 			}
 		}
 	}
-	HASSERT(list->fault_latest_bnum + list->fault_nonlatest_bnum == list->fault_bnum);
-	HASSERT(list->success_latest_bnum + list->success_nonlatest_bnum == list->success_bnum);
-	HASSERT(list->success_bnum + list->fault_bnum == list->valid_bnum);
-	HASSERT(list->valid_bnum <= list->bnum);
-	HASSERT(list->checked_bnum <= list->bnum);
-	HRETURN(ret);
+	MASSERT(list->fault_latest_bnum + list->fault_nonlatest_bnum == list->fault_bnum);
+	MASSERT(list->success_latest_bnum + list->success_nonlatest_bnum == list->success_bnum);
+	MASSERT(list->success_bnum + list->fault_bnum == list->valid_bnum);
+	MASSERT(list->valid_bnum <= list->bnum);
+	MASSERT(list->checked_bnum <= list->bnum);
+	MRETURN(ret);
 }
 EXPORT_SYMBOL(mtfs_oplist_check);
 
@@ -182,16 +182,16 @@ void mtfs_oplist_merge(struct mtfs_operation_list *oplist)
 {
 	mtfs_bindex_t bindex = 0;
 	mtfs_bindex_t bindex_chosed = -1;
-	HENTRY();
+	MENTRY();
 
 	if (oplist->checked_bnum == 0) {
-		HASSERT(oplist->valid_bnum == 0);
-		HASSERT(oplist->success_bnum == 0);
-		HASSERT(oplist->success_latest_bnum == 0);
-		HASSERT(oplist->success_nonlatest_bnum == 0);
-		HASSERT(oplist->fault_bnum == 0);
-		HASSERT(oplist->fault_latest_bnum == 0);
-		HASSERT(oplist->fault_nonlatest_bnum == 0);
+		MASSERT(oplist->valid_bnum == 0);
+		MASSERT(oplist->success_bnum == 0);
+		MASSERT(oplist->success_latest_bnum == 0);
+		MASSERT(oplist->success_nonlatest_bnum == 0);
+		MASSERT(oplist->fault_bnum == 0);
+		MASSERT(oplist->fault_latest_bnum == 0);
+		MASSERT(oplist->fault_nonlatest_bnum == 0);
 	}
 
 	for (bindex = oplist->checked_bnum; bindex < oplist->bnum; bindex++) {
@@ -218,11 +218,11 @@ void mtfs_oplist_merge(struct mtfs_operation_list *oplist)
 			}
 		}
 	}
-	HASSERT(oplist->fault_latest_bnum + oplist->fault_nonlatest_bnum == oplist->fault_bnum);
-	HASSERT(oplist->success_latest_bnum + oplist->success_nonlatest_bnum == oplist->success_bnum);
-	HASSERT(oplist->success_bnum + oplist->fault_bnum == oplist->valid_bnum);
-	HASSERT(oplist->valid_bnum <= oplist->bnum);
-	HASSERT(oplist->checked_bnum <= oplist->bnum);
+	MASSERT(oplist->fault_latest_bnum + oplist->fault_nonlatest_bnum == oplist->fault_bnum);
+	MASSERT(oplist->success_latest_bnum + oplist->success_nonlatest_bnum == oplist->success_bnum);
+	MASSERT(oplist->success_bnum + oplist->fault_bnum == oplist->valid_bnum);
+	MASSERT(oplist->valid_bnum <= oplist->bnum);
+	MASSERT(oplist->checked_bnum <= oplist->bnum);
 
 	if (oplist->opinfo == NULL) {
 		oplist->opinfo = &(oplist->op_binfo[0]);
@@ -230,7 +230,7 @@ void mtfs_oplist_merge(struct mtfs_operation_list *oplist)
 		oplist->opinfo = &(oplist->op_binfo[bindex_chosed]);
 	}
 
-	_HRETURN();
+	_MRETURN();
 
 
 }
@@ -241,10 +241,10 @@ int mtfs_oplist_update(struct inode *inode, struct mtfs_operation_list *list)
 	mtfs_bindex_t bindex = 0;
 	mtfs_bindex_t i = 0;
 	int ret = 0;
-	HENTRY();
+	MENTRY();
 
-	HASSERT(list->checked_bnum == list->bnum);
-	HASSERT(list->valid_bnum > 0);
+	MASSERT(list->checked_bnum == list->bnum);
+	MASSERT(list->valid_bnum > 0);
 	
 	
 	if (list->success_latest_bnum == 0) {
@@ -269,12 +269,12 @@ int mtfs_oplist_update(struct inode *inode, struct mtfs_operation_list *list)
 
 			ret = mtfs_invalid_branch(inode, bindex, MTFS_DATA_VALID);
 			if (ret) {
-				HERROR("invalid inode failed, ret = %d\n", ret);
-				HBUG();
+				MERROR("invalid inode failed, ret = %d\n", ret);
+				MBUG();
 			}
 		}
 	}
 out:
-	HRETURN(ret);
+	MRETURN(ret);
 }
 EXPORT_SYMBOL(mtfs_oplist_update);

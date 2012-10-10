@@ -23,13 +23,13 @@ int random_test(mtfs_bitmap_t *bitmap, int *array)
 	int output = 0;
 	int expect = 0;
 	
-	HASSERT(bitmap);
-	HASSERT(array);
+	MASSERT(bitmap);
+	MASSERT(array);
 	
 	operation = random() % OPERATION_TYPE_NUM;
 	nbit = random() % MAX_BRANCH_NUMBER;
-	HASSERT(operation >= OPERATION_TYPE_SET && operation < OPERATION_TYPE_NUM);
-	HASSERT(nbit >= 0 && nbit < MAX_BRANCH_NUMBER);
+	MASSERT(operation >= OPERATION_TYPE_SET && operation < OPERATION_TYPE_NUM);
+	MASSERT(nbit >= 0 && nbit < MAX_BRANCH_NUMBER);
 	switch(operation) {
 	case OPERATION_TYPE_SET:
 		mtfs_bitmap_set(bitmap, nbit);
@@ -42,15 +42,15 @@ int random_test(mtfs_bitmap_t *bitmap, int *array)
 	case OPERATION_TYPE_CHECK:
 		//fprintf(stderr, "%d ", nbit);
 		output = mtfs_bitmap_check(bitmap, nbit);
-		HASSERT(nbit >= 0 && nbit < MAX_BRANCH_NUMBER);
+		MASSERT(nbit >= 0 && nbit < MAX_BRANCH_NUMBER);
 		expect = array[nbit];
 		if (output != expect) {
-			HERROR("BUG found: expect %d, got %d\n", expect, output);
+			MERROR("BUG found: expect %d, got %d\n", expect, output);
 			ret = 1;
 		}
 		break;
 	default:
-		HERROR("Unexpected operation: %d\n", operation);
+		MERROR("Unexpected operation: %d\n", operation);
 		ret = -1;
 		break;
 	}
@@ -89,7 +89,7 @@ int main()
 
 	goto out;
 error:
-	HPRINT("Seted bits: ");
+	MPRINT("Seted bits: ");
 	mtfs_bitmap_dump(bitmap);
 out:
 	if (bitmap) {

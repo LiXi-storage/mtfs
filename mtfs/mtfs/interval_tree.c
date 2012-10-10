@@ -33,13 +33,13 @@ enum {
 
 static inline int node_is_left_child(struct mtfs_interval_node *node)
 {
-	HASSERT(node->in_parent != NULL);
+	MASSERT(node->in_parent != NULL);
 	return node == node->in_parent->in_left;
 }
 
 static inline int node_is_right_child(struct mtfs_interval_node *node)
 {
-	HASSERT(node->in_parent != NULL);
+	MASSERT(node->in_parent != NULL);
 	return node == node->in_parent->in_right;
 }
 
@@ -117,53 +117,53 @@ for (node = mtfs_interval_last(root); node != NULL;          \
 
 static struct mtfs_interval_node *mtfs_interval_first(struct mtfs_interval_node *node)
 {
-	HENTRY();
+	MENTRY();
 
 	if (!node)
-		HRETURN(NULL);
+		MRETURN(NULL);
 	while (node->in_left)
 		node = node->in_left;
-	HRETURN(node);
+	MRETURN(node);
 }
 
 static struct mtfs_interval_node *mtfs_interval_last(struct mtfs_interval_node *node)
 {
-        HENTRY();
+        MENTRY();
 
 	if (!node)
-		HRETURN(NULL);
+		MRETURN(NULL);
 	while (node->in_right)
 		node = node->in_right;
-        HRETURN(node);
+        MRETURN(node);
 }
 
 static struct mtfs_interval_node *mtfs_interval_next(struct mtfs_interval_node *node)
 {
-	HENTRY();
+	MENTRY();
 
 	if (!node)
-		HRETURN(NULL);
+		MRETURN(NULL);
 	if (node->in_right)
-		HRETURN(mtfs_interval_first(node->in_right));
+		MRETURN(mtfs_interval_first(node->in_right));
 	while (node->in_parent && node_is_right_child(node))
 		node = node->in_parent;
-	HRETURN(node->in_parent);
+	MRETURN(node->in_parent);
 }
 
 static struct mtfs_interval_node *mtfs_interval_prev(struct mtfs_interval_node *node)
 {
-	HENTRY();
+	MENTRY();
 
 	if (!node)
-		HRETURN(NULL);
+		MRETURN(NULL);
 
 	if (node->in_left)
-		HRETURN(mtfs_interval_last(node->in_left));
+		MRETURN(mtfs_interval_last(node->in_left));
 
 	while (node->in_parent && node_is_left_child(node))
 		node = node->in_parent;
 
-	HRETURN(node->in_parent);
+	MRETURN(node->in_parent);
 }
 
 enum mtfs_interval_iter mtfs_interval_iterate(struct mtfs_interval_node *root,
@@ -172,7 +172,7 @@ enum mtfs_interval_iter mtfs_interval_iterate(struct mtfs_interval_node *root,
 {
 	struct mtfs_interval_node *node;
 	enum mtfs_interval_iter rc = MTFS_INTERVAL_ITER_CONT;
-	HENTRY();
+	MENTRY();
 
 	mtfs_interval_for_each(node, root) {
 		rc = func(node, data);
@@ -180,7 +180,7 @@ enum mtfs_interval_iter mtfs_interval_iterate(struct mtfs_interval_node *root,
 			break;
 	}
 
-	HRETURN(rc);
+	MRETURN(rc);
 }
 EXPORT_SYMBOL(mtfs_interval_iterate);
 
@@ -190,7 +190,7 @@ enum mtfs_interval_iter mtfs_interval_iterate_reverse(struct mtfs_interval_node 
 {
 	struct mtfs_interval_node *node;
 	enum mtfs_interval_iter rc = MTFS_INTERVAL_ITER_CONT;
-	HENTRY();
+	MENTRY();
         
 	mtfs_interval_for_each_reverse(node, root) {
 		rc = func(node, data);
@@ -198,7 +198,7 @@ enum mtfs_interval_iter mtfs_interval_iterate_reverse(struct mtfs_interval_node 
 		break;
 	}
 
-	HRETURN(rc);
+	MRETURN(rc);
 }
 EXPORT_SYMBOL(mtfs_interval_iterate_reverse);
 
@@ -209,7 +209,7 @@ struct mtfs_interval_node *mtfs_interval_find(struct mtfs_interval_node *root,
 {
 	struct mtfs_interval_node *walk = root;
 	int rc;
-	HENTRY();
+	MENTRY();
 
 	while (walk) {
 		rc = extent_compare(ex, &walk->in_extent);
@@ -221,7 +221,7 @@ struct mtfs_interval_node *mtfs_interval_find(struct mtfs_interval_node *root,
 			walk = walk->in_right;
         }
 
-	HRETURN(walk);
+	MRETURN(walk);
 }
 EXPORT_SYMBOL(mtfs_interval_find);
 
@@ -310,7 +310,7 @@ static void mtfs_interval_insert_color(struct mtfs_interval_node *node,
                                   struct mtfs_interval_node **root)
 {
 	struct mtfs_interval_node *parent, *gparent;
-	HENTRY();
+	MENTRY();
 
 	while ((parent = node->in_parent) && node_is_red(parent)) {
 		gparent = parent->in_parent;
@@ -357,7 +357,7 @@ static void mtfs_interval_insert_color(struct mtfs_interval_node *node,
 	}
 
 	(*root)->in_color = MTFS_INTERVAL_BLACK;
-	_HRETURN();
+	_MRETURN();
 }
 
 struct mtfs_interval_node *mtfs_interval_insert(struct mtfs_interval_node *node,
@@ -365,14 +365,14 @@ struct mtfs_interval_node *mtfs_interval_insert(struct mtfs_interval_node *node,
                      
 {
 	struct mtfs_interval_node **p, *parent = NULL;
-        HENTRY();
+        MENTRY();
 
-	HASSERT(!mtfs_interval_is_intree(node));
+	MASSERT(!mtfs_interval_is_intree(node));
 	p = root;
 	while (*p) {
 		parent = *p;
 		if (node_equal(parent, node))
-			HRETURN(parent);
+			MRETURN(parent);
 
 		/* max_high field must be updated after each iteration */
 		if (parent->in_max_high < mtfs_interval_high(node))
@@ -393,7 +393,7 @@ struct mtfs_interval_node *mtfs_interval_insert(struct mtfs_interval_node *node,
 	mtfs_interval_insert_color(node, root);
 	node->in_intree = 1;
 
-	HRETURN(NULL);
+	MRETURN(NULL);
 }
 EXPORT_SYMBOL(mtfs_interval_insert);
 
@@ -407,7 +407,7 @@ static void mtfs_interval_erase_color(struct mtfs_interval_node *node,
                                  struct mtfs_interval_node **root)
 {
 	struct mtfs_interval_node *tmp;
-	HENTRY();
+	MENTRY();
 
 	while (node_is_black_or_0(node) && node != *root) {
 		if (parent->in_left == node) {
@@ -474,7 +474,7 @@ static void mtfs_interval_erase_color(struct mtfs_interval_node *node,
 	}
 	if (node)
 		node->in_color = MTFS_INTERVAL_BLACK;
-	_HRETURN();
+	_MRETURN();
 }
 
 /* 
@@ -485,7 +485,7 @@ static void update_maxhigh(struct mtfs_interval_node *node,
                            __u64  old_maxhigh)
 {
 	__u64 left_max, right_max;
-	HENTRY();
+	MENTRY();
 
 	while (node) {
 		left_max = node->in_left ? node->in_left->in_max_high : 0;
@@ -497,7 +497,7 @@ static void update_maxhigh(struct mtfs_interval_node *node,
 			break;
 		node = node->in_parent;
 	}
-	_HRETURN();
+	_MRETURN();
 }
 
 void mtfs_interval_erase(struct mtfs_interval_node *node,
@@ -505,9 +505,9 @@ void mtfs_interval_erase(struct mtfs_interval_node *node,
 {
 	struct mtfs_interval_node *child, *parent;
 	int color;
-	HENTRY();
+	MENTRY();
 
-	HASSERT(mtfs_interval_is_intree(node));
+	MASSERT(mtfs_interval_is_intree(node));
 	node->in_intree = 0;
 	if (!node->in_left) {
 		child = node->in_right;
@@ -570,7 +570,7 @@ void mtfs_interval_erase(struct mtfs_interval_node *node,
 color:
 	if (color == MTFS_INTERVAL_BLACK)
 		mtfs_interval_erase_color(child, parent, root);
-	_HRETURN();
+	_MRETURN();
 }
 EXPORT_SYMBOL(mtfs_interval_erase);
 
@@ -610,8 +610,8 @@ enum mtfs_interval_iter mtfs_interval_search(struct mtfs_interval_node *node,
 	struct mtfs_interval_node *parent;
 	enum mtfs_interval_iter rc = MTFS_INTERVAL_ITER_CONT;
 
-	HASSERT(ext != NULL);
-	HASSERT(func != NULL);
+	MASSERT(ext != NULL);
+	MASSERT(func != NULL);
 
 	while (node) {
 		if (ext->end < mtfs_interval_low(node)) {
@@ -738,11 +738,11 @@ void mtfs_interval_expand(struct mtfs_interval_node *root,
 {
 	/* The assertion of mtfs_interval_is_overlapped is expensive because we may
 	 * travel many nodes to find the overlapped node. */
-	HASSERT(mtfs_interval_is_overlapped(root, ext) == 0);
+	MASSERT(mtfs_interval_is_overlapped(root, ext) == 0);
 	if (!limiter || limiter->start < ext->start)
 		ext->start = mtfs_interval_expand_low(root, ext->start);
 	if (!limiter || limiter->end > ext->end)
 		ext->end = mtfs_interval_expand_high(root, ext->end);
-	HASSERT(mtfs_interval_is_overlapped(root, ext) == 0);
+	MASSERT(mtfs_interval_is_overlapped(root, ext) == 0);
 }
 EXPORT_SYMBOL(mtfs_interval_expand);

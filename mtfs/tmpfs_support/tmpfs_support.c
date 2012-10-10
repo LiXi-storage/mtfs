@@ -19,11 +19,11 @@ size_t mtfs_tmpfs_file_read_branch(struct file *file, char __user *buf, size_t l
 	struct file *hidden_file = mtfs_f2branch(file, bindex);
 	struct inode *inode = NULL;
 	struct inode *hidden_inode = NULL;
-	HENTRY();
+	MENTRY();
 
 	if (hidden_file) {
-		HASSERT(hidden_file->f_op);
-		HASSERT(hidden_file->f_op->read);
+		MASSERT(hidden_file->f_op);
+		MASSERT(hidden_file->f_op->read);
 		ret = hidden_file->f_op->read(hidden_file, buf, len, ppos);
 		if (ret > 0) {
 			/*
@@ -31,18 +31,18 @@ size_t mtfs_tmpfs_file_read_branch(struct file *file, char __user *buf, size_t l
 			 * TODO: Do not update unless file growes bigger.
 			 */
 			inode = file->f_dentry->d_inode;
-			HASSERT(inode);
+			MASSERT(inode);
 			hidden_inode = mtfs_i2branch(inode, bindex);
-			HASSERT(hidden_inode);
+			MASSERT(hidden_inode);
 			fsstack_copy_inode_size(inode, hidden_inode);
 		}
 	} else {
-		HERROR("branch[%d] of file [%*s] is NULL\n",
+		MERROR("branch[%d] of file [%*s] is NULL\n",
 		       bindex, file->f_dentry->d_name.len, file->f_dentry->d_name.name);
 		ret = -ENOENT;
 	}
 
-	HRETURN(ret);
+	MRETURN(ret);
 }
 
 ssize_t mtfs_tmpfs_file_read(struct file *file, char __user *buf, size_t len,
@@ -51,12 +51,12 @@ ssize_t mtfs_tmpfs_file_read(struct file *file, char __user *buf, size_t len,
 	ssize_t ret = 0;
 	loff_t tmp_pos = 0;
 	mtfs_bindex_t bindex = 0;
-	HENTRY();
+	MENTRY();
 
 	for (bindex = 0; bindex < mtfs_f2bnum(file); bindex++) {
 		tmp_pos = *ppos;
 		ret = mtfs_tmpfs_file_read_branch(file, buf, len, &tmp_pos, bindex);
-		HDEBUG("readed branch[%d] of file [%*s] at pos = %llu, ret = %ld\n",
+		MDEBUG("readed branch[%d] of file [%*s] at pos = %llu, ret = %ld\n",
 		       bindex, file->f_dentry->d_name.len, file->f_dentry->d_name.name,
 		       *ppos, ret);
 		if (ret >= 0) { 
@@ -65,7 +65,7 @@ ssize_t mtfs_tmpfs_file_read(struct file *file, char __user *buf, size_t len,
 		}
 	}
 
-	HRETURN(ret);	
+	MRETURN(ret);	
 }
 
 static ssize_t mtfs_tmpfs_file_write_branch(struct file *file, const char __user *buf, size_t len, 
@@ -75,11 +75,11 @@ static ssize_t mtfs_tmpfs_file_write_branch(struct file *file, const char __user
 	struct file *hidden_file = mtfs_f2branch(file, bindex);
 	struct inode *inode = NULL;
 	struct inode *hidden_inode = NULL;
-	HENTRY();
+	MENTRY();
 
 	if (hidden_file) {
-		HASSERT(hidden_file->f_op);
-		HASSERT(hidden_file->f_op->write);
+		MASSERT(hidden_file->f_op);
+		MASSERT(hidden_file->f_op->write);
 		ret = hidden_file->f_op->write(hidden_file, buf, len, ppos);
 		if (ret > 0) {
 			/*
@@ -87,18 +87,18 @@ static ssize_t mtfs_tmpfs_file_write_branch(struct file *file, const char __user
 			 * TODO: Do not update unless file growes bigger.
 			 */
 			inode = file->f_dentry->d_inode;
-			HASSERT(inode);
+			MASSERT(inode);
 			hidden_inode = mtfs_i2branch(inode, bindex);
-			HASSERT(hidden_inode);
+			MASSERT(hidden_inode);
 			fsstack_copy_inode_size(inode, hidden_inode);
 		}
 	} else {
-		HERROR("branch[%d] of file [%*s] is NULL\n",
+		MERROR("branch[%d] of file [%*s] is NULL\n",
 		       bindex, file->f_dentry->d_name.len, file->f_dentry->d_name.name);
 		ret = -ENOENT;
 	}
 
-	HRETURN(ret);
+	MRETURN(ret);
 }
 
 ssize_t mtfs_tmpfs_file_write(struct file *file, const char __user *buf, size_t len, loff_t *ppos)
@@ -108,12 +108,12 @@ ssize_t mtfs_tmpfs_file_write(struct file *file, const char __user *buf, size_t 
 	mtfs_bindex_t bindex = 0;
 	loff_t success_pos = 0;
 	ssize_t success_ret = 0;
-	HENTRY();
+	MENTRY();
 
 	for (bindex = 0; bindex < mtfs_f2bnum(file); bindex++) {
 		tmp_pos = *ppos;
 		ret = mtfs_tmpfs_file_write_branch(file, buf, len, &tmp_pos, bindex);
-		HDEBUG("readed branch[%d] of file [%*s] at pos = %llu, ret = %ld\n",
+		MDEBUG("readed branch[%d] of file [%*s] at pos = %llu, ret = %ld\n",
 		       bindex, file->f_dentry->d_name.len, file->f_dentry->d_name.name,
 		       *ppos, ret);
 		/* TODO: set data flags */
@@ -128,23 +128,23 @@ ssize_t mtfs_tmpfs_file_write(struct file *file, const char __user *buf, size_t 
 		*ppos = success_pos;
 	}
 
-	HRETURN(ret);
+	MRETURN(ret);
 }
 
 struct dentry *mtfs_tmpfs_lookup(struct inode *dir, struct dentry *dentry, struct nameidata *nd)
 {
 	struct dentry *ret = NULL;
 	int rc = 0;
-	HENTRY();
+	MENTRY();
 
-	HASSERT(inode_is_locked(dir));
-	HASSERT(!IS_ROOT(dentry));
+	MASSERT(inode_is_locked(dir));
+	MASSERT(!IS_ROOT(dentry));
 
 	rc = mtfs_lookup_backend(dir, dentry, INTERPOSE_LOOKUP);
 
 	ret = ERR_PTR(rc);
 
-	HRETURN(ret);
+	MRETURN(ret);
 }
 
 struct super_operations mtfs_tmpfs_sops =
@@ -267,17 +267,17 @@ static int tmpfs_support_init(void)
 {
 	int ret = 0;
 
-	HDEBUG("registering mtfs_tmpfs support\n");
+	MDEBUG("registering mtfs_tmpfs support\n");
 
 	ret = lowerfs_register_ops(&lowerfs_tmpfs_ops);
 	if (ret) {
-		HERROR("failed to register lowerfs operation: error %d\n", ret);
+		MERROR("failed to register lowerfs operation: error %d\n", ret);
 		goto out;
 	}	
 
 	ret = junction_register(&mtfs_tmpfs_junction);
 	if (ret) {
-		HERROR("failed to register junction: error %d\n", ret);
+		MERROR("failed to register junction: error %d\n", ret);
 		goto out_unregister_lowerfs_ops;
 	}
 	goto out;
@@ -289,7 +289,7 @@ out:
 
 static void tmpfs_support_exit(void)
 {
-	HDEBUG("unregistering mtfs_tmpfs support\n");
+	MDEBUG("unregistering mtfs_tmpfs support\n");
 	lowerfs_unregister_ops(&lowerfs_tmpfs_ops);
 
 	junction_unregister(&mtfs_tmpfs_junction);

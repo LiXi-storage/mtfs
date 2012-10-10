@@ -39,7 +39,7 @@ int hide_dirs(char *source, int unhide)
 			ret = mount(MTFS_HIDDEN_FS_DEV, name, MTFS_HIDDEN_FS_TYPE, flags, (void *)option);
 		}
 		if (ret) {
-			HERROR("%s branch[%d] at %s failed: %s\n",
+			MERROR("%s branch[%d] at %s failed: %s\n",
 			       unhide ? "unhide" : "hide", bindex, name, strerror(errno));
 			break;
 		}
@@ -76,20 +76,20 @@ int mtfs_api_hide(const char *path, int unhide, struct mtfs_param *param)
 
 	fp = setmntent(MOUNTED, "r");
 	if (fp == NULL) {
-		HERROR("open %s failed: %s\n", MOUNTED, strerror(errno));
+		MERROR("open %s failed: %s\n", MOUNTED, strerror(errno));
 		ret = -errno;
 		goto out;
 	}
 
 	if (realpath(path, rpath) == NULL) {
-		HERROR("invalid path '%s': %s\n", path, strerror(errno));
+		MERROR("invalid path '%s': %s\n", path, strerror(errno));
 		ret = -errno;
 		goto end_mnt;
 	}
 	
 	MTFS_ALLOC(device, PATH_MAX);
 	if (device == NULL) {
-		HERROR("Not enough memory\n");
+		MERROR("Not enough memory\n");
 		ret = -ENOMEM;
 		goto end_mnt;
 	}
@@ -109,7 +109,7 @@ int mtfs_api_hide(const char *path, int unhide, struct mtfs_param *param)
 	}
 
 	if (out_len <= 0) {
-		HERROR("%s isn't mounted on mtfs\n", path);
+		MERROR("%s isn't mounted on mtfs\n", path);
 		ret = -EINVAL;
 		goto free_device;
 	}

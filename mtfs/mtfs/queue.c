@@ -167,11 +167,11 @@ int queue_remove_data(queue_t *queue, void *data)
 void list_dump(mtfs_list_t *head)
 {
 	mtfs_list_t *pos;
-	HPRINT("HEAD");
+	MPRINT("HEAD");
 	mtfs_list_for_each(pos, head) {
-		HPRINT("->%d", *((int *)mtfs_list_entry(pos, node_t, list)->data));
+		MPRINT("->%d", *((int *)mtfs_list_entry(pos, node_t, list)->data));
 	}
-	HPRINT("\n");
+	MPRINT("\n");
 }
 
 void queue_dump(queue_t *queue)

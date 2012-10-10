@@ -279,9 +279,9 @@ static inline void mtfs_bitmap_dump(mtfs_bitmap_t *bitmap)
 {
 	int i = 0;
 	mtfs_foreach_bit(bitmap, i) {
-		HPRINT("%d ", i);
+		MPRINT("%d ", i);
 	}
-	HPRINT("\n");
+	MPRINT("\n");
 }
 
 static inline mtfs_bitmap_t *mtfs_bitmap_allocate(int size)

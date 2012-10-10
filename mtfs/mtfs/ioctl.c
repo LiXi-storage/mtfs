@@ -21,9 +21,9 @@ static int mtfs_user_get_state(struct inode *inode, struct file *file, struct mt
 	int state_size = 0;
 	struct inode *hidden_inode = NULL;
 	struct lowerfs_operations *lowerfs_ops = NULL;
-	HENTRY();
+	MENTRY();
 
-	HASSERT(bnum <= max_bnum);
+	MASSERT(bnum <= max_bnum);
 
 	state_size = mtfs_user_flag_size(bnum);
 	MTFS_ALLOC(state, state_size);
@@ -53,7 +53,7 @@ static int mtfs_user_get_state(struct inode *inode, struct file *file, struct mt
 free_state:	
 	MTFS_FREE(state, state_size);
 out:
-	HRETURN(ret);	
+	MRETURN(ret);	
 }
 
 static int mtfs_user_set_state(struct inode *inode, struct file *file, struct mtfs_user_flag __user *user_state)
@@ -65,7 +65,7 @@ static int mtfs_user_set_state(struct inode *inode, struct file *file, struct mt
 	int state_size = 0;
 	struct inode *hidden_inode = NULL;
 	struct lowerfs_operations *lowerfs_ops = NULL;
-	HENTRY();
+	MENTRY();
 
 	state_size = mtfs_user_flag_size(bnum);
 	MTFS_ALLOC(state, state_size);
@@ -81,13 +81,13 @@ static int mtfs_user_set_state(struct inode *inode, struct file *file, struct mt
 	}
 	
 	if (state->bnum != bnum) {
-		HERROR("bnum (%d) is not valid, expect %d\n", state->bnum, bnum);
+		MERROR("bnum (%d) is not valid, expect %d\n", state->bnum, bnum);
 		ret = -EINVAL;
 		goto free_state;
 	}
 	
 	if (state->state_size != state_size) {
-		HERROR("state_size (%d) is not valid, expect %d\n", state->state_size, state_size);
+		MERROR("state_size (%d) is not valid, expect %d\n", state->state_size, state_size);
 		ret = -EINVAL;
 		goto free_state;
 	}
@@ -106,11 +106,11 @@ static int mtfs_user_set_state(struct inode *inode, struct file *file, struct mt
 		hidden_inode = mtfs_i2branch(inode, bindex);
 		lowerfs_ops = mtfs_i2bops(inode, bindex);
 		if (hidden_inode == NULL) {
-			HDEBUG("branch[%d] of inode is NULL, skipping\n", bindex);
+			MDEBUG("branch[%d] of inode is NULL, skipping\n", bindex);
 		} else {
 			ret = lowerfs_inode_set_flag(lowerfs_ops, hidden_inode, state->state[bindex].flag);
 			if (ret) {
-				HERROR("lowerfs_inode_set_flag failed, ret = %d\n", ret);
+				MERROR("lowerfs_inode_set_flag failed, ret = %d\n", ret);
 				goto recover;
 			}
 		}
@@ -119,11 +119,11 @@ static int mtfs_user_set_state(struct inode *inode, struct file *file, struct mt
 
 recover:
 	/* TODO: If fail, we should recover */
-	HBUG();
+	MBUG();
 free_state:	
 	MTFS_FREE(state, state_size);
 out:
-	HRETURN(ret);
+	MRETURN(ret);
 }
 
 static int mtfs_remove_branch(struct dentry *d_parent, const char *name, mtfs_bindex_t bindex)
@@ -132,7 +132,7 @@ static int mtfs_remove_branch(struct dentry *d_parent, const char *name, mtfs_bi
 	struct dentry *hidden_d_child  = NULL;
 	struct dentry *hidden_d_parent = mtfs_d2branch(d_parent, bindex);
 	struct dentry *d_child         = NULL;
-	HENTRY();
+	MENTRY();
 
 	if (hidden_d_parent|| hidden_d_parent->d_inode) {
 		hidden_d_child = mtfs_dchild_remove(hidden_d_parent, name);
@@ -174,24 +174,24 @@ static int mtfs_remove_branch(struct dentry *d_parent, const char *name, mtfs_bi
 #endif
 	} else {
 		if (hidden_d_parent == NULL) {
-			HDEBUG("branch[%d] of dentry [%*s] is NULL\n", bindex,
+			MDEBUG("branch[%d] of dentry [%*s] is NULL\n", bindex,
 			       d_parent->d_name.len, d_parent->d_parent->d_name.name);
 		} else {
-			HDEBUG("branch[%d] of dentry [%*s] is negative\n", bindex,
+			MDEBUG("branch[%d] of dentry [%*s] is negative\n", bindex,
 			       d_parent->d_name.len, d_parent->d_parent->d_name.name);
 		}
 		ret = -ENOENT;
 	}
 
 out:
-	HRETURN(ret);
+	MRETURN(ret);
 }
 
 static int mtfs_user_remove_branch(struct inode *parent_inode, struct file *parent_file, struct mtfs_remove_branch_info __user *user_remove_info)
 {
 	int ret = 0;
 	struct mtfs_remove_branch_info *remove_info = NULL;
-	HENTRY();
+	MENTRY();
 
 	MTFS_ALLOC_PTR(remove_info);
 	if (remove_info == NULL) {
@@ -213,7 +213,7 @@ static int mtfs_user_remove_branch(struct inode *parent_inode, struct file *pare
 out_free_info:
 	MTFS_FREE_PTR(remove_info);
 out:
-	HRETURN(ret);
+	MRETURN(ret);
 }
 
 static long __vfs_ioctl(struct file *filp, unsigned int cmd,
@@ -262,24 +262,24 @@ static int mtfs_ioctl_do_branch(struct inode *inode, struct file *file, unsigned
 	int ret = 0;
 	struct file *hidden_file = mtfs_f2branch(file, bindex);
 	struct inode *hidden_inode = mtfs_i2branch(inode, bindex);
-	HENTRY();
+	MENTRY();
 
 	ret = mtfs_device_branch_errno(mtfs_i2dev(inode), bindex, BOPS_MASK_WRITE);
 	if (ret) {
-		HDEBUG("branch[%d] is abandoned\n", bindex);
+		MDEBUG("branch[%d] is abandoned\n", bindex);
 		goto out; 
 	}
 
 	if (hidden_file && hidden_inode) {
 		ret = __vfs_ioctl(hidden_file, cmd, arg, is_kernel_ds);
 	} else {
-		HERROR("branch[%d] of file [%*s] is NULL, ioctl setflags skipped\n", 
+		MERROR("branch[%d] of file [%*s] is NULL, ioctl setflags skipped\n", 
 		       bindex, file->f_dentry->d_name.len, file->f_dentry->d_name.name);
 		ret = -ENOENT;
 	}
 
 out:
-	HRETURN(ret);
+	MRETURN(ret);
 }
 
 int mtfs_ioctl_write(struct inode *inode, struct file *file,
@@ -290,19 +290,19 @@ int mtfs_ioctl_write(struct inode *inode, struct file *file,
 	mtfs_bindex_t bindex = 0;
 	struct mtfs_operation_list *list = NULL;
 	mtfs_operation_result_t result = {0};	
-	HENTRY();
+	MENTRY();
 
-	HASSERT(mtfs_f2info(file));
+	MASSERT(mtfs_f2info(file));
 
 	list = mtfs_oplist_build(inode);
 	if (unlikely(list == NULL)) {
-		HERROR("failed to build operation list\n");
+		MERROR("failed to build operation list\n");
 		ret = -ENOMEM;
 		goto out;
 	}
 
 	if (list->latest_bnum == 0) {
-		HERROR("file [%*s] has no valid branch, please check it\n",
+		MERROR("file [%*s] has no valid branch, please check it\n",
 		       file->f_dentry->d_name.len, file->f_dentry->d_name.name);
 		if (!(mtfs_i2dev(inode)->no_abort)) {
 			ret = -EIO;
@@ -318,7 +318,7 @@ int mtfs_ioctl_write(struct inode *inode, struct file *file,
 		if (i == list->latest_bnum - 1) {
 			mtfs_oplist_check(list);
 			if (list->success_latest_bnum <= 0) {
-				HDEBUG("operation failed for all latest %d branches\n", list->latest_bnum);
+				MDEBUG("operation failed for all latest %d branches\n", list->latest_bnum);
 				if (!(mtfs_i2dev(inode)->no_abort)) {
 					result = mtfs_oplist_result(list);
 					ret = result.ret;
@@ -337,15 +337,15 @@ int mtfs_ioctl_write(struct inode *inode, struct file *file,
 
 	ret = mtfs_oplist_update(inode, list);
 	if (ret) {
-		HERROR("failed to update inode\n");
-		HBUG();
+		MERROR("failed to update inode\n");
+		MBUG();
 	}
 
 	mtfs_update_inode_attr(inode);
 out_free_oplist:
 	mtfs_oplist_free(list);
 out:
-	HRETURN(ret);
+	MRETURN(ret);
 }
 EXPORT_SYMBOL(mtfs_ioctl_write);
 
@@ -354,18 +354,18 @@ int mtfs_ioctl_read(struct inode *inode, struct file *file,
 {
 	mtfs_bindex_t bindex = -1;
 	int ret = 0;
-	HENTRY();
+	MENTRY();
 
 	ret = mtfs_i_choose_bindex(inode, MTFS_BRANCH_VALID, &bindex);
 	if (ret) {
-		HERROR("choose bindex failed, ret = %d\n", ret);
+		MERROR("choose bindex failed, ret = %d\n", ret);
 		goto out;
 	}
 
-	HASSERT(bindex >=0 && bindex < mtfs_i2bnum(inode));
+	MASSERT(bindex >=0 && bindex < mtfs_i2bnum(inode));
 	ret = mtfs_ioctl_do_branch(inode, file, cmd, arg, bindex, is_kernel_ds);
 out:
-	HRETURN(ret);
+	MRETURN(ret);
 }
 EXPORT_SYMBOL(mtfs_ioctl_read);
 
@@ -373,7 +373,7 @@ int mtfs_ioctl(struct inode *inode, struct file *file, unsigned int cmd, unsigne
 {
 	int ret = 0;
 	struct mtfs_operations *operations = NULL;
-	HENTRY();
+	MENTRY();
 
 	switch (cmd) {
 	case MTFS_IOCTL_GET_FLAG:
@@ -406,6 +406,6 @@ int mtfs_ioctl(struct inode *inode, struct file *file, unsigned int cmd, unsigne
 			}
 	} /* end of outer switch statement */
 
-	HRETURN(ret);
+	MRETURN(ret);
 }
 EXPORT_SYMBOL(mtfs_ioctl);
