@@ -9,7 +9,86 @@
 #include "main_internal.h"
 #include "io_internal.h"
 
-extern const struct mtfs_io_operations mtrace_io_ops[];
+static void _mtfs_io_iter_start_rw(struct mtfs_io *io)
+{
+	struct mtfs_io_rw *io_rw = &io->u.mi_rw;
+	int is_write = 0;
+	MENTRY();
+
+	is_write = (io->mi_type == MIT_WRITEV) ? 1 : 0;
+	io->mi_result.size = mtfs_file_rw_branch(is_write,
+	                                         io_rw->file,
+	                                         io_rw->iov,
+	                                         io_rw->nr_segs,
+	                                         io_rw->ppos,
+	                                         io->mi_bindex);
+	if (io->mi_result.size > 0) {
+		/* TODO: this check is weak */
+		io->mi_successful = 1;
+	} else {
+		io->mi_successful = 0;
+	}
+
+	_MRETURN();
+}
+
+static void mtrace_io_iter_start_rw(struct mtfs_io *io)
+{
+	MENTRY();
+
+	if (io->mi_bindex != io->mi_bnum - 1) {
+		_mtfs_io_iter_start_rw(io);
+	} else {
+		/* Trace branch */
+	}
+	_MRETURN();
+}
+
+static void mtrace_io_iter_fini_rw(struct mtfs_io *io, int init_ret)
+{
+	MENTRY();
+
+	if (unlikely(init_ret)) {
+		if (io->mi_bindex == io->mi_bnum - 1) {
+			io->mi_break = 1;
+		} else {
+			io->mi_bindex++;
+		}
+		goto out;
+	}
+
+	if (io->mi_bindex == io->mi_bnum - 1) {
+	    	io->mi_break = 1;
+	} else {
+		io->mi_bindex++;
+	}
+
+out:
+	_MRETURN();
+}
+
+const struct mtfs_io_operations mtrace_io_ops[] = {
+	[MIT_READV] = {
+		.mio_init       = NULL,
+		.mio_fini       = NULL,
+		.mio_lock       = NULL,
+		.mio_unlock     = NULL,
+		.mio_iter_init  = NULL,
+		.mio_iter_start = mtrace_io_iter_start_rw,
+		.mio_iter_end   = NULL,
+		.mio_iter_fini  = mtrace_io_iter_fini_rw,
+	},
+	[MIT_WRITEV] = {
+		.mio_init       = NULL,
+		.mio_fini       = NULL,
+		.mio_lock       = NULL,
+		.mio_unlock     = NULL,
+		.mio_iter_init  = NULL,
+		.mio_iter_start = mtrace_io_iter_start_rw,
+		.mio_iter_end   = NULL,
+		.mio_iter_fini  = mtrace_io_iter_fini_rw,
+	},
+};
 
 static int mtrace_io_init_rw(struct mtfs_io *io, int is_write,
                              struct file *file, const struct iovec *iov,
@@ -68,7 +147,6 @@ static ssize_t mtrace_file_rw(int is_write, struct file *file, const struct iove
 		size = io->mi_result.size;
 	}
 
-	*ppos = *ppos + size;
 out_free_io:
 	MTFS_SLAB_FREE_PTR(io, mtfs_io_cache);
 out:
@@ -103,7 +181,7 @@ ssize_t mtrace_file_writev(struct file *file, const struct iovec *iov,
 	ssize_t size = 0;
 	MENTRY();
 
-	size = mtrace_trace_file_rw(WRITE, file, iov, nr_segs, ppos);
+	size = mtrace_file_rw(WRITE, file, iov, nr_segs, ppos);
 
 	MRETURN(size);
 }
@@ -141,61 +219,4 @@ ssize_t mtrace_file_aio_write(struct kiocb *iocb, const struct iovec *iov,
 }
 EXPORT_SYMBOL(mtrace_file_aio_write);
 
-static void mtrace_io_iter_start_rw(struct mtfs_io *io)
-{
-	MENTRY();
-
-	if (io->mi_bindex != io->mi_bnum - 1) {
-		mtfs_io_iter_start_rw(io);
-	} else {
-		/* Trace branch */
-	}
-	_MRETURN();
-}
-
-static void mtrace_io_iter_fini_rw(struct mtfs_io *io, int init_ret)
-{
-	MENTRY();
-
-	if (unlikely(init_ret)) {
-		if (io->mi_bindex == io->mi_bnum - 1) {
-			io->mi_break = 1;
-		} else {
-			io->mi_bindex++;
-		}
-		goto out;
-	}
-
-	if (io->mi_bindex == io->mi_bnum - 1) {
-	    	io->mi_break = 1;
-	} else {
-		io->mi_bindex++;
-	}
-
-out:
-	_MRETURN();
-}
-
-const struct mtfs_io_operations mtrace_io_ops[] = {
-	[MIT_READV] = {
-		.mio_init       = NULL,
-		.mio_fini       = NULL,
-		.mio_lock       = NULL,
-		.mio_unlock     = NULL,
-		.mio_iter_init  = NULL,
-		.mio_iter_start = mtrace_io_iter_start_rw,
-		.mio_iter_end   = NULL,
-		.mio_iter_fini  = mtrace_io_iter_fini_rw,
-	},
-	[MIT_WRITEV] = {
-		.mio_init       = NULL,
-		.mio_fini       = NULL,
-		.mio_lock       = NULL,
-		.mio_unlock     = NULL,
-		.mio_iter_init  = NULL,
-		.mio_iter_start = mtrace_io_iter_start_rw,
-		.mio_iter_end   = NULL,
-		.mio_iter_fini  = mtrace_io_iter_fini_rw,
-	},
-};
 #endif /* !HAVE_FILE_READV */

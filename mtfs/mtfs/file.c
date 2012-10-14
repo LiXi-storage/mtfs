@@ -728,7 +728,9 @@ ssize_t mtfs_file_read(struct file *file, char __user *buf, size_t len,
 {
 	struct iovec local_iov = { .iov_base = (void __user *)buf,
 	                           .iov_len = len };
-	return mtfs_file_readv(file, &local_iov, 1, ppos);
+	MASSERT(file->f_op);
+	MASSERT(file->f_op->readv);
+	return file->f_op->readv(file, &local_iov, 1, ppos);	
 }
 EXPORT_SYMBOL(mtfs_file_read);
 

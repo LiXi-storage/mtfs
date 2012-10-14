@@ -259,18 +259,18 @@ module_is_installed()
 
 mount_mtfs()
 {
-	mount_filesystem $MOUNT_MTFS mtfs $MTFS_DEV $MTFS_MNT1
+	mount_filesystem $MOUNT_MTFS mtfs $MTFS_DEV $MTFS_MNT1 "$MTFS_OPTION"
 }
 
 mount_mtfs_noexit()
 {
-	mount_filesystem_noexit $MOUNT_MTFS mtfs $MTFS_DEV $MTFS_MNT1
+	mount_filesystem_noexit $MOUNT_MTFS mtfs $MTFS_DEV $MTFS_MNT1 "$MTFS_OPTION"
 	return $?
 }
 
 mount_mtfs2()
 {
-	mount_filesystem $MOUNT_MTFS mtfs $MTFS2_DEV $MTFS_MNT2
+	mount_filesystem $MOUNT_MTFS mtfs $MTFS2_DEV $MTFS_MNT2 "$MTFS_OPTION"
 }
 
 umount_mtfs()
