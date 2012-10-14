@@ -529,6 +529,22 @@ out:
 }
 EXPORT_SYMBOL(mtfs_lookup);
 
+struct dentry *mtfs_lookup_nonnd(struct inode *dir, struct dentry *dentry, struct nameidata *nd)
+{
+	struct dentry *tmp_dentry = NULL;
+	int ret = 0;
+	MENTRY();
+
+	MASSERT(inode_is_locked(dir));
+	MASSERT(!IS_ROOT(dentry));
+
+	ret = mtfs_lookup_backend(dir, dentry, INTERPOSE_LOOKUP);
+	tmp_dentry = ERR_PTR(ret);
+
+	MRETURN(tmp_dentry);
+}
+EXPORT_SYMBOL(mtfs_lookup_nonnd);
+
 static int mtfs_create_branch(struct dentry *dentry, int mode,
                               mtfs_bindex_t bindex, struct nameidata *nd)
 {

@@ -13,7 +13,7 @@ typedef signed char mtfs_bindex_t;
 #define MTFS_HIDDEN_FS_DEV "none"
 
 #define MTFS_DEFAULT_PRIMARY_BRANCH 0
-#define MTFS_DEFAULT_SUBJECT "high-reliability"
+#define MTFS_DEFAULT_SUBJECT "REPLICA"
 
 static inline int mtfs_is_primary_bindex(mtfs_bindex_t bindex)
 {

@@ -614,6 +614,7 @@ ssize_t mtfs_file_rw_branch(int is_write, struct file *file, const struct iovec 
 out:
 	MRETURN(ret);
 }
+EXPORT_SYMBOL(mtfs_file_rw_branch);
 
 static int mtfs_io_init_rw(struct mtfs_io *io, int is_write,
                            struct file *file, const struct iovec *iov,

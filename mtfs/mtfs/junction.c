@@ -159,7 +159,8 @@ struct mtfs_junction *junction_get(const char *subject,
 	junction = junction_search(subject, primary_type, secondary_types);
 	if (junction == NULL) {
 		ret = -EOPNOTSUPP;
-		MERROR("failed to find proper junction for type '%s'\n", primary_type); /* TODO: secondary*/
+		MERROR("failed to find proper junction, subject = %s, type = %s\n",
+		       subject, primary_type); /* TODO: secondary*/
 		goto out;
 	}
 

@@ -2,6 +2,7 @@
  * Copyright (C) 2011 Li Xi <pkuelelixi@gmail.com>
  */
 
+#include <linux/module.h>
 #include <mtfs_common.h>
 #include <mtfs_device.h>
 #include <mtfs_oplist.h>
@@ -110,7 +111,7 @@ static int mtfs_io_iter_init_rw(struct mtfs_io *io)
 	MRETURN(ret);
 }
 
-static void mtfs_io_iter_start_rw(struct mtfs_io *io)
+void mtfs_io_iter_start_rw(struct mtfs_io *io)
 {
 	struct mtfs_io_rw *io_rw = &io->u.mi_rw;
 	mtfs_bindex_t global_bindex = io->mi_oplist.op_binfo[io->mi_bindex].bindex;
@@ -346,3 +347,4 @@ out_fini:
 out:
 	MRETURN(ret);
 }
+EXPORT_SYMBOL(mtfs_io_loop);

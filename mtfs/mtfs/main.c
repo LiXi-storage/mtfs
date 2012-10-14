@@ -387,7 +387,7 @@ struct mtfs_config *mtfs_config_init(struct mount_option *mount_option)
 	mc->mc_nonlatest = mount_option->bnum;
 	goto out;
 out_free:
-	
+	MTFS_SLAB_FREE_PTR(mc, mtfs_config_cache);
 	mc = NULL;
 out:
 	MRETURN(mc);
@@ -508,7 +508,7 @@ int mtfs_reserve_init(struct dentry *d_root, struct mount_option *mount_option)
 	}
 
 	if (mc == NULL) {
-		MDEBUG("generating config\n");
+		MDEBUG("generating a new config\n");
 		mc = mtfs_config_init(mount_option);
 		if (mc == NULL) {
 			MERROR("failed to init config\n");
@@ -517,20 +517,15 @@ int mtfs_reserve_init(struct dentry *d_root, struct mount_option *mount_option)
 	}
 
 	MASSERT(mc->mc_valid);
-	if (mount_option->mo_subject &&
-	    strcmp(mc->mc_info.mci_subject, mount_option->mo_subject) != 0) {
-		MERROR("subject confilct, mounted %s, configured %s\n",
-		       mount_option->mo_subject, mc->mc_info.mci_subject);
-		ret = -EINVAL;
-		goto out_free_mc;
-	}
-
-	if (mc->mc_nonlatest) {
-		ret = mtfs_config_write(d_root->d_sb, mc);
-		if (ret) {
-			MERROR("failed to write config, ret = %d\n", ret);
+	if (mount_option->mo_subject) {
+		if (strcmp(mc->mc_info.mci_subject, mount_option->mo_subject) != 0) {
+			MERROR("subject confilct, mounted %s, configured %s\n",
+			       mount_option->mo_subject, mc->mc_info.mci_subject);
+			ret = -EINVAL;
 			goto out_free_mc;
 		}
+	} else {
+		MTFS_STRDUP(mount_option->mo_subject, mc->mc_info.mci_subject);
 	}
 
 	mtfs_s2config(sb) = mc;
@@ -650,6 +645,15 @@ int mtfs_read_super(struct super_block *sb, void *input, int silent)
 	if (IS_ERR(device)) {
 		ret = PTR_ERR(device);
 		goto out_finit_reserve;
+	}
+
+	/* TODO: Move this after mtfs_init_super() */
+	if (mtfs_s2config(sb)->mc_nonlatest) {
+		ret = mtfs_config_write(d_root->d_sb, mtfs_s2config(sb));
+		if (ret) {
+			MERROR("failed to write config, ret = %d\n", ret);
+			goto out_free_dev;
+		}
 	}
 
 	MASSERT(mtfs_s2bnum(sb) == bnum);

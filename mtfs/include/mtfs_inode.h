@@ -39,6 +39,7 @@ struct mtfs_inode_info {
 #define inode_is_locked(inode) (mutex_is_locked(&(inode)->i_mutex))
 
 extern struct dentry *mtfs_lookup(struct inode *dir, struct dentry *dentry, struct nameidata *nd);
+struct dentry *mtfs_lookup_nonnd(struct inode *dir, struct dentry *dentry, struct nameidata *nd);
 extern int mtfs_create(struct inode *dir, struct dentry *dentry, int mode, struct nameidata *nd);
 extern int mtfs_link(struct dentry *old_dentry, struct inode *dir, struct dentry *new_dentry);
 extern int mtfs_unlink(struct inode *dir, struct dentry *dentry);

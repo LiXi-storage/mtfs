@@ -12,22 +12,6 @@
 #include <mtfs_junction.h>
 #include "trace_ext2.h"
 
-struct dentry *trace_ext2_lookup(struct inode *dir, struct dentry *dentry, struct nameidata *nd)
-{
-	struct dentry *ret = NULL;
-	int rc = 0;
-	MENTRY();
-
-	MASSERT(inode_is_locked(dir));
-	MASSERT(!IS_ROOT(dentry));
-
-	rc = mtfs_lookup_backend(dir, dentry, INTERPOSE_LOOKUP);
-
-	ret = ERR_PTR(rc);
-
-	MRETURN(ret);
-}
-
 struct super_operations trace_ext2_sops =
 {
 	alloc_inode:    mtfs_alloc_inode,
@@ -52,7 +36,7 @@ struct inode_operations trace_ext2_symlink_iops =
 struct inode_operations trace_ext2_dir_iops =
 {
 	create:	        mtfs_create,
-	lookup:	        trace_ext2_lookup,
+	lookup:	        mtfs_lookup_nonnd,
 	link:           mtfs_link,
 	unlink:	        mtfs_unlink,
 	symlink:        mtfs_symlink,
@@ -221,7 +205,7 @@ const char *supported_secondary_types[] = {
 struct mtfs_junction trace_ext2_junction = {
 	junction_owner:          THIS_MODULE,
 	junction_name:           "ext2",
-	mj_subject:              "HA",
+	mj_subject:              "REPLICA",
 	primary_type:            "ext2",
 	secondary_types:         supported_secondary_types,
 	fs_ops:                  &trace_ext2_operations,

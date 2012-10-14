@@ -221,7 +221,7 @@ const char *supported_secondary_types[] = {
 struct mtfs_junction mtfs_ext2_junction = {
 	junction_owner:          THIS_MODULE,
 	junction_name:           "ext2",
-	mj_subject:              "HA",
+	mj_subject:              "REPLICA",
 	primary_type:            "ext2",
 	secondary_types:         supported_secondary_types,
 	fs_ops:                  &mtfs_ext2_operations,

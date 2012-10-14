@@ -55,6 +55,9 @@ extern int mtfs_ioctl_read(struct inode *inode, struct file *file,
 extern struct file_operations mtfs_main_fops;
 extern struct file_operations mtfs_dir_fops;
 
+extern ssize_t mtfs_file_rw_branch(int is_write, struct file *file, const struct iovec *iov,
+                                   unsigned long nr_segs, loff_t *ppos, mtfs_bindex_t bindex);
+
 /*
  * Be careful!
  * Keep the same with struct mtfs_file_branch defined in llite/file.c
