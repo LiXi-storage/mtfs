@@ -482,8 +482,10 @@ int mtfs_backup_branch(struct dentry *dentry, mtfs_bindex_t bindex)
 	dput(hidden_d_new);
 
 	/* Lookup the target dentry */
+	mutex_lock(&hidden_d_parent_new->d_inode->i_mutex);
 	hidden_d_new = lookup_one_len(hidden_d_old->d_name.name,
 	                              hidden_d_parent_new, hidden_d_old->d_name.len);
+	mutex_unlock(&hidden_d_parent_new->d_inode->i_mutex);
 	if (IS_ERR(hidden_d_new)) {
 		MERROR("lookup [%.*s/%.*s] failed, ret = %d\n",
 		       hidden_d_parent_new->d_name.len, hidden_d_parent_new->d_name.name,
