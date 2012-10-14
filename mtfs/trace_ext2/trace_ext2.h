@@ -2,8 +2,8 @@
  * Copyright (C) 2011 Li Xi <pkuelelixi@gmail.com>
  */
 
-#ifndef __MTFS_EXT2_SUPPORT_H__
-#define __MTFS_EXT2_SUPPORT_H__
+#ifndef __MTFS_TRACE_EXT2_H__
+#define __MTFS_TRACE_EXT2_H__
 #if defined (__linux__) && defined(__KERNEL__)
 #include <mtfs_file.h>
 #include <linux/ext2_fs.h>
@@ -34,4 +34,4 @@ static inline int inode_to_ext2_flags(int iflags, int keep)
 }
 
 #endif /* defined (__linux__) && defined(__KERNEL__) */
-#endif /* __MTFS_EXT2_SUPPORT_H__ */
+#endif /* __MTFS_TRACE_EXT2_H__ */

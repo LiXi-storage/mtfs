@@ -29,12 +29,26 @@ VALGRIND_LOG=${VALGRIND_LOG:-${VALGRIND_DIR}/valgrind_${basename}.log}
 EXIT_IF_FAIL=${EXIT_IF_FAIL:-TRUE}
 ERR2STR=${ERR2STR:-./err2str}
 
+valgrind -q --log-file-exactly=/tmp/log echo -n "" 2>/dev/null
+if [ $? -eq 0 ]; then
+	LOG_ARG="--log-file-exactly"
+else
+	valgrind -q --log-file=/tmp/log echo -n "" 2>/dev/null
+	if [ $? -eq 0 ]; then
+		LOG_ARG="--log-file"
+	else
+		echo "please check the version of valgrind"
+		exit 1
+	fi
+fi
+VALGRIND="valgrind -q $LOG_ARG=$VALGRIND_LOG"
+
 expect()
 {
 	RET="${1}"
 	shift
 	
-	out=`echo "${IN}" | valgrind -q --log-file-exactly=${VALGRIND_LOG} ${command} $* 2>/dev/null`
+	out=`echo "${IN}" | $VALGRIND ${command} $* 2>/dev/null`
 	ret=$?
 	ret=$(${ERR2STR} ${ret})	
 	

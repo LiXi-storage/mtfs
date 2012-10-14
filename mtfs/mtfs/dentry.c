@@ -50,11 +50,11 @@ static int mtfs_d_revalidate_branch(struct dentry *dentry, struct nameidata *nd,
 		//MASSERT(!d_unhashed(hidden_dentry));
 		ret = hidden_dentry->d_op->d_revalidate(hidden_dentry, nd);
 		if (ret <= 0) {
-			MDEBUG("branch[%d] of dentry [%*s] is invalid, ret = %d\n",
+			MDEBUG("branch[%d] of dentry [%.*s] is invalid, ret = %d\n",
 			       bindex, dentry->d_name.len, dentry->d_name.name, ret);
 		}
 	} else {
-		MDEBUG("branch[%d] of dentry [%*s] is NULL\n",
+		MDEBUG("branch[%d] of dentry [%.*s] is NULL\n",
 		       bindex, dentry->d_name.len, dentry->d_name.name);
 		ret = -ENOENT;
 	}
@@ -69,7 +69,7 @@ int mtfs_d_revalidate(struct dentry *dentry, struct nameidata *nd)
 	mtfs_bindex_t bnum = 0;
 	MENTRY();
 
-	MDEBUG("d_revalidate [%*s]\n", dentry->d_name.len, dentry->d_name.name);
+	MDEBUG("d_revalidate [%.*s]\n", dentry->d_name.len, dentry->d_name.name);
 	MASSERT(mtfs_d2info(dentry));
 
 	/* 
@@ -133,7 +133,7 @@ int mtfs_d_revalidate(struct dentry *dentry, struct nameidata *nd)
 				if (S_ISREG(dentry->d_inode->i_mode) ||
 					S_ISDIR(dentry->d_inode->i_mode)) {
 					struct file *filp;
-					MDEBUG("name = %*s, flags = 0x%x\n", dentry->d_name.len, dentry->d_name.name, nd->intent.open.flags);
+					MDEBUG("name = %.*s, flags = 0x%x\n", dentry->d_name.len, dentry->d_name.name, nd->intent.open.flags);
 					filp = lookup_instantiate_filp(nd, dentry, NULL);
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(2,6,17))
 					/* 2.6.1[456] have a bug in open_namei() that forgets to check
@@ -169,12 +169,12 @@ void mtfs_d_release(struct dentry *dentry)
 	mtfs_bindex_t bnum = 0;
 	MENTRY();
 
-	MDEBUG("d_release [%*s]\n", dentry->d_name.len, dentry->d_name.name);
+	MDEBUG("d_release [%.*s]\n", dentry->d_name.len, dentry->d_name.name);
 	MASSERT(d_unhashed(dentry));
 
 	/* This could be a negative dentry */
 	if (unlikely(!mtfs_d2info(dentry))) {
-		MDEBUG("dentry [%*s] has no private data\n",
+		MDEBUG("dentry [%.*s] has no private data\n",
 		       dentry->d_name.len, dentry->d_name.name);
 		goto out;
 	}

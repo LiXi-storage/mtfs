@@ -10,7 +10,7 @@
 #include <mtfs_inode.h>
 #include <mtfs_file.h>
 #include <mtfs_junction.h>
-#include "ext2_support.h"
+#include "replica_ext2.h"
 
 struct dentry *mtfs_ext2_lookup(struct inode *dir, struct dentry *dentry, struct nameidata *nd)
 {
@@ -85,7 +85,7 @@ int mtfs_d_revalidate_local(struct dentry *dentry, struct nameidata *nd)
 	int ret = 0;
 	MENTRY();
 
-	MDEBUG("d_revalidate [%*s]\n", dentry->d_name.len, dentry->d_name.name);
+	MDEBUG("d_revalidate [%.*s]\n", dentry->d_name.len, dentry->d_name.name);
 
 	if (dentry->d_flags & DCACHE_MTFS_INVALID) {
 		ret = 0;

@@ -582,17 +582,17 @@ AC_ARG_ENABLE([lustre-support],
 AC_MSG_RESULT([$enable_lustre_support])])
 
 #
-# LC_CONFIG_BACKEDN_EXT2
+# LC_CONFIG_REPLICA_EXT2
 #
 # whether to build ext2 backend support
 #
-AC_DEFUN([LC_CONFIG_BACKEDN_EXT2],
-[AC_MSG_CHECKING([whether to build ext2 backend support])
-AC_ARG_ENABLE([ext2-support],
-        AC_HELP_STRING([--disable-ext2-support],
-                        [disable ext2 backend support]),
-        [],[enable_ext2_support='yes'])
-AC_MSG_RESULT([$enable_ext2_support])])
+AC_DEFUN([LC_CONFIG_REPLICA_EXT2],
+[AC_MSG_CHECKING([whether to build replica ext2 support])
+AC_ARG_ENABLE([replica-ext2],
+        AC_HELP_STRING([--disable-replica-ext2],
+                        [disable replica ext2 support]),
+        [],[enable_replica_ext2='yes'])
+AC_MSG_RESULT([$enable_replica_ext2])])
 
 #
 # LC_CONFIG_BACKEDN_EXT3
@@ -658,6 +658,19 @@ AC_ARG_ENABLE([ntfs3g-support],
                         [disable ntfs3g backend support]),
         [],[enable_ntfs3g_support='yes'])
 AC_MSG_RESULT([$enable_ntfs3g_support])])
+
+#
+# LC_CONFIG_TRACE_EXT2
+#
+# whether to build ext2 trace support
+#
+AC_DEFUN([LC_CONFIG_TRACE_EXT2],
+[AC_MSG_CHECKING([whether to build trace ext2 support])
+AC_ARG_ENABLE([trace-ext2],
+        AC_HELP_STRING([--disable-trace-ext2],
+                        [disable trace ext2 support]),
+        [],[enable_trace_ext2='yes'])
+AC_MSG_RESULT([$enable_trace_ext2])])
 
 #
 # LC_CONFIG_MANAGE
@@ -839,12 +852,13 @@ AC_DEFUN([LC_CONDITIONALS],
 AM_CONDITIONAL(LIBMTFS, test x$enable_libmtfs = xyes)
 AM_CONDITIONAL(LIBMTFS_TESTS, test x$enable_libmtfs_tests = xyes)
 AM_CONDITIONAL(LUSTRE_SUPPORT, test x$enable_lustre_support = xyes)
-AM_CONDITIONAL(EXT2_SUPPORT, test x$enable_ext2_support = xyes)
+AM_CONDITIONAL(REPLICA_EXT2, test x$enable_replica_ext2 = xyes)
 AM_CONDITIONAL(EXT3_SUPPORT, test x$enable_ext3_support = xyes)
 AM_CONDITIONAL(EXT4_SUPPORT, test x$enable_ext4_support = xyes)
 AM_CONDITIONAL(NFS_SUPPORT, test x$enable_nfs_support = xyes)
 AM_CONDITIONAL(TMPFS_SUPPORT, test x$enable_tmpfs_support = xyes)
 AM_CONDITIONAL(NTFS3G_SUPPORT, test x$enable_ntfs3g_support = xyes)
+AM_CONDITIONAL(TRACE_EXT2, test x$enable_trace_ext2 = xyes)
 AM_CONDITIONAL(MANAGE, test x$enable_manage = xyes)
 AM_CONDITIONAL(MANAGE_TESTS, test x$enable_manage_tests = xyes)
 ])
@@ -873,8 +887,8 @@ mtfs/tests/Makefile
 mtfs/tests/pjd_fstest/Makefile
 mtfs/tests/src/Makefile
 mtfs/utils/Makefile
-mtfs/ext2_support/Makefile
-mtfs/ext2_support/autoMakefile
+mtfs/replica_ext2/Makefile
+mtfs/replica_ext2/autoMakefile
 mtfs/ext3_support/Makefile
 mtfs/ext3_support/autoMakefile
 mtfs/ext4_support/Makefile
@@ -885,6 +899,8 @@ mtfs/ntfs3g_support/Makefile
 mtfs/ntfs3g_support/autoMakefile
 mtfs/lustre_support/Makefile
 mtfs/lustre_support/autoMakefile
+mtfs/trace_ext2/Makefile
+mtfs/trace_ext2/autoMakefile
 mtfs/selfheal/Makefile
 mtfs/selfheal/autoMakefile
 mtfs/tmpfs_support/Makefile

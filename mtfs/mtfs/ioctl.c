@@ -174,10 +174,10 @@ static int mtfs_remove_branch(struct dentry *d_parent, const char *name, mtfs_bi
 #endif
 	} else {
 		if (hidden_d_parent == NULL) {
-			MDEBUG("branch[%d] of dentry [%*s] is NULL\n", bindex,
+			MDEBUG("branch[%d] of dentry [%.*s] is NULL\n", bindex,
 			       d_parent->d_name.len, d_parent->d_parent->d_name.name);
 		} else {
-			MDEBUG("branch[%d] of dentry [%*s] is negative\n", bindex,
+			MDEBUG("branch[%d] of dentry [%.*s] is negative\n", bindex,
 			       d_parent->d_name.len, d_parent->d_parent->d_name.name);
 		}
 		ret = -ENOENT;
@@ -273,7 +273,7 @@ static int mtfs_ioctl_do_branch(struct inode *inode, struct file *file, unsigned
 	if (hidden_file && hidden_inode) {
 		ret = __vfs_ioctl(hidden_file, cmd, arg, is_kernel_ds);
 	} else {
-		MERROR("branch[%d] of file [%*s] is NULL, ioctl setflags skipped\n", 
+		MERROR("branch[%d] of file [%.*s] is NULL, ioctl setflags skipped\n", 
 		       bindex, file->f_dentry->d_name.len, file->f_dentry->d_name.name);
 		ret = -ENOENT;
 	}
@@ -302,7 +302,7 @@ int mtfs_ioctl_write(struct inode *inode, struct file *file,
 	}
 
 	if (list->latest_bnum == 0) {
-		MERROR("file [%*s] has no valid branch, please check it\n",
+		MERROR("file [%.*s] has no valid branch, please check it\n",
 		       file->f_dentry->d_name.len, file->f_dentry->d_name.name);
 		if (!(mtfs_i2dev(inode)->no_abort)) {
 			ret = -EIO;

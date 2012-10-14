@@ -243,7 +243,7 @@ static int mtfs_lustre_getflags(struct inode *inode, struct file *file, unsigned
 
 	set_fs(old_fs);
 	if (ret) {
-		MERROR("ioctl getflags branch[%d] of file [%*s] failed, ret = %d\n",
+		MERROR("ioctl getflags branch[%d] of file [%.*s] failed, ret = %d\n",
 		       bindex, file->f_dentry->d_name.len, file->f_dentry->d_name.name, ret);
 		goto out;
 	}

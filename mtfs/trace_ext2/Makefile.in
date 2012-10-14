@@ -1,0 +1,6 @@
+MODULES := mtfs_trace_ext2
+mtfs_trace_ext2-objs := trace_ext2.o
+
+EXTRA_DIST := $(mtfs_trace_ext2-objs:.o=.c)
+EXTRA_DIST += trace_ext2.h
+@INCLUDE_RULES@

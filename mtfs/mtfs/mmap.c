@@ -277,7 +277,7 @@ ssize_t mtfs_direct_IO(int rw, struct kiocb *kiocb,
 		for (bindex = 0; bindex < mtfs_f2bnum(file); bindex++) {
 			hidden_file = mtfs_f2branch(file, bindex);
 			if (!hidden_file) {
-				MDEBUG("direct_IO of barnch[%d] file [%*s] is not supported\n",
+				MDEBUG("direct_IO of barnch[%d] file [%.*s] is not supported\n",
 				       bindex, file->f_dentry->d_name.len, file->f_dentry->d_name.name);
 				continue;
 			}

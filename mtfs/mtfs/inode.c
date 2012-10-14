@@ -201,7 +201,7 @@ int mtfs_interpose(struct dentry *dentry, struct super_block *sb, int flag)
 	for (bindex = 0; bindex < bnum; bindex++) {
 		hidden_dentry = mtfs_d2branch(dentry, bindex);
 		if (hidden_dentry == NULL || hidden_dentry->d_inode == NULL) {
-			MDEBUG("branch[%d] of dentry [%*s] is %s\n",
+			MDEBUG("branch[%d] of dentry [%.*s] is %s\n",
 			       bindex, dentry->d_name.len, dentry->d_name.name,
 			       hidden_dentry == NULL ? "NULL" : "negative");
 			continue;
@@ -215,7 +215,7 @@ int mtfs_interpose(struct dentry *dentry, struct super_block *sb, int flag)
 		     mtfs_inode_test, mtfs_inode_set, (void *)dentry);
 	if (inode == NULL) {
 		/* should be impossible? */
-		MERROR("got a NULL inode for dentry [%*s]",
+		MERROR("got a NULL inode for dentry [%.*s]",
 		       dentry->d_name.len, dentry->d_name.name);
 		ret = -EACCES;
 		goto out;
@@ -322,14 +322,14 @@ struct dentry *mtfs_lookup_branch(struct dentry *dentry, mtfs_bindex_t bindex)
 		hidden_dentry = lookup_one_len(dentry->d_name.name, hidden_dir_dentry, dentry->d_name.len);
 		mutex_unlock(&hidden_dir_dentry->d_inode->i_mutex);
 		if (IS_ERR(hidden_dentry)) {
-			MDEBUG("lookup branch[%d] of dentry [%*s], ret = %ld\n", 
+			MDEBUG("lookup branch[%d] of dentry [%.*s], ret = %ld\n", 
 			       bindex, dentry->d_name.len, dentry->d_name.name,
 			       PTR_ERR(hidden_dentry));
 		} else {
 			mtfs_d2branch(dentry, bindex) = hidden_dentry;
 		}
 	} else {
-		MDEBUG("branch[%d] of dir_dentry [%*s] is %s\n",
+		MDEBUG("branch[%d] of dir_dentry [%.*s] is %s\n",
 		       bindex, dentry->d_parent->d_name.len, dentry->d_parent->d_name.name,
 		       hidden_dir_dentry == NULL ? "NULL" : "negative");
 		hidden_dentry = ERR_PTR(-ENOENT);
@@ -363,7 +363,7 @@ int mtfs_lookup_backend(struct inode *dir, struct dentry *dentry, int interpose_
 	}
 
 	if (list->latest_bnum == 0) {
-		MERROR("directory [%*s] has no valid branch, please check it\n",
+		MERROR("directory [%.*s] has no valid branch, please check it\n",
 		       dentry->d_parent->d_name.len, dentry->d_parent->d_name.name);
 		if (!(mtfs_i2dev(dir)->no_abort)) {
 			ret = -EIO;
@@ -377,7 +377,7 @@ int mtfs_lookup_backend(struct inode *dir, struct dentry *dentry, int interpose_
 
 	ret = mtfs_d_alloc(dentry, mtfs_i2bnum(dir));
 	if (ret) {
-		MERROR("failed to alloc info for dentry [%*s]\n",
+		MERROR("failed to alloc info for dentry [%.*s]\n",
 		       dentry->d_name.len, dentry->d_name.name);
 		goto out_free_oplist;
 	}
@@ -410,7 +410,7 @@ int mtfs_lookup_backend(struct inode *dir, struct dentry *dentry, int interpose_
 			       "removing those branches\n");
 			ret = heal_discard_dentry(dir, dentry, list);
 			if (ret) {
-				MERROR("failed to remove branches\n");
+				MERROR("failed to remove branches, ret = %d\n", ret);
 			}
 		}
 		i_valid = 0;
@@ -424,7 +424,7 @@ int mtfs_lookup_backend(struct inode *dir, struct dentry *dentry, int interpose_
 	if (i_valid) {
 		ret = mtfs_interpose(dentry, dir->i_sb, interpose_flag);
 		if (ret) {
-			MDEBUG("failed to interpose dentry [%*s], ret = %d\n",
+			MDEBUG("failed to interpose dentry [%.*s], ret = %d\n",
 		           dentry->d_name.len, dentry->d_name.name, ret);
 			goto out_free;
 		}
@@ -466,7 +466,7 @@ struct dentry *mtfs_lookup(struct inode *dir,
 	int rc = 0;
 	MENTRY();
 
-	MDEBUG("lookup [%*s]\n", dentry->d_name.len, dentry->d_name.name);
+	MDEBUG("lookup [%.*s]\n", dentry->d_name.len, dentry->d_name.name);
 	MASSERT(inode_is_locked(dir));
 	MASSERT(!IS_ROOT(dentry));
 
@@ -576,18 +576,18 @@ static int mtfs_create_branch(struct dentry *dentry, int mode,
 		unlock_dir(hidden_dir_dentry);
 		if (!ret && hidden_dentry->d_inode == NULL) {
 			MBUG();
-			MDEBUG("branch[%d] of dentry [%*s] is negative\n", bindex,
+			MDEBUG("branch[%d] of dentry [%.*s] is negative\n", bindex,
 			       hidden_dentry->d_name.len, hidden_dentry->d_name.name);
 			ret = -EIO; /* which errno? */
 		}
 	} else {
 		if (hidden_dentry == NULL) {
-			MDEBUG("branch[%d] of dentry [%*s/%*s] is NULL\n", bindex,
+			MDEBUG("branch[%d] of dentry [%.*s/%.*s] is NULL\n", bindex,
 			       dentry->d_parent->d_name.len,
 			       dentry->d_parent->d_name.name,
 			       dentry->d_name.len, dentry->d_name.name);
 		} else {
-			MDEBUG("parent's branch[%d] of dentry [%*s/%*s] is NULL\n", bindex,
+			MDEBUG("parent's branch[%d] of dentry [%.*s/%.*s] is NULL\n", bindex,
 			       dentry->d_parent->d_name.len,
 			       dentry->d_parent->d_name.name,
 			       dentry->d_name.len, dentry->d_name.name);
@@ -609,7 +609,7 @@ int mtfs_create(struct inode *dir, struct dentry *dentry, int mode, struct namei
 	mtfs_operation_result_t result = {0};
 	MENTRY();
 
-	MDEBUG("create [%*s]\n", dentry->d_name.len, dentry->d_name.name);
+	MDEBUG("create [%.*s]\n", dentry->d_name.len, dentry->d_name.name);
 	MASSERT(inode_is_locked(dir));
 	MASSERT(dentry->d_inode == NULL);
 
@@ -621,7 +621,7 @@ int mtfs_create(struct inode *dir, struct dentry *dentry, int mode, struct namei
 	}
 
 	if (list->latest_bnum == 0) {
-		MERROR("dir [%*s] has no valid branch, please check it\n",
+		MERROR("dir [%.*s] has no valid branch, please check it\n",
 		       dentry->d_parent->d_name.len, dentry->d_parent->d_name.name);
 		if (!(mtfs_i2dev(dir)->no_abort)) {
 			ret = -EIO;
@@ -719,13 +719,13 @@ int mtfs_link_branch(struct dentry *old_dentry, struct dentry *new_dentry, mtfs_
 		dput(hidden_old_dentry);
 	} else {
 		if (hidden_old_dentry == NULL) {
-			MDEBUG("branch[%d] of dentry [%*s/%*s] is NULL\n", bindex,
+			MDEBUG("branch[%d] of dentry [%.*s/%.*s] is NULL\n", bindex,
 			       old_dentry->d_parent->d_name.len, old_dentry->d_parent->d_name.name,
 			       old_dentry->d_name.len, old_dentry->d_name.name);
 		}
 	
 		if (hidden_new_dentry == NULL){
-			MDEBUG("branch[%d] of dentry [%*s/%*s] is NULL\n", bindex,
+			MDEBUG("branch[%d] of dentry [%.*s/%.*s] is NULL\n", bindex,
 			       new_dentry->d_parent->d_name.len, new_dentry->d_parent->d_name.name,
 			       new_dentry->d_name.len, new_dentry->d_name.name);
 		}
@@ -746,7 +746,7 @@ int mtfs_link(struct dentry *old_dentry, struct inode *dir, struct dentry *new_d
 	mtfs_operation_result_t result = {0};
 	MENTRY();
 
-	MDEBUG("link [%*s] to [%*s]\n",
+	MDEBUG("link [%.*s] to [%.*s]\n",
 	       old_dentry->d_name.len, old_dentry->d_name.name,
 	       new_dentry->d_name.len, new_dentry->d_name.name);
 	MASSERT(old_dentry->d_inode);
@@ -762,7 +762,7 @@ int mtfs_link(struct dentry *old_dentry, struct inode *dir, struct dentry *new_d
 	}
 
 	if (list->latest_bnum == 0) {
-		MERROR("directory [%*s] has no valid branch, please check it\n",
+		MERROR("directory [%.*s] has no valid branch, please check it\n",
 		       new_dentry->d_parent->d_name.len, new_dentry->d_parent->d_name.name);
 		if (!(mtfs_i2dev(dir)->no_abort)) {
 			ret = -EIO;
@@ -879,15 +879,15 @@ static int mtfs_unlink_branch(struct dentry *dentry, mtfs_bindex_t bindex)
 		dput(hidden_dentry);
 	} else {
 		if (hidden_dentry == NULL) {
-			MDEBUG("branch[%d] of dentry [%*s/%*s] is NULL\n", bindex,
+			MDEBUG("branch[%d] of dentry [%.*s/%.*s] is NULL\n", bindex,
 			       dentry->d_parent->d_name.len, dentry->d_parent->d_name.name,
 			       dentry->d_name.len, dentry->d_name.name);
 		} else if (hidden_dentry->d_inode == NULL){
-			MDEBUG("branch[%d] of dentry [%*s/%*s] is negative\n", bindex,
+			MDEBUG("branch[%d] of dentry [%.*s/%.*s] is negative\n", bindex,
 			       dentry->d_parent->d_name.len, dentry->d_parent->d_name.name,
 			       dentry->d_name.len, dentry->d_name.name);
 		} else {
-			MDEBUG("parent's branch[%d] of dentry [%*s/%*s] is NULL\n", bindex,
+			MDEBUG("parent's branch[%d] of dentry [%.*s/%.*s] is NULL\n", bindex,
 			       dentry->d_parent->d_name.len, dentry->d_parent->d_name.name,
 			       dentry->d_name.len, dentry->d_name.name);
 		}
@@ -909,7 +909,7 @@ int mtfs_unlink(struct inode *dir, struct dentry *dentry)
 	mtfs_operation_result_t result = {0};	
 	MENTRY();
 
-	MDEBUG("unlink [%*s]\n", dentry->d_name.len, dentry->d_name.name);
+	MDEBUG("unlink [%.*s]\n", dentry->d_name.len, dentry->d_name.name);
 	MASSERT(inode_is_locked(dir));
 	MASSERT(inode);
 	MASSERT(inode_is_locked(inode));
@@ -924,7 +924,7 @@ int mtfs_unlink(struct inode *dir, struct dentry *dentry)
 	}
 
 	if (list->latest_bnum == 0) {
-		MERROR("dir [%*s] has no valid branch, please check it\n",
+		MERROR("dir [%.*s] has no valid branch, please check it\n",
 		       dentry->d_parent->d_name.len, dentry->d_parent->d_name.name);
 		if (!(mtfs_i2dev(inode)->no_abort)) {
 			ret = -EIO;
@@ -1028,21 +1028,21 @@ static int mtfs_rmdir_branch(struct dentry *dentry, mtfs_bindex_t bindex)
 			 * pjd_fstest:bug:0 will come here. Why?
 			 */
 			//MBUG();
-			MDEBUG("branch[%d] of dentry [%*s] is negative\n", bindex,
+			MDEBUG("branch[%d] of dentry [%.*s] is negative\n", bindex,
 			       hidden_dentry->d_name.len, hidden_dentry->d_name.name);
 			ret = -EIO; /* which errno? */
 		}
 	} else {
 		if (hidden_dentry == NULL) {
-			MDEBUG("branch[%d] of dentry [%*s/%*s] is NULL\n", bindex,
+			MDEBUG("branch[%d] of dentry [%.*s/%.*s] is NULL\n", bindex,
 			       dentry->d_parent->d_name.len, dentry->d_parent->d_name.name,
 			       dentry->d_name.len, dentry->d_name.name);
 		} else if (hidden_dentry->d_inode == NULL){
-			MDEBUG("branch[%d] of dentry [%*s/%*s] is negative\n", bindex,
+			MDEBUG("branch[%d] of dentry [%.*s/%.*s] is negative\n", bindex,
 			       dentry->d_parent->d_name.len, dentry->d_parent->d_name.name,
 			       dentry->d_name.len, dentry->d_name.name);
 		} else {
-			MDEBUG("parent's branch[%d] of dentry [%*s/%*s] is NULL\n", bindex,
+			MDEBUG("parent's branch[%d] of dentry [%.*s/%.*s] is NULL\n", bindex,
 			       dentry->d_parent->d_name.len, dentry->d_parent->d_name.name,
 			       dentry->d_name.len, dentry->d_name.name);
 		}
@@ -1063,7 +1063,7 @@ int mtfs_rmdir(struct inode *dir, struct dentry *dentry)
 	mtfs_operation_result_t result = {0};
 	MENTRY();
 
-	MDEBUG("rmdir [%*s]\n", dentry->d_name.len, dentry->d_name.name);
+	MDEBUG("rmdir [%.*s]\n", dentry->d_name.len, dentry->d_name.name);
 	MASSERT(inode_is_locked(dir));
 	MASSERT(dentry->d_inode);
 	MASSERT(inode_is_locked(dentry->d_inode));
@@ -1078,7 +1078,7 @@ int mtfs_rmdir(struct inode *dir, struct dentry *dentry)
 	}
 
 	if (list->latest_bnum == 0) {
-		MERROR("dir [%*s] has no valid branch, please check it\n",
+		MERROR("dir [%.*s] has no valid branch, please check it\n",
 		       dentry->d_parent->d_name.len, dentry->d_parent->d_name.name);
 		if (!(mtfs_i2dev(dir)->no_abort)) {
 			ret = -EIO;
@@ -1166,17 +1166,17 @@ static int mtfs_symlink_branch(struct dentry *dentry, mtfs_bindex_t bindex, cons
 		unlock_dir(hidden_dir_dentry);
 		if (!ret && hidden_dentry->d_inode == NULL) {
 			MBUG();
-			MDEBUG("branch[%d] of dentry [%*s] is negative\n", bindex,
+			MDEBUG("branch[%d] of dentry [%.*s] is negative\n", bindex,
 			       hidden_dentry->d_name.len, hidden_dentry->d_name.name);
 			ret = -EIO; /* which errno? */
 		}
 	} else {
 		if (hidden_dentry == NULL) {
-			MDEBUG("branch[%d] of dentry [%*s/%*s] is NULL\n", bindex,
+			MDEBUG("branch[%d] of dentry [%.*s/%.*s] is NULL\n", bindex,
 			       dentry->d_parent->d_name.len, dentry->d_parent->d_name.name,
 			       dentry->d_name.len, dentry->d_name.name);
 		} else if (hidden_dentry->d_parent == NULL){
-			MDEBUG("parent's branch[%d] of dentry [%*s/%*s] is NULL\n", bindex,
+			MDEBUG("parent's branch[%d] of dentry [%.*s/%.*s] is NULL\n", bindex,
 			       dentry->d_parent->d_name.len, dentry->d_parent->d_name.name,
 			       dentry->d_name.len, dentry->d_name.name);
 		}
@@ -1197,7 +1197,7 @@ int mtfs_symlink(struct inode *dir, struct dentry *dentry, const char *symname)
 	struct inode *hidden_dir = NULL;
 	MENTRY();
 
-	MDEBUG("symlink [%*s] to [%s]\n", dentry->d_name.len, dentry->d_name.name, symname);
+	MDEBUG("symlink [%.*s] to [%s]\n", dentry->d_name.len, dentry->d_name.name, symname);
 	MASSERT(inode_is_locked(dir));
 	MASSERT(dentry->d_inode == NULL);
 
@@ -1209,7 +1209,7 @@ int mtfs_symlink(struct inode *dir, struct dentry *dentry, const char *symname)
 	}
 
 	if (list->latest_bnum == 0) {
-		MERROR("dir [%*s] has no valid branch, please check it\n",
+		MERROR("dir [%.*s] has no valid branch, please check it\n",
 		       dentry->d_parent->d_name.len, dentry->d_parent->d_name.name);
 		if (!(mtfs_i2dev(dir)->no_abort)) {
 			ret = -EIO;
@@ -1288,22 +1288,22 @@ static int mtfs_mkdir_branch(struct dentry *dentry, int mode, mtfs_bindex_t bind
 		ret = vfs_mkdir(hidden_dir_dentry->d_inode, hidden_dentry, mode);
 		unlock_dir(hidden_dir_dentry);
 		if (ret) {
-			MDEBUG("failed to mkdir branch[%d] of dentry [%*s/%*s], ret = %d\n", 
+			MDEBUG("failed to mkdir branch[%d] of dentry [%.*s/%.*s], ret = %d\n", 
 			       bindex, dentry->d_parent->d_name.len, dentry->d_parent->d_name.name,
 			       dentry->d_name.len, dentry->d_name.name, ret);
 		}
 		if (!ret && hidden_dentry->d_inode == NULL) {
-			MDEBUG("branch[%d] of dentry [%*s] is negative\n", bindex,
+			MDEBUG("branch[%d] of dentry [%.*s] is negative\n", bindex,
 			       hidden_dentry->d_name.len, hidden_dentry->d_name.name);
 			MBUG();
 		}
 	} else {
 		if (hidden_dentry == NULL) {
-			MDEBUG("branch[%d] of dentry [%*s/%*s] is NULL\n", bindex,
+			MDEBUG("branch[%d] of dentry [%.*s/%.*s] is NULL\n", bindex,
 			       dentry->d_parent->d_name.len, dentry->d_parent->d_name.name,
 			       dentry->d_name.len, dentry->d_name.name);
 		} else {
-			MDEBUG("parent's branch[%d] of dentry [%*s/%*s] is NULL\n", bindex,
+			MDEBUG("parent's branch[%d] of dentry [%.*s/%.*s] is NULL\n", bindex,
 			       dentry->d_parent->d_name.len, dentry->d_parent->d_name.name,
 			       dentry->d_name.len, dentry->d_name.name);
 		}
@@ -1324,7 +1324,7 @@ int mtfs_mkdir(struct inode *dir, struct dentry *dentry, int mode)
 	mtfs_operation_result_t result = {0};
 	MENTRY();
 
-	MDEBUG("mkdir [%*s]\n", dentry->d_name.len, dentry->d_name.name);
+	MDEBUG("mkdir [%.*s]\n", dentry->d_name.len, dentry->d_name.name);
 	MASSERT(inode_is_locked(dir));
 	MASSERT(dentry->d_inode == NULL);
 
@@ -1336,7 +1336,7 @@ int mtfs_mkdir(struct inode *dir, struct dentry *dentry, int mode)
 	}
 
 	if (list->latest_bnum == 0) {
-		MERROR("dir [%*s] has no valid branch, please check it\n",
+		MERROR("dir [%.*s] has no valid branch, please check it\n",
 		       dentry->d_parent->d_name.len, dentry->d_parent->d_name.name);
 		if (!(mtfs_i2dev(dir)->no_abort)) {
 			ret = -EIO;
@@ -1422,23 +1422,23 @@ static int mtfs_mknod_branch(struct dentry *dentry, int mode, dev_t dev, mtfs_bi
 		ret = vfs_mknod(hidden_dir_dentry->d_inode, hidden_dentry, mode, dev);
 		unlock_dir(hidden_dir_dentry);
 		if (ret) {
-			MDEBUG("failed to mknod branch[%d] of dentry [%*s/%*s], ret = %d\n", 
+			MDEBUG("failed to mknod branch[%d] of dentry [%.*s/%.*s], ret = %d\n", 
 			       bindex, dentry->d_parent->d_name.len, dentry->d_parent->d_name.name,
 			       dentry->d_name.len, dentry->d_name.name, ret);
 		}
 		if (!ret && hidden_dentry->d_inode == NULL) {
 			MBUG();
-			MDEBUG("branch[%d] of dentry [%*s] is negative\n", bindex,
+			MDEBUG("branch[%d] of dentry [%.*s] is negative\n", bindex,
 			       hidden_dentry->d_name.len, hidden_dentry->d_name.name);
 			ret = -EIO; /* which errno? */
 		}
 	} else {
 		if (hidden_dentry == NULL) {
-			MDEBUG("branch[%d] of dentry [%*s/%*s] is NULL\n", bindex,
+			MDEBUG("branch[%d] of dentry [%.*s/%.*s] is NULL\n", bindex,
 			       dentry->d_parent->d_name.len, dentry->d_parent->d_name.name,
 			       dentry->d_name.len, dentry->d_name.name);
 		} else {
-			MDEBUG("parent's branch[%d] of dentry [%*s/%*s] is NULL\n", bindex,
+			MDEBUG("parent's branch[%d] of dentry [%.*s/%.*s] is NULL\n", bindex,
 			       dentry->d_parent->d_name.len, dentry->d_parent->d_name.name,
 			       dentry->d_name.len, dentry->d_name.name);
 		}
@@ -1459,7 +1459,7 @@ int mtfs_mknod(struct inode *dir, struct dentry *dentry, int mode, dev_t dev)
 	mtfs_operation_result_t result = {0};
 	MENTRY();
 
-	MDEBUG("mkdir [%*s]\n", dentry->d_name.len, dentry->d_name.name);
+	MDEBUG("mkdir [%.*s]\n", dentry->d_name.len, dentry->d_name.name);
 	MASSERT(inode_is_locked(dir));
 	MASSERT(dentry->d_inode == NULL);
 
@@ -1471,7 +1471,7 @@ int mtfs_mknod(struct inode *dir, struct dentry *dentry, int mode, dev_t dev)
 	}
 
 	if (list->latest_bnum == 0) {
-		MERROR("dir [%*s] has no valid branch, please check it\n",
+		MERROR("dir [%.*s] has no valid branch, please check it\n",
 		       dentry->d_parent->d_name.len, dentry->d_parent->d_name.name);
 		if (!(mtfs_i2dev(dir)->no_abort)) {
 			ret = -EIO;
@@ -1574,17 +1574,17 @@ static int mtfs_rename_branch(struct dentry *old_dentry, struct dentry *new_dent
 	} else {
 		if (hidden_old_dentry == NULL) {
 			MASSERT(old_dentry);
-			MDEBUG("branch[%d] of dentry [%*s] is NULL\n", bindex,
+			MDEBUG("branch[%d] of dentry [%.*s] is NULL\n", bindex,
 			       old_dentry->d_name.len, old_dentry->d_name.name);
 		} else if (hidden_old_dentry->d_inode == NULL) {
 			MASSERT(old_dentry);
-			MDEBUG("branch[%d] of dentry [%*s] is negative\n", bindex,
+			MDEBUG("branch[%d] of dentry [%.*s] is negative\n", bindex,
 			       old_dentry->d_name.len, old_dentry->d_name.name);
 		}
 
 		if (hidden_new_dentry == NULL) {
 			MASSERT(new_dentry);
-			MDEBUG("branch[%d] of dentry [%*s] is NULL\n", bindex,
+			MDEBUG("branch[%d] of dentry [%.*s] is NULL\n", bindex,
 			       new_dentry->d_name.len, new_dentry->d_name.name);
 		}
 
@@ -1607,7 +1607,7 @@ int mtfs_rename(struct inode *old_dir, struct dentry *old_dentry, struct inode *
 	mtfs_operation_result_t result = {0};
 	MENTRY();
 
-	MDEBUG("rename [%*s] to [%*s]\n",
+	MDEBUG("rename [%.*s] to [%.*s]\n",
 	       old_dentry->d_name.len, old_dentry->d_name.name,
 	       new_dentry->d_name.len, new_dentry->d_name.name);
 	MASSERT(inode_is_locked(old_dir));
@@ -1629,7 +1629,7 @@ int mtfs_rename(struct inode *old_dir, struct dentry *old_dentry, struct inode *
 	}
 
 	if (list->latest_bnum == 0) {
-		MERROR("dir [%*s] has no valid branch, please check it\n",
+		MERROR("dir [%.*s] has no valid branch, please check it\n",
 		       old_dentry->d_parent->d_name.len, old_dentry->d_parent->d_name.name);
 		if (!(mtfs_i2dev(old_dir)->no_abort)) {
 			ret = -EIO;
@@ -1713,7 +1713,7 @@ int mtfs_readlink(struct dentry *dentry, char __user *buf, int bufsiz)
 	struct dentry *hidden_dentry = NULL;
 	MENTRY();
 
-	MDEBUG("readlink [%*s]\n", dentry->d_name.len, dentry->d_name.name);
+	MDEBUG("readlink [%.*s]\n", dentry->d_name.len, dentry->d_name.name);
 	hidden_dentry = mtfs_d_choose_branch(dentry, MTFS_ATTR_VALID);
 	if (IS_ERR(hidden_dentry)) {
 		ret = PTR_ERR(hidden_dentry);
@@ -1744,7 +1744,7 @@ void *mtfs_follow_link(struct dentry *dentry, struct nameidata *nd)
 	mm_segment_t old_fs;
 	MENTRY();
 
-	MDEBUG("follow_link [%*s]\n", dentry->d_name.len, dentry->d_name.name);
+	MDEBUG("follow_link [%.*s]\n", dentry->d_name.len, dentry->d_name.name);
 	MTFS_ALLOC(buf, len);
 	if (unlikely(buf == NULL)) {
 		ret = -ENOMEM;
@@ -1776,7 +1776,7 @@ void mtfs_put_link(struct dentry *dentry, struct nameidata *nd, void *ptr)
 	char *buf = nd_get_link(nd);
 	MENTRY();
 
-	MDEBUG("put_link [%*s]\n", dentry->d_name.len, dentry->d_name.name);
+	MDEBUG("put_link [%.*s]\n", dentry->d_name.len, dentry->d_name.name);
 	MASSERT(buf);
 	/* Free the char* */
 	MTFS_FREE(buf, len);
@@ -1832,7 +1832,7 @@ static int mtfs_setattr_branch(struct dentry *dentry, struct iattr *ia, mtfs_bin
 		ret = notify_change(hidden_dentry, &temp_ia);
 		mutex_unlock(&hidden_dentry->d_inode->i_mutex);
 	} else {
-		MDEBUG("branch[%d] of dentry [%*s] is %s\n",
+		MDEBUG("branch[%d] of dentry [%.*s] is %s\n",
 		       bindex, dentry->d_name.len, dentry->d_name.name,
 		       hidden_dentry == NULL ? "NULL" : "negative");
 		ret = -ENOENT;
@@ -1853,7 +1853,7 @@ int mtfs_setattr(struct dentry *dentry, struct iattr *ia)
 	mtfs_operation_result_t result = {0};
 	MENTRY();
 
-	MDEBUG("setattr [%*s]\n", dentry->d_name.len, dentry->d_name.name);
+	MDEBUG("setattr [%.*s]\n", dentry->d_name.len, dentry->d_name.name);
 	MASSERT(inode);
 	MASSERT(inode_is_locked(inode));	
 
@@ -1913,7 +1913,7 @@ int mtfs_getattr(struct vfsmount *mnt, struct dentry *dentry, struct kstat *stat
 	struct vfsmount *hidden_mnt = NULL;
 	MENTRY();
 
-	MDEBUG("getattr [%*s]\n", dentry->d_name.len, dentry->d_name.name);
+	MDEBUG("getattr [%.*s]\n", dentry->d_name.len, dentry->d_name.name);
 
 	ret = mtfs_i_choose_bindex(inode, MTFS_BRANCH_VALID, &bindex);
 	if (ret) {
@@ -1946,7 +1946,7 @@ ssize_t mtfs_getxattr(struct dentry *dentry, const char *name, void *value, size
 	ssize_t ret = -EOPNOTSUPP; 
 	MENTRY();
 
-	MDEBUG("getxattr [%*s]\n", dentry->d_name.len, dentry->d_name.name);
+	MDEBUG("getxattr [%.*s]\n", dentry->d_name.len, dentry->d_name.name);
 	MASSERT(dentry->d_inode);
 	hidden_dentry = mtfs_d_choose_branch(dentry, MTFS_ATTR_VALID);
 	if (IS_ERR(hidden_dentry)) {
@@ -1983,7 +1983,7 @@ int mtfs_setxattr_branch(struct dentry *dentry, const char *name, const void *va
 		ret = hidden_dentry->d_inode->i_op->setxattr(hidden_dentry, name, value, size, flags);
 		mutex_unlock(&hidden_dentry->d_inode->i_mutex);
 	} else {
-		MDEBUG("branch[%d] of dentry [%*s] is %s\n",
+		MDEBUG("branch[%d] of dentry [%.*s] is %s\n",
 		       bindex, dentry->d_name.len, dentry->d_name.name,
 		       hidden_dentry == NULL ? "NULL" : "negative");
 		ret = -ENOENT;
@@ -2002,7 +2002,7 @@ int mtfs_setxattr(struct dentry *dentry, const char *name, const void *value, si
 	mtfs_operation_result_t result = {0};
 	MENTRY();
 
-	MDEBUG("setxattr [%*s]\n", dentry->d_name.len, dentry->d_name.name);
+	MDEBUG("setxattr [%.*s]\n", dentry->d_name.len, dentry->d_name.name);
 	MASSERT(dentry->d_inode);
 
 	list = mtfs_oplist_build(dentry->d_inode);
@@ -2013,7 +2013,7 @@ int mtfs_setxattr(struct dentry *dentry, const char *name, const void *value, si
 	}
 
 	if (list->latest_bnum == 0) {
-		MERROR("dentry [%*s] has no valid branch, please check it\n",
+		MERROR("dentry [%.*s] has no valid branch, please check it\n",
 		       dentry->d_name.len, dentry->d_name.name);
 		if (!(mtfs_d2dev(dentry)->no_abort)) {
 			ret = -EIO;
@@ -2079,7 +2079,7 @@ int mtfs_removexattr_branch(struct dentry *dentry, const char *name, mtfs_bindex
 		ret = hidden_dentry->d_inode->i_op->removexattr(hidden_dentry, name);
 		mutex_unlock(&hidden_dentry->d_inode->i_mutex);
 	} else {
-		MDEBUG("branch[%d] of dentry [%*s] is %s\n",
+		MDEBUG("branch[%d] of dentry [%.*s] is %s\n",
 		       bindex, dentry->d_name.len, dentry->d_name.name,
 		       hidden_dentry == NULL ? "NULL" : "negative");
 		ret = -ENOENT;
@@ -2098,7 +2098,7 @@ int mtfs_removexattr(struct dentry *dentry, const char *name)
 	mtfs_operation_result_t result = {0};
 	MENTRY();
 
-	MDEBUG("removexattr [%*s]\n", dentry->d_name.len, dentry->d_name.name);
+	MDEBUG("removexattr [%.*s]\n", dentry->d_name.len, dentry->d_name.name);
 	MASSERT(dentry->d_inode);
 
 	list = mtfs_oplist_build(dentry->d_inode);
@@ -2109,7 +2109,7 @@ int mtfs_removexattr(struct dentry *dentry, const char *name)
 	}
 
 	if (list->latest_bnum == 0) {
-		MERROR("dir [%*s] has no valid branch, please check it\n",
+		MERROR("dir [%.*s] has no valid branch, please check it\n",
 		       dentry->d_parent->d_name.len, dentry->d_parent->d_name.name);
 		if (!(mtfs_d2dev(dentry)->no_abort)) {
 			ret = -EIO;
@@ -2161,7 +2161,7 @@ ssize_t mtfs_listxattr(struct dentry *dentry, char *list, size_t size)
 	ssize_t ret = -EOPNOTSUPP; 
 	MENTRY();
 
-	MDEBUG("listxattr [%*s]\n", dentry->d_name.len, dentry->d_name.name);
+	MDEBUG("listxattr [%.*s]\n", dentry->d_name.len, dentry->d_name.name);
 	hidden_dentry = mtfs_d_choose_branch(dentry, MTFS_ATTR_VALID);
 	if (IS_ERR(hidden_dentry)) {
 		ret = PTR_ERR(hidden_dentry);

@@ -4,6 +4,7 @@
 
 #include <linux/module.h>
 #include <linux/mount.h>
+#include <linux/sched.h>
 #include <parse_option.h>
 #include <compat.h>
 #include <proc.h>
@@ -91,7 +92,7 @@ static int mtfs_config_write_branch(struct super_block *sb,
 	                               current_cred());
 	if (IS_ERR(hidden_file)) {
 		ret = PTR_ERR(hidden_file);
-		MERROR("failed to open branch[%d] of file [%*s], ret = %ld\n", 
+		MERROR("failed to open branch[%d] of file [%.*s], ret = %ld\n", 
 		       bindex, hidden_dentry->d_name.len, hidden_dentry->d_name.name,
 		       ret);
 		goto out;
@@ -105,7 +106,7 @@ static int mtfs_config_write_branch(struct super_block *sb,
 	size = hidden_file->f_op->write(hidden_file, (void *)mci, count, &off);
 	set_fs(old_fs);
 	if (size != count) {
-		MERROR("failed to write branch[%d] of file [%*s], ret = %d\n",
+		MERROR("failed to write branch[%d] of file [%.*s], ret = %d\n",
 		       bindex, hidden_dentry->d_name.len, hidden_dentry->d_name.name,
 		       size);
 		ret = -EINVAL;
@@ -166,7 +167,7 @@ static struct mtfs_config *mtfs_config_read_branch(struct super_block *sb,
 	mm_segment_t old_fs;
 	MENTRY();
 
-	MTFS_ALLOC_PTR(mc);
+	MTFS_SLAB_ALLOC_PTR(mc, mtfs_config_cache);
 	if (mc == NULL) {
 		ret = -ENOMEM;
 		MERROR("not enough memory\n");
@@ -180,7 +181,7 @@ static struct mtfs_config *mtfs_config_read_branch(struct super_block *sb,
 	                               current_cred());
 	if (IS_ERR(hidden_file)) {
 		ret = PTR_ERR(hidden_file);
-		MERROR("failed to open branch[%d] of file [%*s], ret = %ld\n", 
+		MERROR("failed to open branch[%d] of file [%.*s], ret = %ld\n", 
 		       bindex, hidden_dentry->d_name.len, hidden_dentry->d_name.name,
 		       ret);
 		goto out_free_mc;
@@ -188,7 +189,7 @@ static struct mtfs_config *mtfs_config_read_branch(struct super_block *sb,
 
 	count = i_size_read(hidden_file->f_dentry->d_inode);
 	if (count != sizeof(*mci) && count != 0) {
-		MERROR("size of branch[%d] of file [%*s] does not match, " 
+		MERROR("size of branch[%d] of file [%.*s] does not match, " 
 		       "expected %lu, got %lu\n",
 		       bindex, hidden_dentry->d_name.len,
 		       hidden_dentry->d_name.name,
@@ -198,7 +199,7 @@ static struct mtfs_config *mtfs_config_read_branch(struct super_block *sb,
 	}
 
 	if (count == 0) {
-		MDEBUG("size of branch[%d] of file [%*s] is zero\n",
+		MDEBUG("size of branch[%d] of file [%.*s] is zero\n",
 		       bindex, hidden_dentry->d_name.len,
 		       hidden_dentry->d_name.name);
 		mc->mc_valid = 0;
@@ -212,7 +213,7 @@ static struct mtfs_config *mtfs_config_read_branch(struct super_block *sb,
 	size = hidden_file->f_op->read(hidden_file, (void *)mci, count, &off);
 	set_fs(old_fs);
 	if (size != count) {
-		MERROR("failed to read branch[%d] of file [%*s], ret = %d\n",
+		MERROR("failed to read branch[%d] of file [%.*s], ret = %d\n",
 		       bindex, hidden_dentry->d_name.len,
 		       hidden_dentry->d_name.name,
 		       size);
@@ -225,7 +226,7 @@ out_close:
 	fput(hidden_file);
 out_free_mc:
 	if (ret) {
-		MTFS_FREE_PTR(mc);
+		MTFS_SLAB_FREE_PTR(mc, mtfs_config_cache);
 		mc = NULL;
 	}
 out:
@@ -360,7 +361,7 @@ struct mtfs_config *mtfs_config_init(struct mount_option *mount_option)
 	struct mtfs_config_info *mci = NULL;
 	MENTRY();
 	
-	MTFS_ALLOC_PTR(mc);
+	MTFS_SLAB_ALLOC_PTR(mc, mtfs_config_cache);
 	if (mc == NULL) {
 		MERROR("not enough memory\n");
 		goto out;
@@ -417,7 +418,7 @@ int mtfs_reserve_init_branch(struct dentry *d_root, mtfs_bindex_t bindex)
 	                                  S_IFDIR | S_IRWXU, 0, 0);
 	if (IS_ERR(hidden_child)) {
 		ret = PTR_ERR(hidden_child);
-		MERROR("create branch[%d] of [%*s/%s] failed, ret = %d\n",
+		MERROR("create branch[%d] of [%.*s/%s] failed, ret = %d\n",
 		       bindex, hidden_parent->d_name.len,
 		       hidden_parent->d_name.name, name, ret);
 		goto out;
@@ -432,7 +433,7 @@ int mtfs_reserve_init_branch(struct dentry *d_root, mtfs_bindex_t bindex)
 	                                  S_IFDIR | S_IRWXU, 0, 0);
 	if (IS_ERR(hidden_child)) {
 		ret = PTR_ERR(hidden_child);
-		MERROR("create branch[%d] of [%*s/%s] failed, ret = %d\n",
+		MERROR("create branch[%d] of [%.*s/%s] failed, ret = %d\n",
 		       bindex, hidden_parent->d_name.len,
 		       hidden_parent->d_name.name, name, ret);
 		goto out_put_reserve;
@@ -447,7 +448,7 @@ int mtfs_reserve_init_branch(struct dentry *d_root, mtfs_bindex_t bindex)
 	                                  S_IFREG | S_IRWXU, 0, 0);
 	if (IS_ERR(hidden_child)) {
 		ret = PTR_ERR(hidden_child);
-		MERROR("create branch[%d] of [%*s/%s] failed, ret = %d\n",
+		MERROR("create branch[%d] of [%.*s/%s] failed, ret = %d\n",
 		       bindex, hidden_parent->d_name.len,
 		       hidden_parent->d_name.name, name, ret);
 		goto out_put_recover;
@@ -536,7 +537,7 @@ int mtfs_reserve_init(struct dentry *d_root, struct mount_option *mount_option)
 
 	goto out;
 out_free_mc:
-	MTFS_FREE_PTR(mc);
+	MTFS_SLAB_FREE_PTR(mc, mtfs_config_cache);
 out_fini:
 	for (; bindex >= 0; bindex--) {
 		mtfs_reserve_fini_branch(d_root->d_sb, bindex);
@@ -554,7 +555,7 @@ void mtfs_reserve_fini(struct super_block *sb)
 		mtfs_reserve_fini_branch(sb, bindex);
 	}
 
-	MTFS_FREE_PTR(mtfs_s2config(sb));
+	MTFS_SLAB_FREE_PTR(mtfs_s2config(sb), mtfs_config_cache);
 }
 
 int mtfs_read_super(struct super_block *sb, void *input, int silent)
@@ -735,6 +736,7 @@ struct kmem_cache *mtfs_oplist_cache;
 struct kmem_cache *mtfs_lock_cache;
 struct kmem_cache *mtfs_interval_cache;
 struct kmem_cache *mtfs_io_cache;
+struct kmem_cache *mtfs_config_cache;
 
 static struct mtfs_cache_info mtfs_cache_infos[] = {
 	{
@@ -782,6 +784,11 @@ static struct mtfs_cache_info mtfs_cache_infos[] = {
 		.cache = &mtfs_io_cache,
 		.name = "mtfs_io_cache",
 		.size = sizeof(struct mtfs_io),
+	},
+	{
+		.cache = &mtfs_config_cache,
+		.name = "mtfs_config_cache",
+		.size = sizeof(struct mtfs_config),
 	},
 };
 	

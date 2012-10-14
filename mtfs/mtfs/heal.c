@@ -23,7 +23,7 @@ struct dentry *mtfs_dchild_rename2new(struct dentry *dparent, struct dentry *dch
 	MASSERT(inode_is_locked(dparent->d_inode));
 	dchild_new = lookup_one_len(name_new, dparent, len);
 	if (IS_ERR(dchild_new)) {
-		MERROR("lookup [%*s/%s] failed, ret = %d\n",
+		MERROR("lookup [%.*s/%s] failed, ret = %d\n",
 		       dparent->d_name.len, dparent->d_name.name, name_new, ret);
 		goto out;
 	}
@@ -34,7 +34,7 @@ struct dentry *mtfs_dchild_rename2new(struct dentry *dparent, struct dentry *dch
 		goto out;
 	}
 
-	MDEBUG("renaming [%*s/%*s] to [%*s/%*s]\n",
+	MDEBUG("renaming [%.*s/%.*s] to [%.*s/%.*s]\n",
 	       dparent->d_name.len, dparent->d_name.name,
 	       dchild_old->d_name.len, dchild_old->d_name.name,
 	       dparent->d_name.len, dparent->d_name.name,
@@ -92,7 +92,7 @@ struct dentry *_mtfs_dchild_create(struct dentry *dparent, const unsigned char *
 
 	dchild = lookup_one_len(name, dparent, len);
 	if (IS_ERR(dchild)) {
-		MERROR("lookup [%s] under [%*s] failed, ret = %d\n",
+		MERROR("lookup [%s] under [%.*s] failed, ret = %d\n",
 		       name, dparent->d_name.len, dparent->d_name.name, ret);
 		ret = PTR_ERR(dchild);
 		goto out;
@@ -100,23 +100,26 @@ struct dentry *_mtfs_dchild_create(struct dentry *dparent, const unsigned char *
 
 	if (dchild->d_inode) {
 		if ((dchild->d_inode->i_mode & S_IFMT) == (mode & S_IFMT)) {
-			MDEBUG("[%*s/%*s] already existed\n",
-			       dparent->d_name.len, dparent->d_name.name, len, name);
+			MDEBUG("[%.*s/%.*s] already existed\n",
+			       dparent->d_name.len, dparent->d_name.name,
+			       len, name);
 			if ((dchild->d_inode->i_mode & S_IALLUGO) != (mode & S_IALLUGO)) {
-				MDEBUG("permission mode of [%*s/%*s] is 0%04o, "
+				MDEBUG("permission mode of [%.*s/%.*s] is 0%04o, "
 				       "which should be 0%04o for security\n",
-				       dparent->d_name.len, dparent->d_name.name, len, name,
+				       dparent->d_name.len, dparent->d_name.name,
+				       len, name,
 				       dchild->d_inode->i_mode & S_IALLUGO, S_IRWXU);
 			}
 			goto out;
 		} else {
-			MDEBUG("[%*s/%*s] already existed, and is a %s, not a %s\n",
+			MDEBUG("[%.*s/%.*s] already existed, and is a %s, not a %s\n",
 			       dparent->d_name.len, dparent->d_name.name, len, name,
 			       mtfs_mode2type(dchild->d_inode->i_mode), mtfs_mode2type(mode));
 			if (rename) {
 				struct dentry *dchild_new = NULL;
-				MDEBUG("Trying to rename [%*s/%*s]\n",
-				       dparent->d_name.len, dparent->d_name.name, len, name);
+				MDEBUG("Trying to rename [%.*s/%.*s]\n",
+				       dparent->d_name.len, dparent->d_name.name,
+				       len, name);
 				dchild_new = _mtfs_dchild_add_ino(dparent, dchild);
 				if (IS_ERR(dchild_new)) {
 					ret = PTR_ERR(dchild_new);
@@ -187,6 +190,10 @@ struct dentry *mtfs_dchild_create(struct dentry *dparent, const unsigned char *n
 	MRETURN(dchild);
 }
 
+/*
+ * Add the inode number to a dentry.
+ * Return the dentry if successful.
+ */
 struct dentry *mtfs_dchild_add_ino(struct dentry *dparent, const unsigned char *name, unsigned int len)
 {
 	int ret = 0;
@@ -202,7 +209,7 @@ struct dentry *mtfs_dchild_add_ino(struct dentry *dparent, const unsigned char *
 
 	dchild_old = lookup_one_len(name, dparent, len);
 	if (IS_ERR(dchild_old)) {
-		MERROR("lookup [%*s/%s] failed, ret = %d\n",
+		MERROR("lookup [%.*s/%s] failed, ret = %d\n",
 		       dparent->d_name.len, dparent->d_name.name, name, ret);
 		ret = PTR_ERR(dchild_old);
 		goto out_unlock;
@@ -240,7 +247,7 @@ struct dentry *mtfs_dentry_list_mkpath(struct dentry *d_parent, mtfs_list_t *den
 			dput(d_parent_tmp);
 		}	
 		if (IS_ERR(d_child)) {
-			MERROR("create [%*s/%*s] failed\n",
+			MERROR("create [%.*s/%.*s] failed\n",
 			       d_parent_tmp->d_name.len, d_parent_tmp->d_name.name,
 			       tmp_entry->dentry->d_name.len, tmp_entry->dentry->d_name.name);
 			goto out;
@@ -283,7 +290,7 @@ struct dentry *mtfs_dchild_remove(struct dentry *dparent, const char *name)
 
 	dchild = lookup_one_len(name, dparent, strlen(name));
 	if (IS_ERR(dchild)) {
-		MERROR("lookup [%s] under [%*s] failed, ret = %d\n",
+		MERROR("lookup [%s] under [%.*s] failed, ret = %d\n",
 		       name, dparent->d_name.len, dparent->d_name.name, ret);
 		ret = PTR_ERR(dchild);
 		goto out;
@@ -295,7 +302,7 @@ struct dentry *mtfs_dchild_remove(struct dentry *dparent, const char *name)
 		goto out;
 	}
 
-	MDEBUG("removing [%*s/%*s]\n",
+	MDEBUG("removing [%.*s/%.*s]\n",
 	       dparent->d_name.len, dparent->d_name.name, dchild->d_name.len, dchild->d_name.name);
 	switch (dchild->d_inode->i_mode & S_IFMT) {
 	case S_IFDIR:
@@ -395,7 +402,6 @@ int mtfs_backup_branch(struct dentry *dentry, mtfs_bindex_t bindex)
 	struct dentry *hidden_d_new = NULL;
 	struct mtfs_dentry_list *tmp_entry = NULL;
 	MTFS_LIST_HEAD(dentry_list);
-	struct mtfs_dentry_list *n = NULL;
 	int ret = 0;
 	struct dentry *hidden_d_parent_new = NULL;
 	struct dentry *hidden_d_parent_old = NULL;
@@ -404,6 +410,7 @@ int mtfs_backup_branch(struct dentry *dentry, mtfs_bindex_t bindex)
 	MASSERT(hidden_d_old);
 
 	dget(hidden_d_old);
+	MASSERT(hidden_d_old->d_inode);
 	hidden_d_recover = mtfs_d_recover_branch(dentry, bindex);
 	if (hidden_d_recover == NULL) {
 		MERROR("failed to get d_recover for branch[%d]\n", bindex);
@@ -426,16 +433,17 @@ int mtfs_backup_branch(struct dentry *dentry, mtfs_bindex_t bindex)
 		}
 
 		if (hidden_d_tmp == hidden_d_recover) {
-			MERROR("[%*s] is already under recover directory, skipping\n",
-			       dentry->d_name.len, dentry->d_name.name);
+			MERROR("[%.*s] of branch[%d] is already under recover directory, skipping\n",
+			       dentry->d_name.len, dentry->d_name.name, bindex);
 			dput(hidden_d_tmp);
 			goto out_free_list;
 		}
 
 		if (hidden_d_tmp == hidden_d_tmp->d_parent) {
-			MERROR("back to the d_root [%*s] of branch[%d]\n",
+			MERROR("back to the d_root [%.*s] of branch[%d]\n",
 			       hidden_d_tmp->d_name.len, hidden_d_tmp->d_name.name, bindex);
 			dput(hidden_d_tmp);
+			ret = -EINVAL;
 			MBUG();
 			goto out_free_list;
 		}
@@ -452,36 +460,63 @@ int mtfs_backup_branch(struct dentry *dentry, mtfs_bindex_t bindex)
 	}
 
 	if (mtfs_list_empty(&dentry_list)) {
-		hidden_d_parent_new = dget(hidden_d_root);
+		hidden_d_parent_new = dget(hidden_d_recover);
 	} else {
 		hidden_d_parent_new = mtfs_dentry_list_mkpath(hidden_d_recover, &dentry_list);
 		if (IS_ERR(hidden_d_parent_new)) {
+			ret = PTR_ERR(hidden_d_parent_new);
 			MBUG();
 			goto out_free_list;
 		}
 	}
 
+	/* Rename the conflicting dentry */
 	hidden_d_new = mtfs_dchild_add_ino(hidden_d_parent_new,
 	                                   hidden_d_old->d_name.name, hidden_d_old->d_name.len);
 	if (IS_ERR(hidden_d_new)) {
+		MERROR("failed to add info to [%.*s] of branch[%d]\n",
+		       hidden_d_old->d_name.len, hidden_d_old->d_name.name, bindex);
+		ret = PTR_ERR(hidden_d_new);
 		goto out_dput;		
 	}
+	dput(hidden_d_new);
+
+	/* Lookup the target dentry */
+	hidden_d_new = lookup_one_len(hidden_d_old->d_name.name,
+	                              hidden_d_parent_new, hidden_d_old->d_name.len);
+	if (IS_ERR(hidden_d_new)) {
+		MERROR("lookup [%.*s/%.*s] failed, ret = %d\n",
+		       hidden_d_parent_new->d_name.len, hidden_d_parent_new->d_name.name,
+		       hidden_d_old->d_name.len, hidden_d_old->d_name.name, ret);
+		ret = PTR_ERR(hidden_d_new);
+		goto out_dput;
+	}
+	if (hidden_d_new->d_inode != NULL) {
+		MERROR("[%.*s/%.*s] exists aready\n",
+		       hidden_d_parent_new->d_name.len, hidden_d_parent_new->d_name.name,
+		       hidden_d_old->d_name.len, hidden_d_old->d_name.name);
+		ret = -EEXIST;
+		goto out_dput_new;
+	}
+
 
 	hidden_d_parent_old = dget(hidden_d_old->d_parent);
 	lock_rename(hidden_d_parent_old, hidden_d_parent_new);
 	ret = vfs_rename(hidden_d_parent_old->d_inode, hidden_d_old,
 	                 hidden_d_parent_new->d_inode, hidden_d_new);
 	unlock_rename(hidden_d_parent_old, hidden_d_parent_new);
+	if (ret) {
+		MERROR("failed to rename [%.*s] to [%.*s] of branch[%d], ret = %d\n",
+		       hidden_d_old->d_name.len, hidden_d_old->d_name.name,
+		       hidden_d_new->d_name.len, hidden_d_new->d_name.name,
+		       bindex, ret);
+	}
 	dput(hidden_d_parent_old);
+out_dput_new:
 	dput(hidden_d_new);
-
 out_dput:
 	dput(hidden_d_parent_new);
 out_free_list:
-	mtfs_list_for_each_entry_safe(tmp_entry, n, &dentry_list, list) {
-		MDEBUG("branch[%d]: dentry [%*s]\n", bindex,
-		       tmp_entry->dentry->d_name.len, tmp_entry->dentry->d_name.name);
-	}
 	mtfs_dentry_list_cleanup(&dentry_list);
 out:
 	dput(hidden_d_old);
@@ -499,7 +534,7 @@ struct dentry *mtfs_cleanup_branch(struct inode *dir, struct dentry *dentry, mtf
 	if (hidden_dentry != NULL) {
 		ret = mtfs_backup_branch(dentry, bindex);
 		if (ret) {
-			MERROR("failed to backup branch[%d] of dentry [%*s], ret = %d\n",
+			MERROR("failed to backup branch[%d] of dentry [%.*s], ret = %d\n",
 			       bindex, dentry->d_name.len, dentry->d_name.name, ret);
 			hidden_dentry = ERR_PTR(ret);
 			goto out;
@@ -511,6 +546,9 @@ struct dentry *mtfs_cleanup_branch(struct inode *dir, struct dentry *dentry, mtf
 	mtfs_d2branch(dentry, bindex) = NULL;
 	hidden_dentry = mtfs_lookup_branch(dentry, bindex);
 	if (IS_ERR(hidden_dentry)) {
+		MERROR("failed to lookup branch[%d] of dentry [%.*s], ret = %d\n",
+		       bindex, dentry->d_name.len, dentry->d_name.name,
+		       PTR_ERR(hidden_dentry));
 		goto out;
 	} else {
 		mtfs_d2branch(dentry, bindex) = hidden_dentry;
@@ -534,7 +572,7 @@ int heal_discard_dentry_sync(struct inode *dir, struct dentry *dentry, struct mt
 			hidden_dentry = mtfs_cleanup_branch(dir, dentry, bindex);
 			if (IS_ERR(hidden_dentry)) {
 				ret = PTR_ERR(hidden_dentry);
-				MERROR("failed to cleanup branch[%d] of dentry [%*s], ret = %d\n",
+				MERROR("failed to cleanup branch[%d] of dentry [%.*s], ret = %d\n",
 				       bindex, dentry->d_name.len, dentry->d_name.name, ret);
 				goto out;
 			}

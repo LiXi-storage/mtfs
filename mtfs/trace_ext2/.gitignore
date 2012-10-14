@@ -1,0 +1,9 @@
+/.*.cmd
+/*.ko
+/*.mod.c
+
+/autoMakefile
+/autoMakefile.in
+/Makefile
+/modules.order
+/mtfs_trace_ext2.ko.unsigned

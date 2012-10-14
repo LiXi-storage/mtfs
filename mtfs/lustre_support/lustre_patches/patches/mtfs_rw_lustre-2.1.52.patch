@@ -244,7 +244,7 @@ Index: lustre-2.1.52/lustre/llite/file.c
 +                        result = mtfs_ll_file_io_init_branch(env,
 +                                        lustre_file, iot, ppos, count);
 +                        if (result) {
-+                                MERROR("failed to init io for branch[%d] of file [%*s],"
++                                MERROR("failed to init io for branch[%d] of file [%.*s],"
 +                                       " ret = %d\n",
 +                                       bindex, mtfs_file->f_dentry->d_name.len,
 +                                       mtfs_file->f_dentry->d_name.name, result);
@@ -252,7 +252,7 @@ Index: lustre-2.1.52/lustre/llite/file.c
 +                                goto out_fini;
 +                        }
 +                } else {
-+                        MERROR("branch[%d] of file [%*s] is NULL, skipping\n",
++                        MERROR("branch[%d] of file [%.*s] is NULL, skipping\n",
 +                                bindex, mtfs_file->f_dentry->d_name.len,
 +                                mtfs_file->f_dentry->d_name.name);
 +                }
@@ -292,7 +292,7 @@ Index: lustre-2.1.52/lustre/llite/file.c
 +                        op_result.size = size;
 +                        mtfs_oplist_setbranch(oplist, bindex, (size >= 0 ? 1 : 0), op_result);
 +                        if (size <= 0) {
-+                                MERROR("failed to finish io for branch[%d] of file [%*s],"
++                                MERROR("failed to finish io for branch[%d] of file [%.*s],"
 +                                       " ret = %ld\n",
 +                                       bindex, mtfs_file->f_dentry->d_name.len,
 +                                       mtfs_file->f_dentry->d_name.name, size);
@@ -300,7 +300,7 @@ Index: lustre-2.1.52/lustre/llite/file.c
 +                } else {
 +                        op_result.size = -ENOENT;
 +                        mtfs_oplist_setbranch(oplist, bindex, 0, op_result);
-+                        MERROR("branch[%d] of file [%*s] is NULL, skipping\n",
++                        MERROR("branch[%d] of file [%.*s] is NULL, skipping\n",
 +                                bindex, mtfs_file->f_dentry->d_name.len,
 +                                mtfs_file->f_dentry->d_name.name);
 +                }
@@ -363,7 +363,7 @@ Index: lustre-2.1.52/lustre/llite/file.c
 +                        cl_env_reenter();
 +
 +                } else {
-+                        MERROR("branch[%d] of file [%*s] is NULL, skipping\n",
++                        MERROR("branch[%d] of file [%.*s] is NULL, skipping\n",
 +                                bindex, mtfs_file->f_dentry->d_name.len,
 +                                mtfs_file->f_dentry->d_name.name);
 +                }
@@ -394,7 +394,7 @@ Index: lustre-2.1.52/lustre/llite/file.c
 +                        io->u.ci_wr.wr.crw_count = first_io->u.ci_wr.wr.crw_count;
 +                        result = cl_io_start(env, io);
 +                        if (result) {
-+                                MERROR("start branch[%d] of file [%*s] failed"
++                                MERROR("start branch[%d] of file [%.*s] failed"
 +                                       ", ret = %d\n",
 +                                       bindex, mtfs_file->f_dentry->d_name.len,
 +                                       mtfs_file->f_dentry->d_name.name,
@@ -405,7 +405,7 @@ Index: lustre-2.1.52/lustre/llite/file.c
 +                        cl_io_rw_advance(env, io, io->ci_nob - nob);
 +                        cl_env_reenter();
 +                } else {
-+                        MERROR("branch[%d] of file [%*s] is NULL, skipping\n",
++                        MERROR("branch[%d] of file [%.*s] is NULL, skipping\n",
 +                                bindex, mtfs_file->f_dentry->d_name.len,
 +                                mtfs_file->f_dentry->d_name.name);
 +                }
@@ -498,7 +498,7 @@ Index: lustre-2.1.52/lustre/llite/file.c
 +
 +        result = mtfs_ll_file_io_init(env_vector, mtfs_file, iot, ppos, count);
 +        if (result) {
-+                MERROR("failed to init io for file [%*s], ret = %d\n",
++                MERROR("failed to init io for file [%.*s], ret = %d\n",
 +                       mtfs_file->f_dentry->d_name.len,
 +                       mtfs_file->f_dentry->d_name.name, result);
 +                goto out;
@@ -508,7 +508,7 @@ Index: lustre-2.1.52/lustre/llite/file.c
 +
 +        result = mtfs_ll_file_io_fini(env_vector, mtfs_file, iot, oplist);
 +        if (result) {
-+                MERROR("failed to finish io for file [%*s], ret = %d\n",
++                MERROR("failed to finish io for file [%.*s], ret = %d\n",
 +                       mtfs_file->f_dentry->d_name.len,
 +                       mtfs_file->f_dentry->d_name.name, result);
 +                goto out;

@@ -37,7 +37,7 @@ size_t mtfs_tmpfs_file_read_branch(struct file *file, char __user *buf, size_t l
 			fsstack_copy_inode_size(inode, hidden_inode);
 		}
 	} else {
-		MERROR("branch[%d] of file [%*s] is NULL\n",
+		MERROR("branch[%d] of file [%.*s] is NULL\n",
 		       bindex, file->f_dentry->d_name.len, file->f_dentry->d_name.name);
 		ret = -ENOENT;
 	}
@@ -56,7 +56,7 @@ ssize_t mtfs_tmpfs_file_read(struct file *file, char __user *buf, size_t len,
 	for (bindex = 0; bindex < mtfs_f2bnum(file); bindex++) {
 		tmp_pos = *ppos;
 		ret = mtfs_tmpfs_file_read_branch(file, buf, len, &tmp_pos, bindex);
-		MDEBUG("readed branch[%d] of file [%*s] at pos = %llu, ret = %ld\n",
+		MDEBUG("readed branch[%d] of file [%.*s] at pos = %llu, ret = %ld\n",
 		       bindex, file->f_dentry->d_name.len, file->f_dentry->d_name.name,
 		       *ppos, ret);
 		if (ret >= 0) { 
@@ -93,7 +93,7 @@ static ssize_t mtfs_tmpfs_file_write_branch(struct file *file, const char __user
 			fsstack_copy_inode_size(inode, hidden_inode);
 		}
 	} else {
-		MERROR("branch[%d] of file [%*s] is NULL\n",
+		MERROR("branch[%d] of file [%.*s] is NULL\n",
 		       bindex, file->f_dentry->d_name.len, file->f_dentry->d_name.name);
 		ret = -ENOENT;
 	}
@@ -113,7 +113,7 @@ ssize_t mtfs_tmpfs_file_write(struct file *file, const char __user *buf, size_t 
 	for (bindex = 0; bindex < mtfs_f2bnum(file); bindex++) {
 		tmp_pos = *ppos;
 		ret = mtfs_tmpfs_file_write_branch(file, buf, len, &tmp_pos, bindex);
-		MDEBUG("readed branch[%d] of file [%*s] at pos = %llu, ret = %ld\n",
+		MDEBUG("readed branch[%d] of file [%.*s] at pos = %llu, ret = %ld\n",
 		       bindex, file->f_dentry->d_name.len, file->f_dentry->d_name.name,
 		       *ppos, ret);
 		/* TODO: set data flags */

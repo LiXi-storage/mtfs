@@ -23,7 +23,7 @@ static int mtfs_io_init_oplist(struct mtfs_io *io)
 
 	mtfs_oplist_init(oplist, inode);
 	if (oplist->latest_bnum == 0) {
-		MERROR("[%*s] has no valid branch, please check it\n",
+		MERROR("[%.*s] has no valid branch, please check it\n",
 		       dentry->d_name.len, dentry->d_name.name);
 		if (!(mtfs_i2dev(inode)->no_abort)) {
 			ret = -EIO;
@@ -64,7 +64,7 @@ static void mtfs_io_fini_oplist(struct mtfs_io *io)
 
 	ret = mtfs_oplist_update(inode, oplist);
 	if (ret) {
-		MERROR("failed to update oplist for [%*s]\n",
+		MERROR("failed to update oplist for [%.*s]\n",
 		       dentry->d_name.len, dentry->d_name.name);
 		MBUG();
 	}

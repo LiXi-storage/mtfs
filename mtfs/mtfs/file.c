@@ -91,7 +91,7 @@ int mtfs_readdir_branch(struct file *file, void *dirent, filldir_t filldir, mtfs
 		ret = vfs_readdir(hidden_file, filldir, dirent);
 		file->f_pos = hidden_file->f_pos;
 	} else {
-		MDEBUG("branch[%d] of file [%*s] is %s\n",
+		MDEBUG("branch[%d] of file [%.*s] is %s\n",
 		       bindex, file->f_dentry->d_name.len, file->f_dentry->d_name.name,
 		       "NULL");
 		ret = -ENOENT;
@@ -109,7 +109,7 @@ int mtfs_readdir(struct file *file, void *dirent, filldir_t filldir)
 	mtfs_bindex_t i = 0;
 	MENTRY();
 
-	MDEBUG("readdir [%*s]\n", file->f_dentry->d_name.len, file->f_dentry->d_name.name);
+	MDEBUG("readdir [%.*s]\n", file->f_dentry->d_name.len, file->f_dentry->d_name.name);
 
 	list = mtfs_oplist_build(file->f_dentry->d_inode);
 	if (unlikely(list == NULL)) {
@@ -119,7 +119,7 @@ int mtfs_readdir(struct file *file, void *dirent, filldir_t filldir)
 	}
 
 	if (list->latest_bnum == 0) {
-		MERROR("dir [%*s] has no valid branch, try to read broken branches\n",
+		MERROR("dir [%.*s] has no valid branch, try to read broken branches\n",
 		       file->f_dentry->d_name.len, file->f_dentry->d_name.name);
 	}
 
@@ -131,7 +131,7 @@ int mtfs_readdir(struct file *file, void *dirent, filldir_t filldir)
 		}
 
 		if (list->latest_bnum > 0 && i == list->latest_bnum - 1) {
-			MERROR("dir [%*s] has no readable valid branch, try to read broken branches\n",
+			MERROR("dir [%.*s] has no readable valid branch, try to read broken branches\n",
 			       file->f_dentry->d_name.len, file->f_dentry->d_name.name);
 		}
 	}
@@ -185,7 +185,7 @@ int mtfs_open_branch(struct inode *inode, struct file *file, mtfs_bindex_t binde
 		 */
 		hidden_file = mtfs_dentry_open(hidden_dentry, hidden_mnt, hidden_flags, current_cred());
 		if (IS_ERR(hidden_file)) {
-			MDEBUG("open branch[%d] of file [%*s], flags = 0x%x, ret = %ld\n", 
+			MDEBUG("open branch[%d] of file [%.*s], flags = 0x%x, ret = %ld\n", 
 			       bindex, hidden_dentry->d_name.len, hidden_dentry->d_name.name,
 			       hidden_flags, PTR_ERR(hidden_file));
 			ret = PTR_ERR(hidden_file);
@@ -193,7 +193,7 @@ int mtfs_open_branch(struct inode *inode, struct file *file, mtfs_bindex_t binde
 			mtfs_f2branch(file, bindex) = hidden_file;
 		}
 	} else {
-		MDEBUG("branch[%d] of dentry [%*s] is %s\n",
+		MDEBUG("branch[%d] of dentry [%.*s] is %s\n",
 		       bindex, dentry->d_name.len, dentry->d_name.name,
 		       hidden_dentry == NULL ? "NULL" : "negative");
 		ret = -ENOENT;
@@ -224,7 +224,7 @@ int mtfs_open(struct inode *inode, struct file *file)
 	}
 
 	if (list->latest_bnum == 0) {
-		MERROR("file [%*s] has no valid branch, please check it\n",
+		MERROR("file [%.*s] has no valid branch, please check it\n",
 		       file->f_dentry->d_name.len, file->f_dentry->d_name.name);
 		if (!(mtfs_i2dev(inode)->no_abort)) {
 			ret = -EIO;
@@ -292,12 +292,12 @@ int mtfs_flush_branch(struct file *file, fl_owner_t id, mtfs_bindex_t bindex)
 		MASSERT(hidden_file->f_op->flush);
 		ret = hidden_file->f_op->flush(hidden_file, id);
 		if (ret) {
-			MDEBUG("failed to open branch[%d] of file [%*s], ret = %d\n", 
+			MDEBUG("failed to open branch[%d] of file [%.*s], ret = %d\n", 
 			       bindex, file->f_dentry->d_name.len, file->f_dentry->d_name.name,
 			       ret);
 		}
 	} else {
-		MDEBUG("branch[%d] of file [%*s] is NULL\n",
+		MDEBUG("branch[%d] of file [%.*s] is NULL\n",
 		       bindex, file->f_dentry->d_name.len, file->f_dentry->d_name.name);
 		ret = -ENOENT;
 	}
@@ -333,7 +333,7 @@ int mtfs_release_branch(struct inode *inode, struct file *file, mtfs_bindex_t bi
 		 */
 		fput(hidden_file);
 	} else {
-		MDEBUG("branch[%d] of file [%*s] is NULL\n",
+		MDEBUG("branch[%d] of file [%.*s] is NULL\n",
 		       bindex, file->f_dentry->d_name.len, file->f_dentry->d_name.name);
 		ret = -ENOENT;
 	}
@@ -348,12 +348,12 @@ int mtfs_release(struct inode *inode, struct file *file)
 	mtfs_bindex_t bnum = 0;
 	MENTRY();
 
-	MDEBUG("release file [%*s]\n",
+	MDEBUG("release file [%.*s]\n",
 	       file->f_dentry->d_name.len, file->f_dentry->d_name.name);
 
 	/* #BUG(posix:80): empty symlink */
 	if (mtfs_f2info(file) == NULL) {
-		MERROR("file [%*s] has no private data\n",
+		MERROR("file [%.*s] has no private data\n",
 		       file->f_dentry->d_name.len, file->f_dentry->d_name.name);
 		goto out;
 	}
@@ -384,14 +384,14 @@ int mtfs_fsync_branch(struct file *file, struct dentry *dentry, int datasync, mt
 		ret = hidden_file->f_op->fsync(hidden_file, hidden_dentry, datasync);
 		mutex_unlock(&hidden_dentry->d_inode->i_mutex);
 		if (unlikely(ret)) {
-			MDEBUG("failed to fsync branch[%d] of file [%*s], ret = %d\n", 
+			MDEBUG("failed to fsync branch[%d] of file [%.*s], ret = %d\n", 
 			       bindex, file->f_dentry->d_name.len, file->f_dentry->d_name.name,
 			       ret);
 		}
 	} else {
 		MASSERT(hidden_file == NULL);
 		MASSERT(hidden_dentry == NULL);
-		MDEBUG("branch[%d] of file [%*s] is NULL\n",
+		MDEBUG("branch[%d] of file [%.*s] is NULL\n",
 		       bindex, dentry->d_name.len, dentry->d_name.name);
 	}
 
@@ -427,7 +427,7 @@ int mtfs_fasync_branch(int fd, struct file *file, int flag, mtfs_bindex_t bindex
 		MASSERT(hidden_file->f_op->fasync);
 		ret = hidden_file->f_op->fasync(fd, hidden_file, flag);
 	} else {
-		MDEBUG("branch[%d] of file [%*s] is NULL\n",
+		MDEBUG("branch[%d] of file [%.*s] is NULL\n",
 		       bindex, file->f_dentry->d_name.len, file->f_dentry->d_name.name);
 	}
 	MRETURN(ret);
@@ -465,7 +465,7 @@ int mtfs_lock(struct file *file, int cmd, struct file_lock *fl)
 				ret = hidden_file->f_op->lock(hidden_file, F_GETLK, fl);
 			}
 		} else {
-			MDEBUG("branch[%d] of file [%*s] is NULL\n",
+			MDEBUG("branch[%d] of file [%.*s] is NULL\n",
 			       bindex, file->f_dentry->d_name.len, file->f_dentry->d_name.name);
 		}
 	}
@@ -492,7 +492,7 @@ int mtfs_flock(struct file *file, int cmd, struct file_lock *fl)
 				/* What to do? */
 			}
 		} else {
-			MDEBUG("branch[%d] of file [%*s] is NULL\n",
+			MDEBUG("branch[%d] of file [%.*s] is NULL\n",
 			       bindex, file->f_dentry->d_name.len, file->f_dentry->d_name.name);
 		}
 	}
@@ -590,7 +590,7 @@ ssize_t mtfs_file_rw_branch(int is_write, struct file *file, const struct iovec 
 	}
 
 	if (hidden_file == NULL) {
-		MERROR("branch[%d] of file [%*s] is NULL\n",
+		MERROR("branch[%d] of file [%.*s] is NULL\n",
 		       bindex, file->f_dentry->d_name.len,
 		       file->f_dentry->d_name.name);
 		ret = -ENOENT;
@@ -858,7 +858,7 @@ static ssize_t mtfs_file_write_nonwritev_branch(struct file *file, const char __
 			fsstack_copy_inode_size(inode, hidden_inode);
 		}
 	} else {
-		MERROR("branch[%d] of file [%*s] is NULL\n",
+		MERROR("branch[%d] of file [%.*s] is NULL\n",
 		       bindex, file->f_dentry->d_name.len, file->f_dentry->d_name.name);
 		ret = -ENOENT;
 	}
@@ -880,7 +880,7 @@ ssize_t mtfs_file_write_nonwritev(struct file *file, const char __user *buf, siz
 	for (bindex = 0; bindex < mtfs_f2bnum(file); bindex++) {
 		tmp_pos = *ppos;
 		ret = mtfs_file_write_nonwritev_branch(file, buf, len, &tmp_pos, bindex);
-		MDEBUG("writed branch[%d] of file [%*s] at pos = %llu, ret = %ld\n",
+		MDEBUG("writed branch[%d] of file [%.*s] at pos = %llu, ret = %ld\n",
 		       bindex, file->f_dentry->d_name.len, file->f_dentry->d_name.name,
 		       *ppos, ret);
 		/* TODO: set data flags */
@@ -924,7 +924,7 @@ static ssize_t mtfs_file_read_nonreadv_branch(struct file *file, char __user *bu
 			fsstack_copy_inode_size(inode, hidden_inode);
 		}
 	} else {
-		MERROR("branch[%d] of file [%*s] is NULL\n",
+		MERROR("branch[%d] of file [%.*s] is NULL\n",
 		       bindex, file->f_dentry->d_name.len, file->f_dentry->d_name.name);
 		ret = -ENOENT;
 	}
@@ -944,7 +944,7 @@ ssize_t mtfs_file_read_nonreadv(struct file *file, char __user *buf, size_t len,
 	for (bindex = 0; bindex < mtfs_f2bnum(file); bindex++) {
 		tmp_pos = *ppos;
 		ret = mtfs_file_read_nonreadv_branch(file, buf, len, &tmp_pos, bindex);
-		MDEBUG("readed branch[%d] of file [%*s] at pos = %llu, ret = %ld\n",
+		MDEBUG("readed branch[%d] of file [%.*s] at pos = %llu, ret = %ld\n",
 		       bindex, file->f_dentry->d_name.len, file->f_dentry->d_name.name,
 		       *ppos, ret);
 		if (ret >= 0) { 
@@ -1048,7 +1048,7 @@ ssize_t mtfs_file_sendfile(struct file *in_file, loff_t *ppos,
 				break;
 			}
 		} else {
-			MDEBUG("branch[%d] of file [%*s] is NULL\n",
+			MDEBUG("branch[%d] of file [%.*s] is NULL\n",
 			       bindex, in_file->f_dentry->d_name.len, in_file->f_dentry->d_name.name);
 		}
 	}
