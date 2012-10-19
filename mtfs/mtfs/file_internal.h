@@ -12,7 +12,9 @@
 #define mtfs_dentry_open(dentry, mnt, flags, cred) dentry_open(dentry, mnt, flags)
 #endif /* !HAVE_DENTRY_OPEN_4ARGS */
 
-
+#define READ 0
+#define WRITE 1
+ssize_t _do_read_write(int is_write, struct file *file, void *buf, ssize_t count, loff_t *ppos);
 ssize_t mtfs_file_rw_branch(int is_write, struct file *file, const struct iovec *iov,
                             unsigned long nr_segs, loff_t *ppos, mtfs_bindex_t bindex);
 #endif /* __MTFS_FILE_INTERNAL_H__ */

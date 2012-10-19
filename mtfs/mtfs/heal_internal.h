@@ -18,4 +18,6 @@ int heal_discard_dentry(struct inode *dir, struct dentry *dentry, struct mtfs_op
 struct dentry *mtfs_dchild_create(struct dentry *dparent, const unsigned char *name,
                                   unsigned int len, umode_t mode, dev_t rdev, int repeat);
 struct dentry *mtfs_dchild_remove(struct dentry *dparent, const char *name);
+struct dentry *mtfs_dchild_create(struct dentry *dparent, const unsigned char *name,
+                                  unsigned int len, umode_t mode, dev_t rdev, int repeat);
 #endif /* __MTFS_HEAL_INTERNAL_H__ */

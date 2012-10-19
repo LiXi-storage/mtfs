@@ -18,9 +18,6 @@
 #include "mmap_internal.h"
 #include "io_internal.h"
 
-#define READ 0
-#define WRITE 1
-
 int mtfs_file_dump(struct file *file)
 {
 	int ret = 0;
@@ -568,6 +565,27 @@ static ssize_t _do_readv_writev(int is_write, struct file *file, const struct io
 	MRETURN(ret);
 }
 #endif /* !HAVE_FILE_READV */
+
+ssize_t _do_read_write(int is_write, struct file *file, void *buf, ssize_t count, loff_t *ppos)
+{
+	ssize_t ret = 0;
+	mm_segment_t old_fs;
+	MENTRY();
+
+	old_fs = get_fs();
+	set_fs(get_ds());
+	MASSERT(file->f_op);
+	if (is_write) {
+		MASSERT(file->f_op->write);
+		ret = file->f_op->write(file, buf, count, ppos);
+	} else {
+		MASSERT(file->f_op->read);
+		ret = file->f_op->read(file, buf, count, ppos);
+	}
+	set_fs(old_fs);
+
+	MRETURN(ret);
+}
 
 ssize_t mtfs_file_rw_branch(int is_write, struct file *file, const struct iovec *iov,
                             unsigned long nr_segs, loff_t *ppos, mtfs_bindex_t bindex)

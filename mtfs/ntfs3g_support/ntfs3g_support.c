@@ -143,11 +143,11 @@ const char *supported_secondary_types[] = {
 };
 
 struct mtfs_junction mtfs_ntfs3g_junction = {
-	junction_owner:          THIS_MODULE,
-	junction_name:           "ntfs3g",
-	primary_type:            "fuseblk",
-	secondary_types:         supported_secondary_types,
-	fs_ops:                  &mtfs_ntfs3g_operations,
+	mj_owner:                THIS_MODULE,
+	mj_name:                 "ntfs3g",
+	mj_primary_type:         "fuseblk",
+	mj_secondary_types:      supported_secondary_types,
+	mj_fs_ops:               &mtfs_ntfs3g_operations,
 };
 
 #include <mtfs_flag.h>

@@ -3,6 +3,7 @@
  */
 
 #include <linux/module.h>
+#include <memory.h>
 #include <mtfs_heal.h>
 #include <mtfs_support.h>
 #include <mtfs_super.h>
@@ -11,6 +12,8 @@
 #include <mtfs_file.h>
 #include <mtfs_junction.h>
 #include <mtfs_trace.h>
+#include <mtfs_subject.h>
+#include <mtfs_record.h>
 #include "trace_ext2.h"
 
 struct super_operations trace_ext2_sops =
@@ -217,6 +220,52 @@ int trace_ext2_ioctl(struct inode *inode, struct file *file, unsigned int cmd, u
 	MRETURN(ret);
 }
 
+#define MTFS_RESERVE_RECORD  "RECORD"
+int trace_subject_init(struct super_block *sb)
+{
+	int ret = 0;
+	struct mrecord_handle *handle = NULL;
+	struct mrecord_file_info *mrh_file = NULL;
+	mtfs_bindex_t bindex = mtfs_s2bnum(sb) - 1;
+	MENTRY();
+
+	MTFS_ALLOC_PTR(handle);
+	if (handle == NULL) {
+		ret = -ENOMEM;
+		MERROR("not enough memory\n");
+		goto out;
+	}
+
+	handle->mrh_ops = &mrecord_file_ops;
+
+	mrh_file = &handle->u.mrh_file;
+	mrh_file->mrfi_mnt = mtfs_s2mntbranch(sb, bindex);
+	mrh_file->mrfi_dparent = mtfs_s2bdreserve(sb, bindex);
+	mrh_file->mrfi_fname = MTFS_RESERVE_RECORD;
+	mrecord_init(handle);
+
+	mtfs_s2subinfo(sb) = handle;
+out:
+	MRETURN(ret);
+}
+
+int trace_subject_fini(struct super_block *sb)
+{
+	int ret = 0;
+	struct mrecord_handle *handle = NULL;
+	MENTRY();
+
+	handle = (struct mrecord_handle *)mtfs_s2subinfo(sb);
+	mrecord_fini(handle);
+	MTFS_FREE_PTR(handle);
+	MRETURN(ret);
+}
+
+struct mtfs_subject_operations trace_subject_ops = {
+	mso_init:                 trace_subject_init,
+	mso_fini:                 trace_subject_fini,
+};
+
 struct mtfs_operations trace_ext2_operations = {
 	symlink_iops:            &trace_ext2_symlink_iops,
 	dir_iops:                &trace_ext2_dir_iops,
@@ -226,6 +275,7 @@ struct mtfs_operations trace_ext2_operations = {
 	sops:                    &trace_ext2_sops,
 	dops:                    &trace_ext2_dops,
 	ioctl:                   &trace_ext2_ioctl,
+	subject_ops:             &trace_subject_ops,
 };
 
 const char *supported_secondary_types[] = {
@@ -234,12 +284,12 @@ const char *supported_secondary_types[] = {
 };
 
 struct mtfs_junction trace_ext2_junction = {
-	junction_owner:          THIS_MODULE,
-	junction_name:           "ext2",
+	mj_owner:                THIS_MODULE,
+	mj_name:                 "ext2",
 	mj_subject:              "TRACE",
-	primary_type:            "ext2",
-	secondary_types:         supported_secondary_types,
-	fs_ops:                  &trace_ext2_operations,
+	mj_primary_type:         "ext2",
+	mj_secondary_types:      supported_secondary_types,
+	mj_fs_ops:              &trace_ext2_operations,
 };
 
 #include <mtfs_flag.h>

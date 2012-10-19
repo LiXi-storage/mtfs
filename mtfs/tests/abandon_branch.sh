@@ -29,9 +29,11 @@ export DIR=$ABANDON_DIR
 export DIR1=$MTFS_MNT1/$DIR_SUB/abandon_tests
 export DIR2=$MTFS_MNT2/$DIR_SUB/abandon_tests
 
-export ABANDON_BINDEX="0"
-bash posix.sh
-bash multi_mnt.sh
+if [ "$SUBJECT_NAME" != "trace" ]; then
+	export ABANDON_BINDEX="0"
+	bash posix.sh
+	bash multi_mnt.sh
+fi
 
 cleanup_abandon
 

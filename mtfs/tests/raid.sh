@@ -235,10 +235,15 @@ test_3b()
 run_test 3b "rmbranch all branches"
 
 test_4() {
+	if [ "$SUBJECT_NAME" != "replica" ]; then
+		echo "skipped"
+		return 0
+	fi
+
 	$MULTICORRECT $DIR/$tfile $BRANCH_0/$tfile $BRANCH_1/$tfile -s 60 > /dev/null \
 	|| error "multicorret failed"
 	diff $BRANCH_0/$tfile $BRANCH_1/$tfile > /dev/null || error "file diff"
-	#rm -f $DIR/$tfile
+	rm -f $DIR/$tfile
 }
 leak_detect_state_push "no"
 run_test 4 "concurrent write test ======================================="

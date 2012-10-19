@@ -11,6 +11,7 @@
 #include "device_internal.h"
 #include "junction_internal.h"
 #include "support_internal.h"
+#include "subject_internal.h"
 
 static struct mtfs_device *mtfs_device_alloc(struct mount_option *mount_option)
 {

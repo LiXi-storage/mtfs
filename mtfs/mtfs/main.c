@@ -18,6 +18,7 @@
 #include "device_internal.h"
 #include "io_internal.h"
 #include "file_internal.h"
+#include "subject_internal.h"
 
 /* This definition must only appear after we include <linux/module.h> */
 #ifndef MODULE_LICENSE
@@ -36,6 +37,11 @@ int mtfs_init_super(struct super_block *sb, struct mtfs_device *device, struct d
 	MENTRY();
 
 	mtfs_s2dev(sb) = device;
+
+	ret = mtfs_subject_init(sb);
+	if (ret) {
+		goto out;
+	}
 
 	operations = mtfs_dev2ops(device);
 
@@ -62,7 +68,14 @@ int mtfs_init_super(struct super_block *sb, struct mtfs_device *device, struct d
 	sb->s_root->d_sb = sb;
 	sb->s_root->d_parent = sb->s_root;
 	ret = mtfs_interpose(sb->s_root, sb, INTERPOSE_SUPER);
-
+	if (ret) {
+		MERROR("failed to interpose root dentry\n");
+		goto out_fini_subject;
+	}
+	goto out;
+out_fini_subject:
+	mtfs_subject_fini(sb);
+out:
 	MRETURN(ret);
 }
 
@@ -83,7 +96,6 @@ static int mtfs_config_write_branch(struct super_block *sb,
 	ssize_t count = sizeof(*mci);
 	ssize_t size = 0;
 	loff_t off = 0;
-	mm_segment_t old_fs;
 	MENTRY();
 
 	hidden_file = mtfs_dentry_open(dget(hidden_dentry),
@@ -99,12 +111,7 @@ static int mtfs_config_write_branch(struct super_block *sb,
 	}
 
 	mci->mci_bindex = bindex;
-	MASSERT(hidden_file->f_op);
-	MASSERT(hidden_file->f_op->write);
-	old_fs = get_fs();
-	set_fs(get_ds());
-	size = hidden_file->f_op->write(hidden_file, (void *)mci, count, &off);
-	set_fs(old_fs);
+	size = _do_read_write(WRITE, hidden_file, (void *)mci, count, &off);
 	if (size != count) {
 		MERROR("failed to write branch[%d] of file [%.*s], ret = %d\n",
 		       bindex, hidden_dentry->d_name.len, hidden_dentry->d_name.name,
@@ -164,7 +171,6 @@ static struct mtfs_config *mtfs_config_read_branch(struct super_block *sb,
 	ssize_t count = 0;
 	ssize_t size = 0;
 	loff_t off = 0;
-	mm_segment_t old_fs;
 	MENTRY();
 
 	MTFS_SLAB_ALLOC_PTR(mc, mtfs_config_cache);
@@ -206,12 +212,7 @@ static struct mtfs_config *mtfs_config_read_branch(struct super_block *sb,
 		goto out_close;
 	}
 
-	MASSERT(hidden_file->f_op);
-	MASSERT(hidden_file->f_op->read);
-	old_fs = get_fs();
-	set_fs(get_ds());
-	size = hidden_file->f_op->read(hidden_file, (void *)mci, count, &off);
-	set_fs(old_fs);
+	size = _do_read_write(READ, hidden_file, (void *)mci, count, &off);
 	if (size != count) {
 		MERROR("failed to read branch[%d] of file [%.*s], ret = %d\n",
 		       bindex, hidden_dentry->d_name.len,

@@ -135,11 +135,11 @@ const char *supported_secondary_types[] = {
 };
 
 struct mtfs_junction mtfs_ext3_junction = {
-	junction_owner:          THIS_MODULE,
-	junction_name:           "unknown",
-	primary_type:            "ext3",
-	secondary_types:         supported_secondary_types,
-	fs_ops:                  &mtfs_ext3_operations,
+	mj_owner:                THIS_MODULE,
+	mj_name:                 "unknown",
+	mj_primary_type:         "ext3",
+	mj_secondary_types:      supported_secondary_types,
+	mj_fs_ops:              &mtfs_ext3_operations,
 };
 
 struct lowerfs_operations lowerfs_ext3_ops = {

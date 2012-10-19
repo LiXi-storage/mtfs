@@ -37,14 +37,14 @@ struct mtfs_device {
 	struct mtfs_device_branch branch[MTFS_BRANCH_MAX]; /* Info for each branch */
 };
 
-#define mtfs_dev2bops(device, bindex) (device->branch[bindex].ops)
-#define mtfs_dev2bpath(device, bindex) (device->branch[bindex].path)
+#define mtfs_dev2bops(device, bindex)    (device->branch[bindex].ops)
+#define mtfs_dev2bpath(device, bindex)   (device->branch[bindex].path)
 #define mtfs_dev2blength(device, bindex) (device->branch[bindex].path_length)
-#define mtfs_dev2bproc(device, bindex) (device->branch[bindex].proc_entry)
-#define mtfs_dev2branch(device, bindex) (&device->branch[bindex])
-#define mtfs_dev2bnum(device) (device->bnum)
-#define mtfs_dev2junction(device) (device->junction)
-#define mtfs_dev2ops(device) (mtfs_dev2junction(device)->fs_ops)
+#define mtfs_dev2bproc(device, bindex)   (device->branch[bindex].proc_entry)
+#define mtfs_dev2branch(device, bindex)  (&device->branch[bindex])
+#define mtfs_dev2bnum(device)            (device->bnum)
+#define mtfs_dev2junction(device)        (device->junction)
+#define mtfs_dev2ops(device)             (mtfs_dev2junction(device)->mj_fs_ops)
 
 #include <mtfs_super.h>
 static inline struct mtfs_device *mtfs_i2dev(struct inode *inode)

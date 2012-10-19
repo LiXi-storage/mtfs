@@ -34,12 +34,16 @@ static void _mtfs_io_iter_start_rw(struct mtfs_io *io)
 
 static void mtrace_io_iter_start_rw(struct mtfs_io *io)
 {
+	struct mtfs_io_trace *io_trace = &io->subject.mi_trace;
 	MENTRY();
 
 	if (io->mi_bindex != io->mi_bnum - 1) {
+		do_gettimeofday(&io_trace->start);
 		_mtfs_io_iter_start_rw(io);
+		do_gettimeofday(&io_trace->end);
 	} else {
 		/* Trace branch */
+		
 	}
 	_MRETURN();
 }
@@ -118,7 +122,7 @@ static int mtrace_io_init_rw(struct mtfs_io *io, int is_write,
 }
 
 static ssize_t mtrace_file_rw(int is_write, struct file *file, const struct iovec *iov,
-                                  unsigned long nr_segs, loff_t *ppos)
+                              unsigned long nr_segs, loff_t *ppos)
 {
 	ssize_t size = 0;
 	int ret = 0;
@@ -155,7 +159,7 @@ out:
 
 #ifdef HAVE_FILE_READV
 ssize_t mtrace_file_readv(struct file *file, const struct iovec *iov,
-                        unsigned long nr_segs, loff_t *ppos)
+                          unsigned long nr_segs, loff_t *ppos)
 {
 	ssize_t size = 0;
 	MENTRY();
@@ -167,7 +171,7 @@ ssize_t mtrace_file_readv(struct file *file, const struct iovec *iov,
 EXPORT_SYMBOL(mtrace_file_readv);
 
 ssize_t mtrace_file_read(struct file *file, char __user *buf, size_t len,
-                       loff_t *ppos)
+                         loff_t *ppos)
 {
 	struct iovec local_iov = { .iov_base = (void __user *)buf,
 	                           .iov_len = len };
@@ -188,7 +192,7 @@ ssize_t mtrace_file_writev(struct file *file, const struct iovec *iov,
 EXPORT_SYMBOL(mtrace_file_writev);
 #else /* !HAVE_FILE_READV */
 ssize_t mtrace_file_aio_read(struct kiocb *iocb, const struct iovec *iov,
-                           unsigned long nr_segs, loff_t pos)
+                             unsigned long nr_segs, loff_t pos)
 {
 	ssize_t size = 0;
 	struct file *file = iocb->ki_filp;
@@ -204,7 +208,7 @@ ssize_t mtrace_file_aio_read(struct kiocb *iocb, const struct iovec *iov,
 EXPORT_SYMBOL(mtrace_file_aio_read);
 
 ssize_t mtrace_file_aio_write(struct kiocb *iocb, const struct iovec *iov,
-                            unsigned long nr_segs, loff_t pos)
+                              unsigned long nr_segs, loff_t pos)
 {
 	ssize_t size = 0;
 	struct file *file = iocb->ki_filp;

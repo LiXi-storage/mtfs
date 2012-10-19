@@ -12,7 +12,7 @@ LIST_HEAD(mtfs_junctions);
 
 static int _junction_support_secondary_type(struct mtfs_junction * junction, const char *type)
 {
-	const char **secondary_types = junction->secondary_types;
+	const char **secondary_types = junction->mj_secondary_types;
 
 	if (secondary_types) {
 		while(*secondary_types != NULL) {
@@ -36,9 +36,9 @@ static struct mtfs_junction *_junction_search(const char *subject,
 
 	MASSERT(primary_type);
 	list_for_each(p, &mtfs_junctions) {
-		junction = list_entry(p, struct mtfs_junction, junction_list);
+		junction = list_entry(p, struct mtfs_junction, mj_list);
 		if (strcmp(junction->mj_subject, subject) == 0 &&
-		    strcmp(junction->primary_type, primary_type) == 0) {
+		    strcmp(junction->mj_primary_type, primary_type) == 0) {
 			support = 1;
 			if (tmp_type) {
 				while(*tmp_type != NULL) {
@@ -73,12 +73,12 @@ static int junction_check(struct mtfs_junction *junction)
 {
 	int ret = 0;
 
-	if (junction->junction_owner == NULL ||
-	    junction->junction_name == NULL ||
+	if (junction->mj_owner == NULL ||
+	    junction->mj_name == NULL ||
 	    junction->mj_subject == NULL ||
-	    junction->primary_type == NULL ||
-	    junction->secondary_types == NULL ||
-	    junction->fs_ops == NULL) {
+	    junction->mj_primary_type == NULL ||
+	    junction->mj_secondary_types == NULL ||
+	    junction->mj_fs_ops == NULL) {
 	    	ret = -EINVAL;
 	}
 
@@ -97,17 +97,20 @@ static int _junction_register(struct mtfs_junction *junction)
 		goto out;
 	}
 
-	if ((found = _junction_search(junction->mj_subject, junction->primary_type, junction->secondary_types))) {
+	found = _junction_search(junction->mj_subject,
+	                         junction->mj_primary_type,
+	                         junction->mj_secondary_types);
+	if (found) {
 		if (found != junction) {
 			MERROR("try to register multiple operations for type %s\n",
-			        junction->junction_name);
+			        junction->mj_name);
 		} else {
 			MERROR("operation of type %s has already been registered\n",
-			        junction->junction_name);
+			        junction->mj_name);
 		}
 		ret = -EALREADY;
 	} else {
-		list_add(&junction->junction_list, &mtfs_junctions);
+		list_add(&junction->mj_list, &mtfs_junctions);
 	}
 
 out:
@@ -132,7 +135,7 @@ static void _junction_unregister(struct mtfs_junction *junction)
 	list_for_each(p, &mtfs_junctions) {
 		struct mtfs_junction *found;
 
-		found = list_entry(p, typeof(*found), junction_list);
+		found = list_entry(p, typeof(*found), mj_list);
 		if (found == junction) {
 			list_del(p);
 			break;
@@ -169,7 +172,7 @@ struct mtfs_junction *junction_get(const char *subject,
 	 * junction_search() just returned successfully,
 	 * will this be OK? Since junction will point to nobody.
 	 */
-	if (try_module_get(junction->junction_owner) == 0) {
+	if (try_module_get(junction->mj_owner) == 0) {
 		ret = -EOPNOTSUPP;
 	}
 
@@ -182,5 +185,5 @@ out:
 
 void junction_put(struct mtfs_junction *junction)
 {
-	module_put(junction->junction_owner);
+	module_put(junction->mj_owner);
 }

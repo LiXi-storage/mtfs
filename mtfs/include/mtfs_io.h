@@ -55,6 +55,12 @@ struct mtfs_io {
 			size_t iov_length;
 		} mi_rw;
 	} u;
+	union {
+		struct mtfs_io_trace {
+			struct timeval start;
+			struct timeval end;
+		} mi_trace;
+	} subject;
 };
 
 struct mtfs_io_operations {

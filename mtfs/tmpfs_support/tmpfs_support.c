@@ -245,11 +245,11 @@ const char *supported_secondary_types[] = {
 };
 
 struct mtfs_junction mtfs_tmpfs_junction = {
-	junction_owner:          THIS_MODULE,
-	junction_name:           "unknown",
-	primary_type:            "tmpfs",
-	secondary_types:         supported_secondary_types,
-	fs_ops:                  &mtfs_tmpfs_operations,
+	mj_owner:                THIS_MODULE,
+	mj_name:                 "unknown",
+	mj_primary_type:         "tmpfs",
+	mj_secondary_types:      supported_secondary_types,
+	mj_fs_ops:              &mtfs_tmpfs_operations,
 };
 
 struct lowerfs_operations lowerfs_tmpfs_ops = {

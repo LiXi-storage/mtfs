@@ -22,18 +22,17 @@ struct mtfs_operations {
 	struct vm_operations_struct *vm_ops;
 	int (*ioctl)(struct inode *inode, struct file *file, unsigned int cmd, unsigned long arg);
 	struct heal_operations *heal_ops;
+	struct mtfs_subject_operations *subject_ops;
 };
 
 struct mtfs_junction {
-	struct list_head junction_list;
-	struct module *junction_owner;
-	const char *junction_name;
-
-	const char *mj_subject;
-	const char *primary_type;
-	const char **secondary_types;
-
-	struct mtfs_operations *fs_ops;
+	struct list_head        mj_list;
+	struct module          *mj_owner;
+	const char             *mj_name;
+	const char             *mj_subject;
+	const char             *mj_primary_type;
+	const char            **mj_secondary_types;
+	struct mtfs_operations *mj_fs_ops;
 };
 
 extern int junction_register(struct mtfs_junction *junction);

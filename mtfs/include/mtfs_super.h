@@ -42,6 +42,7 @@ struct mtfs_sb_branch {
 struct mtfs_sb_info {
 	struct mtfs_device   *msi_device;
 	struct mtfs_config   *msi_config;
+	void                 *msi_subject_info;
 	mtfs_bindex_t         msi_bnum; /* branch number */
 	struct mtfs_sb_branch msi_barray[MTFS_BRANCH_MAX];
 };
@@ -53,6 +54,7 @@ struct mtfs_sb_info {
 #define mtfs_s2bnum(sb)              (mtfs_s2info(sb)->msi_bnum)
 #define mtfs_s2dev(sb)               (mtfs_s2info(sb)->msi_device)
 #define mtfs_s2config(sb)            (mtfs_s2info(sb)->msi_config)
+#define mtfs_s2subinfo(sb)           (mtfs_s2info(sb)->msi_subject_info)
 #define mtfs_s2barray(sb)            (mtfs_s2info(sb)->msi_barray)
 
 #define mtfs_s2branch(sb, bindex)    (mtfs_s2barray(sb)[bindex].msb_sb)

@@ -292,11 +292,11 @@ const char *supported_secondary_types[] = {
 };
 
 struct mtfs_junction mtfs_lustre_junction = {
-	junction_owner:          THIS_MODULE,
-	junction_name:           "lustre",
-	primary_type:            "lustre",
-	secondary_types:         supported_secondary_types,
-	fs_ops:                  &mtfs_lustre_operations,
+	mj_owner:                THIS_MODULE,
+	mj_name:                 "lustre",
+	mj_primary_type:         "lustre",
+	mj_secondary_types:      supported_secondary_types,
+	mj_fs_ops:               &mtfs_lustre_operations,
 };
 
 struct lowerfs_operations lowerfs_lustre_ops = {
