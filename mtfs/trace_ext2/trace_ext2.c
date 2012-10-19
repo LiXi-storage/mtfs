@@ -100,7 +100,6 @@ struct file_operations trace_ext2_dir_fops =
 	/* TODO: fsync, do we really need open? */
 };
 
-#if 1
 struct file_operations trace_ext2_main_fops =
 {
 	llseek:     mtfs_file_llseek,
@@ -128,35 +127,6 @@ struct file_operations trace_ext2_main_fops =
 	fsync:      mtfs_fsync,
 	/* TODO: splice_read, splice_write */
 };
-#else
-struct file_operations trace_ext2_main_fops =
-{
-	llseek:     mtfs_file_llseek,
-	read:       mtfs_file_read,
-	write:      mtfs_file_write,
-#ifdef HAVE_KERNEL_SENDFILE
-	sendfile:   mtfs_file_sendfile,
-#endif /* HAVE_KERNEL_SENDFILE */
-#ifdef HAVE_FILE_READV
-	readv:      mtfs_file_readv,
-#else /* !HAVE_FILE_READV */
-	aio_read:   mtfs_file_aio_read,
-#endif /* !HAVE_FILE_READV */
-#ifdef HAVE_FILE_WRITEV
-	writev:     mtfs_file_writev,
-#else /* !HAVE_FILE_WRITEV */
-	aio_write:  mtfs_file_aio_write,
-#endif /* !HAVE_FILE_WRITEV */
-	readdir:    mtfs_readdir,
-	poll:       mtfs_poll,
-	ioctl:      mtfs_ioctl,
-	mmap:       mtfs_file_mmap,
-	open:       mtfs_open,
-	release:    mtfs_release,
-	fsync:      mtfs_fsync,
-	/* TODO: splice_read, splice_write */
-};
-#endif
 
 struct heal_operations trace_ext2_hops =
 {

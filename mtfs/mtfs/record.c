@@ -52,14 +52,18 @@ int mrecord_cleanup(struct mrecord_handle *handle)
 }
 EXPORT_SYMBOL(mrecord_cleanup);
 
-int mrecord_add(struct mrecord_handle *handle, struct mrecord *record)
+int mrecord_add(struct mrecord_handle *handle, struct mrecord_head *head)
 {
 	int ret = 0;
 	MENTRY();
 
 	MASSERT(handle->mrh_ops);
 	if (handle->mrh_ops->mro_add) {
-		ret = handle->mrh_ops->mro_add(handle, record);
+		head->mrh_sequence = handle->mrh_next_sequence;
+		ret = handle->mrh_ops->mro_add(handle, head);
+		if (!ret) {
+			handle->mrh_next_sequence++;
+		}
 	}
 
 	MRETURN(ret);
@@ -92,7 +96,6 @@ static int mrecord_file_init(struct mrecord_handle *handle)
 	                                       mntget(mrh_file->mrfi_mnt),
 	                                       O_RDWR,
 	                                       current_cred());
-
 	if (IS_ERR(mrh_file->mrfi_filp)) {
 		ret = PTR_ERR(mrh_file->mrfi_filp);
 		MERROR("failed to open [%.*s/%s], ret = %d\n",
@@ -102,6 +105,7 @@ static int mrecord_file_init(struct mrecord_handle *handle)
 		goto out_dput;
 	}
 
+	init_rwsem(&mrh_file->mrfi_rwsem);
 	goto out;
 out_dput:
 	dput(mrh_file->mrfi_dchild);
@@ -109,7 +113,7 @@ out:
 	MRETURN(ret);
 }
 
-static int mrecord_file_add(struct mrecord_handle *handle, struct mrecord *record)
+static int mrecord_file_add(struct mrecord_handle *handle, struct mrecord_head *head)
 {
 	int ret = 0;
 	struct mrecord_file_info *mrh_file = &handle->u.mrh_file;
@@ -117,9 +121,11 @@ static int mrecord_file_add(struct mrecord_handle *handle, struct mrecord *recor
 	MENTRY();
 
 	MASSERT(mrh_file->mrfi_filp);
+	down_write(&mrh_file->mrfi_rwsem);
 	size = _do_read_write(WRITE, mrh_file->mrfi_filp,
-	                      (void *)record, sizeof(*record),
+	                      (void *)head, head->mrh_len,
 	                      &mrh_file->mrfi_filp->f_pos);
+	up_write(&mrh_file->mrfi_rwsem);
 	MRETURN(ret);
 }
 

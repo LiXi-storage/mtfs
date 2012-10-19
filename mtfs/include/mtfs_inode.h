@@ -19,7 +19,6 @@ struct mtfs_inode_branch {
 struct mtfs_inode_info {
 	struct inode             mii_inode;
 	struct mlock_resource    mii_resource;
-	struct semaphore         mii_write_sem;
 	mtfs_bindex_t            mii_bnum;
 	struct mtfs_inode_branch mii_barray[MTFS_BRANCH_MAX];
 };

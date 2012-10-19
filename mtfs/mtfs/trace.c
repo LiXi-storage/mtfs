@@ -6,8 +6,10 @@
 #include <linux/sched.h>
 #include <mtfs_io.h>
 #include <mtfs_file.h>
+#include <mtfs_record.h>
 #include "main_internal.h"
 #include "io_internal.h"
+#include "super_internal.h"
 
 static void _mtfs_io_iter_start_rw(struct mtfs_io *io)
 {
@@ -35,6 +37,8 @@ static void _mtfs_io_iter_start_rw(struct mtfs_io *io)
 static void mtrace_io_iter_start_rw(struct mtfs_io *io)
 {
 	struct mtfs_io_trace *io_trace = &io->subject.mi_trace;
+	struct mtfs_io_rw *io_rw = &io->u.mi_rw;
+	struct mrecord_head *head = &io_trace->head;
 	MENTRY();
 
 	if (io->mi_bindex != io->mi_bnum - 1) {
@@ -43,7 +47,10 @@ static void mtrace_io_iter_start_rw(struct mtfs_io *io)
 		do_gettimeofday(&io_trace->end);
 	} else {
 		/* Trace branch */
-		
+		head->mrh_len = sizeof(*io_trace);
+		io_trace->type = io->mi_type;
+		io_trace->result = io->mi_result;
+		mrecord_add(mtfs_f2subinfo(io_rw->file), head);
 	}
 	_MRETURN();
 }

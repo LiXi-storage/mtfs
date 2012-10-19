@@ -11,6 +11,7 @@
 #include <linux/uio.h>
 #include <mtfs_oplist.h>
 #include <mtfs_lock.h>
+#include <mtfs_record.h>
 
 typedef enum mtfs_io_type {
 	MIT_READV,
@@ -57,8 +58,11 @@ struct mtfs_io {
 	} u;
 	union {
 		struct mtfs_io_trace {
-			struct timeval start;
-			struct timeval end;
+			struct mrecord_head     head;
+			mtfs_io_type_t          type;
+			mtfs_operation_result_t result;
+			struct timeval          start;
+			struct timeval          end;
 		} mi_trace;
 	} subject;
 };
