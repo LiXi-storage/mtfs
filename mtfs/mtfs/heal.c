@@ -337,62 +337,6 @@ out:
 	MRETURN(dchild);
 }
 
-static inline int mutex_lock_if_needed(struct mutex *lock)
-{
-	if(!mutex_is_locked(lock)) {
-		mutex_is_locked(lock);
-	}
-	return 0;
-}
-
-/*
- * p1 and p2 should be directories on the same fs.
- */
-struct dentry *mtfs_lock_rename(struct dentry *p1, struct dentry *p2)
-{
-	struct dentry *p;
-
-	if (p1 == p2) {
-		mutex_lock_if_needed(&p1->d_inode->i_mutex);
-		return NULL;
-	}
-
-	mutex_lock(&p1->d_inode->i_sb->s_vfs_rename_mutex);
-
-	for (p = p1; p->d_parent != p; p = p->d_parent) {
-		if (p->d_parent == p2) {
-			mutex_lock(&p2->d_inode->i_mutex);
-			mutex_lock(&p1->d_inode->i_mutex);
-			return p;
-		}
-	}
-
-	for (p = p2; p->d_parent != p; p = p->d_parent) {
-		if (p->d_parent == p1) {
-			mutex_lock(&p1->d_inode->i_mutex);
-			mutex_lock(&p2->d_inode->i_mutex);
-			return p;
-		}
-	}
-
-	mutex_lock_if_needed(&p1->d_inode->i_mutex);
-	mutex_lock_if_needed(&p2->d_inode->i_mutex);
-	return NULL;
-}
-
-void mtfs_unlock_rename(struct dentry *p1, struct dentry *p2, int p1_locked, int p2_locked)
-{
-	if (!p1_locked) {
-		mutex_unlock(&p1->d_inode->i_mutex);
-	}
-	if (p1 != p2) {
-		if (!p2_locked) {
-			mutex_unlock(&p2->d_inode->i_mutex);
-		}
-		mutex_unlock(&p1->d_inode->i_sb->s_vfs_rename_mutex);
-	}
-}
-
 int mtfs_backup_branch(struct dentry *dentry, mtfs_bindex_t bindex)
 {
 	struct dentry *hidden_d_old = mtfs_d2branch(dentry, bindex);

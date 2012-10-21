@@ -15,7 +15,7 @@ EXPORT_SYMBOL(mtfs_kmemory_used);
 atomic64_t mtfs_kmemory_used_max = {0};
 EXPORT_SYMBOL(mtfs_kmemory_used_max);
 
-static int
+int
 mtfs_proc_call_handler(void *data, int write,
                        loff_t *ppos, void *buffer, size_t *lenp,
                        int (*handler)(void *data, int write,
@@ -36,6 +36,7 @@ mtfs_proc_call_handler(void *data, int write,
 
 	return 0;
 }
+EXPORT_SYMBOL(mtfs_proc_call_handler);
 
 static int __mtfs_proc_dump_kernel(void *data, int write,
                             loff_t pos, void *buffer, int nob)
@@ -53,7 +54,7 @@ out:
 MTFS_DECLARE_PROC_HANDLER(mtfs_proc_dump_kernel)
 
 static int __mtfs_proc_dobitmasks(void *data, int write,
-                             loff_t pos, void *buffer, int nob)
+                                  loff_t pos, void *buffer, int nob)
 {
 	const int     tmpstrlen = 512;
 	char         *tmpstr;
@@ -73,14 +74,14 @@ static int __mtfs_proc_dobitmasks(void *data, int write,
 		} else {
 			rc = mtfs_trace_copyout_string(buffer, nob,
 			                               tmpstr + pos, "\n");
-                }
-        } else {
+ 		}
+	} else {
 		rc = mtfs_trace_copyin_string(tmpstr, tmpstrlen, buffer, nob);
 		if (rc < 0)
 			return rc;
 
 		rc = mtfs_debug_str2mask(mask, tmpstr, is_subsys);
-		/* Always print LBUG/LASSERT to console, so keep this mask */
+		/* Always print MBUG/MASSERT to console, so keep this mask */
 		if (is_printk)
 			*mask |= D_EMERG;
 	}
@@ -89,6 +90,7 @@ static int __mtfs_proc_dobitmasks(void *data, int write,
 	return rc;
 }
 MTFS_DECLARE_PROC_HANDLER(mtfs_proc_dobitmasks)
+EXPORT_SYMBOL(mtfs_proc_dobitmasks);
 
 static struct ctl_table mtfs_table[] = {
 	/*

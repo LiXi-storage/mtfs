@@ -5,5 +5,5 @@ EXTRA_DIST += mtfs_stack.h mtfs_string.h mtfs_super.h mtfs_support.h mtfs_types.
 EXTRA_DIST += mtfs_version.h log.h memory.h parse_option.h parser.h
 EXTRA_DIST += raid.h rule_tree.h mtfs_flag.h mtfs_device.h mtfs_oplist.h
 EXTRA_DIST += multithread.h cfg.h compat.h thread.h mtfs_selfheal.h
-EXTRA_DIST += proc.h mtfs_heal.h mtfs_lock.h spinlock.h mtfs_io.h
+EXTRA_DIST += mtfs_heal.h mtfs_lock.h spinlock.h mtfs_io.h mtfs_proc.h
 EXTRA_DIST += mtfs_trace.h mtfs_record.h mtfs_subject.h

@@ -59,13 +59,15 @@ int mrecord_add(struct mrecord_handle *handle, struct mrecord_head *head)
 
 	MASSERT(handle->mrh_ops);
 	if (handle->mrh_ops->mro_add) {
-		head->mrh_sequence = handle->mrh_next_sequence;
+		head->mrh_sequence = handle->mrh_prev_sequence + 1;
 		ret = handle->mrh_ops->mro_add(handle, head);
-		if (!ret) {
-			handle->mrh_next_sequence++;
+		if (ret) {
+			MERROR("failed to add record, ret = %d\n", ret);
+			goto out;
 		}
 	}
-
+	handle->mrh_prev_sequence++;
+out:
 	MRETURN(ret);
 }
 EXPORT_SYMBOL(mrecord_add);
@@ -142,10 +144,31 @@ static int mrecord_file_fini(struct mrecord_handle *handle)
 	MRETURN(ret);
 }
 
+static int mrecord_file_cleanup(struct mrecord_handle *handle)
+{
+	int ret = 0;
+	struct mrecord_file_info *mrh_file = &handle->u.mrh_file;
+	struct iattr newattrs;
+	struct inode *inode = NULL;
+	MENTRY();
+
+	MASSERT(mrh_file->mrfi_filp);
+	MASSERT(mrh_file->mrfi_dchild);
+	MASSERT(mrh_file->mrfi_dchild->d_inode);
+	inode = mrh_file->mrfi_dchild->d_inode;
+	MASSERT(S_ISREG(inode->i_mode));
+	newattrs.ia_size = 0;
+	newattrs.ia_valid = ATTR_SIZE;
+	mutex_lock(&inode->i_mutex);
+	ret = notify_change(mrh_file->mrfi_dchild, &newattrs);
+	mutex_unlock(&inode->i_mutex);
+	MRETURN(ret);
+}
+
 struct mrecord_operations mrecord_file_ops = {
 	mro_init:    mrecord_file_init,
 	mro_add:     mrecord_file_add,
-	mro_cleanup: NULL,
+	mro_cleanup: mrecord_file_cleanup,
 	mro_fini:    mrecord_file_fini,
 };
 EXPORT_SYMBOL(mrecord_file_ops);

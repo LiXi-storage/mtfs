@@ -26,7 +26,8 @@ struct mrecord_file_info {
 struct mrecord_handle {
 	int                        mrh_type;
 	const char                *mrh_name;
-	__u64                      mrh_next_sequence;
+	/* Sequence number. Zero is presaved */
+	__u64                      mrh_prev_sequence;
 	struct mrecord_operations *mrh_ops;
 	union {
 		struct mrecord_file_info mrh_file;

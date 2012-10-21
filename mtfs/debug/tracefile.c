@@ -319,6 +319,7 @@ int mtfs_trace_copyin_string(char *knl_buffer, int knl_buffer_nob,
 	knl_buffer[nob + 1] = 0;                /* terminate */
 	return 0;
 }
+EXPORT_SYMBOL(mtfs_trace_copyin_string);
 
 int mtfs_trace_copyout_string(char *usr_buffer, int usr_buffer_nob,
                               const char *knl_buffer, char *append)
@@ -343,6 +344,7 @@ int mtfs_trace_copyout_string(char *usr_buffer, int usr_buffer_nob,
 
         return nob;
 }
+EXPORT_SYMBOL(mtfs_trace_copyout_string);
 
 int mtfs_trace_allocate_string_buffer(char **str, int nob)
 {

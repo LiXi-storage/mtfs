@@ -7,6 +7,8 @@
 #include <mtfs_io.h>
 #include <mtfs_file.h>
 #include <mtfs_record.h>
+#include <mtfs_trace.h>
+#include <mtfs_proc.h>
 #include "main_internal.h"
 #include "io_internal.h"
 #include "super_internal.h"
@@ -39,8 +41,10 @@ static void mtrace_io_iter_start_rw(struct mtfs_io *io)
 	struct mtfs_io_trace *io_trace = &io->subject.mi_trace;
 	struct mtfs_io_rw *io_rw = &io->u.mi_rw;
 	struct mrecord_head *head = &io_trace->head;
+	struct msubject_trace_info *info = NULL;
 	MENTRY();
 
+	info = (struct msubject_trace_info *)mtfs_f2subinfo(io_rw->file);
 	if (io->mi_bindex != io->mi_bnum - 1) {
 		do_gettimeofday(&io_trace->start);
 		_mtfs_io_iter_start_rw(io);
@@ -50,7 +54,7 @@ static void mtrace_io_iter_start_rw(struct mtfs_io *io)
 		head->mrh_len = sizeof(*io_trace);
 		io_trace->type = io->mi_type;
 		io_trace->result = io->mi_result;
-		mrecord_add(mtfs_f2subinfo(io_rw->file), head);
+		mrecord_add(&info->msti_handle, head);
 	}
 	_MRETURN();
 }
@@ -231,3 +235,209 @@ ssize_t mtrace_file_aio_write(struct kiocb *iocb, const struct iovec *iov,
 EXPORT_SYMBOL(mtrace_file_aio_write);
 
 #endif /* !HAVE_FILE_READV */
+
+#define TOPS_READ         0x00000001
+#define TOPS_WRITE        0x00000002
+#define TOPS_DEFAULT      (TOPS_READ | TOPS_WRITE)
+
+unsigned int mtfs_trace_ops = TOPS_DEFAULT;
+module_param(mtfs_trace_ops, int, 0644);
+
+#define TUINT_TIME        0x00000001
+#define TUINT_UID         0x00000002
+#define TUINT_DEFAULT     (TOPS_TIME | TOPS_UID)
+
+unsigned int mtfs_trace_units = TOPS_DEFAULT;
+module_param(mtfs_trace_units, int, 0644);
+
+#ifdef HAVE_SYSCTL_UNNUMBERED
+#define CTL_TRACE_MTFS        CTL_UNNUMBERED
+#define MTFS_TRACE_OPS_MASK   CTL_UNNUMBERED
+#define MTFS_TRACE_UNIT_MASK   CTL_UNNUMBERED
+#else /* !define(HAVE_SYSCTL_UNNUMBERED) */
+#define CTL_TRACE_MTFS        (0x100)
+enum {
+	MTFS_TRACE_OPS_MASK = 1, /* Operation */
+	MTFS_TRACE_UNIT_MASK,
+};
+#endif /* !define(HAVE_SYSCTL_UNNUMBERED) */
+
+const char *
+mtfs_trace_ops2str(int mask)
+{
+	switch (1 << mask) {
+	default:
+		return NULL;
+	case TOPS_READ:
+		return "read";
+        case TOPS_WRITE:
+		return "write";
+        }
+}
+
+const char *
+mtfs_trace_unit2str(int mask)
+{
+	switch (1 << mask) {
+	default:
+		return NULL;
+	case TUINT_TIME:
+		return "time";
+        case TUINT_UID:
+		return "uid";
+        }
+}
+
+const char *
+mtfs_trace_subsys2str(int subsys)
+{
+        switch (1 << subsys) {
+        default:
+                return NULL;
+        case S_UNDEFINED:
+                return "undefined";
+        case S_MTFS:
+                return "mtfs";
+        }
+}
+
+static int __mtfs_trace_proc_dobitmasks(void *data, int write,
+                                  loff_t pos, void *buffer, int nob)
+{
+	const int     tmpstrlen = 512;
+	char         *tmpstr;
+	int           ret;
+	unsigned int *mask = data;
+	int           is_ops = (mask == &mtfs_trace_ops) ? 1 : 0;
+	int           is_unit = (mask == &mtfs_trace_units) ? 1 : 0;
+	const char *(*mask2str)(int bit) = NULL;
+	MENTRY();
+
+	MTFS_ALLOC(tmpstr, tmpstrlen);
+	if (tmpstr == NULL) {
+		MERROR("not enough memory\n");
+		ret = -ENOMEM;
+		goto out;
+	}
+
+	MASSERT(is_ops || is_unit);
+
+	if (is_ops) {
+		mask2str = mtfs_trace_ops2str;
+	} else {
+		mask2str = mtfs_trace_unit2str;
+	}
+
+	ret = mtfs_common_proc_dobitmasks(data, write,
+	                                  pos, buffer, nob,
+	                                  0, tmpstr, tmpstrlen,
+	                                  mask2str);
+	MTFS_FREE(tmpstr, tmpstrlen);
+out:
+	MRETURN(ret);
+}
+MTFS_DECLARE_PROC_HANDLER(mtfs_trace_proc_dobitmasks)
+
+static struct ctl_table mtfs_trace_table[] = {
+        {
+		/* Mask kernel trace */
+		.ctl_name = MTFS_TRACE_OPS_MASK,
+		.procname = "operations",
+		.data     = &mtfs_trace_ops,
+		.maxlen   = sizeof(int),
+		.mode     = 0644,
+		.proc_handler = &mtfs_trace_proc_dobitmasks,
+	},
+        {
+		/* Mask kernel trace */
+		.ctl_name = MTFS_TRACE_UNIT_MASK,
+		.procname = "units",
+		.data     = &mtfs_trace_units,
+		.maxlen   = sizeof(int),
+		.mode     = 0644,
+		.proc_handler = &mtfs_trace_proc_dobitmasks,
+	},
+	{0}
+};
+
+struct ctl_table mtfs_trace_top_table[] = {
+	{
+		.ctl_name = CTL_TRACE_MTFS,
+		.procname = "mtfs_trace",
+		.mode     = 0555,
+		.data     = NULL,
+		.maxlen   = 0,
+		.child    = mtfs_trace_table,
+	},
+	{
+		.ctl_name = 0
+	}
+};
+
+#define MTFS_RESERVE_RECORD "RECORD"
+int trace_subject_init(struct super_block *sb)
+{
+	int ret = 0;
+	struct mrecord_handle *handle = NULL;
+	struct msubject_trace_info *info = NULL;
+	struct mrecord_file_info *mrh_file = NULL;
+	mtfs_bindex_t bindex = mtfs_s2bnum(sb) - 1;
+	MENTRY();
+
+	MTFS_ALLOC_PTR(info);
+	if (info == NULL) {
+		ret = -ENOMEM;
+		MERROR("not enough memory\n");
+		goto out;
+	}
+	handle = &info->msti_handle;
+	handle->mrh_ops = &mrecord_file_ops;
+
+	mrh_file = &handle->u.mrh_file;
+	mrh_file->mrfi_mnt = mtfs_s2mntbranch(sb, bindex);
+	mrh_file->mrfi_dparent = mtfs_s2bdreserve(sb, bindex);
+	mrh_file->mrfi_fname = MTFS_RESERVE_RECORD;
+	ret = mrecord_init(handle);
+	if (ret) {
+		MERROR("failed to init handle, ret = %d\n", ret);
+		goto out_free_handle;
+	}
+
+	ret = mrecord_cleanup(handle);
+	if (ret) {
+		MERROR("failed to cleanup handle, ret = %d\n", ret);
+		goto out_fini_handle;
+	}
+
+#ifdef CONFIG_SYSCTL
+#ifdef HAVE_REGISTER_SYSCTL_2ARGS
+	info->msti_ctl_table = register_sysctl_table(mtfs_trace_top_table, 0);
+#else /* !HAVE_REGISTER_SYSCTL_2ARGS */
+	info->msti_ctl_table = register_sysctl_table(mtfs_trace_top_table);
+#endif /* !HAVE_REGISTER_SYSCTL_2ARGS */
+#endif /* CONFIG_SYSCTL */
+
+	mtfs_s2subinfo(sb) = (void *)info;
+	goto out;
+out_fini_handle:
+	mrecord_fini(handle);
+out_free_handle:
+	MTFS_FREE_PTR(handle);
+out:
+	MRETURN(ret);
+}
+EXPORT_SYMBOL(trace_subject_init);
+
+int trace_subject_fini(struct super_block *sb)
+{
+	int ret = 0;
+	struct msubject_trace_info *info = NULL;
+	MENTRY();
+
+	info = (struct msubject_trace_info *)mtfs_s2subinfo(sb);
+	unregister_sysctl_table(info->msti_ctl_table);
+	mrecord_fini(&info->msti_handle);
+	MTFS_FREE_PTR(info);
+	MRETURN(ret);
+}
+EXPORT_SYMBOL(trace_subject_fini);

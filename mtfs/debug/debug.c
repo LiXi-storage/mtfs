@@ -7,7 +7,7 @@
 #include <linux/sysctl.h>
 #include <debug.h>
 #include <compat.h>
-#include <proc.h>
+#include <mtfs_proc.h>
 #include "linux_debug.h"
 #include "linux_tracefile.h"
 #include "tracefile.h"
@@ -270,6 +270,112 @@ int mtfs_str2mask(const char *str, const char *(*bit2str)(int bit),
         *oldmask = newmask;
         return 0;
 }
+
+int
+mtfs_common_mask2str(char *str, int size, int mask, const char *(*mask2str)(int bit))
+{
+	int           len = 0;
+	const char   *token;
+	int           i;
+
+	if (mask == 0) {                        /* "0" */
+		if (size > 0)
+			str[0] = '0';
+		len = 1;
+        } else {                                /* space-separated tokens */
+		for (i = 0; i < 32; i++) {
+			if ((mask & (1 << i)) == 0)
+				continue;
+
+			token = mask2str(i);
+			if (token == NULL)              /* unused bit */
+				continue;
+
+			if (len > 0) {                  /* separator? */
+				if (len < size)
+					str[len] = ' ';
+				len++;
+			}
+
+			while (*token != 0) {
+				if (len < size)
+					str[len] = *token;
+				token++;
+				len++;
+			}
+		}
+	}
+
+	/* terminate 'str' */
+	if (len < size)
+		str[len] = 0;
+	else
+		str[size - 1] = 0;
+
+	return len;
+}
+
+int
+mtfs_common_str2mask(int *mask, const char *str, const char *(*mask2str)(int bit), int minmask)
+{
+        int         m = 0;
+        int         matched;
+        int         n;
+        int         t;
+
+        /* Allow a number for backwards compatibility */
+
+        for (n = strlen(str); n > 0; n--)
+                if (!isspace(str[n-1]))
+                        break;
+        matched = n;
+
+        if ((t = sscanf(str, "%i%n", &m, &matched)) >= 1 &&
+            matched == n) {
+                /* don't print warning for lctl set_param debug=0 or -1 */
+                if (m != 0 && m != -1)
+                        MWARN("You are trying to use a numerical value for the "
+                              "mask - this will be deprecated in a future "
+                              "release.\n");
+                *mask = m;
+                return 0;
+        }
+
+        return mtfs_str2mask(str, mask2str, mask, minmask,
+                            0xffffffff);
+}
+
+int mtfs_common_proc_dobitmasks(void *data, int write,
+                                loff_t pos, void *buffer,
+                                int nob, int minmask,
+                                char *tmpstr, int tmpstrlen,
+                                const char *(*mask2str)(int bit))
+{
+	int           ret;
+	unsigned int *mask = data;
+
+	if (!write) {
+		mtfs_common_mask2str(tmpstr, tmpstrlen, *mask, mask2str);
+		ret = strlen(tmpstr);
+		if (pos >= ret) {
+			ret = 0;
+		} else {
+			ret = mtfs_trace_copyout_string(buffer, nob,
+			                               tmpstr + pos, "\n");
+		}
+	} else {
+		ret = mtfs_trace_copyin_string(tmpstr, tmpstrlen, buffer, nob);
+		if (ret < 0) {
+			goto out;
+		}
+
+		ret = mtfs_common_str2mask(mask, tmpstr, mask2str, minmask);
+	}
+
+out:
+	return ret;
+}
+EXPORT_SYMBOL(mtfs_common_proc_dobitmasks);
 
 int
 mtfs_debug_str2mask(int *mask, const char *str, int is_subsys)

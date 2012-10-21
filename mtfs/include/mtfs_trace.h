@@ -6,11 +6,18 @@
 #define __MTFS_TRACE_H__
 
 #if defined(__linux__) && defined(__KERNEL__)
-#include "mtfs_common.h"
-#include "memory.h"
-#include "debug.h"
 #include <linux/file.h>
 #include <linux/poll.h>
+#include "mtfs_common.h"
+#include "mtfs_record.h"
+
+struct msubject_trace_info {
+	struct mrecord_handle msti_handle;
+	struct ctl_table_header *msti_ctl_table;
+};
+
+extern int trace_subject_init(struct super_block *sb);
+extern int trace_subject_fini(struct super_block *sb);
 
 #ifdef HAVE_FILE_READV
 extern ssize_t mtrace_file_readv(struct file *file, const struct iovec *iov,
