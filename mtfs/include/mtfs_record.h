@@ -5,14 +5,14 @@
 #ifndef __MTFS_RECORD_H__
 #define __MTFS_RECORD_H__
 
-#if defined(__linux__) && defined(__KERNEL__)
-#include <linux/fs.h>
-#include <linux/rwsem.h>
-
 struct mrecord_head {
 	__u32 mrh_len;
 	__u64 mrh_sequence;
 };
+
+#if defined(__linux__) && defined(__KERNEL__)
+#include <linux/fs.h>
+#include <linux/rwsem.h>
 
 struct mrecord_file_info {
 	char               *mrfi_fname;
@@ -49,8 +49,6 @@ extern int mrecord_fini(struct mrecord_handle *handle);
 extern int mrecord_cleanup(struct mrecord_handle *handle);
 extern int mrecord_add(struct mrecord_handle *handle, struct mrecord_head *head);
 
-#else /* !defined (__linux__) && defined(__KERNEL__) */
-#error This head is only for kernel space use
-#endif /* !defined (__linux__) && defined(__KERNEL__) */
+#endif /* defined (__linux__) && defined(__KERNEL__) */
 
 #endif /* __MTFS_RECORD_H__ */

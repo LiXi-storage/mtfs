@@ -7,7 +7,7 @@
 #include <linux/sched.h>
 #include <parse_option.h>
 #include <compat.h>
-#include <proc.h>
+#include <mtfs_proc.h>
 #include <mtfs_selfheal.h>
 #include <mtfs_device.h>
 #include <mtfs_file.h>
@@ -79,9 +79,6 @@ out:
 	MRETURN(ret);
 }
 
-#define MTFS_RESERVE_ROOT    ".mtfs"
-#define MTFS_RESERVE_RECOVER "RECOVER"
-#define MTFS_RESERVE_CONFIG  "CONFIG"
 #define MCI_MAGIC 0xEAC1C001
 
 static int mtfs_config_write_branch(struct super_block *sb,

@@ -6,7 +6,7 @@
 #include <linux/uaccess.h>
 #include <linux/module.h>
 #include <compat.h>
-#include <proc.h>
+#include <mtfs_proc.h>
 #include <mtfs_dentry.h>
 #include "device_internal.h"
 #include "junction_internal.h"

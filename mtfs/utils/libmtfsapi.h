@@ -4,6 +4,8 @@
 
 #ifndef __MTFS_LIBMTFSAPI_H__
 #define __MTFS_LIBMTFSAPI_H__
+#include <mntent.h>
+#include <dirent.h>
 #include <raid.h>
 #include <mtfs_common.h>
 
@@ -34,4 +36,6 @@ int mtfs_api_setraid(char *path, raid_type_t raid_pattern, struct mtfs_param *pa
 int mtfs_api_rmbranch(const char *path, mtfs_bindex_t bindex, struct mtfs_param *param);
 int mtfsctl_api_debug_kernel(const char *filename, struct mtfs_param *param);
 int mtfsctl_api_debug_kernel(const char *out_file, struct mtfs_param *param);
+int mtfsapi_is_mtfs_mnt(struct mntent *mnt);
+int mtfsapi_is_mtfs_hidden_mnt(struct mntent *mnt);
 #endif /* __MTFS_LIBMTFSAPI_H__ */

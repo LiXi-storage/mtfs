@@ -191,8 +191,8 @@ int trace_ext2_ioctl(struct inode *inode, struct file *file, unsigned int cmd, u
 }
 
 struct mtfs_subject_operations trace_subject_ops = {
-	mso_init:                 trace_subject_init,
-	mso_fini:                 trace_subject_fini,
+	mso_init:                 mtrace_subject_init,
+	mso_fini:                 mtrace_subject_fini,
 };
 
 struct mtfs_operations trace_ext2_operations = {
@@ -233,7 +233,7 @@ struct lowerfs_operations lowerfs_ext2_ops = {
 	lowerfs_idata_finit:     NULL,
 };
 
-static int ext2_support_init(void)
+static int trace_ext2_init(void)
 {
 	int ret = 0;
 
@@ -257,7 +257,7 @@ out:
 	return ret;
 }
 
-static void ext2_support_exit(void)
+static void trace_ext2_exit(void)
 {
 	MDEBUG("unregistering trace_ext2 support\n");
 	lowerfs_unregister_ops(&lowerfs_ext2_ops);
@@ -269,5 +269,5 @@ MODULE_AUTHOR("MulTi File System Workgroup");
 MODULE_DESCRIPTION("mtfs's support for ext2");
 MODULE_LICENSE("GPL");
 
-module_init(ext2_support_init);
-module_exit(ext2_support_exit);
+module_init(trace_ext2_init);
+module_exit(trace_ext2_exit);

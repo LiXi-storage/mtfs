@@ -5,18 +5,34 @@
 #ifndef __MTFS_IO_H__
 #define __MTFS_IO_H__
 
-#if defined(__linux__) && defined(__KERNEL__)
-
-#include <linux/fs.h>
-#include <linux/uio.h>
 #include <mtfs_oplist.h>
-#include <mtfs_lock.h>
 #include <mtfs_record.h>
+#if defined(__linux__) && defined(__KERNEL__)
+#include <linux/time.h>
+#else
+#include <sys/time.h>
+#endif
 
 typedef enum mtfs_io_type {
 	MIT_READV,
 	MIT_WRITEV,
 } mtfs_io_type_t;
+
+struct mtfs_io_trace {
+	struct mrecord_head     head;
+	mtfs_io_type_t          type;
+	mtfs_operation_result_t result;
+	struct timeval          start;
+	struct timeval          end;
+};
+
+
+#if defined(__linux__) && defined(__KERNEL__)
+
+#include <linux/fs.h>
+#include <linux/uio.h>
+#include <mtfs_lock.h>
+#include <mtfs_trace.h>
 
 struct mtfs_io {
 	const struct mtfs_io_operations *mi_ops;
@@ -57,13 +73,7 @@ struct mtfs_io {
 		} mi_rw;
 	} u;
 	union {
-		struct mtfs_io_trace {
-			struct mrecord_head     head;
-			mtfs_io_type_t          type;
-			mtfs_operation_result_t result;
-			struct timeval          start;
-			struct timeval          end;
-		} mi_trace;
+		struct mtfs_io_trace mi_trace;
 	} subject;
 };
 
@@ -102,9 +112,6 @@ struct mtfs_io_operations {
 };
 
 extern int mtfs_io_loop(struct mtfs_io *io);
-
-#else /* !defined (__linux__) && defined(__KERNEL__) */
-#error This head is only for kernel space use
-#endif /* !defined (__linux__) && defined(__KERNEL__) */
+#endif /* defined (__linux__) && defined(__KERNEL__) */
 
 #endif /* __MTFS_IO_H__ */

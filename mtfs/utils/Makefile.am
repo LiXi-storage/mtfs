@@ -28,7 +28,7 @@ mtfsctl_SOURCES = mtfsctl.c mtfs_debug.h mtfs_debug.c
 mtfsctl_LDADD := $(LIBREADLINE) $(LIBUSER) libmtfsapi.a
 mtfsctl_DEPENDENCIES := $(LIBUSER) libmtfsapi.a
 
-mtfs_SOURCES = mtfs.c hide.c hide.h grouplock.c grouplock.h exit_status.h
+mtfs_SOURCES = mtfs.c hide.c hide.h grouplock.c grouplock.h exit_status.h dump_trace.c dump_trace.h
 mtfs_LDADD := $(LIBREADLINE) libmtfsapi.a $(LIBUSER)
 mtfs_DEPENDENCIES := $(LIBUSER) libmtfsapi.a
 

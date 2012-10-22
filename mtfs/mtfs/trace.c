@@ -13,6 +13,144 @@
 #include "io_internal.h"
 #include "super_internal.h"
 
+#define TOPS_READ         0x00000001
+#define TOPS_WRITE        0x00000002
+#define TOPS_DEFAULT      (TOPS_READ | TOPS_WRITE)
+
+unsigned int mtrace_operations = TOPS_DEFAULT;
+module_param(mtrace_operations, int, 0644);
+
+#define TUINT_TIME        0x00000001
+#define TUINT_UID         0x00000002
+#define TUINT_DEFAULT     (TOPS_TIME | TOPS_UID)
+
+unsigned int mtrace_units = TOPS_DEFAULT;
+module_param(mtrace_units, int, 0644);
+
+#ifdef HAVE_SYSCTL_UNNUMBERED
+#define CTL_TRACE_MTFS        CTL_UNNUMBERED
+#define MTFS_TRACE_OPS_MASK   CTL_UNNUMBERED
+#define MTFS_TRACE_UNIT_MASK   CTL_UNNUMBERED
+#else /* !define(HAVE_SYSCTL_UNNUMBERED) */
+#define CTL_TRACE_MTFS        (0x100)
+enum {
+	MTFS_TRACE_OPS_MASK = 1, /* Operation */
+	MTFS_TRACE_UNIT_MASK,
+};
+#endif /* !define(HAVE_SYSCTL_UNNUMBERED) */
+
+const char *
+mtrace_ops2str(int mask)
+{
+	switch (1 << mask) {
+	default:
+		return NULL;
+	case TOPS_READ:
+		return "read";
+        case TOPS_WRITE:
+		return "write";
+        }
+}
+
+const char *
+mtrace_unit2str(int mask)
+{
+	switch (1 << mask) {
+	default:
+		return NULL;
+	case TUINT_TIME:
+		return "time";
+        case TUINT_UID:
+		return "uid";
+        }
+}
+
+const char *
+mtrace_subsys2str(int subsys)
+{
+        switch (1 << subsys) {
+        default:
+                return NULL;
+        case S_UNDEFINED:
+                return "undefined";
+        case S_MTFS:
+                return "mtfs";
+        }
+}
+
+static int __mtrace_proc_dobitmasks(void *data, int write,
+                                  loff_t pos, void *buffer, int nob)
+{
+	const int     tmpstrlen = 512;
+	char         *tmpstr;
+	int           ret;
+	unsigned int *mask = data;
+	int           is_ops = (mask == &mtrace_operations) ? 1 : 0;
+	int           is_unit = (mask == &mtrace_units) ? 1 : 0;
+	const char *(*mask2str)(int bit) = NULL;
+	MENTRY();
+
+	MTFS_ALLOC(tmpstr, tmpstrlen);
+	if (tmpstr == NULL) {
+		MERROR("not enough memory\n");
+		ret = -ENOMEM;
+		goto out;
+	}
+
+	MASSERT(is_ops || is_unit);
+
+	if (is_ops) {
+		mask2str = mtrace_ops2str;
+	} else {
+		mask2str = mtrace_unit2str;
+	}
+
+	ret = mtfs_common_proc_dobitmasks(data, write,
+	                                  pos, buffer, nob,
+	                                  0, tmpstr, tmpstrlen,
+	                                  mask2str);
+	MTFS_FREE(tmpstr, tmpstrlen);
+out:
+	MRETURN(ret);
+}
+MTFS_DECLARE_PROC_HANDLER(mtrace_proc_dobitmasks)
+
+static struct ctl_table mtrace_table[] = {
+        {
+		/* Mask kernel trace */
+		.ctl_name = MTFS_TRACE_OPS_MASK,
+		.procname = "operations",
+		.data     = &mtrace_operations,
+		.maxlen   = sizeof(int),
+		.mode     = 0644,
+		.proc_handler = &mtrace_proc_dobitmasks,
+	},
+        {
+		/* Mask kernel trace */
+		.ctl_name = MTFS_TRACE_UNIT_MASK,
+		.procname = "units",
+		.data     = &mtrace_units,
+		.maxlen   = sizeof(int),
+		.mode     = 0644,
+		.proc_handler = &mtrace_proc_dobitmasks,
+	},
+	{0}
+};
+
+struct ctl_table mtrace_top_table[] = {
+	{
+		.ctl_name = CTL_TRACE_MTFS,
+		.procname = "mtfs_trace",
+		.mode     = 0555,
+		.data     = NULL,
+		.maxlen   = 0,
+		.child    = mtrace_table,
+	},
+	{
+		.ctl_name = 0
+	}
+};
+
 static void _mtfs_io_iter_start_rw(struct mtfs_io *io)
 {
 	struct mtfs_io_rw *io_rw = &io->u.mi_rw;
@@ -36,6 +174,8 @@ static void _mtfs_io_iter_start_rw(struct mtfs_io *io)
 	_MRETURN();
 }
 
+#define mtrace_trace_type(type) (mtrace_operations & type)
+
 static void mtrace_io_iter_start_rw(struct mtfs_io *io)
 {
 	struct mtfs_io_trace *io_trace = &io->subject.mi_trace;
@@ -46,15 +186,24 @@ static void mtrace_io_iter_start_rw(struct mtfs_io *io)
 
 	info = (struct msubject_trace_info *)mtfs_f2subinfo(io_rw->file);
 	if (io->mi_bindex != io->mi_bnum - 1) {
-		do_gettimeofday(&io_trace->start);
+		if ((io->mi_type == MIT_WRITEV && mtrace_trace_type(TOPS_WRITE)) || 
+		    (io->mi_type == MIT_READV && mtrace_trace_type(TOPS_READ))) {
+			do_gettimeofday(&io_trace->start);
+		}
 		_mtfs_io_iter_start_rw(io);
-		do_gettimeofday(&io_trace->end);
+		if ((io->mi_type == MIT_WRITEV && mtrace_trace_type(TOPS_WRITE)) || 
+		    (io->mi_type == MIT_READV && mtrace_trace_type(TOPS_READ))) {
+			do_gettimeofday(&io_trace->end);
+		}
 	} else {
 		/* Trace branch */
-		head->mrh_len = sizeof(*io_trace);
-		io_trace->type = io->mi_type;
-		io_trace->result = io->mi_result;
-		mrecord_add(&info->msti_handle, head);
+		if ((io->mi_type == MIT_WRITEV && mtrace_trace_type(TOPS_WRITE)) || 
+		    (io->mi_type == MIT_READV && mtrace_trace_type(TOPS_READ))) {
+			head->mrh_len = sizeof(*io_trace);
+			io_trace->type = io->mi_type;
+			io_trace->result = io->mi_result;
+			mrecord_add(&info->msti_handle, head);
+		}
 	}
 	_MRETURN();
 }
@@ -236,146 +385,7 @@ EXPORT_SYMBOL(mtrace_file_aio_write);
 
 #endif /* !HAVE_FILE_READV */
 
-#define TOPS_READ         0x00000001
-#define TOPS_WRITE        0x00000002
-#define TOPS_DEFAULT      (TOPS_READ | TOPS_WRITE)
-
-unsigned int mtfs_trace_ops = TOPS_DEFAULT;
-module_param(mtfs_trace_ops, int, 0644);
-
-#define TUINT_TIME        0x00000001
-#define TUINT_UID         0x00000002
-#define TUINT_DEFAULT     (TOPS_TIME | TOPS_UID)
-
-unsigned int mtfs_trace_units = TOPS_DEFAULT;
-module_param(mtfs_trace_units, int, 0644);
-
-#ifdef HAVE_SYSCTL_UNNUMBERED
-#define CTL_TRACE_MTFS        CTL_UNNUMBERED
-#define MTFS_TRACE_OPS_MASK   CTL_UNNUMBERED
-#define MTFS_TRACE_UNIT_MASK   CTL_UNNUMBERED
-#else /* !define(HAVE_SYSCTL_UNNUMBERED) */
-#define CTL_TRACE_MTFS        (0x100)
-enum {
-	MTFS_TRACE_OPS_MASK = 1, /* Operation */
-	MTFS_TRACE_UNIT_MASK,
-};
-#endif /* !define(HAVE_SYSCTL_UNNUMBERED) */
-
-const char *
-mtfs_trace_ops2str(int mask)
-{
-	switch (1 << mask) {
-	default:
-		return NULL;
-	case TOPS_READ:
-		return "read";
-        case TOPS_WRITE:
-		return "write";
-        }
-}
-
-const char *
-mtfs_trace_unit2str(int mask)
-{
-	switch (1 << mask) {
-	default:
-		return NULL;
-	case TUINT_TIME:
-		return "time";
-        case TUINT_UID:
-		return "uid";
-        }
-}
-
-const char *
-mtfs_trace_subsys2str(int subsys)
-{
-        switch (1 << subsys) {
-        default:
-                return NULL;
-        case S_UNDEFINED:
-                return "undefined";
-        case S_MTFS:
-                return "mtfs";
-        }
-}
-
-static int __mtfs_trace_proc_dobitmasks(void *data, int write,
-                                  loff_t pos, void *buffer, int nob)
-{
-	const int     tmpstrlen = 512;
-	char         *tmpstr;
-	int           ret;
-	unsigned int *mask = data;
-	int           is_ops = (mask == &mtfs_trace_ops) ? 1 : 0;
-	int           is_unit = (mask == &mtfs_trace_units) ? 1 : 0;
-	const char *(*mask2str)(int bit) = NULL;
-	MENTRY();
-
-	MTFS_ALLOC(tmpstr, tmpstrlen);
-	if (tmpstr == NULL) {
-		MERROR("not enough memory\n");
-		ret = -ENOMEM;
-		goto out;
-	}
-
-	MASSERT(is_ops || is_unit);
-
-	if (is_ops) {
-		mask2str = mtfs_trace_ops2str;
-	} else {
-		mask2str = mtfs_trace_unit2str;
-	}
-
-	ret = mtfs_common_proc_dobitmasks(data, write,
-	                                  pos, buffer, nob,
-	                                  0, tmpstr, tmpstrlen,
-	                                  mask2str);
-	MTFS_FREE(tmpstr, tmpstrlen);
-out:
-	MRETURN(ret);
-}
-MTFS_DECLARE_PROC_HANDLER(mtfs_trace_proc_dobitmasks)
-
-static struct ctl_table mtfs_trace_table[] = {
-        {
-		/* Mask kernel trace */
-		.ctl_name = MTFS_TRACE_OPS_MASK,
-		.procname = "operations",
-		.data     = &mtfs_trace_ops,
-		.maxlen   = sizeof(int),
-		.mode     = 0644,
-		.proc_handler = &mtfs_trace_proc_dobitmasks,
-	},
-        {
-		/* Mask kernel trace */
-		.ctl_name = MTFS_TRACE_UNIT_MASK,
-		.procname = "units",
-		.data     = &mtfs_trace_units,
-		.maxlen   = sizeof(int),
-		.mode     = 0644,
-		.proc_handler = &mtfs_trace_proc_dobitmasks,
-	},
-	{0}
-};
-
-struct ctl_table mtfs_trace_top_table[] = {
-	{
-		.ctl_name = CTL_TRACE_MTFS,
-		.procname = "mtfs_trace",
-		.mode     = 0555,
-		.data     = NULL,
-		.maxlen   = 0,
-		.child    = mtfs_trace_table,
-	},
-	{
-		.ctl_name = 0
-	}
-};
-
-#define MTFS_RESERVE_RECORD "RECORD"
-int trace_subject_init(struct super_block *sb)
+int mtrace_subject_init(struct super_block *sb)
 {
 	int ret = 0;
 	struct mrecord_handle *handle = NULL;
@@ -411,9 +421,9 @@ int trace_subject_init(struct super_block *sb)
 
 #ifdef CONFIG_SYSCTL
 #ifdef HAVE_REGISTER_SYSCTL_2ARGS
-	info->msti_ctl_table = register_sysctl_table(mtfs_trace_top_table, 0);
+	info->msti_ctl_table = register_sysctl_table(mtrace_top_table, 0);
 #else /* !HAVE_REGISTER_SYSCTL_2ARGS */
-	info->msti_ctl_table = register_sysctl_table(mtfs_trace_top_table);
+	info->msti_ctl_table = register_sysctl_table(mtrace_top_table);
 #endif /* !HAVE_REGISTER_SYSCTL_2ARGS */
 #endif /* CONFIG_SYSCTL */
 
@@ -426,9 +436,9 @@ out_free_handle:
 out:
 	MRETURN(ret);
 }
-EXPORT_SYMBOL(trace_subject_init);
+EXPORT_SYMBOL(mtrace_subject_init);
 
-int trace_subject_fini(struct super_block *sb)
+int mtrace_subject_fini(struct super_block *sb)
 {
 	int ret = 0;
 	struct msubject_trace_info *info = NULL;
@@ -440,4 +450,4 @@ int trace_subject_fini(struct super_block *sb)
 	MTFS_FREE_PTR(info);
 	MRETURN(ret);
 }
-EXPORT_SYMBOL(trace_subject_fini);
+EXPORT_SYMBOL(mtrace_subject_fini);

@@ -321,3 +321,16 @@ out_free_info:
 out:
 	return ret;
 }
+
+/* Is this a mtfs fs? */
+int mtfsapi_is_mtfs_mnt(struct mntent *mnt)
+{
+	return (strcmp(mnt->mnt_type, MTFS_FS_TYPE) == 0);
+}
+
+/* Is this a mtfs-hidden fs? */
+int mtfsapi_is_mtfs_hidden_mnt(struct mntent *mnt)
+{
+	return (strcmp(mnt->mnt_type, MTFS_HIDDEN_FS_TYPE) == 0);
+}
+

@@ -5,17 +5,17 @@
 #ifndef __MTFS_OPLIST_H__
 #define __MTFS_OPLIST_H__
 
-#if defined (__linux__) && defined(__KERNEL__)
-
-#include <linux/fs.h>
-#include "mtfs_common.h"
-#include "debug.h"
 
 typedef union mtfs_operation_result {
 	int ret;
 	void *ptr;
 	ssize_t size;
 } mtfs_operation_result_t;
+
+#if defined (__linux__) && defined(__KERNEL__)
+#include <linux/fs.h>
+#include "mtfs_common.h"
+#include "debug.h"
 
 struct mtfs_operation_binfo {
 	mtfs_bindex_t bindex;     /* Global bindex */
@@ -61,8 +61,6 @@ mtfs_operation_result_t mtfs_oplist_result(struct mtfs_operation_list *list);
 int mtfs_oplist_update(struct inode *inode, struct mtfs_operation_list *list);
 int mtfs_oplist_check(struct mtfs_operation_list *list);
 
-#else /* !defined (__linux__) && defined(__KERNEL__) */
-#error This head is only for kernel space use
-#endif /* !defined (__linux__) && defined(__KERNEL__) */
+#endif /* defined (__linux__) && defined(__KERNEL__) */
 
 #endif /* __MTFS_FLAG_H__ */

@@ -2,20 +2,21 @@
  * Copyright (C) 2011 Li Xi <pkuelelixi@gmail.com>
  */
 
-#include <cmd_parser.h>
 #include <stdio.h>
 #include <getopt.h>
 #include <stdlib.h>
-#include <raid.h>
 #include <unistd.h>
-#include "libmtfsapi.h"
-#include <log.h>
-#include "hide.h"
-#include "grouplock.h"
 #include <signal.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <cmd_parser.h>
+#include <raid.h>
+#include <log.h>
+#include "libmtfsapi.h"
+#include "hide.h"
+#include "grouplock.h"
+#include "dump_trace.h"
 
 int mtfs_get_version(int argc, char **argv)
 {
@@ -48,6 +49,7 @@ static int mtfs_log(int argc, char **argv);
 static int mtfs_hide(int argc, char **argv);
 static int mtfs_grouplock(int argc, char **argv);
 static int mtfs_rmbranch(int argc, char **argv);
+static int mtfs_dumptrace(int argc, char **argv);
 
 command_t mtfs_cmdlist[] = {
 	/* Metacommands */
@@ -91,6 +93,11 @@ command_t mtfs_cmdlist[] = {
 	{"hide", mtfs_hide, 0,
 	"To list the state info for a given file or directory.\n"
 	"usage: hide [--quiet | -q] [--verbose | -v] [--unhide | -u]\n"
+	"                <dir> ...\n"},
+
+	{"dumptrace", mtfs_dumptrace, 0,
+	"To dump the trace info for trace file system.\n"
+	"usage: dumptrace [--quiet | -q] [--verbose | -v]\n"
 	"                <dir> ...\n"},
 
 	/* repair commands */
@@ -589,6 +596,58 @@ static int mtfs_hide(int argc, char **argv)
 
 	do {
 		rc = mtfs_api_hide(argv[optind], unhide, &param);
+	} while (++optind < argc && !rc);
+
+	if (rc) {
+		fprintf(stderr, "error: %s failed for %s, rc = %d.\n",
+		        argv[0], argv[optind - 1], rc);
+	}
+out:
+	return rc;
+}
+
+static int mtfs_dumptrace(int argc, char **argv)
+{
+	struct option long_opts[] = {
+		{"quiet", no_argument, 0, 'q'},
+		{"verbose", no_argument, 0, 'v'},
+		{"unhide", no_argument, 0, 'u'},
+		{0, 0, 0, 0}
+	};
+	char short_opts[] = "qvu";
+	int c = 0;
+	int rc = 0;
+	struct mtfs_param param = { 0 };
+
+	optind = 0;
+	while ((c = getopt_long(argc, argv, short_opts, long_opts, NULL)) != -1) {
+		switch (c) {
+		case 'q':
+ 			param.quiet++;
+			param.verbose = 0;
+			break;
+		case 'v':
+			param.verbose++;
+			param.quiet = 0;
+			break;
+		case '?':
+			rc = CMD_HELP;
+			goto out;
+		default:
+			fprintf(stderr, "error: %s: option '%s' unrecognized\n",
+			        argv[0], argv[optind - 1]);
+			rc = CMD_HELP;
+			goto out;
+		}
+	}
+	
+	if (optind >= argc) {
+		rc = CMD_HELP;
+		goto out;
+	}
+
+	do {
+		rc = mtfs_api_dumptrace(argv[optind], &param);
 	} while (++optind < argc && !rc);
 
 	if (rc) {
