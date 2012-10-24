@@ -11,7 +11,7 @@ RPM_SUBDIRS :=
 
 include build/autoMakefile.am.toplevel
 
-EXTRA_DIST += config.h.in rebuild.sh
+EXTRA_DIST += config.h.in
 
 CSTK=/tmp/checkstack
 CSTKO=/tmp/checkstack.orig
