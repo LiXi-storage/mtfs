@@ -227,47 +227,24 @@ struct mtfs_junction mtfs_ext2_junction = {
 	mj_fs_ops:              &mtfs_ext2_operations,
 };
 
-#include <mtfs_flag.h>
-struct lowerfs_operations lowerfs_ext2_ops = {
-	lowerfs_owner:           THIS_MODULE,
-	lowerfs_type:            "ext2",
-	lowerfs_magic:           EXT2_SUPER_MAGIC,
-	lowerfs_flag:            0,
-	lowerfs_inode_set_flag:  lowerfs_inode_set_flag_default,
-	lowerfs_inode_get_flag:  lowerfs_inode_get_flag_default,
-	lowerfs_idata_init:      NULL,
-	lowerfs_idata_finit:     NULL,
-};
-
 static int ext2_support_init(void)
 {
 	int ret = 0;
 
 	MDEBUG("registering mtfs_ext2 support\n");
 
-	ret = lowerfs_register_ops(&lowerfs_ext2_ops);
-	if (ret) {
-		MERROR("failed to register lowerfs operation: error %d\n", ret);
-		goto out;
-	}	
 
 	ret = junction_register(&mtfs_ext2_junction);
 	if (ret) {
 		MERROR("failed to register junction: error %d\n", ret);
-		goto out_unregister_lowerfs_ops;
 	}
-	goto out;
-out_unregister_lowerfs_ops:
-	lowerfs_unregister_ops(&lowerfs_ext2_ops);
-out:
+
 	return ret;
 }
 
 static void ext2_support_exit(void)
 {
 	MDEBUG("unregistering mtfs_ext2 support\n");
-	lowerfs_unregister_ops(&lowerfs_ext2_ops);
-
 	junction_unregister(&mtfs_ext2_junction);
 }
 

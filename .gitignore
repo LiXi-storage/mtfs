@@ -21,9 +21,8 @@
 /config.status
 /configure
 /mtfs.spec
+/mtfs*.tar.gz
 /INSTALL
-/lustre.spec
-/lustre*.tar.gz
 /Makefile
 /mkinstalldirs
 /Module.markers
@@ -36,6 +35,4 @@
 /Rules
 /series
 /stamp-h1
-
-/mtfs*.tar.gz
 

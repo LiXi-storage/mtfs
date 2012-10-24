@@ -2,10 +2,12 @@
  * Copyright (C) 2011 Li Xi <pkuelelixi@gmail.com>
  */
 
-#include "junction_internal.h"
-#include <debug.h>
-#include <mtfs_common.h>
+#include <linux/ctype.h>
 #include <linux/module.h>
+#include <debug.h>
+#include <memory.h>
+#include <mtfs_common.h>
+#include "junction_internal.h"
 
 spinlock_t mtfs_junction_lock = SPIN_LOCK_UNLOCKED;
 LIST_HEAD(mtfs_junctions);
@@ -55,18 +57,6 @@ static struct mtfs_junction *_junction_search(const char *subject,
 		}
 	}
 	return NULL;
-}
-
-static struct mtfs_junction *junction_search(const char *subject,
-                                              const char *primary_type,
-                                              const char **secondary_types)
-{
-	struct mtfs_junction *found = NULL;
-	
-	spin_lock(&mtfs_junction_lock);
-	found = _junction_search(subject, primary_type, secondary_types);
-	spin_unlock(&mtfs_junction_lock);
-	return found;
 }
 
 static int junction_check(struct mtfs_junction *junction)
@@ -151,36 +141,94 @@ void junction_unregister(struct mtfs_junction *junction)
 }
 EXPORT_SYMBOL(junction_unregister);
 
+struct mtfs_junction *_junction_get(const char *subject,
+                                    const char *primary_type,
+                                    const char **secondary_types)
+{
+	struct mtfs_junction *found = NULL;
+
+	spin_lock(&mtfs_junction_lock);
+	found = _junction_search(subject, primary_type, secondary_types);
+	if (found == NULL) {
+		MDEBUG("failed to found junction, subject = %s, type = %s\n",
+		       subject, primary_type); /* TODO: secondary*/
+	} else {
+		if (try_module_get(found->mj_owner) == 0) {
+			MDEBUG("failed to get junction module, subject = %s, type = %s\n",
+			       subject, primary_type);
+			found = ERR_PTR(-EOPNOTSUPP);
+		}
+	}
+	spin_unlock(&mtfs_junction_lock);
+	return found;
+}
+
+char *str_tolower(const char *str)
+{
+	char *tmp = NULL;
+	int i = 0;
+
+	MTFS_ALLOC(tmp, strlen(str) + 1);
+	if (tmp == NULL) {
+		MERROR("not enough memory\n");
+		goto out;
+	}
+
+	for (i = 0; i < strlen(str); i++) {
+		tmp[i] = tolower(str[i]);
+	}
+	tmp[strlen(str)] = '\0';
+
+out:
+	return tmp;
+} 
+
 struct mtfs_junction *junction_get(const char *subject,
                                    const char *primary_type,
                                    const char **secondary_types)
 {
-	struct mtfs_junction *junction = NULL;
-	int ret = 0;
-	MENTRY();
+	struct mtfs_junction *found = NULL;
+	char module_name[32];
+	char *lower_subject = NULL;
 
-	junction = junction_search(subject, primary_type, secondary_types);
-	if (junction == NULL) {
-		ret = -EOPNOTSUPP;
-		MERROR("failed to find proper junction, subject = %s, type = %s\n",
-		       subject, primary_type); /* TODO: secondary*/
-		goto out;
-	}
+	found = _junction_get(subject, primary_type, secondary_types);
+	if (found == NULL) {
+		lower_subject = str_tolower(subject);
+		if (lower_subject == NULL) {
+			found = ERR_PTR(-ENOMEM);
+			goto out;
+		}
 
-	/*
-	 * If support module removed after 
-	 * junction_search() just returned successfully,
-	 * will this be OK? Since junction will point to nobody.
-	 */
-	if (try_module_get(junction->mj_owner) == 0) {
-		ret = -EOPNOTSUPP;
+		if (strcmp(primary_type, "ext2") == 0 ||
+		    strcmp(primary_type, "ext3") == 0 ||
+		    strcmp(primary_type, "ext4") == 0) {
+			snprintf(module_name, sizeof(module_name) - 1,
+			         "mtfs_%s_ext", lower_subject);
+		} else {
+			snprintf(module_name, sizeof(module_name) - 1,
+			         "mtfs_%s_%s", lower_subject, primary_type);
+		}
+
+		if (request_module(module_name) != 0) {
+			found = ERR_PTR(-ENOENT);
+			MERROR("failed to load module %s\n", module_name);
+		} else {
+			found = _junction_get(subject, primary_type, secondary_types);
+			if (found == NULL || IS_ERR(found)) {
+				MERROR("failed to get junction after loading module %s, "
+				       "subject = %s, primary_type = %s\n",
+			               module_name, subject, primary_type);
+				found = found == NULL ? ERR_PTR(-EOPNOTSUPP) : found;
+			}
+		}
+		MTFS_FREE(lower_subject, strlen(lower_subject) + 1);
+	} else if (IS_ERR(found)) {
+		MERROR("failed to get lowerfs support, subject = %s, primary_type = %s\n",
+		       primary_type, module_name);
 	}
 
 out:
-	if (ret) {
-		junction = ERR_PTR(ret);
-	}
-	MRETURN(junction);
+	return found;
 }
 
 void junction_put(struct mtfs_junction *junction)

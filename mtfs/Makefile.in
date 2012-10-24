@@ -1,9 +1,8 @@
 subdir-m += mtfs selfheal debug
 @LUSTRE_SUPPORT_TRUE@subdir-m += lustre_support
-@REPLICA_EXT2_TRUE@subdir-m += replica_ext2
-@EXT3_SUPPORT_TRUE@subdir-m += ext3_support
-@EXT4_SUPPORT_TRUE@subdir-m += ext4_support
-@EXT4_SUPPORT_TRUE@subdir-m += nfs_support
+@REPLICA_EXT_TRUE@subdir-m += replica_ext
+@EXT_SUPPORT_TRUE@subdir-m += ext_support
+@NFS_SUPPORT_TRUE@subdir-m += nfs_support
 @TMPFS_SUPPORT_TRUE@subdir-m += tmpfs_support
 @NTFS3G_SUPPORT_TRUE@subdir-m += ntfs3g_support
 @TRACE_EXT2_TRUE@subdir-m += trace_ext2

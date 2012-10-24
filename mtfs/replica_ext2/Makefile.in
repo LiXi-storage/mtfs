@@ -1,6 +1,0 @@
-MODULES := mtfs_replica_ext2
-mtfs_replica_ext2-objs := replica_ext2.o
-
-EXTRA_DIST := $(mtfs_replica_ext2-objs:.o=.c)
-EXTRA_DIST += replica_ext2.h
-@INCLUDE_RULES@

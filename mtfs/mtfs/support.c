@@ -9,7 +9,7 @@
 spinlock_t mtfs_lowerfs_lock = SPIN_LOCK_UNLOCKED;
 LIST_HEAD(lowerfs_types);
 
-static struct lowerfs_operations *_lowerfs_search_type(const char *type)
+static struct lowerfs_operations *_lowerfs_search_ops(const char *type)
 {
 	struct lowerfs_operations *found = NULL;
 	struct list_head *p = NULL;
@@ -23,22 +23,12 @@ static struct lowerfs_operations *_lowerfs_search_type(const char *type)
 	return NULL;
 }
 
-static struct lowerfs_operations *lowerfs_search_type(const char *type)
-{
-	struct lowerfs_operations *found = NULL;
-	
-	spin_lock(&mtfs_lowerfs_lock);
-	found = _lowerfs_search_type(type);
-	spin_unlock(&mtfs_lowerfs_lock);
-	return found;
-}
-
 static int _lowerfs_register_ops(struct lowerfs_operations *fs_ops)
 {
 	struct lowerfs_operations *found = NULL;
 	int ret = 0;
 
-	if ((found = _lowerfs_search_type(fs_ops->lowerfs_type))) {
+	if ((found = _lowerfs_search_ops(fs_ops->lowerfs_type))) {
 		if (found != fs_ops) {
 			MERROR("try to register multiple operations for type %s\n",
 			        fs_ops->lowerfs_type);
@@ -89,48 +79,58 @@ void lowerfs_unregister_ops(struct lowerfs_operations *fs_ops)
 }
 EXPORT_SYMBOL(lowerfs_unregister_ops);
 
+struct lowerfs_operations *_lowerfs_get_ops(const char *type)
+{
+	struct lowerfs_operations *found = NULL;
+
+	spin_lock(&mtfs_lowerfs_lock);
+	found = _lowerfs_search_ops(type);
+	if (found == NULL) {
+		MERROR("failed to found lowerfs support for type %s\n", type);
+	} else {
+		if (try_module_get(found->lowerfs_owner) == 0) {
+			MERROR("failed to get module for lowerfs support for type %s\n", type);
+			found = ERR_PTR(-EOPNOTSUPP);
+		}
+	}	
+	spin_unlock(&mtfs_lowerfs_lock);
+	return found;
+}
+
 struct lowerfs_operations *lowerfs_get_ops(const char *type)
 {
-	struct lowerfs_operations *fs_ops = NULL;
-	int ret = 0;
-	MENTRY();
+	struct lowerfs_operations *found = NULL;
+	char module_name[32];
 
-	fs_ops = lowerfs_search_type(type);
-	if (fs_ops == NULL) {
-		char name[32];
-
-		snprintf(name, sizeof(name) - 1, "mtfs_%s", type);
-		name[sizeof(name) - 1] = '\0';
-
-		if (request_module(name) != 0) {
-			ret = -ENODEV;
-			MERROR("failed to load module '%s'\n", name);
-			goto out;
+	found = _lowerfs_get_ops(type);
+	if (found == NULL) {
+		if (strcmp(type, "ext2") == 0 ||
+		    strcmp(type, "ext3") == 0 ||
+		    strcmp(type, "ext4") == 0) {
+			snprintf(module_name, sizeof(module_name) - 1, "mtfs_ext");
 		} else {
-			MDEBUG("loaded module '%s'\n", name);
-			fs_ops = lowerfs_search_type(type);
-			if (fs_ops == NULL) {
-				ret = -EOPNOTSUPP;
-				goto out;
+			snprintf(module_name, sizeof(module_name) - 1, "mtfs_%s", type);
+		}
+
+		if (request_module(module_name) != 0) {
+			found = ERR_PTR(-ENOENT);
+			MERROR("failed to load module %s\n", module_name);
+		} else {
+			found = _lowerfs_get_ops(type);
+			if (found == NULL || IS_ERR(found)) {
+				MERROR("failed to get lowerfs support after loading module %s, "
+				       "type = %s\n",
+			               module_name, type);
+				found = found == NULL ? ERR_PTR(-EOPNOTSUPP) : found;
 			}
 		}
+	} else if (IS_ERR(found)) {
+		MERROR("failed to get lowerfs support for type %s\n", type);
 	}
 
-	/*
-	 * If support module removed after 
-	 * lowerfs_search_type() just returned successfully,
-	 * will this be OK? Since fs_ops will point to nobody.
-	 */
-	if (try_module_get(fs_ops->lowerfs_owner) == 0) {
-		ret = -EOPNOTSUPP;
-	}
-
-out:
-	if (ret) {
-		fs_ops = ERR_PTR(ret);
-	}
-	MRETURN(fs_ops);
+	return found;
 }
+
 
 void lowerfs_put_ops(struct lowerfs_operations *fs_ops)
 {

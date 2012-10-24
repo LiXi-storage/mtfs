@@ -582,17 +582,17 @@ AC_ARG_ENABLE([lustre-support],
 AC_MSG_RESULT([$enable_lustre_support])])
 
 #
-# LC_CONFIG_REPLICA_EXT2
+# LC_CONFIG_REPLICA_EXT
 #
-# whether to build ext2 backend support
+# whether to build replica ext support
 #
-AC_DEFUN([LC_CONFIG_REPLICA_EXT2],
-[AC_MSG_CHECKING([whether to build replica ext2 support])
-AC_ARG_ENABLE([replica-ext2],
-        AC_HELP_STRING([--disable-replica-ext2],
-                        [disable replica ext2 support]),
-        [],[enable_replica_ext2='yes'])
-AC_MSG_RESULT([$enable_replica_ext2])])
+AC_DEFUN([LC_CONFIG_REPLICA_EXT],
+[AC_MSG_CHECKING([whether to build replica ext support])
+AC_ARG_ENABLE([replica-ext],
+        AC_HELP_STRING([--disable-replica-ext],
+                        [disable replica ext support]),
+        [],[enable_replica_ext='yes'])
+AC_MSG_RESULT([$enable_replica_ext])])
 
 #
 # LC_CONFIG_ASYNC_REPLICA_EXT2
@@ -608,30 +608,17 @@ AC_ARG_ENABLE([async-replica-ext2],
 AC_MSG_RESULT([$enable_async_replica_ext2])])
 
 #
-# LC_CONFIG_BACKEDN_EXT3
+# LC_CONFIG_LOWERFS_EXT
 #
-# whether to build ext3 backend support
+# whether to build ext lowerfs support
 #
-AC_DEFUN([LC_CONFIG_BACKEDN_EXT3],
-[AC_MSG_CHECKING([whether to build ext3 backend support])
-AC_ARG_ENABLE([ext3-support],
-        AC_HELP_STRING([--disable-ext3-support],
-                        [disable ext3 backend support]),
-        [],[enable_ext3_support='yes'])
-AC_MSG_RESULT([$enable_ext3_support])])
-
-#
-# LC_CONFIG_BACKEDN_EXT4
-#
-# whether to build ext4 backend support
-#
-AC_DEFUN([LC_CONFIG_BACKEDN_EXT4],
-[AC_MSG_CHECKING([whether to build ext4 backend support])
-AC_ARG_ENABLE([ext4-support],
-        AC_HELP_STRING([--disable-ext4-support],
-                        [disable ext4 backend support]),
-        [],[enable_ext4_support='yes'])
-AC_MSG_RESULT([$enable_ext4_support])])
+AC_DEFUN([LC_CONFIG_LOWERFS_EXT],
+[AC_MSG_CHECKING([whether to build ext backend support])
+AC_ARG_ENABLE([ext-support],
+        AC_HELP_STRING([--disable-ext-support],
+                        [disable ext lowerfs support]),
+        [],[enable_ext_support='yes'])
+AC_MSG_RESULT([$enable_ext_support])])
 
 #
 # LC_CONFIG_BACKEDN_NFS
@@ -865,10 +852,9 @@ AC_DEFUN([LC_CONDITIONALS],
 AM_CONDITIONAL(LIBMTFS, test x$enable_libmtfs = xyes)
 AM_CONDITIONAL(LIBMTFS_TESTS, test x$enable_libmtfs_tests = xyes)
 AM_CONDITIONAL(LUSTRE_SUPPORT, test x$enable_lustre_support = xyes)
-AM_CONDITIONAL(REPLICA_EXT2, test x$enable_replica_ext2 = xyes)
+AM_CONDITIONAL(REPLICA_EXT, test x$enable_replica_ext = xyes)
 AM_CONDITIONAL(ASYNC_REPLICA_EXT2, test x$enable_async_replica_ext2 = xyes)
-AM_CONDITIONAL(EXT3_SUPPORT, test x$enable_ext3_support = xyes)
-AM_CONDITIONAL(EXT4_SUPPORT, test x$enable_ext4_support = xyes)
+AM_CONDITIONAL(EXT_SUPPORT, test x$enable_ext_support = xyes)
 AM_CONDITIONAL(NFS_SUPPORT, test x$enable_nfs_support = xyes)
 AM_CONDITIONAL(TMPFS_SUPPORT, test x$enable_tmpfs_support = xyes)
 AM_CONDITIONAL(NTFS3G_SUPPORT, test x$enable_ntfs3g_support = xyes)
@@ -901,14 +887,12 @@ mtfs/tests/Makefile
 mtfs/tests/pjd_fstest/Makefile
 mtfs/tests/src/Makefile
 mtfs/utils/Makefile
-mtfs/replica_ext2/Makefile
-mtfs/replica_ext2/autoMakefile
+mtfs/replica_ext/Makefile
+mtfs/replica_ext/autoMakefile
 mtfs/async_replica_ext2/Makefile
 mtfs/async_replica_ext2/autoMakefile
-mtfs/ext3_support/Makefile
-mtfs/ext3_support/autoMakefile
-mtfs/ext4_support/Makefile
-mtfs/ext4_support/autoMakefile
+mtfs/ext_support/Makefile
+mtfs/ext_support/autoMakefile
 mtfs/nfs_support/Makefile
 mtfs/nfs_support/autoMakefile
 mtfs/ntfs3g_support/Makefile

@@ -10,25 +10,9 @@
 #include <mtfs_inode.h>
 #include <mtfs_file.h>
 #include <mtfs_junction.h>
-#include "replica_ext2.h"
+#include "replica_ext.h"
 
-struct dentry *mtfs_ext2_lookup(struct inode *dir, struct dentry *dentry, struct nameidata *nd)
-{
-	struct dentry *ret = NULL;
-	int rc = 0;
-	MENTRY();
-
-	MASSERT(inode_is_locked(dir));
-	MASSERT(!IS_ROOT(dentry));
-
-	rc = mtfs_lookup_backend(dir, dentry, INTERPOSE_LOOKUP);
-
-	ret = ERR_PTR(rc);
-
-	MRETURN(ret);
-}
-
-struct super_operations mtfs_ext2_sops =
+struct super_operations mtfs_ext_sops =
 {
 	alloc_inode:    mtfs_alloc_inode,
 	destroy_inode:  mtfs_destroy_inode,
@@ -39,7 +23,7 @@ struct super_operations mtfs_ext2_sops =
 	show_options:   mtfs_show_options,
 };
 
-struct inode_operations mtfs_ext2_symlink_iops =
+struct inode_operations mtfs_ext_symlink_iops =
 {
 	readlink:       mtfs_readlink,
 	follow_link:    mtfs_follow_link,
@@ -49,10 +33,10 @@ struct inode_operations mtfs_ext2_symlink_iops =
 	getattr:        mtfs_getattr,
 };
 
-struct inode_operations mtfs_ext2_dir_iops =
+struct inode_operations mtfs_ext_dir_iops =
 {
 	create:	        mtfs_create,
-	lookup:	        mtfs_ext2_lookup,
+	lookup:	        mtfs_lookup_nonnd,
 	link:           mtfs_link,
 	unlink:	        mtfs_unlink,
 	symlink:        mtfs_symlink,
@@ -69,7 +53,7 @@ struct inode_operations mtfs_ext2_dir_iops =
 	listxattr:      mtfs_listxattr,
 };
 
-struct inode_operations mtfs_ext2_main_iops =
+struct inode_operations mtfs_ext_main_iops =
 {
 	permission:     mtfs_permission,
 	setattr:        mtfs_setattr,
@@ -96,12 +80,12 @@ out:
 	MRETURN(ret);
 }
 
-struct dentry_operations mtfs_ext2_dops = {
+struct dentry_operations mtfs_ext_dops = {
 	d_revalidate:  mtfs_d_revalidate_local,
 	d_release:     mtfs_d_release,
 };
 
-struct file_operations mtfs_ext2_dir_fops =
+struct file_operations mtfs_ext_dir_fops =
 {
 	llseek:   mtfs_file_llseek,
 	read:     generic_read_dir,
@@ -112,7 +96,7 @@ struct file_operations mtfs_ext2_dir_fops =
 	/* TODO: fsync, do we really need open? */
 };
 
-struct file_operations mtfs_ext2_main_fops =
+struct file_operations mtfs_ext_main_fops =
 {
 	llseek:     mtfs_file_llseek,
 	read:       mtfs_file_read,
@@ -140,7 +124,7 @@ struct file_operations mtfs_ext2_main_fops =
 	/* TODO: splice_read, splice_write */
 };
 
-struct heal_operations mtfs_ext2_hops =
+struct heal_operations mtfs_ext_hops =
 {
 	ho_discard_dentry: heal_discard_dentry_async,
 };
@@ -203,18 +187,50 @@ int mtfs_ext2_ioctl(struct inode *inode, struct file *file, unsigned int cmd, un
 }
 
 struct mtfs_operations mtfs_ext2_operations = {
-	symlink_iops:            &mtfs_ext2_symlink_iops,
-	dir_iops:                &mtfs_ext2_dir_iops,
-	main_iops:               &mtfs_ext2_main_iops,
-	main_fops:               &mtfs_ext2_main_fops,
-	dir_fops:                &mtfs_ext2_dir_fops,
-	sops:                    &mtfs_ext2_sops,
-	dops:                    &mtfs_ext2_dops,
+	symlink_iops:            &mtfs_ext_symlink_iops,
+	dir_iops:                &mtfs_ext_dir_iops,
+	main_iops:               &mtfs_ext_main_iops,
+	main_fops:               &mtfs_ext_main_fops,
+	dir_fops:                &mtfs_ext_dir_fops,
+	sops:                    &mtfs_ext_sops,
+	dops:                    &mtfs_ext_dops,
 	ioctl:                   &mtfs_ext2_ioctl,
 };
 
-const char *supported_secondary_types[] = {
+struct mtfs_operations mtfs_ext3_operations = {
+	symlink_iops:            &mtfs_ext_symlink_iops,
+	dir_iops:                &mtfs_ext_dir_iops,
+	main_iops:               &mtfs_ext_main_iops,
+	main_fops:               &mtfs_ext_main_fops,
+	dir_fops:                &mtfs_ext_dir_fops,
+	sops:                    &mtfs_ext_sops,
+	dops:                    &mtfs_ext_dops,
+	ioctl:                    NULL,
+};
+
+struct mtfs_operations mtfs_ext4_operations = {
+	symlink_iops:            &mtfs_ext_symlink_iops,
+	dir_iops:                &mtfs_ext_dir_iops,
+	main_iops:               &mtfs_ext_main_iops,
+	main_fops:               &mtfs_ext_main_fops,
+	dir_fops:                &mtfs_ext_dir_fops,
+	sops:                    &mtfs_ext_sops,
+	dops:                    &mtfs_ext_dops,
+	ioctl:                    NULL,
+};
+
+const char *ext2_supported_secondary_types[] = {
 	"ext2",
+	NULL,
+};
+
+const char *ext3_supported_secondary_types[] = {
+	"ext3",
+	NULL,
+};
+
+const char *ext4_supported_secondary_types[] = {
+	"ext4",
 	NULL,
 };
 
@@ -223,51 +239,67 @@ struct mtfs_junction mtfs_ext2_junction = {
 	mj_name:                 "ext2",
 	mj_subject:              "REPLICA",
 	mj_primary_type:         "ext2",
-	mj_secondary_types:      supported_secondary_types,
+	mj_secondary_types:      ext2_supported_secondary_types,
 	mj_fs_ops:              &mtfs_ext2_operations,
 };
 
-#include <mtfs_flag.h>
-struct lowerfs_operations lowerfs_ext2_ops = {
-	lowerfs_owner:           THIS_MODULE,
-	lowerfs_type:            "ext2",
-	lowerfs_magic:           EXT2_SUPER_MAGIC,
-	lowerfs_flag:            0,
-	lowerfs_inode_set_flag:  lowerfs_inode_set_flag_default,
-	lowerfs_inode_get_flag:  lowerfs_inode_get_flag_default,
-	lowerfs_idata_init:      NULL,
-	lowerfs_idata_finit:     NULL,
+struct mtfs_junction mtfs_ext3_junction = {
+	mj_owner:                THIS_MODULE,
+	mj_name:                 "ext3",
+	mj_subject:              "REPLICA",
+	mj_primary_type:         "ext3",
+	mj_secondary_types:      ext3_supported_secondary_types,
+	mj_fs_ops:              &mtfs_ext3_operations,
+};
+
+struct mtfs_junction mtfs_ext4_junction = {
+	mj_owner:                THIS_MODULE,
+	mj_name:                 "ext4",
+	mj_subject:              "REPLICA",
+	mj_primary_type:         "ext4",
+	mj_secondary_types:      ext4_supported_secondary_types,
+	mj_fs_ops:              &mtfs_ext4_operations,
 };
 
 static int ext2_support_init(void)
 {
 	int ret = 0;
 
-	MDEBUG("registering mtfs_ext2 support\n");
-
-	ret = lowerfs_register_ops(&lowerfs_ext2_ops);
-	if (ret) {
-		MERROR("failed to register lowerfs operation: error %d\n", ret);
-		goto out;
-	}	
+	MDEBUG("registering mtfs async juntion for ext2\n");
 
 	ret = junction_register(&mtfs_ext2_junction);
 	if (ret) {
-		MERROR("failed to register junction: error %d\n", ret);
-		goto out_unregister_lowerfs_ops;
+		MERROR("failed to register junction for ext2, ret = %d\n", ret);
+		goto out;
+	}
+
+	ret = junction_register(&mtfs_ext3_junction);
+	if (ret) {
+		MERROR("failed to register junction for ext3, ret = %d\n", ret);
+		goto out_unregister_ext2;
+	}
+
+	ret = junction_register(&mtfs_ext4_junction);
+	if (ret) {
+		MERROR("failed to register junction for ext4, ret = %d\n", ret);
+		goto out_unregister_ext3;
 	}
 	goto out;
-out_unregister_lowerfs_ops:
-	lowerfs_unregister_ops(&lowerfs_ext2_ops);
+
+out_unregister_ext3:
+	junction_unregister(&mtfs_ext3_junction);	
+out_unregister_ext2:
+	junction_unregister(&mtfs_ext2_junction);
 out:
 	return ret;
 }
 
 static void ext2_support_exit(void)
 {
-	MDEBUG("unregistering mtfs_ext2 support\n");
-	lowerfs_unregister_ops(&lowerfs_ext2_ops);
+	MDEBUG("unregistering mtfs async juntion for ext2\n");
 
+	junction_unregister(&mtfs_ext4_junction);
+	junction_unregister(&mtfs_ext3_junction);
 	junction_unregister(&mtfs_ext2_junction);
 }
 
