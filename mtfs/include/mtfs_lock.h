@@ -67,7 +67,7 @@ struct mlock_type_object {
 };
 
 struct mlock_interval_tree {
-        int                         mlit_size; /* Granted locks */
+        int                         mlit_size; /* Number of granted locks */
         mlock_mode_t                mlit_mode; /* Lock mode */
         struct mtfs_interval_node  *mlit_root; /* Actual tree */
 };
@@ -105,13 +105,6 @@ typedef enum {
         MLOCK_STATE_GRANTED  = 2,
 } mlock_state_t;
 
-/* Interval node data for each LDLM_EXTENT lock */
-struct mlock_interval {
-	struct mtfs_interval_node mli_node;   /* node for tree */
-	mtfs_list_t               mli_group;  /* lock with same policy */
-};
-#define node2mlock_interval(node) container_of(node, struct mlock_interval, mli_node)
-
 struct mlock {
 	struct mlock_resource    *ml_resource;    /* Resource to protect */
 	mlock_mode_t              ml_mode;        /* Lock mode */
@@ -132,7 +125,7 @@ struct mlock {
 
 	/* fields of extent lock */
 	mtfs_list_t               ml_policy_link; /* Linkage to policy group */
-	struct mlock_interval *   ml_tree_node;   /* Interval tree node */
+	struct mtfs_interval     *ml_tree_node;   /* Interval tree node */
 	
 };
 

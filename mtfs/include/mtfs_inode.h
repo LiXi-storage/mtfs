@@ -5,9 +5,11 @@
 #ifndef __MTFS_INODE_H__
 #define __MTFS_INODE_H__
 #if defined (__linux__) && defined(__KERNEL__)
-#include "debug.h"
+
 #include <linux/fs.h>
 #include <linux/namei.h>
+#include "debug.h"
+#include "mtfs_async.h"
 #include "mtfs_common.h"
 #include "mtfs_lock.h"
 
@@ -19,6 +21,7 @@ struct mtfs_inode_branch {
 struct mtfs_inode_info {
 	struct inode             mii_inode;
 	struct mlock_resource    mii_resource;
+	struct masync_bucket     mii_bucket;
 	mtfs_bindex_t            mii_bnum;
 	struct mtfs_inode_branch mii_barray[MTFS_BRANCH_MAX];
 };
@@ -29,6 +32,7 @@ struct mtfs_inode_info {
 #define mtfs_i2barray(inode)         (mtfs_i2info(inode)->mii_barray)
 #define mtfs_i2branch(inode, bindex) (mtfs_i2barray(inode)[bindex].binode)
 #define mtfs_i2resource(inode)       (&mtfs_i2info(inode)->mii_resource)
+#define mtfs_i2bucket(inode)         (&mtfs_i2info(inode)->mii_bucket)
 
 /* The values for mtfs_interpose's flag. */
 #define INTERPOSE_DEFAULT	0

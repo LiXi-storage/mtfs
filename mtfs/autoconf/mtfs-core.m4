@@ -595,6 +595,19 @@ AC_ARG_ENABLE([replica-ext2],
 AC_MSG_RESULT([$enable_replica_ext2])])
 
 #
+# LC_CONFIG_ASYNC_REPLICA_EXT2
+#
+# whether to build ext2 backend support
+#
+AC_DEFUN([LC_CONFIG_ASYNC_REPLICA_EXT2],
+[AC_MSG_CHECKING([whether to build async replica ext2 support])
+AC_ARG_ENABLE([async-replica-ext2],
+        AC_HELP_STRING([--disable-async-replica-ext2],
+                        [disable async replica ext2 support]),
+        [],[enable_async_replica_ext2='yes'])
+AC_MSG_RESULT([$enable_async_replica_ext2])])
+
+#
 # LC_CONFIG_BACKEDN_EXT3
 #
 # whether to build ext3 backend support
@@ -853,6 +866,7 @@ AM_CONDITIONAL(LIBMTFS, test x$enable_libmtfs = xyes)
 AM_CONDITIONAL(LIBMTFS_TESTS, test x$enable_libmtfs_tests = xyes)
 AM_CONDITIONAL(LUSTRE_SUPPORT, test x$enable_lustre_support = xyes)
 AM_CONDITIONAL(REPLICA_EXT2, test x$enable_replica_ext2 = xyes)
+AM_CONDITIONAL(ASYNC_REPLICA_EXT2, test x$enable_async_replica_ext2 = xyes)
 AM_CONDITIONAL(EXT3_SUPPORT, test x$enable_ext3_support = xyes)
 AM_CONDITIONAL(EXT4_SUPPORT, test x$enable_ext4_support = xyes)
 AM_CONDITIONAL(NFS_SUPPORT, test x$enable_nfs_support = xyes)
@@ -889,6 +903,8 @@ mtfs/tests/src/Makefile
 mtfs/utils/Makefile
 mtfs/replica_ext2/Makefile
 mtfs/replica_ext2/autoMakefile
+mtfs/async_replica_ext2/Makefile
+mtfs/async_replica_ext2/autoMakefile
 mtfs/ext3_support/Makefile
 mtfs/ext3_support/autoMakefile
 mtfs/ext4_support/Makefile

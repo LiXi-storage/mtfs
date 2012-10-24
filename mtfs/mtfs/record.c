@@ -2,6 +2,7 @@
  * Copyright (C) 2011 Li Xi <pkuelelixi@gmail.com>
  */
 
+#include <linux/sched.h>
 #include <linux/module.h>
 #include <linux/mount.h>
 #include <linux/fs.h>

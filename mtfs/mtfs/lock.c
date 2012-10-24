@@ -181,34 +181,34 @@ static inline int lock_mode_to_index(mlock_mode_t mode)
 	return index;
 }
 
-void mlock_interval_attach(struct mlock_interval *node,
+void mlock_interval_attach(struct mtfs_interval *node,
                            struct mlock *lock)
 {
 	MASSERT(lock->ml_tree_node == NULL);
 	MASSERT(lock->ml_type->mto_type == MLOCK_TYPE_EXTENT);
 	MENTRY();
 
-	mtfs_list_add_tail(&lock->ml_policy_link, &node->mli_group);
+	mtfs_list_add_tail(&lock->ml_policy_link, &node->mi_linkage);
 	lock->ml_tree_node = node;
 	_MRETURN();
 }
 
-struct mlock_interval *mlock_interval_detach(struct mlock *lock)
+struct mtfs_interval *mlock_interval_detach(struct mlock *lock)
 {
-        struct mlock_interval *node = lock->ml_tree_node;
+        struct mtfs_interval *node = lock->ml_tree_node;
 	MENTRY();
 
 	MASSERT(node);
-	MASSERT(!mtfs_list_empty(&node->mli_group));
+	MASSERT(!mtfs_list_empty(&node->mi_linkage));
 	lock->ml_tree_node = NULL;
 	mtfs_list_del_init(&lock->ml_policy_link);
 
-        return (mtfs_list_empty(&node->mli_group) ? node : NULL);
+        return (mtfs_list_empty(&node->mi_linkage) ? node : NULL);
 }
 
 static int mlock_extent_init(struct mlock *lock, struct mlock_enqueue_info *einfo)
 {
-	struct mlock_interval *node = NULL;
+	struct mtfs_interval *node = NULL;
 	int ret = 0;
 	__u64 start;
  	__u64 end;
@@ -227,7 +227,7 @@ static int mlock_extent_init(struct mlock *lock, struct mlock_enqueue_info *einf
 	end = lock->ml_policy_data.mlp_extent.end;
 	MASSERT(start < end);
 
-	MTFS_INIT_LIST_HEAD(&node->mli_group);
+	MTFS_INIT_LIST_HEAD(&node->mi_linkage);
 	mlock_interval_attach(node, lock);
 
 	MTFS_INIT_LIST_HEAD(&lock->ml_res_link);
@@ -235,10 +235,10 @@ out:
 	MRETURN(ret);
 }
 
-static void mlock_interval_free(struct mlock_interval *node)
+static void mlock_interval_free(struct mtfs_interval *node)
 {
-	MASSERT(mtfs_list_empty(&node->mli_group));
-	MASSERT(!mtfs_interval_is_intree(&node->mli_node));
+	MASSERT(mtfs_list_empty(&node->mi_linkage));
+	MASSERT(!mtfs_interval_is_intree(&node->mi_node));
 	MTFS_SLAB_FREE_PTR(node, mtfs_interval_cache);
 }
 
@@ -246,7 +246,7 @@ static void mlock_extent_grant(struct mlock *lock)
 {
 	struct mtfs_interval_node *found = NULL;
 	struct mtfs_interval_node **root = NULL;
-	struct mlock_interval *node = NULL;
+	struct mtfs_interval *node = NULL;
 	struct mlock_extent *extent = NULL;
 	struct mlock_resource *resource = lock->ml_resource;
 	int index = 0;
@@ -257,23 +257,23 @@ static void mlock_extent_grant(struct mlock *lock)
 
 	node = lock->ml_tree_node;
 	MASSERT(node);
-	MASSERT(!mtfs_interval_is_intree(&node->mli_node));
+	MASSERT(!mtfs_interval_is_intree(&node->mi_node));
 
 	index = lock_mode_to_index(lock->ml_mode);
 	MASSERT(lock->ml_mode == 1 << index);
 	MASSERT(lock->ml_mode == resource->mlr_itree[index].mlit_mode);
 
 	extent = &lock->ml_policy_data.mlp_extent;
-	mtfs_interval_set(&node->mli_node, extent->start, extent->end);
+	mtfs_interval_set(&node->mi_node, extent->start, extent->end);
 
 	root = &resource->mlr_itree[index].mlit_root;
-	found = mtfs_interval_insert(&node->mli_node, root);
+	found = mtfs_interval_insert(&node->mi_node, root);
 	if (found) {
 		/* The policy group found */
-		struct mlock_interval *tmp = mlock_interval_detach(lock);
+		struct mtfs_interval *tmp = mlock_interval_detach(lock);
 		MASSERT(tmp != NULL);
 		mlock_interval_free(tmp);
-		mlock_interval_attach(node2mlock_interval(found), lock);
+		mlock_interval_attach(mtfs_node2interval(found), lock);
 	}
 	resource->mlr_itree[index].mlit_size++;
 
@@ -287,13 +287,13 @@ static void mlock_extent_grant(struct mlock *lock)
 void mlock_extent_unlink(struct mlock *lock)
 {
 	struct mlock_resource *resource = lock->ml_resource;
-	struct mlock_interval *node = lock->ml_tree_node;
+	struct mtfs_interval *node = lock->ml_tree_node;
 	struct mlock_interval_tree *tree = NULL;
 	int index = 0;
 	MENTRY();
 
 	MASSERT(node);
-	MASSERT(mtfs_interval_is_intree(&node->mli_node));
+	MASSERT(mtfs_interval_is_intree(&node->mi_node));
 
 	index = lock_mode_to_index(lock->ml_mode);
 	MASSERT(lock->ml_mode == 1 << index);
@@ -302,7 +302,7 @@ void mlock_extent_unlink(struct mlock *lock)
 	tree->mlit_size--;
 	node = mlock_interval_detach(lock);
 	if (node) {
-		mtfs_interval_erase(&node->mli_node, &tree->mlit_root);
+		mtfs_interval_erase(&node->mi_node, &tree->mlit_root);
 		mlock_interval_free(node);
 	}
 

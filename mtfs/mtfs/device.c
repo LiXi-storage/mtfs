@@ -623,7 +623,8 @@ struct mtfs_device *mtfs_newdev(struct super_block *sb, struct mount_option *mou
 
 	newdev->junction = junction_get(mount_option->mo_subject, primary_type, secondary_types);
 	if (IS_ERR(newdev->junction)) {
-		MERROR("junction type [%s] not supported yet\n", primary_type); /* TODO: print secondary type */
+		MERROR("junction not supported yet, type = %s, mount_option->mo_subject = %s \n",
+		       primary_type, mount_option->mo_subject); /* TODO: print secondary type */
 		ret = PTR_ERR(newdev->junction);
 		goto out_put_module;
 	}

@@ -23,7 +23,8 @@ mtfs-objs   := dentry.o \
 	io.o \
 	trace.o \
 	record.o \
-	subject.o
+	subject.o \
+	async.o
 
 EXTRA_DIST := $(mtfs-objs:.o=.c)
 EXTRA_DIST += dentry_internal.h device_internal.h file_internal.h hide_internal.h

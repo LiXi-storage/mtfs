@@ -780,7 +780,7 @@ static struct mtfs_cache_info mtfs_cache_infos[] = {
 	{
 		.cache = &mtfs_interval_cache,
 		.name = "mtfs_interval_cache",
-		.size = sizeof(struct mlock_interval),
+		.size = sizeof(struct mtfs_interval),
 	},
 	{
 		.cache = &mtfs_io_cache,

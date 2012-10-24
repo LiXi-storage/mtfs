@@ -7,6 +7,7 @@
 
 #include <asm/types.h>
 #include <debug.h>
+#include <mtfs_list.h>
 
 struct mtfs_interval_node {
 	struct mtfs_interval_node   *in_left;
@@ -22,6 +23,13 @@ struct mtfs_interval_node {
 		__u64 end;
 	} in_extent;
 };
+
+/* Interval node data for each LDLM_EXTENT lock */
+struct mtfs_interval {
+	struct mtfs_interval_node mi_node;    /* node for tree */
+	mtfs_list_t               mi_linkage; /* linkage to a list */
+};
+#define mtfs_node2interval(node) container_of(node, struct mtfs_interval, mi_node)
 
 enum mtfs_interval_iter {
 	MTFS_INTERVAL_ITER_CONT = 1,

@@ -7,6 +7,7 @@
 #include <mtfs_file.h>
 
 #ifdef HAVE_DENTRY_OPEN_4ARGS
+#include <linux/cred.h>
 #define mtfs_dentry_open(dentry, mnt, flags, cred) dentry_open(dentry, mnt, flags, cred)
 #else /* !HAVE_DENTRY_OPEN_4ARGS */
 #define mtfs_dentry_open(dentry, mnt, flags, cred) dentry_open(dentry, mnt, flags)

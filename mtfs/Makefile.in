@@ -7,4 +7,5 @@ subdir-m += mtfs selfheal debug
 @TMPFS_SUPPORT_TRUE@subdir-m += tmpfs_support
 @NTFS3G_SUPPORT_TRUE@subdir-m += ntfs3g_support
 @TRACE_EXT2_TRUE@subdir-m += trace_ext2
+@ASYNC_REPLICA_EXT2_TRUE@subdir-m += async_replica_ext2
 @INCLUDE_RULES@
