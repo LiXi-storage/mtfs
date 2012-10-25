@@ -840,7 +840,8 @@ skip()
 	log " skip: ${TESTSUITE} ${TESTNAME} $@"
 }
 
-assert_DIR () {
+assert_DIR()
+{
 	local failed=""
 	[[ $DIR/ = $MTFS_MNT1/* ]] || \
 		{ failed=1 && echo "DIR=$DIR not in $MTFS_MNT1. Aborting."; }
@@ -856,87 +857,92 @@ assert_DIR () {
 	[ -n "$failed" ] && exit 99 || true
 }
 
-check_runas_id_ret() {
-    local myRC=0
-    local myRUNAS_UID=$1
-    local myRUNAS_GID=$2
-    shift 2
-    local myRUNAS=$@
-    if [ -z "$myRUNAS" ]; then
-        error_exit "myRUNAS command must be specified for check_runas_id"
-    fi
-    mkdir $DIR/d0_runas_test
-    chmod 0755 $DIR
-    chown $myRUNAS_UID:$myRUNAS_GID $DIR/d0_runas_test
-    $myRUNAS touch $DIR/d0_runas_test/f$$ || myRC=1
-    rm -rf $DIR/d0_runas_test
-    return $myRC
+check_runas_id_ret()
+{
+	local myRC=0
+	local myRUNAS_UID=$1
+	local myRUNAS_GID=$2
+	shift 2
+	local myRUNAS=$@
+	if [ -z "$myRUNAS" ]; then
+		error_exit "myRUNAS command must be specified for check_runas_id"
+	fi
+	mkdir $DIR/d0_runas_test
+	chmod 0755 $DIR
+	chown $myRUNAS_UID:$myRUNAS_GID $DIR/d0_runas_test
+	$myRUNAS touch $DIR/d0_runas_test/f$$ || myRC=1
+	rm -rf $DIR/d0_runas_test
+	return $myRC
 }
 
-check_runas_id() {
-    local myRUNAS_UID=$1
-    local myRUNAS_GID=$2
-    shift 2
-    local myRUNAS=$@
-    check_runas_id_ret $myRUNAS_UID $myRUNAS_GID $myRUNAS || \
-        error_exit "unable to write to $DIR/d0_runas_test as UID $myRUNAS_UID.
-        Please set RUNAS_ID to some UID which exists or
-        add user $myRUNAS_UID:$myRUNAS_GID."
+check_runas_id()
+{
+	local myRUNAS_UID=$1
+	local myRUNAS_GID=$2
+	shift 2
+	local myRUNAS=$@
+	check_runas_id_ret $myRUNAS_UID $myRUNAS_GID $myRUNAS || \
+		error_exit "unable to write to $DIR/d0_runas_test as UID $myRUNAS_UID.
+			Please set RUNAS_ID to some UID which exists or
+			add user $myRUNAS_UID:$myRUNAS_GID."
 }
 
 # Run multiop in the background, but wait for it to print
 # "PAUSING" to its stdout before returning from this function.
-multiop_bg_pause() {
-    #MULTIOP_PROG=${MULTIOP_PROG:-multiop}
+multiop_bg_pause()
+{
+	#MULTIOP_PROG=${MULTIOP_PROG:-multiop}
 	MULTIOP_PROG=${MULTIOP_PROG:-$MULTIOP}
-    FILE=$1
-    ARGS=$2
+	FILE=$1
+	ARGS=$2
 
-    TMPPIPE=/tmp/multiop_open_wait_pipe.$$
-    mkfifo $TMPPIPE
+	TMPPIPE=/tmp/multiop_open_wait_pipe.$$
+	mkfifo $TMPPIPE
 
-    echo "$MULTIOP_PROG $FILE v$ARGS"
-    $MULTIOP_PROG $FILE v$ARGS > $TMPPIPE &
+	echo "$MULTIOP_PROG $FILE v$ARGS"
+	$MULTIOP_PROG $FILE v$ARGS > $TMPPIPE &
 
-    echo "TMPPIPE=${TMPPIPE}"
-    local multiop_output
+	echo "TMPPIPE=${TMPPIPE}"
+	local multiop_output
 
-    read -t 60 multiop_output < $TMPPIPE
-    if [ $? -ne 0 ]; then
-        rm -f $TMPPIPE
-        return 1
-    fi
-    rm -f $TMPPIPE
-    if [ "$multiop_output" != "PAUSING" ]; then
-        echo "Incorrect multiop output: $multiop_output"
-        kill -9 $PID
-        return 1
-    fi
+	read -t 60 multiop_output < $TMPPIPE
+	if [ $? -ne 0 ]; then
+		rm -f $TMPPIPE
+		return 1
+	fi
+	rm -f $TMPPIPE
+	if [ "$multiop_output" != "PAUSING" ]; then
+		echo "Incorrect multiop output: $multiop_output"
+		kill -9 $PID
+		return 1
+	fi
 
-    return 0
+	return 0
 }
 
-no_dsh() {
-    shift
-    eval $@
+no_dsh()
+{
+	shift
+	eval $@
 }
 
-do_node() {
-    HOST=$1
-    shift
-    local myPDSH=$PDSH
-    if [ "$HOST" = "$HOSTNAME" ]; then
-        myPDSH="no_dsh"
-    elif [ -z "$myPDSH" -o "$myPDSH" = "no_dsh" ]; then
-        echo "cannot run remote command on $HOST with $myPDSH"
-        return 128
-    fi
-    if $VERBOSE; then
-        echo "CMD: $HOST $@" >&2
-        $myPDSH $HOST $LCTL mark "$@" > /dev/null 2>&1 || :
-    fi
+do_node()
+{
+	HOST=$1
+	shift
+	local myPDSH=$PDSH
+	if [ "$HOST" = "$HOSTNAME" ]; then
+		myPDSH="no_dsh"
+	elif [ -z "$myPDSH" -o "$myPDSH" = "no_dsh" ]; then
+		echo "cannot run remote command on $HOST with $myPDSH"
+		return 128
+	fi
+	if $VERBOSE; then
+		echo "CMD: $HOST $@" >&2
+		$myPDSH $HOST $LCTL mark "$@" > /dev/null 2>&1 || :
+	fi
 
-    if [ "$myPDSH" = "rsh" ]; then
+	if [ "$myPDSH" = "rsh" ]; then
 		# we need this because rsh does not return exit code of an executed command
 		local command_status="$TMP/cs"
 		rsh $HOST ":> $command_status"
@@ -945,88 +951,90 @@ do_node() {
 		echo command failed >$command_status"
 		[ -n "$($myPDSH $HOST cat $command_status)" ] && return 1 || true
 		return 0
-    fi
-    $myPDSH $HOST "(PATH=\$PATH:$RMTFS/utils:$RMTFS/tests:/sbin:/usr/sbin; cd $RPWD; sh -c \"$@\")" | sed "s/^${HOST}: //"
-    return ${PIPESTATUS[0]}
+	fi
+	$myPDSH $HOST "(PATH=\$PATH:$RMTFS/utils:$RMTFS/tests:/sbin:/usr/sbin; cd $RPWD; sh -c \"$@\")" | sed "s/^${HOST}: //"
+	return ${PIPESTATUS[0]}
 }
 
-single_local_node () {
-   [ "$1" = "$HOSTNAME" ]
+single_local_node()
+{
+	[ "$1" = "$HOSTNAME" ]
 }
 
-do_nodes() {
-    local rnodes=$1
-    shift
+do_nodes()
+{
+	local rnodes=$1
+	shift
 
-    if $(single_local_node $rnodes); then
-        do_node $rnodes $@
-        return $?
-    fi
+	if $(single_local_node $rnodes); then
+		do_node $rnodes $@
+		return $?
+	fi
 
-    # This is part from do_node
-    local myPDSH=$PDSH
+	# This is part from do_node
+	local myPDSH=$PDSH
 
-    [ -z "$myPDSH" -o "$myPDSH" = "no_dsh" -o "$myPDSH" = "rsh" ] && \
-        echo "cannot run remote command on $rnodes with $myPDSH" && return 128
+	[ -z "$myPDSH" -o "$myPDSH" = "no_dsh" -o "$myPDSH" = "rsh" ] && \
+		echo "cannot run remote command on $rnodes with $myPDSH" && return 128
 
-    if $VERBOSE; then
-        echo "CMD: $rnodes $@" >&2
-        $myPDSH $rnodes $LCTL mark "$@" > /dev/null 2>&1 || :
-    fi
-    local i
-    local j
-    for((i=1;i<100;i++)){
-        j="\$$i"
-        host=`echo $rnodes | awk -F, "{print $j}"`
-        if [[ $host = "" ]];then
-                break
-        fi
-        $myPDSH $host "(PATH=\$PATH:$RMTFS/utils:$RMTFS/tests:/sbin:/usr/sbin; cd $RPWD; sh -c \"$@\")" | sed -re "s/\w+:\s//g"
-    }
+	if $VERBOSE; then
+		echo "CMD: $rnodes $@" >&2
+		$myPDSH $rnodes $LCTL mark "$@" > /dev/null 2>&1 || :
+	fi
+	local i
+	local j
+	for((i=1;i<100;i++)){
+		j="\$$i"
+		host=`echo $rnodes | awk -F, "{print $j}"`
+		if [[ $host = "" ]];then
+			break
+		fi
+		$myPDSH $host "(PATH=\$PATH:$RMTFS/utils:$RMTFS/tests:/sbin:/usr/sbin; cd $RPWD; sh -c \"$@\")" | sed -re "s/\w+:\s//g"
+	}
 #    $myPDSH $rnodes "(PATH=\$PATH:$RMTFS/utils:$RMTFS/tests:/sbin:/usr/sbin; cd $RPWD; sh -c \"$@\")" | sed -re "s/\w+:\s//g"
-    return ${PIPESTATUS[0]}
+	return ${PIPESTATUS[0]}
 }
 
 assert_env() {
-    local failed=""
-    for name in $@; do
-        if [ -z "${!name}" ]; then
-            echo "$0: $name must be set"
-            failed=1
-        fi
-    done
-    [ $failed ] && exit 1 || true
+	local failed=""
+	for name in $@; do
+		if [ -z "${!name}" ]; then
+			echo "$0: $name must be set"
+			failed=1
+		fi
+	done
+	[ $failed ] && exit 1 || true
 }
 
 wait_remote_prog () {
-   local prog=$1
-   local WAIT=0
-   local INTERVAL=5
-   local rc=0
+	local prog=$1
+	local WAIT=0
+	local INTERVAL=5
+	local rc=0
 
-   [ "$PDSH" = "no_dsh" ] && return 0
+	[ "$PDSH" = "no_dsh" ] && return 0
 
-   while [ $WAIT -lt $2 ]; do
-        running=$(ps uax | grep "$PDSH.*$prog.*$MOUNT" | grep -v grep) || true
-        [ -z "${running}" ] && return 0 || true
-        echo "waited $WAIT for: "
-        echo "$running"
-        [ $INTERVAL -lt 60 ] && INTERVAL=$((INTERVAL + INTERVAL))
-        sleep $INTERVAL
-        WAIT=$((WAIT + INTERVAL))
-    done
-    local pids=$(ps  uax | grep "$PDSH.*$prog.*$MOUNT" | grep -v grep | awk '{print $2}')
-    [ -z "$pids" ] && return 0
-    echo "$PDSH processes still exists after $WAIT seconds.  Still running: $pids"
-    # FIXME: not portable
-    for pid in $pids; do
-        cat /proc/${pid}/status || true
-        cat /proc/${pid}/wchan || true
-        echo "Killing $pid"
-        kill -9 $pid || true
-        sleep 1
-        ps -P $pid && rc=1
-    done
-
-    return $rc
+	while [ $WAIT -lt $2 ]; do
+		running=$(ps uax | grep "$PDSH.*$prog.*$MOUNT" | grep -v grep) || true
+		[ -z "${running}" ] && return 0 || true
+		echo "waited $WAIT for: "
+		echo "$running"
+		[ $INTERVAL -lt 60 ] && INTERVAL=$((INTERVAL + INTERVAL))
+		sleep $INTERVAL
+		WAIT=$((WAIT + INTERVAL))
+	done
+	local pids=$(ps  uax | grep "$PDSH.*$prog.*$MOUNT" | grep -v grep | awk '{print $2}')
+	[ -z "$pids" ] && return 0
+	echo "$PDSH processes still exists after $WAIT seconds.  Still running: $pids"
+	# FIXME: not portable
+	for pid in $pids; do
+		cat /proc/${pid}/status || true
+		cat /proc/${pid}/wchan || true
+		echo "Killing $pid"
+		kill -9 $pid || true
+		sleep 1
+		ps -P $pid && rc=1
+	done
+	
+	return $rc
 }

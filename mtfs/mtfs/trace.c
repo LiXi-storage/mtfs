@@ -9,6 +9,7 @@
 #include <mtfs_record.h>
 #include <mtfs_trace.h>
 #include <mtfs_proc.h>
+#include "file_internal.h"
 #include "main_internal.h"
 #include "io_internal.h"
 #include "super_internal.h"
@@ -151,29 +152,6 @@ struct ctl_table mtrace_top_table[] = {
 	}
 };
 
-static void _mtfs_io_iter_start_rw(struct mtfs_io *io)
-{
-	struct mtfs_io_rw *io_rw = &io->u.mi_rw;
-	int is_write = 0;
-	MENTRY();
-
-	is_write = (io->mi_type == MIT_WRITEV) ? 1 : 0;
-	io->mi_result.size = mtfs_file_rw_branch(is_write,
-	                                         io_rw->file,
-	                                         io_rw->iov,
-	                                         io_rw->nr_segs,
-	                                         io_rw->ppos,
-	                                         io->mi_bindex);
-	if (io->mi_result.size > 0) {
-		/* TODO: this check is weak */
-		io->mi_successful = 1;
-	} else {
-		io->mi_successful = 0;
-	}
-
-	_MRETURN();
-}
-
 #define mtrace_trace_type(type) (mtrace_operations & type)
 
 static void mtrace_io_iter_start_rw(struct mtfs_io *io)
@@ -190,7 +168,7 @@ static void mtrace_io_iter_start_rw(struct mtfs_io *io)
 		    (io->mi_type == MIT_READV && mtrace_trace_type(TOPS_READ))) {
 			do_gettimeofday(&io_trace->start);
 		}
-		_mtfs_io_iter_start_rw(io);
+		mtfs_io_iter_start_rw_nonoplist(io);
 		if ((io->mi_type == MIT_WRITEV && mtrace_trace_type(TOPS_WRITE)) || 
 		    (io->mi_type == MIT_READV && mtrace_trace_type(TOPS_READ))) {
 			do_gettimeofday(&io_trace->end);
@@ -277,6 +255,7 @@ static int mtrace_io_init_rw(struct mtfs_io *io, int is_write,
 	io_rw->nr_segs = nr_segs;
 	io_rw->ppos = ppos;
 	io_rw->iov_length = sizeof(*iov) * nr_segs;
+	io_rw->rw_size = rw_size;
 
 	MRETURN(ret);
 }
@@ -289,6 +268,12 @@ static ssize_t mtrace_file_rw(int is_write, struct file *file, const struct iove
 	struct mtfs_io *io = NULL;
 	size_t rw_size = 0;
 	MENTRY();
+
+	rw_size = get_iov_count(iov, &nr_segs);
+	if (rw_size <= 0) {
+		ret = rw_size;
+		goto out;
+	}
 
 	MTFS_SLAB_ALLOC_PTR(io, mtfs_io_cache);
 	if (io == NULL) {

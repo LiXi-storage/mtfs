@@ -34,6 +34,19 @@ struct mtfs_io_trace {
 #include <mtfs_lock.h>
 #include <mtfs_trace.h>
 
+struct mtfs_io_rw {
+	struct file *file;
+	const struct iovec *iov;
+	unsigned long nr_segs;
+	loff_t *ppos;
+	size_t rw_size;
+	ssize_t ret;
+
+	struct iovec *iov_tmp;
+	loff_t pos_tmp;
+	size_t iov_length;
+};
+
 struct mtfs_io {
 	const struct mtfs_io_operations *mi_ops;
 	mtfs_io_type_t mi_type;
@@ -60,17 +73,7 @@ struct mtfs_io {
 	struct mlock_enqueue_info mi_einfo;
 
 	union {
-		struct mtfs_io_rw {
-			struct file *file;
-			const struct iovec *iov;
-			unsigned long nr_segs;
-			loff_t *ppos;
-			ssize_t ret;
-
-			struct iovec *iov_tmp;
-			loff_t pos_tmp;
-			size_t iov_length;
-		} mi_rw;
+		struct mtfs_io_rw mi_rw;
 	} u;
 	union {
 		struct mtfs_io_trace mi_trace;

@@ -12,14 +12,37 @@ ORIGIN_DIR2=$DIR2
 
 export SINGLE_DIR=${SINGLE_DIR:-$ORIGIN_DIR/single_tests}
 rm $SINGLE_DIR -fr
-mkdir $SINGLE_DIR
+
+make_single()
+{
+	local REMOVED_DIR=$1
+	rm $DIR -fr
+	mkdir $DIR
+	rm $REMOVED_DIR -fr
+	if [ -e $REMOVED_DIR ]; then
+		error "failed to remove $REMOVED_DIR"
+	fi
+
+	if [ ! -d  $DIR ]; then
+		error "failed mkdir $DIR"
+	fi
+}
 
 export DIR=$SINGLE_DIR
 export DIR1=$MTFS_MNT1/$DIR_SUB/single_tests
 export DIR2=$MTFS_MNT2/$DIR_SUB/single_tests
 
+if [ "$SKIP_ABANDON_BRANCH0" != "yes" ]; then
+	make_single $MTFS_DIR1/test/single_tests
+	bash posix.sh
+	bash multi_mnt.sh
+fi
+
+make_single $MTFS_DIR2/test/single_tests
 bash posix.sh
 bash multi_mnt.sh
+rm $DIR -fr
+
 
 export DIR=$ORIGIN_DIR
 export DIR1=$ORIGIN_DIR1

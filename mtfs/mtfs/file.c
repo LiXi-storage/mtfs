@@ -498,8 +498,8 @@ int mtfs_flock(struct file *file, int cmd, struct file_lock *fl)
 }
 EXPORT_SYMBOL(mtfs_flock);
 
-static size_t get_iov_count(const struct iovec *iov,
-                            unsigned long *nr_segs)
+size_t get_iov_count(const struct iovec *iov,
+                     unsigned long *nr_segs)
 {
 	size_t count = 0;
 	unsigned long seg = 0;
@@ -634,7 +634,7 @@ out:
 }
 EXPORT_SYMBOL(mtfs_file_rw_branch);
 
-static int mtfs_io_init_rw(struct mtfs_io *io, int is_write,
+int mtfs_io_init_rw_common(struct mtfs_io *io, int is_write,
                            struct file *file, const struct iovec *iov,
                            unsigned long nr_segs, loff_t *ppos, size_t rw_size)
 {
@@ -644,22 +644,39 @@ static int mtfs_io_init_rw(struct mtfs_io *io, int is_write,
 	MENTRY();
 
 	type = is_write ? MIT_WRITEV : MIT_READV;
-	io->mi_ops = &mtfs_io_ops[type];
 	io->mi_type = type;
 	io->mi_oplist_dentry = file->f_dentry;
 	io->mi_bindex = 0;
 	io->mi_bnum = mtfs_f2bnum(file);
 	io->mi_break = 0;
 	io->mi_oplist_dentry = file->f_dentry;
-	io->mi_resource = mtfs_i2resource(file->f_dentry->d_inode);
-	io->mi_einfo.mode = is_write ? MLOCK_MODE_WRITE : MLOCK_MODE_READ;
-	io->mi_einfo.data.mlp_extent.start = *ppos;
-	io->mi_einfo.data.mlp_extent.end = *ppos + rw_size;
 
 	io_rw->file = file;
 	io_rw->iov = iov;
 	io_rw->nr_segs = nr_segs;
 	io_rw->ppos = ppos;
+	io_rw->iov_length = sizeof(*iov) * nr_segs;
+	io_rw->rw_size = rw_size;
+
+	MRETURN(ret);
+}
+
+static int mtfs_io_init_rw(struct mtfs_io *io, int is_write,
+                           struct file *file, const struct iovec *iov,
+                           unsigned long nr_segs, loff_t *ppos, size_t rw_size)
+{
+	int ret = 0;
+	mtfs_io_type_t type;
+	struct mtfs_io_rw *io_rw = &io->u.mi_rw;
+	MENTRY();
+
+	mtfs_io_init_rw_common(io, is_write, file, iov, nr_segs, ppos, rw_size);
+	type = is_write ? MIT_WRITEV : MIT_READV;
+	io->mi_ops = &mtfs_io_ops[type];
+	io->mi_resource = mtfs_i2resource(file->f_dentry->d_inode);
+	io->mi_einfo.mode = is_write ? MLOCK_MODE_WRITE : MLOCK_MODE_READ;
+	io->mi_einfo.data.mlp_extent.start = *ppos;
+	io->mi_einfo.data.mlp_extent.end = *ppos + rw_size;
 
 	io_rw->iov_length = sizeof(*iov) * nr_segs;
 	MTFS_ALLOC(io_rw->iov_tmp, io_rw->iov_length);

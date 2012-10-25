@@ -97,7 +97,7 @@ static void mtfs_io_unlock_mlock(struct mtfs_io *io)
 	_MRETURN();
 }
 
-static int mtfs_io_iter_init_rw(struct mtfs_io *io)
+int mtfs_io_iter_init_rw(struct mtfs_io *io)
 {
 	int ret = 0;
 	struct mtfs_io_rw *io_rw = &io->u.mi_rw;
@@ -109,6 +109,29 @@ static int mtfs_io_iter_init_rw(struct mtfs_io *io)
 	io_rw->pos_tmp = *(io_rw->ppos);
 
 	MRETURN(ret);
+}
+
+void mtfs_io_iter_start_rw_nonoplist(struct mtfs_io *io)
+{
+	struct mtfs_io_rw *io_rw = &io->u.mi_rw;
+	int is_write = 0;
+	MENTRY();
+
+	is_write = (io->mi_type == MIT_WRITEV) ? 1 : 0;
+	io->mi_result.size = mtfs_file_rw_branch(is_write,
+	                                         io_rw->file,
+	                                         io_rw->iov,
+	                                         io_rw->nr_segs,
+	                                         io_rw->ppos,
+	                                         io->mi_bindex);
+	if (io->mi_result.size > 0) {
+		/* TODO: this check is weak */
+		io->mi_successful = 1;
+	} else {
+		io->mi_successful = 0;
+	}
+
+	_MRETURN();
 }
 
 void mtfs_io_iter_start_rw(struct mtfs_io *io)

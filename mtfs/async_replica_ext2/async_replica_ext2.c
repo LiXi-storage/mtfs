@@ -12,23 +12,7 @@
 #include <mtfs_junction.h>
 #include "async_replica_ext2.h"
 
-struct dentry *mtfs_ext2_lookup(struct inode *dir, struct dentry *dentry, struct nameidata *nd)
-{
-	struct dentry *ret = NULL;
-	int rc = 0;
-	MENTRY();
-
-	MASSERT(inode_is_locked(dir));
-	MASSERT(!IS_ROOT(dentry));
-
-	rc = mtfs_lookup_backend(dir, dentry, INTERPOSE_LOOKUP);
-
-	ret = ERR_PTR(rc);
-
-	MRETURN(ret);
-}
-
-struct super_operations mtfs_ext2_sops =
+struct super_operations mtfs_ext_sops =
 {
 	alloc_inode:    mtfs_alloc_inode,
 	destroy_inode:  mtfs_destroy_inode,
@@ -39,7 +23,7 @@ struct super_operations mtfs_ext2_sops =
 	show_options:   mtfs_show_options,
 };
 
-struct inode_operations mtfs_ext2_symlink_iops =
+struct inode_operations mtfs_ext_symlink_iops =
 {
 	readlink:       mtfs_readlink,
 	follow_link:    mtfs_follow_link,
@@ -49,10 +33,10 @@ struct inode_operations mtfs_ext2_symlink_iops =
 	getattr:        mtfs_getattr,
 };
 
-struct inode_operations mtfs_ext2_dir_iops =
+struct inode_operations mtfs_ext_dir_iops =
 {
 	create:	        mtfs_create,
-	lookup:	        mtfs_ext2_lookup,
+	lookup:	        mtfs_lookup_nonnd,
 	link:           mtfs_link,
 	unlink:	        mtfs_unlink,
 	symlink:        mtfs_symlink,
@@ -69,7 +53,7 @@ struct inode_operations mtfs_ext2_dir_iops =
 	listxattr:      mtfs_listxattr,
 };
 
-struct inode_operations mtfs_ext2_main_iops =
+struct inode_operations mtfs_ext_main_iops =
 {
 	permission:     mtfs_permission,
 	setattr:        mtfs_setattr,
@@ -96,12 +80,12 @@ out:
 	MRETURN(ret);
 }
 
-struct dentry_operations mtfs_ext2_dops = {
+struct dentry_operations mtfs_ext_dops = {
 	d_revalidate:  mtfs_d_revalidate_local,
 	d_release:     mtfs_d_release,
 };
 
-struct file_operations mtfs_ext2_dir_fops =
+struct file_operations mtfs_ext_dir_fops =
 {
 	llseek:   mtfs_file_llseek,
 	read:     generic_read_dir,
@@ -112,7 +96,7 @@ struct file_operations mtfs_ext2_dir_fops =
 	/* TODO: fsync, do we really need open? */
 };
 
-struct file_operations mtfs_ext2_main_fops =
+struct file_operations mtfs_ext_main_fops =
 {
 	llseek:     mtfs_file_llseek,
 	read:       mtfs_file_read,
@@ -121,14 +105,14 @@ struct file_operations mtfs_ext2_main_fops =
 	sendfile:   mtfs_file_sendfile,
 #endif /* HAVE_KERNEL_SENDFILE */
 #ifdef HAVE_FILE_READV
-	readv:      mtfs_file_readv,
+	readv:      masync_file_readv,
 #else /* !HAVE_FILE_READV */
-	aio_read:   mtfs_file_aio_read,
+	aio_read:   masync_file_aio_read,
 #endif /* !HAVE_FILE_READV */
 #ifdef HAVE_FILE_WRITEV
-	writev:     mtfs_file_writev,
+	writev:     masync_file_writev,
 #else /* !HAVE_FILE_WRITEV */
-	aio_write:  mtfs_file_aio_write,
+	aio_write:  masync_file_aio_write,
 #endif /* !HAVE_FILE_WRITEV */
 	readdir:    mtfs_readdir,
 	poll:       mtfs_poll,
@@ -140,7 +124,7 @@ struct file_operations mtfs_ext2_main_fops =
 	/* TODO: splice_read, splice_write */
 };
 
-struct heal_operations mtfs_ext2_hops =
+struct heal_operations mtfs_ext_hops =
 {
 	ho_discard_dentry: heal_discard_dentry_async,
 };
@@ -203,17 +187,17 @@ int mtfs_ext2_ioctl(struct inode *inode, struct file *file, unsigned int cmd, un
 }
 
 struct mtfs_operations mtfs_ext2_operations = {
-	symlink_iops:            &mtfs_ext2_symlink_iops,
-	dir_iops:                &mtfs_ext2_dir_iops,
-	main_iops:               &mtfs_ext2_main_iops,
-	main_fops:               &mtfs_ext2_main_fops,
-	dir_fops:                &mtfs_ext2_dir_fops,
-	sops:                    &mtfs_ext2_sops,
-	dops:                    &mtfs_ext2_dops,
+	symlink_iops:            &mtfs_ext_symlink_iops,
+	dir_iops:                &mtfs_ext_dir_iops,
+	main_iops:               &mtfs_ext_main_iops,
+	main_fops:               &mtfs_ext_main_fops,
+	dir_fops:                &mtfs_ext_dir_fops,
+	sops:                    &mtfs_ext_sops,
+	dops:                    &mtfs_ext_dops,
 	ioctl:                   &mtfs_ext2_ioctl,
 };
 
-const char *supported_secondary_types[] = {
+const char *ext2_supported_secondary_types[] = {
 	"ext2",
 	NULL,
 };
@@ -223,11 +207,11 @@ struct mtfs_junction mtfs_ext2_junction = {
 	mj_name:                 "ext2",
 	mj_subject:              "ASYNC_REPLICA",
 	mj_primary_type:         "ext2",
-	mj_secondary_types:      supported_secondary_types,
+	mj_secondary_types:      ext2_supported_secondary_types,
 	mj_fs_ops:              &mtfs_ext2_operations,
 };
 
-static int ext2_support_init(void)
+static int async_replica_ext_init(void)
 {
 	int ret = 0;
 
@@ -242,15 +226,15 @@ static int ext2_support_init(void)
 	return ret;
 }
 
-static void ext2_support_exit(void)
+static void async_replica_ext_exit(void)
 {
 	MDEBUG("unregistering mtfs_ext2 support\n");
 	junction_unregister(&mtfs_ext2_junction);
 }
 
 MODULE_AUTHOR("MulTi File System Workgroup");
-MODULE_DESCRIPTION("mtfs's support for ext2");
+MODULE_DESCRIPTION("mtfs's async support for ext");
 MODULE_LICENSE("GPL");
 
-module_init(ext2_support_init);
-module_exit(ext2_support_exit);
+module_init(async_replica_ext_init);
+module_exit(async_replica_ext_exit);
