@@ -2,6 +2,11 @@
  * Copyright (C) 2011 Li Xi <pkuelelixi@gmail.com>
  */
 
+/*
+ * For both kernel and userspace use
+ * DO NOT use anything special that opposes this purpose
+ */
+
 #if defined (__linux__) && defined(__KERNEL__)
 #include <linux/sched.h>
 #include <thread.h>
@@ -269,11 +274,12 @@ static void mlock_extent_grant(struct mlock *lock)
 	root = &resource->mlr_itree[index].mlit_root;
 	found = mtfs_interval_insert(&node->mi_node, root);
 	if (found) {
-		/* The policy group found */
+		/* Should never be here */
 		struct mtfs_interval *tmp = mlock_interval_detach(lock);
 		MASSERT(tmp != NULL);
 		mlock_interval_free(tmp);
 		mlock_interval_attach(mtfs_node2interval(found), lock);
+		MBUG();
 	}
 	resource->mlr_itree[index].mlit_size++;
 

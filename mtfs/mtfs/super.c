@@ -19,6 +19,7 @@
 #include "support_internal.h"
 #include "main_internal.h"
 #include "subject_internal.h"
+#include "async_internal.h"
 
 struct inode *mtfs_alloc_inode(struct super_block *sb)
 {
@@ -46,6 +47,7 @@ void mtfs_destroy_inode(struct inode *inode)
 	struct mtfs_inode_info *inode_info = mtfs_i2info(inode);
 	MENTRY();
 
+	masync_bucket_cleanup(mtfs_i2bucket(inode));
 	mtfs_ii_free(inode_info);
 	_MRETURN();
 }

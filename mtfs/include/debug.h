@@ -177,6 +177,12 @@ do {                                                 \
 #include <assert.h>
 #include <asm/types.h>
 
+#define MBUG()                                       \
+do {                                                 \
+    MERROR("a bug found!\n");                        \
+    assert(0);                                       \
+} while(0)
+
 #define MASSERT(cond) assert(cond)
 #if 0
 #define MTRACE(format, args...) fprintf(stderr, "DEBUG: %s(%d) %s(): " format, __FILE__,  __LINE__, __FUNCTION__, ##args)

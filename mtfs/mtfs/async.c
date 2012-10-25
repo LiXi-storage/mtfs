@@ -31,7 +31,7 @@ static enum mtfs_interval_iter masync_overlap_cb(struct mtfs_interval_node *node
 
 	extent_node = mtfs_node2interval(node);
 	extent_list = (struct list_head *)args;
-	mtfs_list_add_tail(&extent_node->mi_linkage, extent_list);
+	mtfs_list_add(&extent_node->mi_linkage, extent_list);
 
 	return MTFS_INTERVAL_ITER_CONT;
 }
@@ -41,20 +41,72 @@ int masync_bucket_add(struct masync_bucket *bucket,
 {
 	MTFS_LIST_HEAD(extent_list);
 	struct mtfs_interval *tmp_extent = NULL;
+	struct mtfs_interval *node = NULL;
+	struct mtfs_interval *head = NULL;
+	int ret = 0;
+	__u64 min_start = extent->start;
+	__u64 max_end = extent->end;
+	MENTRY();
+
+	MTFS_SLAB_ALLOC_PTR(node, mtfs_interval_cache);
+	if (node == NULL) {
+		MERROR("failed to create interval, not enough memory\n");
+		ret = -ENOMEM;
+		goto out;
+	}
+
+	MERROR("adding [%lu, %lu]\n", extent->start, extent->end);
+
+	mtfs_spin_lock(&bucket->mab_lock);
+	{
+		mtfs_interval_search(bucket->mab_root,
+		                     extent,
+		                     masync_overlap_cb,
+		                     &extent_list);
+
+		mtfs_list_for_each_entry_safe(tmp_extent, head, &extent_list, mi_linkage) {
+			MERROR("[%lu, %lu] overlaped with [%lu, %lu]\n",
+			       tmp_extent->mi_node.in_extent.start,
+			       tmp_extent->mi_node.in_extent.end,
+			       extent->start, extent->end);
+			if (tmp_extent->mi_node.in_extent.start < min_start) {
+				min_start = tmp_extent->mi_node.in_extent.start;
+			}
+			if (tmp_extent->mi_node.in_extent.end > max_end) {
+				max_end = tmp_extent->mi_node.in_extent.end;
+			}
+			mtfs_interval_erase(&tmp_extent->mi_node, &bucket->mab_root);
+			MTFS_SLAB_FREE_PTR(tmp_extent, mtfs_interval_cache);
+		}
+		mtfs_interval_set(&node->mi_node, min_start, max_end);
+		mtfs_interval_insert(&node->mi_node, &bucket->mab_root);
+		MERROR("added [%lu, %lu]\n", min_start, max_end);
+	}
+	mtfs_spin_unlock(&bucket->mab_lock);
+
+out:
+	MRETURN(ret);
+}
+
+int masync_bucket_cleanup(struct masync_bucket *bucket)
+{
+	MTFS_LIST_HEAD(extent_list);
+	struct mtfs_interval *node = NULL;
 	int ret = 0;
 	MENTRY();
 
-	MERROR("adding [%lu, %lu]\n", extent->start, extent->end);
 	mtfs_spin_lock(&bucket->mab_lock);
-	mtfs_interval_search(bucket->mab_root, extent, masync_overlap_cb, &extent_list);
-	mtfs_spin_unlock(&bucket->mab_lock);
-	mtfs_list_for_each_entry(tmp_extent, &extent_list, mi_linkage) {
-		MERROR("extenet\n");
+	{
+		while(bucket->mab_root) {
+			node = mtfs_node2interval(bucket->mab_root);
+			mtfs_interval_erase(bucket->mab_root, &bucket->mab_root);
+			MTFS_SLAB_FREE_PTR(node, mtfs_interval_cache);
+		}
 	}
+	mtfs_spin_unlock(&bucket->mab_lock);
 
 	MRETURN(ret);
 }
-EXPORT_SYMBOL(masync_bucket_add);
 
 static void masync_io_iter_start_rw(struct mtfs_io *io)
 {
