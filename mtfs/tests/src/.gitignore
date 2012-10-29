@@ -2,6 +2,7 @@
 /Makefile
 /Makefile.in
 
+/append_many
 /checkstat
 /correct
 /createmany

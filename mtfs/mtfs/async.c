@@ -21,6 +21,15 @@ static inline void masync_bucket_lock_init(struct masync_bucket *bucket)
 	init_MUTEX(&bucket->mab_lock);
 }
 
+/* Returns 0 if the mutex has
+ * been acquired successfully
+ * or 1 if it it cannot be acquired.
+ */
+static inline int masync_bucket_trylock(struct masync_bucket *bucket)
+{
+	return down_trylock(&bucket->mab_lock);
+}
+
 static inline void masync_bucket_lock(struct masync_bucket *bucket)
 {
 	down(&bucket->mab_lock);
@@ -56,6 +65,96 @@ static inline void masync_info_write_unlock(struct msubject_async_info *info)
 	up_write(&info->msai_lock);
 }
 
+void masync_bucket_remove_from_lru_nonlock(struct masync_bucket *bucket)
+{
+	struct msubject_async_info *info = NULL;
+        MENTRY();
+
+	info = bucket->mab_info;
+	MASSERT(info);
+	MASSERT(atomic_read(&bucket->mab_nr) == 0);
+	MASSERT(!mtfs_list_empty(&bucket->mab_linkage));
+	MASSERT(bucket->mab_root == NULL);
+	mtfs_list_del_init(&bucket->mab_linkage);
+
+	_MRETURN();
+}
+
+void masync_bucket_remove_from_lru(struct masync_bucket *bucket)
+{
+	struct msubject_async_info *info = NULL;
+        MENTRY();
+
+	info = bucket->mab_info;
+	MASSERT(info);
+	MASSERT(atomic_read(&bucket->mab_nr) == 0);
+	MASSERT(!mtfs_list_empty(&bucket->mab_linkage));
+	MASSERT(bucket->mab_root == NULL);
+	masync_info_write_lock(bucket->mab_info);
+	masync_bucket_remove_from_lru_nonlock(bucket);
+	masync_info_write_unlock(bucket->mab_info);
+
+	_MRETURN();
+}
+
+static void masync_bucket_add_to_lru_nonlock(struct masync_bucket *bucket)
+{
+	struct msubject_async_info *info = NULL;
+        MENTRY();
+
+	info = bucket->mab_info;
+	MASSERT(info);
+	MASSERT(mtfs_list_empty(&bucket->mab_linkage));
+	MASSERT(bucket->mab_root != NULL);
+	MASSERT(atomic_read(&bucket->mab_nr) != 0);
+	mtfs_list_add_tail(&bucket->mab_linkage, &info->msai_dirty_buckets);
+
+	_MRETURN();
+}
+
+static void masync_bucket_add_to_lru(struct masync_bucket *bucket)
+{
+	struct msubject_async_info *info = NULL;
+        MENTRY();
+
+	info = bucket->mab_info;
+	MASSERT(info);
+	MASSERT(mtfs_list_empty(&bucket->mab_linkage));
+	MASSERT(bucket->mab_root != NULL);
+	MASSERT(atomic_read(&bucket->mab_nr) != 0);
+	masync_info_write_lock(bucket->mab_info);
+	masync_bucket_add_to_lru_nonlock(bucket);
+	masync_info_write_unlock(bucket->mab_info);
+	_MRETURN();
+}
+
+static void masync_bucket_touch_in_lru_nonlock(struct masync_bucket *bucket)
+{
+	struct msubject_async_info *info = NULL;
+        MENTRY();
+
+	info = bucket->mab_info;
+	MASSERT(info);
+	MASSERT(!mtfs_list_empty(&bucket->mab_linkage));
+	mtfs_list_move_tail(&bucket->mab_linkage, &info->msai_dirty_buckets);
+	_MRETURN();
+}
+
+void masync_bucket_touch_in_lru(struct masync_bucket *bucket)
+{
+	struct msubject_async_info *info = NULL;
+        MENTRY();
+
+	info = bucket->mab_info;
+	MASSERT(info);
+	MASSERT(!mtfs_list_empty(&bucket->mab_linkage));
+	masync_info_write_lock(info);
+	masync_bucket_touch_in_lru_nonlock(bucket);
+	masync_info_write_unlock(info);
+
+	_MRETURN();
+}
+
 void masync_bucket_init(struct msubject_async_info *info, struct masync_bucket *bucket)
 {
 	MENTRY();
@@ -64,7 +163,7 @@ void masync_bucket_init(struct msubject_async_info *info, struct masync_bucket *
 	bucket->mab_root = NULL;
 	bucket->mab_info = info;
 	atomic_set(&bucket->mab_nr, 0);
-	mtfs_list_add(&bucket->mab_linkage, &info->msai_dirty_buckets);
+	MTFS_INIT_LIST_HEAD(&bucket->mab_linkage);
 	_MRETURN();
 }
 
@@ -127,13 +226,19 @@ int masync_bucket_add(struct masync_bucket *bucket,
 	mtfs_interval_insert(&node->mi_node, &bucket->mab_root);
 	atomic_inc(&bucket->mab_nr);
 	MDEBUG("added [%lu, %lu]\n", min_start, max_end);
+	if (mtfs_list_empty(&bucket->mab_linkage)) {
+		masync_bucket_add_to_lru(bucket);
+	} else {
+		//masync_bucket_touch_in_lru(bucket);
+	}
 	masync_bucket_unlock(bucket);
 
 out:
 	MRETURN(ret);
 }
 
-int _masync_bucket_cleanup(struct masync_bucket *bucket)
+/* Return nr that canceled */
+int masync_bucket_cleanup(struct masync_bucket *bucket)
 {
 	struct mtfs_interval *node = NULL;
 	int ret = 0;
@@ -147,21 +252,13 @@ int _masync_bucket_cleanup(struct masync_bucket *bucket)
 		MTFS_SLAB_FREE_PTR(node, mtfs_interval_cache);
 		atomic_dec(&bucket->mab_nr);
 	}
-	MASSERT(atomic_read(&bucket->mab_nr) == 0);
-	mtfs_list_del_init(&bucket->mab_linkage);
+	
+	if (!mtfs_list_empty(&bucket->mab_linkage)) {
+		MASSERT(atomic_read(&bucket->mab_nr) == 0);
+		MASSERT(bucket->mab_root);
+		masync_bucket_remove_from_lru(bucket);
+	}
 	masync_bucket_unlock(bucket);
-
-	MRETURN(ret);
-}
-
-int masync_bucket_cleanup(struct masync_bucket *bucket)
-{
-	int ret = 0;
-	MENTRY();
-
-	masync_info_write_lock(bucket->mab_info);
-	ret = _masync_bucket_cleanup(bucket);
-	masync_info_write_unlock(bucket->mab_info);
 
 	MRETURN(ret);
 }
@@ -182,13 +279,12 @@ int masync_calculate_all(struct msubject_async_info *info)
 	MRETURN(ret);
 }
 
-int _masync_bucket_cancel(struct masync_bucket *bucket, int nr_to_cacel)
+int masync_bucket_cancel(struct masync_bucket *bucket, int nr_to_cacel)
 {
 	struct mtfs_interval *node = NULL;
 	int ret = 0;
 	MENTRY();
 
-	masync_bucket_lock(bucket);
 	while (bucket->mab_root && ret < nr_to_cacel) {
 		node = mtfs_node2interval(bucket->mab_root);
 		mtfs_interval_erase(bucket->mab_root, &bucket->mab_root);
@@ -196,7 +292,11 @@ int _masync_bucket_cancel(struct masync_bucket *bucket, int nr_to_cacel)
 		atomic_dec(&bucket->mab_nr);
 		ret++;
 	}
-	masync_bucket_unlock(bucket);
+	if (bucket->mab_root == NULL) {
+		if (!list_empty(&bucket->mab_linkage)) {
+			masync_bucket_remove_from_lru_nonlock(bucket);
+		}
+	}
 
 	MRETURN(ret);
 }
@@ -209,32 +309,26 @@ int masync_cancel(struct msubject_async_info *info, int nr_to_cacel)
 	int canceled = 0;
 	MENTRY();
 
+	MASSERT(nr_to_cacel > 0);
 	masync_info_write_lock(info);
-	mtfs_list_for_each_entry(bucket, &info->msai_dirty_buckets, mab_linkage) {
-		canceled = _masync_bucket_cancel(bucket, nr_to_cacel);
+	while (ret < nr_to_cacel) {
+		if (mtfs_list_empty(&info->msai_dirty_buckets)) {
+			MDEBUG("only canceled %d/%d, but the dirty list is empty\n",
+			       ret, nr_to_cacel);
+		}
+
+		bucket = mtfs_list_entry(info->msai_dirty_buckets.prev, struct masync_bucket, mab_linkage);
+
+		/* Do not wait here in case of deadlock */
+		if (masync_bucket_trylock(bucket) != 0) {
+			masync_bucket_touch_in_lru_nonlock(bucket);
+			MDEBUG("failed to lock a bucket for one time\n");
+			continue;
+		}
+
+		canceled = masync_bucket_cancel(bucket, nr_to_cacel - ret);
+		masync_bucket_unlock(bucket);
 		ret += canceled;
-		nr_to_cacel -= canceled;
-		if (nr_to_cacel <= 0) {
-			break;
-		}
-	}
-	masync_info_write_unlock(info);
-
-	MRETURN(ret);
-}
-
-int masync_cancel_all(struct msubject_async_info *info, int nr_to_cacel)
-{
-	int ret = 0;
-	struct masync_bucket *bucket = NULL;
-	MENTRY();
-
-	masync_info_write_lock(info);
-	mtfs_list_for_each_entry(bucket, &info->msai_dirty_buckets, mab_linkage) {
-		ret += _masync_bucket_cleanup(bucket);
-		if (ret >= nr_to_cacel) {
-			break;
-		}
 	}
 	masync_info_write_unlock(info);
 
@@ -442,13 +536,6 @@ static int _masync_shrink(int nr_to_scan, unsigned int gfp_mask)
 	int canceled = 0;
 	MENTRY();
 
-	if (mtfs_debug & D_SPECIAL) {
-		if (nr_to_scan == 0) {
-			printk("check\n");
-		} else {
-			printk("shrinking some memory\n");
-		}
-	}
 	if (nr_to_scan == 0) {
 		goto out_calc;
 	} else if (!(gfp_mask & __GFP_FS)) {
@@ -457,17 +544,12 @@ static int _masync_shrink(int nr_to_scan, unsigned int gfp_mask)
 	}
 
 	canceled = masync_cancel(masync_info, nr_to_scan);
-	MASSERT(canceled == nr_to_scan);
-out_calc:
-	ret = masync_calculate_all(masync_info);
-	if (mtfs_debug & D_SPECIAL) {
-		if (canceled == 0) {
-			printk("canceled zero\n");
-		} else {
-			printk("canceled some memory\n");
-		}
+	if (canceled != nr_to_scan) {
+		MERROR("trying to shrink %d, canceled %d\n",
+		       nr_to_scan, canceled);
 	}
-	//ret = (masync_calculate_all(masync_info) / 100) * sysctl_vfs_cache_pressure;
+out_calc:
+	ret = (masync_calculate_all(masync_info) / 100) * sysctl_vfs_cache_pressure;
 out:
 	MRETURN(ret);
 }
