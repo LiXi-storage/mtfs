@@ -190,11 +190,6 @@ int trace_ext2_ioctl(struct inode *inode, struct file *file, unsigned int cmd, u
 	MRETURN(ret);
 }
 
-struct mtfs_subject_operations trace_subject_ops = {
-	mso_init:                 mtrace_subject_init,
-	mso_fini:                 mtrace_subject_fini,
-};
-
 struct mtfs_operations trace_ext2_operations = {
 	symlink_iops:            &trace_ext2_symlink_iops,
 	dir_iops:                &trace_ext2_dir_iops,
@@ -204,7 +199,7 @@ struct mtfs_operations trace_ext2_operations = {
 	sops:                    &trace_ext2_sops,
 	dops:                    &trace_ext2_dops,
 	ioctl:                   &trace_ext2_ioctl,
-	subject_ops:             &trace_subject_ops,
+	subject_ops:             &mtrace_subject_ops,
 };
 
 const char *supported_secondary_types[] = {

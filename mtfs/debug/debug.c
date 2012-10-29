@@ -7,6 +7,7 @@
 #include <linux/sysctl.h>
 #include <debug.h>
 #include <compat.h>
+#include <memory.h>
 #include <mtfs_proc.h>
 #include "linux_debug.h"
 #include "linux_tracefile.h"
@@ -155,6 +156,10 @@ mtfs_debug_dbg2str(int debug)
 		return "emerg";
         case D_CONSOLE:
                 return "console";
+        case D_DEBUG:
+                return "debug";
+        case D_SPECIAL:
+                return "special";
         }
 }
 
@@ -415,6 +420,9 @@ static int __init mtfs_debug_module_init(void)
 {
 	int ret = 0;
 
+	atomic64_set(&mtfs_kmemory_used, 0);
+	atomic64_set(&mtfs_kmemory_used_max, 0);
+
 	ret = mtfs_debug_init(5 * 1024 * 1024);
 	if (ret) {
 		printk(KERN_ERR "MTFS Error: failed to init debug system, ret = %d\n", ret);
@@ -445,6 +453,7 @@ static void __exit mtfs_debug_module_exit(void)
 	mtfs_table_header = NULL;
 #endif
 	mtfs_debug_cleanup();
+	MASSERT(atomic64_read(&mtfs_kmemory_used) == 0);
 }
 
 MODULE_AUTHOR("MulTi File System Development Workgroup");

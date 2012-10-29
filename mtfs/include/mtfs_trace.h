@@ -20,6 +20,7 @@ struct msubject_trace_info {
 
 extern int mtrace_subject_init(struct super_block *sb);
 extern int mtrace_subject_fini(struct super_block *sb);
+extern struct mtfs_subject_operations mtrace_subject_ops;
 
 #ifdef HAVE_FILE_READV
 extern ssize_t mtrace_file_readv(struct file *file, const struct iovec *iov,

@@ -93,6 +93,8 @@ mtfs_debug_str2mask(int *mask, const char *str, int is_subsys);
 #define D_WARNING     0x00000010
 #define D_CONSOLE     0x00000020
 #define D_MALLOC      0x00000040
+#define D_DEBUG       0x00000080
+#define D_SPECIAL     0x00000100
 
 #define D_CANTMASK   (D_ERROR | D_EMERG | D_WARNING | D_CONSOLE)
 

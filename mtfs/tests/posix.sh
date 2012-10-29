@@ -7,7 +7,7 @@ BUG_242="32 32a 32b 32s 37"
 BUG_304="212 54c"
 LOWERFS_BUG_305="34b 34c"
 BUG_318="39k"
-EXCEPT_SLOW="24v 51a 51b 51c"
+EXCEPT_SLOW="24v 51a 51b 51c 501"
 
 export CONFIGS=${CONFIGS:-local}
 . $TESTS_DIR/cfg/$CONFIGS.sh
@@ -2420,7 +2420,18 @@ test_500() {
 	rm -f $DIR/f500
 }
 leak_detect_state_push "no"
-run_test 500 "correctness test ============================================"
+run_test 500 "correctness test ==========================================="
+leak_detect_state_pop
+
+#
+# LIXI added
+# Should shrink memory
+#
+test_501() {
+	$APPEND_MANY $DIR/$tfile
+}
+leak_detect_state_push "no"
+run_test 501 "append many ================================================"
 leak_detect_state_pop
 
 cleanup_all

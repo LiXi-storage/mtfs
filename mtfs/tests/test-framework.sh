@@ -664,6 +664,9 @@ init_test_env()
 	export MULTICORRECT=${MULTICORRECT:-$TESTS_DIR/src/multicorrect}
 	check_command $MULTICORRECT
 
+	export APPEND_MANY=${APPEND_MANY:-$TESTS_DIR/src/append_many}
+	check_command $APPEND_MANY
+
 	export MOUNT_MTFS=${MOUNT_MTFS:-$UTILS_DIR/mount.mtfs}
 	check_command $MOUNT_MTFS
 	

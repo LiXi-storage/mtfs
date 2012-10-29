@@ -93,7 +93,8 @@ int mtfs_inode_init(struct inode *inode, struct dentry *dentry)
 	}
 
 	mlock_resource_init(mtfs_i2resource(inode));
-	masync_bucket_init(mtfs_i2bucket(inode));
+	masync_bucket_init((struct msubject_async_info *)mtfs_s2subinfo(inode->i_sb),
+	                   mtfs_i2bucket(inode));
 	MRETURN(ret);
 }
 

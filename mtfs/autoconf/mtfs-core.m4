@@ -533,6 +533,61 @@ LB_LINUX_TRY_COMPILE([
 EXTRA_KCFLAGS="$tmp_flags"
 ])
 
+#2.6.23 has new shrinker API
+AC_DEFUN([LC_REGISTER_SHRINKER],
+[AC_MSG_CHECKING([if kernel has register_shrinker])
+LB_LINUX_TRY_COMPILE([
+	#include <linux/mm.h>
+],[
+	register_shrinker(NULL);
+], [
+	AC_MSG_RESULT([yes])
+	AC_DEFINE(HAVE_REGISTER_SHRINKER, 1,                                                                      
+		[kernel has register_shrinker])
+],[
+	AC_MSG_RESULT([no])
+])
+])
+
+#
+# FC15 2.6.40-5 backported the "shrink_control" parameter to the memory
+# pressure shrinker from Linux 3.0
+#
+AC_DEFUN([LC_SHRINK_CONTROL],
+[AC_MSG_CHECKING([shrink_control is present])
+LB_LINUX_TRY_COMPILE([
+	#include <linux/mm.h>
+],[
+	struct shrink_control tmp = {0};
+	tmp.nr_to_scan = sizeof(tmp);
+],[
+	AC_MSG_RESULT(yes)
+	AC_DEFINE(HAVE_SHRINK_CONTROL, 1,
+		[shrink_control is present])
+],[
+	AC_MSG_RESULT(no)
+])
+])
+
+#
+# RHEL6/2.6.32 want to have pointer to shrinker self pointer in handler function
+#
+AC_DEFUN([LC_SHRINKER_WANT_SHRINK_PTR],
+[AC_MSG_CHECKING([shrinker want self pointer in handler])
+LB_LINUX_TRY_COMPILE([
+	#include <linux/mm.h>
+],[
+	struct shrinker *tmp = NULL;
+	tmp->shrink(tmp, 0, 0);
+],[
+	AC_MSG_RESULT(yes)
+	AC_DEFINE(HAVE_SHRINKER_WANT_SHRINK_PTR, 1,
+		[shrinker want self pointer in handler])
+],[
+	AC_MSG_RESULT(no)
+])
+])
+
 #
 # LC_PROG_LINUX
 #
@@ -566,6 +621,9 @@ AC_DEFUN([LC_PROG_LINUX],
 	LC_SET_CPUS_ALLOWED
 	LC_EXPORT_NODE_TO_CPUMASK
 	LC_FUNC_UNSHARE_FS_STRUCT
+	LC_REGISTER_SHRINKER
+	LC_SHRINK_CONTROL
+	LC_SHRINKER_WANT_SHRINK_PTR
 ])
 
 #

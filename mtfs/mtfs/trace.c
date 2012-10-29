@@ -9,6 +9,7 @@
 #include <mtfs_record.h>
 #include <mtfs_trace.h>
 #include <mtfs_proc.h>
+#include <mtfs_subject.h>
 #include "file_internal.h"
 #include "main_internal.h"
 #include "io_internal.h"
@@ -436,3 +437,9 @@ int mtrace_subject_fini(struct super_block *sb)
 	MRETURN(ret);
 }
 EXPORT_SYMBOL(mtrace_subject_fini);
+
+struct mtfs_subject_operations mtrace_subject_ops = {
+	mso_init:                 mtrace_subject_init,
+	mso_fini:                 mtrace_subject_fini,
+};
+EXPORT_SYMBOL(mtrace_subject_ops);

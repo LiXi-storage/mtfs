@@ -195,6 +195,7 @@ struct mtfs_operations mtfs_ext2_operations = {
 	sops:                    &mtfs_ext_sops,
 	dops:                    &mtfs_ext_dops,
 	ioctl:                   &mtfs_ext2_ioctl,
+	subject_ops:             &masync_subject_ops,
 };
 
 const char *ext2_supported_secondary_types[] = {
