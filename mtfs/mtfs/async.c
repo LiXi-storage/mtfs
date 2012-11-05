@@ -254,8 +254,6 @@ int masync_bucket_cleanup(struct masync_bucket *bucket)
 	}
 	
 	if (!mtfs_list_empty(&bucket->mab_linkage)) {
-		MASSERT(atomic_read(&bucket->mab_nr) == 0);
-		MASSERT(bucket->mab_root);
 		masync_bucket_remove_from_lru(bucket);
 	}
 	masync_bucket_unlock(bucket);
