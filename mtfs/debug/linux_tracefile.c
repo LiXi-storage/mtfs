@@ -28,7 +28,7 @@ void mtfs_tracefile_fini_arch(void)
 	int j;
 
 	for (i = 0; i < num_possible_cpus(); i++) {
-		for (j = 0; j < 3; j++) {
+		for (j = 0; j < MTFS_TCD_TYPE_MAX; j++) {
 			if (mtfs_trace_console_buffers[i][j] != NULL) {
 				kfree(mtfs_trace_console_buffers[i][j]);
 				mtfs_trace_console_buffers[i][j] = NULL;
@@ -75,7 +75,7 @@ int mtfs_tracefile_init_arch(void)
 	}
 
 	for (i = 0; i < num_possible_cpus(); i++) {
-		for (j = 0; j < 3; j++) {
+		for (j = 0; j < MTFS_TCD_TYPE_MAX; j++) {
 			mtfs_trace_console_buffers[i][j] =
 			kmalloc(MTFS_TRACE_CONSOLE_BUFFER_SIZE,
 			        GFP_KERNEL);
