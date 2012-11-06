@@ -136,8 +136,6 @@ static void masync_bucket_degrade_in_lru_nonlock(struct masync_bucket *bucket)
 	info = bucket->mab_info;
 	MASSERT(info);
 	MASSERT(!mtfs_list_empty(&bucket->mab_linkage));
-	MASSERT(bucket->mab_root != NULL);
-	MASSERT(atomic_read(&bucket->mab_nr) != 0);
 	mtfs_list_move(&bucket->mab_linkage, &info->msai_dirty_buckets);
 
 	_MRETURN();
@@ -585,7 +583,6 @@ static int masync_shrink(SHRINKER_ARGS(sc, nr_to_scan, gfp_mask))
 	return _masync_shrink(shrink_param(sc, nr_to_scan),
                               shrink_param(sc, gfp_mask));
 }
-
 
 int masync_subject_init(struct super_block *sb)
 {

@@ -26,7 +26,7 @@ struct mtfs_device_branch {
 };
 
 struct mtfs_device {
-	struct list_head device_list;                      /* Managed in the device list */
+	struct list_head md_list;                          /* Managed in the device list */
 	char *device_name;                                 /* Name of the device */
 	int name_length;                                   /* Length of the device name */
 	struct super_block *sb;                            /* Super block this device belong to */

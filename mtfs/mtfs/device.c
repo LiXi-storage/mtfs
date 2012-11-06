@@ -91,7 +91,7 @@ static struct mtfs_device *_mtfs_search_device(struct mtfs_device *device)
 	int have_diff = 0;
 
 	list_for_each(p, &mtfs_devs) {
-		found = list_entry(p, typeof(*found), device_list);
+		found = list_entry(p, typeof(*found), md_list);
 		d_root_tmp = found->sb->s_root;
 
 		MASSERT(d_root_tmp);
@@ -154,7 +154,7 @@ static int _mtfs_register_device(struct mtfs_device *device)
 		}
 		ret = -EEXIST;
 	} else {
-		list_add(&device->device_list, &mtfs_devs);
+		list_add(&device->md_list, &mtfs_devs);
 	}
 
 	return ret;
@@ -557,7 +557,7 @@ void _mtfs_unregister_device(struct mtfs_device *device)
 	struct list_head *p;
 
 	list_for_each(p, &mtfs_devs) {
-		found = list_entry(p, typeof(*found), device_list);
+		found = list_entry(p, typeof(*found), md_list);
 		if (found == device) {
 			list_del(p);
 			break;
@@ -696,7 +696,7 @@ int mtfs_proc_read_devices(char *page, char **start, off_t off,
 
 	spin_lock(&mtfs_device_lock);
 	list_for_each(p, &mtfs_devs) {
-		found = list_entry(p, typeof(*found), device_list);
+		found = list_entry(p, typeof(*found), md_list);
 		hash_num = full_name_hash(found->device_name, found->name_length);
 		sprintf(hash_name, "%x", hash_num);
 		ret += snprintf(ptr, count, "%s %s\n", found->device_name, hash_name);
