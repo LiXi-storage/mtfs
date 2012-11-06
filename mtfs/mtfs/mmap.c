@@ -99,7 +99,7 @@ int mtfs_writepage(struct page *page, struct writeback_control *wbc)
 
 	if (list->latest_bnum == 0) {
 		MERROR("page has no valid branch, please check it\n");
-		if (!(mtfs_i2dev(inode)->no_abort)) {
+		if (!mtfs_dev2noabort(mtfs_i2dev(inode))) {
 			ret = -EIO;
 			goto out_free_oplist;
 		}
@@ -114,7 +114,7 @@ int mtfs_writepage(struct page *page, struct writeback_control *wbc)
 			mtfs_oplist_check(list);
 			if (list->success_latest_bnum <= 0) {
 				MDEBUG("operation failed for all latest branches\n");
-				if (!(mtfs_i2dev(inode)->no_abort)) {
+				if (!mtfs_dev2noabort(mtfs_i2dev(inode))) {
 					ret = -EIO;
 					goto out_free_oplist;
 				}

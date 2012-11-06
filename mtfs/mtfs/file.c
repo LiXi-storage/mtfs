@@ -223,7 +223,7 @@ int mtfs_open(struct inode *inode, struct file *file)
 	if (list->latest_bnum == 0) {
 		MERROR("file [%.*s] has no valid branch, please check it\n",
 		       file->f_dentry->d_name.len, file->f_dentry->d_name.name);
-		if (!(mtfs_i2dev(inode)->no_abort)) {
+		if (!mtfs_dev2noabort(mtfs_i2dev(inode))) {
 			ret = -EIO;
 			goto out_free_oplist;
 		}
@@ -244,7 +244,7 @@ int mtfs_open(struct inode *inode, struct file *file)
 			mtfs_oplist_check(list);
 			if (list->success_latest_bnum <= 0) {
 				MDEBUG("operation failed for all latest branches\n");
-				if (!(mtfs_i2dev(inode)->no_abort)) {
+				if (!mtfs_dev2noabort(mtfs_i2dev(inode))) {
 					result = mtfs_oplist_result(list);
 					ret = result.ret;
 					goto out_free_file;

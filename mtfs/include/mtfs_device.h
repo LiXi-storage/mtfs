@@ -5,46 +5,53 @@
 #ifndef __MTFS_DEVICE_H__
 #define __MTFS_DEVICE_H__
 #if defined (__linux__) && defined(__KERNEL__)
-#include <linux/list.h>
+#include <mtfs_list.h>
 #include <parse_option.h>
 #include <mtfs_common.h>
 #include <mtfs_junction.h>
 #include <mtfs_heal.h>
 
 struct mtfs_branch_debug {
-	int active;       /* Wheather debug is active */
-	int errno;        /* Every write operation should return this errno */
-	__u32 bops_emask; /* Branch operation error mask */
+	int   mbd_active;     /* Wheather debug is active */
+	int   mbd_errno;      /* Every write operation should return this errno */
+	__u32 mbd_bops_emask; /* Branch operation error mask */
 };
 
 struct mtfs_device_branch {
-	char *path;                          /* Path for each branch */
-	int path_length;                     /* Length of the path for each branch */
-	struct lowerfs_operations *ops;      /* Lowerfs operation for each branch*/
-	struct mtfs_branch_debug debug;      /* Debug option for each branch */
-	struct proc_dir_entry *proc_entry;   /* Proc entry for each branch */
+	char                      *mdb_path;       /* Path for each branch */
+	int                        mdb_pathlen;    /* Length of the path for each branch */
+	struct lowerfs_operations *mdb_ops;        /* Lowerfs operation for each branch*/
+	struct mtfs_branch_debug   mdb_debug;      /* Debug option for each branch */
+	struct proc_dir_entry     *mdb_proc_entry; /* Proc entry for each branch */
 };
 
 struct mtfs_device {
-	struct list_head md_list;                          /* Managed in the device list */
-	char *device_name;                                 /* Name of the device */
-	int name_length;                                   /* Length of the device name */
-	struct super_block *sb;                            /* Super block this device belong to */
-	struct mtfs_junction *junction;                    /* Junction to lowerfs */
-	struct proc_dir_entry *proc_entry;                 /* Proc entry for this device */
-	int no_abort;                                      /* Do not abort when no latest branch success */
-	mtfs_bindex_t bnum;                                /* Branch number */
-	struct mtfs_device_branch branch[MTFS_BRANCH_MAX]; /* Info for each branch */
+	mtfs_list_t               md_list;                    /* Managed in the device list */
+	struct super_block       *md_sb;                      /* Super block this device belong to */
+	char                     *md_name;                    /* Name of the device */
+	int                       md_namelen;                 /* Length of the device name */
+	struct mtfs_junction     *md_junction;                /* Junction to lowerfs */
+	struct proc_dir_entry    *md_proc_entry;              /* Proc entry for this device */
+	int                       md_no_abort;                /* Do not abort when no latest branch success */
+	mtfs_bindex_t             md_bnum;                    /* Branch number */
+	struct mtfs_device_branch md_branch[MTFS_BRANCH_MAX]; /* Info for each branch */
 };
 
-#define mtfs_dev2bops(device, bindex)    (device->branch[bindex].ops)
-#define mtfs_dev2bpath(device, bindex)   (device->branch[bindex].path)
-#define mtfs_dev2blength(device, bindex) (device->branch[bindex].path_length)
-#define mtfs_dev2bproc(device, bindex)   (device->branch[bindex].proc_entry)
-#define mtfs_dev2branch(device, bindex)  (&device->branch[bindex])
-#define mtfs_dev2bnum(device)            (device->bnum)
-#define mtfs_dev2junction(device)        (device->junction)
+#define mtfs_dev2sb(device)              (device->md_sb)
+#define mtfs_dev2name(device)            (device->md_name)
+#define mtfs_dev2namelen(device)         (device->md_namelen)
+#define mtfs_dev2junction(device)        (device->md_junction)
+#define mtfs_dev2proc(device)            (device->md_proc_entry)
+#define mtfs_dev2noabort(device)         (device->md_no_abort)
 #define mtfs_dev2ops(device)             (mtfs_dev2junction(device)->mj_fs_ops)
+#define mtfs_dev2bnum(device)            (device->md_bnum)
+#define mtfs_dev2branch(device, bindex)  (&device->md_branch[bindex])
+#define mtfs_dev2bops(device, bindex)    (device->md_branch[bindex].mdb_ops)
+#define mtfs_dev2bpath(device, bindex)   (device->md_branch[bindex].mdb_path)
+#define mtfs_dev2blength(device, bindex) (device->md_branch[bindex].mdb_pathlen)
+#define mtfs_dev2bdebug(device, bindex)  (device->md_branch[bindex].mdb_debug)
+#define mtfs_dev2bproc(device, bindex)   (device->md_branch[bindex].mdb_proc_entry)
+
 
 #include <mtfs_super.h>
 static inline struct mtfs_device *mtfs_i2dev(struct inode *inode)

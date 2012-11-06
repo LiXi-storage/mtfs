@@ -26,7 +26,7 @@ static int mtfs_io_init_oplist(struct mtfs_io *io)
 	if (oplist->latest_bnum == 0) {
 		MERROR("[%.*s] has no valid branch, please check it\n",
 		       dentry->d_name.len, dentry->d_name.name);
-		if (!(mtfs_i2dev(inode)->no_abort)) {
+		if (!mtfs_dev2noabort(mtfs_i2dev(inode))) {
 			ret = -EIO;
 		}
 	}
@@ -200,7 +200,7 @@ static void mtfs_io_iter_fini_writev(struct mtfs_io *io, int init_ret)
 		if (io->mi_oplist.success_latest_bnum <= 0) {
 			MDEBUG("operation failed for all latest %d branches\n",
 			       io->mi_oplist.latest_bnum);
-			if (!(mtfs_i2dev(io->mi_oplist_dentry->d_inode)->no_abort)) {
+			if (!mtfs_dev2noabort(mtfs_i2dev(io->mi_oplist_dentry->d_inode))) {
 				io->mi_break = 1;
 				goto out;
 			}

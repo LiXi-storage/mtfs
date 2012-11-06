@@ -6,6 +6,7 @@
 #include <linux/uaccess.h>
 #include <linux/module.h>
 #include <compat.h>
+#include <mtfs_list.h>
 #include <mtfs_proc.h>
 #include <mtfs_dentry.h>
 #include "device_internal.h"
@@ -25,13 +26,13 @@ static struct mtfs_device *mtfs_device_alloc(struct mount_option *mount_option)
 		goto out;
 	}
 
-	device->bnum = bnum;
+	mtfs_dev2bnum(device) = bnum;
 
 	for(bindex = 0; bindex < bnum; bindex++) {
 		int length = mount_option->branch[bindex].length;
 
 		mtfs_dev2blength(device, bindex) = length;
-		device->name_length += length;
+		mtfs_dev2namelen(device) += length;
 		MTFS_ALLOC(mtfs_dev2bpath(device, bindex), length);
 		if (mtfs_dev2bpath(device, bindex) == NULL) {
 			bindex --;
@@ -40,18 +41,18 @@ static struct mtfs_device *mtfs_device_alloc(struct mount_option *mount_option)
 		memcpy(mtfs_dev2bpath(device, bindex), mount_option->branch[bindex].path, length - 1);
 	}
 
-	MTFS_ALLOC(device->device_name, device->name_length);
-	if (device->device_name == NULL) {
+	MTFS_ALLOC(mtfs_dev2name(device), mtfs_dev2namelen(device));
+	if (mtfs_dev2name(device) == NULL) {
 		goto out_free_path;
 	}
 
 	for(bindex = 0; bindex < bnum; bindex++) {
-		append_dir(device->device_name, mount_option->branch[bindex].path);
+		append_dir(mtfs_dev2name(device), mount_option->branch[bindex].path);
 	}
 
 	goto out;
 //out_free_name:
-	MTFS_FREE(device->device_name, device->name_length);
+	MTFS_FREE(mtfs_dev2name(device), mtfs_dev2namelen(device));
 out_free_path:
 	for(; bindex >= 0; bindex--) {
 		MTFS_FREE(mtfs_dev2bpath(device, bindex), mtfs_dev2blength(device, bindex));
@@ -72,35 +73,35 @@ static void mtfs_device_free(struct mtfs_device *device)
 	for(bindex = 0; bindex < bnum; bindex++) {
 		MTFS_FREE(mtfs_dev2bpath(device, bindex), mtfs_dev2blength(device, bindex));
 	}
-	MTFS_FREE(device->device_name, device->name_length);
+	MTFS_FREE(mtfs_dev2name(device), mtfs_dev2namelen(device));
 	MTFS_SLAB_FREE_PTR(device, mtfs_device_cache);
 }
 
 spinlock_t mtfs_device_lock = SPIN_LOCK_UNLOCKED;
-LIST_HEAD(mtfs_devs);
+static MTFS_LIST_HEAD(mtfs_devs);
 
 static struct mtfs_device *_mtfs_search_device(struct mtfs_device *device)
 {
 	struct mtfs_device *found = NULL;
-	struct list_head *p = NULL;
-	mtfs_bindex_t bindex = 0;
-	mtfs_bindex_t bnum = 0;
-	struct dentry *d_root  = device->sb->s_root;
-	struct dentry *d_root_tmp = NULL;
-	int have_same = 0;
-	int have_diff = 0;
+	mtfs_list_t        *p = NULL;
+	mtfs_bindex_t       bindex = 0;
+	mtfs_bindex_t       bnum = 0;
+	struct dentry      *d_root  = mtfs_dev2sb(device)->s_root;
+	struct dentry      *d_root_tmp = NULL;
+	int                 have_same = 0;
+	int                 have_diff = 0;
 
-	list_for_each(p, &mtfs_devs) {
-		found = list_entry(p, typeof(*found), md_list);
-		d_root_tmp = found->sb->s_root;
+	mtfs_list_for_each(p, &mtfs_devs) {
+		found = mtfs_list_entry(p, typeof(*found), md_list);
+		d_root_tmp = mtfs_dev2sb(found)->s_root;
 
 		MASSERT(d_root_tmp);
-		bnum = device->bnum;
-		if (bnum > found->bnum) {
-			bnum = found->bnum;
+		bnum = mtfs_dev2bnum(device);
+		if (bnum > mtfs_dev2bnum(found)) {
+			bnum = mtfs_dev2bnum(found);
 		}
-		if (bnum != found->bnum ||
-		    bnum != device->bnum) {
+		if (bnum != mtfs_dev2bnum(found) ||
+		    bnum != mtfs_dev2bnum(device)) {
 		    have_diff = 1;
 		}
 
@@ -146,11 +147,11 @@ static int _mtfs_register_device(struct mtfs_device *device)
 	found = _mtfs_search_device(device);
 	if (found != NULL) {
 		if (found == device) {
-			MERROR("try to register same devices %s for mutiple times\n",
-			        device->device_name);
+			MERROR("register same devices %s for mutiple times\n",
+			       mtfs_dev2name(device));
 		} else {
-			MERROR("try to register multiple devices for %s\n",
-			        device->device_name);
+			MERROR("register multiple devices for %s\n",
+			       mtfs_dev2name(device));
 		}
 		ret = -EEXIST;
 	} else {
@@ -168,7 +169,7 @@ int mtfs_device_proc_read_name(char *page, char **start, off_t off, int count,
 	char *ptr = page;
 
 	*eof = 1;
-	ret = snprintf(ptr, count, "%s\n", device->device_name);
+	ret = snprintf(ptr, count, "%s\n", mtfs_dev2name(device));
 	ptr += ret;
 	return ret;
 }
@@ -181,7 +182,7 @@ int mtfs_device_proc_read_bnum(char *page, char **start, off_t off, int count,
 	char *ptr = page;
 
 	*eof = 1;
-	ret = snprintf(ptr, count, "%d\n", device->bnum);
+	ret = snprintf(ptr, count, "%d\n", mtfs_dev2bnum(device));
 	ptr += ret;
 	return ret;
 }
@@ -194,7 +195,7 @@ int mtfs_device_proc_read_noabort(char *page, char **start, off_t off, int count
 	char *ptr = page;
 
 	*eof = 1;
-	ret = snprintf(ptr, count, "%d\n", device->no_abort);
+	ret = snprintf(ptr, count, "%d\n", mtfs_dev2noabort(device));
 	ptr += ret;
 	return ret;
 }
@@ -215,8 +216,8 @@ int mtfs_device_branch_proc_read_errno(char *page, char **start, off_t off, int 
 	char *ptr = page;
 
 	*eof = 1;
-	if (dev_branch->debug.active) {
-		ret = snprintf(ptr, count, "%d\n", dev_branch->debug.errno);
+	if (dev_branch->mdb_debug.mbd_active) {
+		ret = snprintf(ptr, count, "%d\n", dev_branch->mdb_debug.mbd_errno);
 	} else {
 		ret = snprintf(ptr, count, MTFS_ERRNO_INACTIVE"\n");
 	}
@@ -249,7 +250,7 @@ static int mtfs_device_branch_proc_write_errno(struct file *file, const char *bu
 	kern_buf[count] = '\0';
 
 	if (strncmp(MTFS_ERRNO_INACTIVE, kern_buf, strlen(MTFS_ERRNO_INACTIVE)) == 0) {
-		dev_branch->debug.active = 0;
+		dev_branch->mdb_debug.mbd_active = 0;
 		goto out;
 	}
 
@@ -269,8 +270,8 @@ static int mtfs_device_branch_proc_write_errno(struct file *file, const char *bu
 		goto out;
 	}
 
-	dev_branch->debug.active = 1;
-	dev_branch->debug.errno = var;
+	dev_branch->mdb_debug.mbd_active = 1;
+	dev_branch->mdb_debug.mbd_errno = var;
 out:
 	if (ret) {
 		MRETURN(ret);
@@ -297,7 +298,7 @@ int mtfs_device_proc_bops_emask_read(char *page, char **start, off_t off, int co
 	int ret = 0;
 	struct mtfs_device_branch *dev_branch = (struct mtfs_device_branch *)data;
 	char *ptr = page;
-	__u64 mask = dev_branch->debug.bops_emask;
+	__u64 mask = dev_branch->mdb_debug.mbd_bops_emask;
 	const char *token = NULL;
 	__u64 bit = 0;
 	int i = 0;
@@ -460,7 +461,7 @@ static int mtfs_device_proc_bops_emask_write(struct file *file, const char *buff
 	}
 	kern_buf[count] = '\0';
 
-	ret = mtfs_bops_str2mask(kern_buf, &(dev_branch->debug.bops_emask));
+	ret = mtfs_bops_str2mask(kern_buf, &(dev_branch->mdb_debug.mbd_bops_emask));
 out_free_buf:
 	MTFS_FREE(kern_buf, count + 1);
 out:
@@ -482,7 +483,6 @@ int mtfs_device_proc_register(struct mtfs_device *device)
 	unsigned int hash_num = 0;
 	char *name = NULL;
 	mtfs_bindex_t bindex = 0;
-	struct mtfs_device_branch *dev_branch = NULL;
 
 	MTFS_ALLOC(name, PATH_MAX);
 	if (name == NULL) {
@@ -491,25 +491,25 @@ int mtfs_device_proc_register(struct mtfs_device *device)
 		goto out;
 	}
 
-	hash_num = full_name_hash(device->device_name, device->name_length);
+	hash_num = full_name_hash(mtfs_dev2name(device), mtfs_dev2namelen(device));
 	sprintf(name, "%x", hash_num);
-	device->proc_entry = mtfs_proc_register(name, mtfs_proc_device,
-                                          mtfs_proc_vars_device, device);
-	if (unlikely(device->proc_entry == NULL)) {
-		MERROR("failed to register proc for device %s\n",
-		       device->device_name);
+	mtfs_dev2proc(device) = mtfs_proc_register(name, mtfs_proc_device,
+                                                   mtfs_proc_vars_device, device);
+	if (unlikely(mtfs_dev2proc(device) == NULL)) {
+		MERROR("failed to register proc for device [%s]\n",
+		       mtfs_dev2name(device));
 		ret = -ENOMEM;
 		goto out;
 	}
 
 	for (bindex = 0; bindex < mtfs_dev2bnum(device); bindex++) {
 		sprintf(name, "branch%d", bindex);
-		dev_branch = mtfs_dev2branch(device, bindex);
-		dev_branch->proc_entry = mtfs_proc_register(name, device->proc_entry,
-                                                mtfs_proc_vars_device_branch, dev_branch);
-		if (unlikely(dev_branch->proc_entry == NULL)) {
-			MERROR("failed to register proc for %s of device %s\n",
-			       name, device->device_name);
+		mtfs_dev2bproc(device, bindex) = mtfs_proc_register(name, mtfs_dev2proc(device),
+                                                                    mtfs_proc_vars_device_branch,
+                                                                    mtfs_dev2branch(device, bindex));
+		if (unlikely(mtfs_dev2bproc(device, bindex) == NULL)) {
+			MERROR("failed to register proc for branch[%d] of device [%s]\n",
+			       bindex, mtfs_dev2name(device));
 			bindex--;
 			ret = -ENOMEM;
 			goto out_unregister;
@@ -518,10 +518,9 @@ int mtfs_device_proc_register(struct mtfs_device *device)
 	goto out_free_name;
 out_unregister:
 	for (; bindex >= 0; bindex--) {
-		dev_branch = mtfs_dev2branch(device, bindex);
-		mtfs_proc_remove(&dev_branch->proc_entry);
+		mtfs_proc_remove(&mtfs_dev2bproc(device, bindex));
 	}
-	mtfs_proc_remove(&device->proc_entry);
+	mtfs_proc_remove(&mtfs_dev2proc(device));
 out_free_name:
 	MTFS_FREE(name, PATH_MAX);
 out:
@@ -533,11 +532,11 @@ void mtfs_device_proc_unregister(struct mtfs_device *device)
 {
 	mtfs_bindex_t bindex = 0;
 
-	MASSERT(device->proc_entry);
+	MASSERT(mtfs_dev2proc(device));
 	for (bindex = 0; bindex < mtfs_dev2bnum(device); bindex++) {
 		mtfs_proc_remove(&mtfs_dev2bproc(device, bindex));
 	}
-	mtfs_proc_remove(&device->proc_entry);
+	mtfs_proc_remove(&mtfs_dev2proc(device));
 }
 
 static int mtfs_register_device(struct mtfs_device *device)
@@ -553,11 +552,11 @@ static int mtfs_register_device(struct mtfs_device *device)
 
 void _mtfs_unregister_device(struct mtfs_device *device)
 {
-	struct mtfs_device *found;
-	struct list_head *p;
+	struct mtfs_device    *found;
+	mtfs_list_t           *p;
 
-	list_for_each(p, &mtfs_devs) {
-		found = list_entry(p, typeof(*found), md_list);
+	mtfs_list_for_each(p, &mtfs_devs) {
+		found = mtfs_list_entry(p, typeof(*found), md_list);
 		if (found == device) {
 			list_del(p);
 			break;
@@ -621,15 +620,15 @@ struct mtfs_device *mtfs_newdev(struct super_block *sb, struct mount_option *mou
 	}
 	secondary_types[secondary_number] = NULL;
 
-	newdev->junction = junction_get(mount_option->mo_subject, primary_type, secondary_types);
-	if (IS_ERR(newdev->junction)) {
+	mtfs_dev2junction(newdev) = junction_get(mount_option->mo_subject, primary_type, secondary_types);
+	if (IS_ERR(mtfs_dev2junction(newdev))) {
 		MERROR("junction not supported yet, type = %s, subject = %s\n",
 		       primary_type, mount_option->mo_subject); /* TODO: print secondary type */
-		ret = PTR_ERR(newdev->junction);
+		ret = PTR_ERR(mtfs_dev2junction(newdev));
 		goto out_put_module;
 	}
 
-	newdev->sb = sb;
+	mtfs_dev2sb(newdev) = sb;
 
 	ret = mtfs_register_device(newdev);
 	if (ret) {
@@ -645,7 +644,7 @@ struct mtfs_device *mtfs_newdev(struct super_block *sb, struct mount_option *mou
 out_unregister_device:
 	mtfs_unregister_device(newdev);
 out_put_junction:
-	junction_put(newdev->junction);
+	junction_put(mtfs_dev2junction(newdev));
 out_put_module:
 	for (bindex = 0; bindex < bnum; bindex++) {
 		lowerfs_ops = mtfs_dev2bops(newdev, bindex);
@@ -678,28 +677,28 @@ void mtfs_freedev(struct mtfs_device *device)
 		MASSERT(lowerfs_ops);
 		lowerfs_put_ops(lowerfs_ops);
 	}
-	junction_put(device->junction);
+	junction_put(mtfs_dev2junction(device));
 	mtfs_device_free(device);
 }
 
 int mtfs_proc_read_devices(char *page, char **start, off_t off,
                            int count, int *eof, void *data)
 {
-	int ret = 0;
-	struct list_head *p = NULL;
+	int                 ret = 0;
+	mtfs_list_t        *p = NULL;
 	struct mtfs_device *found = NULL;
-	char *ptr = page;
-	unsigned int hash_num = 0;
-	char hash_name[9];
+	char               *ptr = page;
+	unsigned int        hash_num = 0;
+	char                hash_name[9];
 
 	*eof = 1;
 
 	spin_lock(&mtfs_device_lock);
-	list_for_each(p, &mtfs_devs) {
-		found = list_entry(p, typeof(*found), md_list);
-		hash_num = full_name_hash(found->device_name, found->name_length);
+	mtfs_list_for_each(p, &mtfs_devs) {
+		found = mtfs_list_entry(p, typeof(*found), md_list);
+		hash_num = full_name_hash(mtfs_dev2name(found), mtfs_dev2namelen(found));
 		sprintf(hash_name, "%x", hash_num);
-		ret += snprintf(ptr, count, "%s %s\n", found->device_name, hash_name);
+		ret += snprintf(ptr, count, "%s %s\n", mtfs_dev2name(found), hash_name);
 		ptr += ret;
 	}
 	spin_unlock(&mtfs_device_lock);
@@ -711,10 +710,10 @@ int mtfs_device_branch_errno(struct mtfs_device *device, mtfs_bindex_t bindex, _
 	struct mtfs_device_branch *dev_branch = mtfs_dev2branch(device, bindex);
 	int errno = -EIO;
 
-	if ((emask & dev_branch->debug.bops_emask) != 0) {
-		if (dev_branch->debug.active) {
-			MASSERT(dev_branch->debug.errno < 0);
-			errno = dev_branch->debug.errno;
+	if ((emask & dev_branch->mdb_debug.mbd_bops_emask) != 0) {
+		if (dev_branch->mdb_debug.mbd_active) {
+			MASSERT(dev_branch->mdb_debug.mbd_errno < 0);
+			errno = dev_branch->mdb_debug.mbd_errno;
 		}
 		return errno;
 	}

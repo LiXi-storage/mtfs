@@ -221,7 +221,7 @@ int masync_bucket_add(struct masync_bucket *bucket,
 	                     &extent_list);
 
 	mtfs_list_for_each_entry_safe(tmp_extent, head, &extent_list, mi_linkage) {
-		MERROR("[%lu, %lu] overlaped with [%lu, %lu]\n",
+		MDEBUG("[%lu, %lu] overlaped with [%lu, %lu]\n",
 		       tmp_extent->mi_node.in_extent.start,
 		       tmp_extent->mi_node.in_extent.end,
 		       extent->start, extent->end);

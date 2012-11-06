@@ -368,7 +368,7 @@ int mtfs_lookup_backend(struct inode *dir, struct dentry *dentry, int interpose_
 	if (list->latest_bnum == 0) {
 		MERROR("directory [%.*s] has no valid branch, please check it\n",
 		       dentry->d_parent->d_name.len, dentry->d_parent->d_name.name);
-		if (!(mtfs_i2dev(dir)->no_abort)) {
+		if (!mtfs_dev2noabort(mtfs_i2dev(dir))) {
 			ret = -EIO;
 			goto out_free_oplist;
 		}
@@ -642,7 +642,7 @@ int mtfs_create(struct inode *dir, struct dentry *dentry, int mode, struct namei
 	if (list->latest_bnum == 0) {
 		MERROR("dir [%.*s] has no valid branch, please check it\n",
 		       dentry->d_parent->d_name.len, dentry->d_parent->d_name.name);
-		if (!(mtfs_i2dev(dir)->no_abort)) {
+		if (!mtfs_dev2noabort(mtfs_i2dev(dir))) {
 			ret = -EIO;
 			goto out_free_oplist;
 		}
@@ -657,7 +657,7 @@ int mtfs_create(struct inode *dir, struct dentry *dentry, int mode, struct namei
 			mtfs_oplist_check(list);
 			if (list->success_latest_bnum <= 0) {
 				MDEBUG("operation failed for all latest branches\n");
-				if (!(mtfs_i2dev(dir)->no_abort)) {
+				if (!mtfs_dev2noabort(mtfs_i2dev(dir))) {
 					ret = -EIO;
 					goto out_free_oplist;
 				}
@@ -783,7 +783,7 @@ int mtfs_link(struct dentry *old_dentry, struct inode *dir, struct dentry *new_d
 	if (list->latest_bnum == 0) {
 		MERROR("directory [%.*s] has no valid branch, please check it\n",
 		       new_dentry->d_parent->d_name.len, new_dentry->d_parent->d_name.name);
-		if (!(mtfs_i2dev(dir)->no_abort)) {
+		if (!mtfs_dev2noabort(mtfs_i2dev(dir))) {
 			ret = -EIO;
 			goto out_free_oplist;
 		}
@@ -798,7 +798,7 @@ int mtfs_link(struct dentry *old_dentry, struct inode *dir, struct dentry *new_d
 			mtfs_oplist_check(list);
 			if (list->success_latest_bnum <= 0) {
 				MDEBUG("operation failed for all latest %d branches\n", list->latest_bnum);
-				if (!(mtfs_i2dev(dir)->no_abort)) {
+				if (!mtfs_dev2noabort(mtfs_i2dev(dir))) {
 					result = mtfs_oplist_result(list);
 					ret = result.ret;
 					goto out_free_oplist;
@@ -945,7 +945,7 @@ int mtfs_unlink(struct inode *dir, struct dentry *dentry)
 	if (list->latest_bnum == 0) {
 		MERROR("dir [%.*s] has no valid branch, please check it\n",
 		       dentry->d_parent->d_name.len, dentry->d_parent->d_name.name);
-		if (!(mtfs_i2dev(inode)->no_abort)) {
+		if (!mtfs_dev2noabort(mtfs_i2dev(dir))) {
 			ret = -EIO;
 			goto out_free_oplist;
 		}
@@ -960,7 +960,7 @@ int mtfs_unlink(struct inode *dir, struct dentry *dentry)
 			mtfs_oplist_check(list);
 			if (list->success_latest_bnum <= 0) {
 				MDEBUG("operation failed for all latest %d branches\n", list->latest_bnum);
-				if (!(mtfs_i2dev(dir)->no_abort)) {
+				if (!mtfs_dev2noabort(mtfs_i2dev(dir))) {
 					result = mtfs_oplist_result(list);
 					ret = result.ret;
 					goto out_free_oplist;
@@ -1099,7 +1099,7 @@ int mtfs_rmdir(struct inode *dir, struct dentry *dentry)
 	if (list->latest_bnum == 0) {
 		MERROR("dir [%.*s] has no valid branch, please check it\n",
 		       dentry->d_parent->d_name.len, dentry->d_parent->d_name.name);
-		if (!(mtfs_i2dev(dir)->no_abort)) {
+		if (!mtfs_dev2noabort(mtfs_i2dev(dir))) {
 			ret = -EIO;
 			goto out_free_oplist;
 		}
@@ -1114,7 +1114,7 @@ int mtfs_rmdir(struct inode *dir, struct dentry *dentry)
 			mtfs_oplist_check(list);
 			if (list->success_latest_bnum <= 0) {
 				MDEBUG("operation failed for all latest %d branches\n", list->latest_bnum);
-				if (!(mtfs_i2dev(dir)->no_abort)) {
+				if (!mtfs_dev2noabort(mtfs_i2dev(dir))) {
 					result = mtfs_oplist_result(list);
 					ret = result.ret;
 					goto out_free_oplist;
@@ -1230,7 +1230,7 @@ int mtfs_symlink(struct inode *dir, struct dentry *dentry, const char *symname)
 	if (list->latest_bnum == 0) {
 		MERROR("dir [%.*s] has no valid branch, please check it\n",
 		       dentry->d_parent->d_name.len, dentry->d_parent->d_name.name);
-		if (!(mtfs_i2dev(dir)->no_abort)) {
+		if (!mtfs_dev2noabort(mtfs_i2dev(dir))) {
 			ret = -EIO;
 			goto out_free_oplist;
 		}
@@ -1245,7 +1245,7 @@ int mtfs_symlink(struct inode *dir, struct dentry *dentry, const char *symname)
 			mtfs_oplist_check(list);
 			if (list->success_latest_bnum <= 0) {
 				MDEBUG("operation failed for all latest %d branches\n", list->latest_bnum);
-				if (!(mtfs_i2dev(dir)->no_abort)) {
+				if (!mtfs_dev2noabort(mtfs_i2dev(dir))) {
 					result = mtfs_oplist_result(list);
 					ret = result.ret;
 					goto out_free_oplist;
@@ -1357,7 +1357,7 @@ int mtfs_mkdir(struct inode *dir, struct dentry *dentry, int mode)
 	if (list->latest_bnum == 0) {
 		MERROR("dir [%.*s] has no valid branch, please check it\n",
 		       dentry->d_parent->d_name.len, dentry->d_parent->d_name.name);
-		if (!(mtfs_i2dev(dir)->no_abort)) {
+		if (!mtfs_dev2noabort(mtfs_i2dev(dir))) {
 			ret = -EIO;
 			goto out_free_oplist;
 		}
@@ -1373,7 +1373,7 @@ int mtfs_mkdir(struct inode *dir, struct dentry *dentry, int mode)
 			mtfs_oplist_check(list);
 			if (list->success_latest_bnum <= 0) {
 				MDEBUG("operation failed for all latest %d branches\n", list->latest_bnum);
-				if (!(mtfs_i2dev(dir)->no_abort)) {
+				if (!mtfs_dev2noabort(mtfs_i2dev(dir))) {
 					result = mtfs_oplist_result(list);
 					ret = result.ret;
 					goto out_free_oplist;
@@ -1492,7 +1492,7 @@ int mtfs_mknod(struct inode *dir, struct dentry *dentry, int mode, dev_t dev)
 	if (list->latest_bnum == 0) {
 		MERROR("dir [%.*s] has no valid branch, please check it\n",
 		       dentry->d_parent->d_name.len, dentry->d_parent->d_name.name);
-		if (!(mtfs_i2dev(dir)->no_abort)) {
+		if (!mtfs_dev2noabort(mtfs_i2dev(dir))) {
 			ret = -EIO;
 			goto out_free_oplist;
 		}
@@ -1508,7 +1508,7 @@ int mtfs_mknod(struct inode *dir, struct dentry *dentry, int mode, dev_t dev)
 			mtfs_oplist_check(list);
 			if (list->success_latest_bnum <= 0) {
 				MDEBUG("operation failed for all latest branches\n");
-				if (!(mtfs_i2dev(dir)->no_abort)) {
+				if (!mtfs_dev2noabort(mtfs_i2dev(dir))) {
 					result = mtfs_oplist_result(list);
 					ret = result.ret;
 					goto out_free_oplist;
@@ -1650,7 +1650,7 @@ int mtfs_rename(struct inode *old_dir, struct dentry *old_dentry, struct inode *
 	if (list->latest_bnum == 0) {
 		MERROR("dir [%.*s] has no valid branch, please check it\n",
 		       old_dentry->d_parent->d_name.len, old_dentry->d_parent->d_name.name);
-		if (!(mtfs_i2dev(old_dir)->no_abort)) {
+		if (!mtfs_dev2noabort(mtfs_i2dev(old_dir))) {
 			ret = -EIO;
 			goto out_free_oplist;
 		}
@@ -1665,7 +1665,7 @@ int mtfs_rename(struct inode *old_dir, struct dentry *old_dentry, struct inode *
 			mtfs_oplist_check(list);
 			if (list->success_latest_bnum <= 0) {
 				MDEBUG("rename failed for all latest %d branches\n", list->latest_bnum);
-				if (!(mtfs_i2dev(old_dir)->no_abort)) {
+				if (!mtfs_dev2noabort(mtfs_i2dev(old_dir))) {
 					result = mtfs_oplist_result(list);
 					ret = result.ret;
 					goto out_free_oplist;
@@ -2034,7 +2034,7 @@ int mtfs_setxattr(struct dentry *dentry, const char *name, const void *value, si
 	if (list->latest_bnum == 0) {
 		MERROR("dentry [%.*s] has no valid branch, please check it\n",
 		       dentry->d_name.len, dentry->d_name.name);
-		if (!(mtfs_d2dev(dentry)->no_abort)) {
+		if (!mtfs_dev2noabort(mtfs_d2dev(dentry))) {
 			ret = -EIO;
 			goto out_free_oplist;
 		}
@@ -2049,7 +2049,7 @@ int mtfs_setxattr(struct dentry *dentry, const char *name, const void *value, si
 			mtfs_oplist_check(list);
 			if (list->success_latest_bnum <= 0) {
 				MDEBUG("operation failed for all latest %d branches\n", list->latest_bnum);
-				if (!(mtfs_d2dev(dentry)->no_abort)) {
+				if (!mtfs_dev2noabort(mtfs_d2dev(dentry))) {
 					result = mtfs_oplist_result(list);
 					ret = result.ret;
 					goto out_free_oplist;
@@ -2130,7 +2130,7 @@ int mtfs_removexattr(struct dentry *dentry, const char *name)
 	if (list->latest_bnum == 0) {
 		MERROR("dir [%.*s] has no valid branch, please check it\n",
 		       dentry->d_parent->d_name.len, dentry->d_parent->d_name.name);
-		if (!(mtfs_d2dev(dentry)->no_abort)) {
+		if (!mtfs_dev2noabort(mtfs_d2dev(dentry))) {
 			ret = -EIO;
 			goto out_free_oplist;
 		}
@@ -2145,7 +2145,7 @@ int mtfs_removexattr(struct dentry *dentry, const char *name)
 			mtfs_oplist_check(list);
 			if (list->success_latest_bnum <= 0) {
 				MDEBUG("operation failed for all latest %d branches\n", list->latest_bnum);
-				if (!(mtfs_i2dev(dentry->d_inode)->no_abort)) {
+				if (!mtfs_dev2noabort(mtfs_d2dev(dentry))) {
 					result = mtfs_oplist_result(list);
 					ret = result.ret;
 					goto out_free_oplist;
