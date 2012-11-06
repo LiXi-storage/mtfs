@@ -122,9 +122,24 @@ static void masync_bucket_add_to_lru(struct masync_bucket *bucket)
 	MASSERT(mtfs_list_empty(&bucket->mab_linkage));
 	MASSERT(bucket->mab_root != NULL);
 	MASSERT(atomic_read(&bucket->mab_nr) != 0);
-	masync_info_write_lock(bucket->mab_info);
+	masync_info_write_lock(info);
 	masync_bucket_add_to_lru_nonlock(bucket);
-	masync_info_write_unlock(bucket->mab_info);
+	masync_info_write_unlock(info);
+	_MRETURN();
+}
+
+static void masync_bucket_degrade_in_lru_nonlock(struct masync_bucket *bucket)
+{
+	struct msubject_async_info *info = NULL;
+        MENTRY();
+
+	info = bucket->mab_info;
+	MASSERT(info);
+	MASSERT(!mtfs_list_empty(&bucket->mab_linkage));
+	MASSERT(bucket->mab_root != NULL);
+	MASSERT(atomic_read(&bucket->mab_nr) != 0);
+	mtfs_list_move(&bucket->mab_linkage, &info->msai_dirty_buckets);
+
 	_MRETURN();
 }
 
@@ -229,7 +244,7 @@ int masync_bucket_add(struct masync_bucket *bucket,
 	if (mtfs_list_empty(&bucket->mab_linkage)) {
 		masync_bucket_add_to_lru(bucket);
 	} else {
-		//masync_bucket_touch_in_lru(bucket);
+		masync_bucket_touch_in_lru(bucket);
 	}
 	masync_bucket_unlock(bucket);
 
@@ -304,31 +319,44 @@ int masync_cancel(struct msubject_async_info *info, int nr_to_cacel)
 {
 	int ret = 0;
 	struct masync_bucket *bucket = NULL;
+	struct masync_bucket *n = NULL;
 	int canceled = 0;
+	int degraded = 0;
 	MENTRY();
 
 	MASSERT(nr_to_cacel > 0);
-	masync_info_write_lock(info);
 	while (ret < nr_to_cacel) {
-		if (mtfs_list_empty(&info->msai_dirty_buckets)) {
-			MDEBUG("only canceled %d/%d, but the dirty list is empty\n",
+		degraded = 0;
+
+		masync_info_write_lock(info);
+		mtfs_list_for_each_entry_safe(bucket, n, &info->msai_dirty_buckets, mab_linkage) {
+			if (masync_bucket_trylock(bucket) != 0) {
+				/*
+				 * Do not wait, degrade instead to free it next time.
+				 * Not precisely fair, but that is OK.
+				 */
+				masync_bucket_degrade_in_lru_nonlock(bucket);
+				degraded++;
+				MDEBUG("a bucket is too busy to be freed\n");
+				continue;
+			}
+	
+			canceled = masync_bucket_cancel(bucket, nr_to_cacel - ret);
+			masync_bucket_unlock(bucket);
+			ret += canceled;
+			if (ret >= nr_to_cacel) {
+				break;
+			}
+		}
+		masync_info_write_unlock(info);
+
+		if (ret < nr_to_cacel && degraded == 0) {
+			MERROR("only canceled %d/%d, but none is available\n",
 			       ret, nr_to_cacel);
+			break;
 		}
-
-		bucket = mtfs_list_entry(info->msai_dirty_buckets.prev, struct masync_bucket, mab_linkage);
-
-		/* Do not wait here in case of deadlock */
-		if (masync_bucket_trylock(bucket) != 0) {
-			masync_bucket_touch_in_lru_nonlock(bucket);
-			MDEBUG("failed to lock a bucket for one time\n");
-			continue;
-		}
-
-		canceled = masync_bucket_cancel(bucket, nr_to_cacel - ret);
-		masync_bucket_unlock(bucket);
-		ret += canceled;
 	}
-	masync_info_write_unlock(info);
+	
 
 	MRETURN(ret);
 }
