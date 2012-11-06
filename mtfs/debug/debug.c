@@ -277,7 +277,8 @@ int mtfs_str2mask(const char *str, const char *(*bit2str)(int bit),
 }
 
 int
-mtfs_common_mask2str(char *str, int size, int mask, const char *(*mask2str)(int bit))
+mtfs_common_mask2str(char *str, int size, int mask,
+                     const char *(*mask2str)(int bit))
 {
 	int           len = 0;
 	const char   *token;
@@ -319,9 +320,11 @@ mtfs_common_mask2str(char *str, int size, int mask, const char *(*mask2str)(int 
 
 	return len;
 }
+EXPORT_SYMBOL(mtfs_common_mask2str);
 
 int
-mtfs_common_str2mask(int *mask, const char *str, const char *(*mask2str)(int bit), int minmask)
+mtfs_common_str2mask(int *mask, const char *str,
+                     const char *(*mask2str)(int bit), int minmask)
 {
         int         m = 0;
         int         matched;
@@ -349,6 +352,7 @@ mtfs_common_str2mask(int *mask, const char *str, const char *(*mask2str)(int bit
         return mtfs_str2mask(str, mask2str, mask, minmask,
                             0xffffffff);
 }
+EXPORT_SYMBOL(mtfs_common_str2mask);
 
 int mtfs_common_proc_dobitmasks(void *data, int write,
                                 loff_t pos, void *buffer,

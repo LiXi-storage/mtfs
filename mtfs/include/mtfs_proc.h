@@ -44,6 +44,16 @@ struct mtfs_proc_vars {
         mode_t proc_mode;
 };
 
+extern int mtfs_trace_copyin_string(char *knl_buffer, int knl_buffer_nob,
+                                    const char *usr_buffer, int usr_buffer_nob);
+extern int mtfs_common_str2mask(int *mask,
+                                const char *str,
+                                const char *(*mask2str)(int bit),
+                                int minmask);
+extern int mtfs_common_mask2str(char *str,
+                                int size,
+                                int mask,
+                                const char *(*mask2str)(int bit));
 extern void mtfs_proc_remove(struct proc_dir_entry **rooth);
 extern struct proc_dir_entry *mtfs_proc_register(const char *name,
                                             struct proc_dir_entry *parent,

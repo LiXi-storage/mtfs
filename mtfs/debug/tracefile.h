@@ -29,8 +29,6 @@ int mtfs_trace_dump_debug_buffer_usrstr(void *usr_str, int usr_str_nob);
 int mtfs_trace_allocate_string_buffer(char **str, int nob);
 int mtfs_trace_copyout_string(char *usr_buffer, int usr_buffer_nob,
                               const char *knl_buffer, char *append);
-int mtfs_trace_copyin_string(char *knl_buffer, int knl_buffer_nob,
-                             const char *usr_buffer, int usr_buffer_nob);
 void mtfs_trace_free_string_buffer(char *str, int nob);
 #define TCD_MAX_PAGES (5 << (20 - PAGE_CACHE_SHIFT))
 #define TCD_STOCK_PAGES (TCD_MAX_PAGES)

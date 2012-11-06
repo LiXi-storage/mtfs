@@ -49,7 +49,7 @@ mtrace_ops2str(int mask)
 		return NULL;
 	case TOPS_READ:
 		return "read";
-        case TOPS_WRITE:
+	case TOPS_WRITE:
 		return "write";
         }
 }
@@ -62,7 +62,7 @@ mtrace_unit2str(int mask)
 		return NULL;
 	case TUINT_TIME:
 		return "time";
-        case TUINT_UID:
+	case TUINT_UID:
 		return "uid";
         }
 }

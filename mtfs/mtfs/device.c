@@ -225,7 +225,6 @@ int mtfs_device_branch_proc_read_errno(char *page, char **start, off_t off, int 
 	return ret;
 }
 
-
 static int mtfs_device_branch_proc_write_errno(struct file *file, const char *buffer,
                                                unsigned long count, void *data)
 {
@@ -279,191 +278,55 @@ out:
 	MRETURN(count);
 }
 
-const char *mtfs_bops_bit2str(__u32 bit)
+const char *mtfs_bops_mask2str(int mask)
 {
-	switch (bit) {
+	switch (1 << mask) {
+	default:
+		return NULL;
 	case BOPS_MASK_WRITE:
 		return "write_ops";
 	case BOPS_MASK_READ:
 		return "read_ops";
-	default:
-		return NULL;
 	}
-	return NULL;
 }
 
 int mtfs_device_proc_bops_emask_read(char *page, char **start, off_t off, int count,
-                                       int *eof, void *data)
+                                     int *eof, void *data)
 {
 	int ret = 0;
 	struct mtfs_device_branch *dev_branch = (struct mtfs_device_branch *)data;
-	char *ptr = page;
-	__u64 mask = dev_branch->mdb_debug.mbd_bops_emask;
-	const char *token = NULL;
-	__u64 bit = 0;
-	int i = 0;
-	int first = 1;
+	int mask = dev_branch->mdb_debug.mbd_bops_emask;
 	MENTRY();
 
 	*eof = 1;
-	for (i = 0; i < 32; i++) {
-		bit = 1 << i;
-		if ((mask & bit) == 0) {
-			continue;
-		}
 
-		token = mtfs_bops_bit2str(bit);
-		if (token == NULL) {
-			/* unused bit */
-			continue;
-		}
-
-		MERROR("matched %d\n", i);
-		if (first) {
-			ret += snprintf(ptr + ret, count - ret, "%s", token);
-			first = 0;
-		} else {
-			ret += snprintf(ptr + ret, count - ret, " %s", token);
-		}
-	}
-	ret += snprintf(ptr + ret, count - ret, "\n");
-
-	MRETURN(ret);
-}
-
-int mtfs_bops_str2bit(const char *str, size_t length, __u64 *mask)
-{
-	const char *token = NULL;
-	int i = 0;
-	int ret = 0;
-	__u64 bit = 0;;
-	MENTRY();
-
-	MASSERT(str);
-	MASSERT(length > 0);
-	for (i = 0; i < 32; i++) {
-		bit = 1 << i;
-
-		token = mtfs_bops_bit2str(bit);
-		if (token == NULL) {
-			/* unused bit */
-			continue;
-		}
-
-		if (length != strlen(token)) {
-			continue;
-		}
-
-		ret = strncasecmp(str, token, length);
-		if (ret == 0) {
-			*mask = bit;
-			goto out;
-		}
-	}
-	ret = -EINVAL;
-out:
-	MRETURN(ret);
-}
-
-/*
- * <str> must be a list of tokens separated by
- * whitespace and optionally an operator ('+' or '-').  If an operator
- * appears first in <str>, '*mask' is used as the starting point
- * (relative), otherwise 0 is used (absolute).  An operator applies to
- * all following tokens up to the next operator.
- */
-int mtfs_bops_str2mask(const char *str, __u32 *mask)
-{
-	int ret = 0;
-	__u64 mask_tmp = 0;
-	char op = 0;
-	int matched = 0;
-	__u64 mask_bit = 0;
-	int n = 0;
-	MENTRY();
-
-	while (*str != 0) {
-		while (isspace(*str)) {
-			/* skip whitespace */
-			str++;
-		}
-
-		if (*str == 0) {
-			break;
-		}
-
-		if (*str == '+' || *str == '-') {
-			op = *str++;
-
-			/* op on first token == relative */
-			if (!matched) {
-				mask_tmp = *mask;
-			}
-
-			while (isspace(*str)) {
-				/* skip whitespace */
-				str++;
-			}
-
-			if (*str == 0) {
-				/* trailing op */
-				ret = -EINVAL;
-				goto out;
-			}
-		}
-
-		/* find token length */
-		for (n = 0; str[n] != 0 && !isspace(str[n]); n++);
-		MASSERT(n > 0);
-
-		/* match token */
-		ret = mtfs_bops_str2bit(str, n, &mask_bit);
-		if (ret) {
-			goto out;
-		}
-
-		matched = 1;
-		if (op == '-') {
-			mask_tmp &= ~mask_bit;
-		} else {
-			mask_tmp |= mask_bit;
-		}
-
-		str += n;
-	}
-
-	if (matched) {
-		*mask = mask_tmp;
-	} else {
-		*mask = 0;
-	}
-out:
+	ret = mtfs_common_mask2str(page, count, mask, mtfs_bops_mask2str);
 	MRETURN(ret);
 }
 
 static int mtfs_device_proc_bops_emask_write(struct file *file, const char *buffer,
-                                               unsigned long count, void *data)
+                                             unsigned long count, void *data)
 {
 	int ret = 0;
-	char *kern_buf = NULL;
+	char *tmpstr = NULL;
 	struct mtfs_device_branch *dev_branch = (struct mtfs_device_branch *)data;
 	MENTRY();
 
-	MTFS_ALLOC(kern_buf, count + 1);
-	if (kern_buf == NULL) {
+	MTFS_ALLOC(tmpstr, count + 1);
+	if (tmpstr == NULL) {
 		ret = -ENOMEM;
 		goto out;
 	}
 
-	if (copy_from_user(kern_buf, buffer, count)) {
-		ret = -EINVAL;
+	ret = mtfs_trace_copyin_string(tmpstr, count + 1, buffer, count);
+	if (ret < 0) {
 		goto out_free_buf;
 	}
-	kern_buf[count] = '\0';
 
-	ret = mtfs_bops_str2mask(kern_buf, &(dev_branch->mdb_debug.mbd_bops_emask));
+	ret = mtfs_common_str2mask(&(dev_branch->mdb_debug.mbd_bops_emask),
+	                           tmpstr, mtfs_bops_mask2str, 0);
 out_free_buf:
-	MTFS_FREE(kern_buf, count + 1);
+	MTFS_FREE(tmpstr, count + 1);
 out:
 	if (ret) {
 		MRETURN(ret);
@@ -705,18 +568,22 @@ int mtfs_proc_read_devices(char *page, char **start, off_t off,
 	return ret;
 }
 
+#define MTFS_DEFAULT_ERRNO (-EIO)
 int mtfs_device_branch_errno(struct mtfs_device *device, mtfs_bindex_t bindex, __u32 emask)
 {
 	struct mtfs_device_branch *dev_branch = mtfs_dev2branch(device, bindex);
-	int errno = -EIO;
+	int errno = 0;
+	MENTRY();
 
 	if ((emask & dev_branch->mdb_debug.mbd_bops_emask) != 0) {
 		if (dev_branch->mdb_debug.mbd_active) {
 			MASSERT(dev_branch->mdb_debug.mbd_errno < 0);
 			errno = dev_branch->mdb_debug.mbd_errno;
+		} else {
+			errno = MTFS_DEFAULT_ERRNO;
 		}
-		return errno;
 	}
-	return 0;
+
+	MRETURN(errno);
 }
 EXPORT_SYMBOL(mtfs_device_branch_errno);
