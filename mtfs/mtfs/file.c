@@ -14,7 +14,7 @@
 #include <mtfs_lock.h>
 #include "dentry_internal.h"
 #include "file_internal.h"
-#include "support_internal.h"
+#include "lowerfs_internal.h"
 #include "mmap_internal.h"
 #include "io_internal.h"
 

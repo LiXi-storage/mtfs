@@ -5,7 +5,7 @@
 #include <linux/fs.h>
 #include <linux/module.h>
 #include <mtfs_common.h>
-#include "support_internal.h"
+#include "lowerfs_internal.h"
 
 int mtfs_flag_invalidate_data(struct inode *inode, mtfs_bindex_t bindex)
 {

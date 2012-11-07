@@ -2,8 +2,8 @@
  * Copyright (C) 2011 Li Xi <pkuelelixi@gmail.com>
  */
 
-#ifndef __MTFS_SUPPORT_H__
-#define __MTFS_SUPPORT_H__
+#ifndef __MTFS_LOWERFS_H__
+#define __MTFS_LOWERFS_H__
 
 #if defined (__linux__) && defined(__KERNEL__)
 
@@ -34,4 +34,4 @@ extern void lowerfs_unregister_ops(struct lowerfs_operations *fs_ops);
 #error This head is only for kernel space use
 #endif /* !defined (__linux__) && defined(__KERNEL__) */
 
-#endif /* __MTFS_SUPPORT_H__ */
+#endif /* __MTFS_LOWERFS_H__ */

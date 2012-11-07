@@ -5,7 +5,7 @@
 #include <linux/module.h>
 #include <memory.h>
 #include <mtfs_heal.h>
-#include <mtfs_support.h>
+#include <mtfs_lowerfs.h>
 #include <mtfs_super.h>
 #include <mtfs_dentry.h>
 #include <mtfs_inode.h>

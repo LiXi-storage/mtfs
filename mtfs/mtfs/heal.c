@@ -10,7 +10,7 @@
 #include <mtfs_selfheal.h>
 #include "inode_internal.h"
 #include "heal_internal.h"
-#include "support_internal.h"
+#include "lowerfs_internal.h"
 
 /* If succeed, return dchild_new which needed to be dput */
 struct dentry *mtfs_dchild_rename2new(struct dentry *dparent, struct dentry *dchild_old,

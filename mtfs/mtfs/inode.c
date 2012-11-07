@@ -13,7 +13,7 @@
 #include <mtfs_oplist.h>
 #include <mtfs_dentry.h>
 #include <mtfs_inode.h>
-#include "support_internal.h"
+#include "lowerfs_internal.h"
 #include "inode_internal.h"
 #include "heal_internal.h"
 #include "super_internal.h"

@@ -8,7 +8,7 @@ mtfs-objs   := dentry.o \
 	rule_tree.o \
 	queue.o \
 	parse_option.o \
-	support.o \
+	lowerfs.o \
 	junction.o \
 	stack.o \
 	hide.o \
@@ -29,7 +29,7 @@ mtfs-objs   := dentry.o \
 EXTRA_DIST := $(mtfs-objs:.o=.c)
 EXTRA_DIST += dentry_internal.h device_internal.h file_internal.h hide_internal.h
 EXTRA_DIST += inode_internal.h junction_internal.h main_internal.h mmap_internal.h
-EXTRA_DIST += super_internal.h support_internal.h flag_internal.h ioctl_internal.h
+EXTRA_DIST += super_internal.h lowerfs_internal.h flag_internal.h ioctl_internal.h
 EXTRA_DIST += heal_internal.h io_internal.h subject_internal.h async_internal.h
 
 @INCLUDE_RULES@

@@ -2,7 +2,7 @@
  * Copyright (C) 2011 Li Xi <pkuelelixi@gmail.com>
  */
 
-#include <mtfs_support.h>
+#include <mtfs_lowerfs.h>
 #include <mtfs_super.h>
 #include <mtfs_dentry.h>
 #include <mtfs_inode.h>

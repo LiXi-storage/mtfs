@@ -9,7 +9,7 @@
 #include "heal_internal.h"
 #include "dentry_internal.h"
 #include "ioctl_internal.h"
-#include "support_internal.h"
+#include "lowerfs_internal.h"
 
 static int mtfs_user_get_state(struct inode *inode, struct file *file, struct mtfs_user_flag __user *user_state, mtfs_bindex_t max_bnum)
 {

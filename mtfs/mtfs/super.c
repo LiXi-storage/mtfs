@@ -16,7 +16,7 @@
 #include <mtfs_dentry.h>
 #include "device_internal.h"
 #include "inode_internal.h"
-#include "support_internal.h"
+#include "lowerfs_internal.h"
 #include "main_internal.h"
 #include "subject_internal.h"
 #include "async_internal.h"

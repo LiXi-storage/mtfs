@@ -4,7 +4,7 @@
 
 #include <linux/module.h>
 #include <debug.h>
-#include "support_internal.h"
+#include "lowerfs_internal.h"
 
 spinlock_t mtfs_lowerfs_lock = SPIN_LOCK_UNLOCKED;
 LIST_HEAD(lowerfs_types);

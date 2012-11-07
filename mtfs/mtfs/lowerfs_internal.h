@@ -2,11 +2,11 @@
  * Copyright (C) 2011 Li Xi <pkuelelixi@gmail.com>
  */
 
-#ifndef __MTFS_SUPPORT_INTERNAL_H__
-#define __MTFS_SUPPORT_INTERNAL_H__
+#ifndef __MTFS_LOWERFS_INTERNAL_H__
+#define __MTFS_LOWERFS_INTERNAL_H__
 #include <raid.h>
 #include <mtfs_common.h>
-#include <mtfs_support.h>
+#include <mtfs_lowerfs.h>
 #include <mtfs_flag.h>
 
 struct lowerfs_operations *lowerfs_get_ops(const char *type);
@@ -140,4 +140,4 @@ static inline struct mtfs_operations *mtfs_f2ops(struct file *file)
 	struct dentry *dentry = file->f_dentry;
 	return mtfs_d2ops(dentry);
 }
-#endif /* __MTFS_SUPPORT_INTERNAL_H__ */
+#endif /* __MTFS_LOWERFS_INTERNAL_H__ */

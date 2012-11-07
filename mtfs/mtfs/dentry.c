@@ -7,7 +7,7 @@
 #include <linux/version.h>
 #include <linux/module.h>
 #include <debug.h>
-#include "support_internal.h"
+#include "lowerfs_internal.h"
 #include "inode_internal.h"
 #include "dentry_internal.h"
 

@@ -195,7 +195,7 @@ static enum mtfs_interval_iter masync_overlap_cb(struct mtfs_interval_node *node
 }
 
 static int masync_bucket_add(struct masync_bucket *bucket,
-                      struct mtfs_interval_node_extent *extent)
+                             struct mtfs_interval_node_extent *extent)
 {
 	MTFS_LIST_HEAD(extent_list);
 	struct mtfs_interval *tmp_extent = NULL;

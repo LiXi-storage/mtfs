@@ -3,7 +3,7 @@
  */
 
 #include <mtfs_subject.h>
-#include "support_internal.h"
+#include "lowerfs_internal.h"
 
 int mtfs_subject_init(struct super_block *sb)
 {
