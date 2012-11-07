@@ -156,15 +156,14 @@ void mtfs_clear_inode(struct inode *inode)
 	mtfs_bindex_t bindex = 0;
 	mtfs_bindex_t bnum = 0;
 	struct inode *hidden_inode = NULL;
-	struct lowerfs_operations *lowerfs_ops = NULL;
+	struct mtfs_lowerfs *lowerfs = NULL;
 	MENTRY();
 
 	for (bindex = 0; bindex < mtfs_i2bnum(inode); bindex++) {
 		if (mtfs_i2branch(inode, bindex) == NULL) {
 			continue;
 		}
-		lowerfs_ops = mtfs_i2bops(inode, bindex);
-		lowerfs_idata_finit(lowerfs_ops, mtfs_i2branch(inode, bindex));
+		lowerfs = mtfs_i2bops(inode, bindex);
 	}
 	/*
 	 * Decrease a reference to a hidden_inode, which was increased

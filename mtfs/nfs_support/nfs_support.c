@@ -161,15 +161,13 @@ struct mtfs_junction mtfs_nfs_junction = {
 	mj_fs_ops:               &mtfs_nfs_operations,
 };
 
-struct lowerfs_operations lowerfs_nfs_ops = {
-	lowerfs_owner:           THIS_MODULE,
-	lowerfs_type:            "nfs",
-	lowerfs_magic:           NFS_SUPER_MAGIC,
-	lowerfs_flag:            0,
-	lowerfs_inode_set_flag:  NULL,
-	lowerfs_inode_get_flag:  NULL,
-	lowerfs_idata_init:      NULL,
-	lowerfs_idata_finit:     NULL,
+struct mtfs_lowerfs lowerfs_nfs = {
+	ml_owner:           THIS_MODULE,
+	ml_type:            "nfs",
+	ml_magic:           NFS_SUPER_MAGIC,
+	ml_flag:            0,
+	ml_setflag:  NULL,
+	ml_getflag:  NULL,
 };
 
 static int nfs_support_init(void)
@@ -178,7 +176,7 @@ static int nfs_support_init(void)
 
 	MDEBUG("registering mtfs_nfs support\n");
 
-	ret = lowerfs_register_ops(&lowerfs_nfs_ops);
+	ret = mlowerfs_register(&lowerfs_nfs);
 	if (ret) {
 		MERROR("failed to register lowerfs operation: error %d\n", ret);
 		goto out;
@@ -187,11 +185,11 @@ static int nfs_support_init(void)
 	ret = junction_register(&mtfs_nfs_junction);
 	if (ret) {
 		MERROR("failed to register junction: error %d\n", ret);
-		goto out_unregister_lowerfs_ops;
+		goto out_unregister_lowerfs;
 	}
 	goto out;
-out_unregister_lowerfs_ops:
-	lowerfs_unregister_ops(&lowerfs_nfs_ops);
+out_unregister_lowerfs:
+	mlowerfs_unregister(&lowerfs_nfs);
 out:
 	return ret;
 }
@@ -199,7 +197,7 @@ out:
 static void nfs_support_exit(void)
 {
 	MDEBUG("unregistering mtfs_nfs support\n");
-	lowerfs_unregister_ops(&lowerfs_nfs_ops);
+	mlowerfs_unregister(&lowerfs_nfs);
 
 	junction_unregister(&mtfs_nfs_junction);
 }

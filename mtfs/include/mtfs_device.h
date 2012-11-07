@@ -21,7 +21,7 @@ struct mtfs_branch_debug {
 struct mtfs_device_branch {
 	char                      *mdb_path;       /* Path for each branch */
 	int                        mdb_pathlen;    /* Length of the path for each branch */
-	struct lowerfs_operations *mdb_ops;        /* Lowerfs operation for each branch*/
+	struct mtfs_lowerfs *mdb_ops;        /* Lowerfs operation for each branch*/
 	struct mtfs_branch_debug   mdb_debug;      /* Debug option for each branch */
 	struct proc_dir_entry     *mdb_proc_entry; /* Proc entry for each branch */
 };

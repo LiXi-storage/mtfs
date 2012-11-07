@@ -13,37 +13,31 @@
 #include "ext_support.h"
 #include <mtfs_flag.h>
 
-struct lowerfs_operations lowerfs_ext2_ops = {
-	lowerfs_owner:           THIS_MODULE,
-	lowerfs_type:            "ext2",
-	lowerfs_magic:           EXT2_SUPER_MAGIC,
-	lowerfs_flag:            0,
-	lowerfs_inode_set_flag:  lowerfs_inode_set_flag_default,
-	lowerfs_inode_get_flag:  lowerfs_inode_get_flag_default,
-	lowerfs_idata_init:      NULL,
-	lowerfs_idata_finit:     NULL,
+struct mtfs_lowerfs lowerfs_ext2 = {
+	ml_owner:           THIS_MODULE,
+	ml_type:            "ext2",
+	ml_magic:           EXT2_SUPER_MAGIC,
+	ml_flag:            0,
+	ml_setflag:         mlowerfs_setflag_default,
+	ml_getflag:         mlowerfs_getflag_default,
 };
 
-struct lowerfs_operations lowerfs_ext3_ops = {
-	lowerfs_owner:           THIS_MODULE,
-	lowerfs_type:            "ext3",
-	lowerfs_magic:           EXT3_SUPER_MAGIC,
-	lowerfs_flag:            0,
-	lowerfs_inode_set_flag:  lowerfs_inode_set_flag_default,
-	lowerfs_inode_get_flag:  lowerfs_inode_get_flag_default,
-	lowerfs_idata_init:      NULL,
-	lowerfs_idata_finit:     NULL,
+struct mtfs_lowerfs lowerfs_ext3 = {
+	ml_owner:           THIS_MODULE,
+	ml_type:            "ext3",
+	ml_magic:           EXT3_SUPER_MAGIC,
+	ml_flag:            0,
+	ml_setflag:         mlowerfs_setflag_default,
+	ml_getflag:         mlowerfs_getflag_default,
 };
 
-struct lowerfs_operations lowerfs_ext4_ops = {
-	lowerfs_owner:           THIS_MODULE,
-	lowerfs_type:            "ext4",
-	lowerfs_magic:           EXT4_SUPER_MAGIC,
-	lowerfs_flag:            0,
-	lowerfs_inode_set_flag:  lowerfs_inode_set_flag_default,
-	lowerfs_inode_get_flag:  lowerfs_inode_get_flag_default,
-	lowerfs_idata_init:      NULL,
-	lowerfs_idata_finit:     NULL,
+struct mtfs_lowerfs lowerfs_ext4 = {
+	ml_owner:           THIS_MODULE,
+	ml_type:            "ext4",
+	ml_magic:           EXT4_SUPER_MAGIC,
+	ml_flag:            0,
+	ml_setflag:         mlowerfs_setflag_default,
+	ml_getflag:         mlowerfs_getflag_default,
 };
 
 static int ext_support_init(void)
@@ -52,28 +46,28 @@ static int ext_support_init(void)
 
 	MDEBUG("registering mtfs_ext lowerfs support\n");
 
-	ret = lowerfs_register_ops(&lowerfs_ext2_ops);
+	ret = mlowerfs_register(&lowerfs_ext2);
 	if (ret) {
-		MERROR("failed to register lowerfs operation for ext2: error %d\n", ret);
+		MERROR("failed to register lowerfs for ext2: error %d\n", ret);
 		goto out;
 	}
 
-	ret = lowerfs_register_ops(&lowerfs_ext3_ops);
+	ret = mlowerfs_register(&lowerfs_ext3);
 	if (ret) {
-		MERROR("failed to register lowerfs operation for ext3: error %d\n", ret);
+		MERROR("failed to register lowerfs for ext3: error %d\n", ret);
 		goto out_unregister_ext2;
 	}
 
-	ret = lowerfs_register_ops(&lowerfs_ext4_ops);
+	ret = mlowerfs_register(&lowerfs_ext4);
 	if (ret) {
-		MERROR("failed to register lowerfs operation for ext4: error %d\n", ret);
+		MERROR("failed to register lowerfs for ext4: error %d\n", ret);
 		goto out_unregister_ext3;
 	}
 	goto out;
 out_unregister_ext3:
-	lowerfs_unregister_ops(&lowerfs_ext3_ops);
+	mlowerfs_unregister(&lowerfs_ext3);
 out_unregister_ext2:
-	lowerfs_unregister_ops(&lowerfs_ext2_ops);
+	mlowerfs_unregister(&lowerfs_ext2);
 out:
 	return ret;
 }
@@ -81,9 +75,9 @@ out:
 static void ext_support_exit(void)
 {
 	MDEBUG("unregistering mtfs_ext2 lowerfs support\n");
-	lowerfs_unregister_ops(&lowerfs_ext2_ops);
-	lowerfs_unregister_ops(&lowerfs_ext3_ops);
-	lowerfs_unregister_ops(&lowerfs_ext4_ops);
+	mlowerfs_unregister(&lowerfs_ext2);
+	mlowerfs_unregister(&lowerfs_ext3);
+	mlowerfs_unregister(&lowerfs_ext4);
 }
 
 MODULE_AUTHOR("MulTi File System Workgroup");

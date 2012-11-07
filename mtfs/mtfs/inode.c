@@ -142,7 +142,7 @@ int mtfs_inherit_raid_type(struct dentry *dentry, raid_type_t *raid_type)
 	int ret = 0;
 	struct inode *i_parent = NULL;
 	struct inode *hidden_i_parent = NULL;
-	struct lowerfs_operations *lowerfs_ops = NULL;
+	struct mtfs_lowerfs *lowerfs = NULL;
 	mtfs_bindex_t bindex = -1;
 	MENTRY();
 
@@ -156,8 +156,8 @@ int mtfs_inherit_raid_type(struct dentry *dentry, raid_type_t *raid_type)
 	}
 
 	hidden_i_parent = mtfs_i2branch(i_parent, bindex);
-	lowerfs_ops = mtfs_i2bops(i_parent, bindex);
-	ret = lowerfs_inode_get_raid_type(lowerfs_ops, hidden_i_parent, raid_type);
+	lowerfs = mtfs_i2bops(i_parent, bindex);
+	ret = mlowerfs_get_raid_type(lowerfs, hidden_i_parent, raid_type);
 
 	MDEBUG("parent raid_type = %d\n", *raid_type);
 out:
@@ -872,7 +872,7 @@ static int mtfs_unlink_branch(struct dentry *dentry, mtfs_bindex_t bindex)
 	struct dentry *hidden_dentry = mtfs_d2branch(dentry, bindex);
 	struct dentry *hidden_dir_dentry = NULL;
 	int ret = 0;
-	struct lowerfs_operations *lowerfs_ops = mtfs_d2bops(dentry, bindex);
+	struct mtfs_lowerfs *lowerfs = mtfs_d2bops(dentry, bindex);
 	MENTRY();
 
 	ret = mtfs_device_branch_errno(mtfs_d2dev(dentry), bindex, BOPS_MASK_WRITE);
@@ -886,7 +886,7 @@ static int mtfs_unlink_branch(struct dentry *dentry, mtfs_bindex_t bindex)
 		hidden_dir_dentry = lock_parent(hidden_dentry);
 		MASSERT(hidden_dir_dentry);
 		MASSERT(hidden_dir_dentry->d_inode); 
-		if (lowerfs_ops->lowerfs_flag & LF_UNLINK_NO_DDLETE) {
+		if (lowerfs->ml_flag & MLOWERFS_FLAG_UNLINK_NO_DDLETE) {
 			/* BUG263: do not use vfs_unlink() for its d_delete() */
 			ret = __vfs_unlink(hidden_dir_dentry->d_inode, hidden_dentry);
 		} else {
@@ -1022,7 +1022,7 @@ static int mtfs_rmdir_branch(struct dentry *dentry, mtfs_bindex_t bindex)
 	struct dentry *hidden_dentry = mtfs_d2branch(dentry, bindex);
 	struct dentry *hidden_dir_dentry = NULL;
 	int ret = 0;
-	struct lowerfs_operations *lowerfs_ops = mtfs_d2bops(dentry, bindex);
+	struct mtfs_lowerfs *lowerfs = mtfs_d2bops(dentry, bindex);
 	MENTRY();
 
 	ret = mtfs_device_branch_errno(mtfs_d2dev(dentry), bindex, BOPS_MASK_WRITE);
@@ -1034,7 +1034,7 @@ static int mtfs_rmdir_branch(struct dentry *dentry, mtfs_bindex_t bindex)
 	if (hidden_dentry && hidden_dentry->d_parent && hidden_dentry->d_inode) {
 		dget(hidden_dentry);
 		hidden_dir_dentry = lock_parent(hidden_dentry);
-		if (lowerfs_ops->lowerfs_flag & LF_RMDIR_NO_DDLETE) {
+		if (lowerfs->ml_flag & MLOWERFS_FLAG_RMDIR_NO_DDLETE) {
 			/* BUG264: do not use vfs_rmdir() for its d_delete() */
 			ret = __vfs_rmdir(hidden_dir_dentry->d_inode, hidden_dentry);
 		} else {

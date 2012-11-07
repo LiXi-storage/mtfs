@@ -252,15 +252,13 @@ struct mtfs_junction mtfs_tmpfs_junction = {
 	mj_fs_ops:              &mtfs_tmpfs_operations,
 };
 
-struct lowerfs_operations lowerfs_tmpfs_ops = {
-	lowerfs_owner:           THIS_MODULE,
-	lowerfs_type:            "tmpfs",
-	lowerfs_magic:           TMPFS_MAGIC,
-	lowerfs_flag:            0,
-	lowerfs_inode_set_flag:  NULL,
-	lowerfs_inode_get_flag:  NULL,
-	lowerfs_idata_init:      NULL,
-	lowerfs_idata_finit:     NULL,
+struct mtfs_lowerfs lowerfs_tmpfs = {
+	ml_owner:           THIS_MODULE,
+	ml_type:            "tmpfs",
+	ml_magic:           TMPFS_MAGIC,
+	ml_flag:            0,
+	ml_setflag:         NULL,
+	ml_getflag:         NULL,
 };
 
 static int tmpfs_support_init(void)
@@ -269,7 +267,7 @@ static int tmpfs_support_init(void)
 
 	MDEBUG("registering mtfs_tmpfs support\n");
 
-	ret = lowerfs_register_ops(&lowerfs_tmpfs_ops);
+	ret = mlowerfs_register(&lowerfs_tmpfs);
 	if (ret) {
 		MERROR("failed to register lowerfs operation: error %d\n", ret);
 		goto out;
@@ -278,11 +276,11 @@ static int tmpfs_support_init(void)
 	ret = junction_register(&mtfs_tmpfs_junction);
 	if (ret) {
 		MERROR("failed to register junction: error %d\n", ret);
-		goto out_unregister_lowerfs_ops;
+		goto out_unregister_lowerfs;
 	}
 	goto out;
-out_unregister_lowerfs_ops:
-	lowerfs_unregister_ops(&lowerfs_tmpfs_ops);
+out_unregister_lowerfs:
+	mlowerfs_unregister(&lowerfs_tmpfs);
 out:
 	return ret;
 }
@@ -290,7 +288,7 @@ out:
 static void tmpfs_support_exit(void)
 {
 	MDEBUG("unregistering mtfs_tmpfs support\n");
-	lowerfs_unregister_ops(&lowerfs_tmpfs_ops);
+	mlowerfs_unregister(&lowerfs_tmpfs);
 
 	junction_unregister(&mtfs_tmpfs_junction);
 }

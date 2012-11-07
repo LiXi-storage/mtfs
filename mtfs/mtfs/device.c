@@ -430,7 +430,7 @@ struct mtfs_device *mtfs_newdev(struct super_block *sb, struct mount_option *mou
 {
 	struct mtfs_device *newdev = NULL;
 	int ret = 0;
-	struct lowerfs_operations *lowerfs_ops = NULL;
+	struct mtfs_lowerfs *lowerfs = NULL;
 	mtfs_bindex_t bindex = 0;
 	struct super_block *hidden_sb = NULL;
 	mtfs_bindex_t bnum = mtfs_s2bnum(sb);
@@ -465,13 +465,13 @@ struct mtfs_device *mtfs_newdev(struct super_block *sb, struct mount_option *mou
 			secondary_types[secondary_number] = hidden_sb->s_type->name;
 			secondary_number ++;
 		}
-		lowerfs_ops = lowerfs_get_ops(hidden_sb->s_type->name);
-		if (IS_ERR(lowerfs_ops)) {
+		lowerfs = mlowerfs_get(hidden_sb->s_type->name);
+		if (IS_ERR(lowerfs)) {
 			MERROR("lowerfs type [%s] not supported yet\n", hidden_sb->s_type->name);
-			ret = PTR_ERR(lowerfs_ops);
+			ret = PTR_ERR(lowerfs);
 			goto out_put_module;
 		}
-		mtfs_dev2bops(newdev, bindex) = lowerfs_ops;
+		mtfs_dev2bops(newdev, bindex) = lowerfs;
 	}
 	secondary_types[secondary_number] = NULL;
 
@@ -502,9 +502,9 @@ out_put_junction:
 	junction_put(mtfs_dev2junction(newdev));
 out_put_module:
 	for (bindex = 0; bindex < bnum; bindex++) {
-		lowerfs_ops = mtfs_dev2bops(newdev, bindex);
-		if (lowerfs_ops) {
-			lowerfs_put_ops(lowerfs_ops);
+		lowerfs = mtfs_dev2bops(newdev, bindex);
+		if (lowerfs) {
+			mlowerfs_put(lowerfs);
 		}
 	}
 
@@ -521,16 +521,16 @@ out:
 
 void mtfs_freedev(struct mtfs_device *device)
 {
-	struct lowerfs_operations *lowerfs_ops = NULL;
+	struct mtfs_lowerfs *lowerfs = NULL;
 	mtfs_bindex_t bnum = mtfs_dev2bnum(device);
 	mtfs_bindex_t bindex = 0;
 
 	mtfs_device_proc_unregister(device);
 	mtfs_unregister_device(device);
 	for (bindex = 0; bindex < bnum; bindex++) {
-		lowerfs_ops = mtfs_dev2bops(device, bindex);
-		MASSERT(lowerfs_ops);
-		lowerfs_put_ops(lowerfs_ops);
+		lowerfs = mtfs_dev2bops(device, bindex);
+		MASSERT(lowerfs);
+		mlowerfs_put(lowerfs);
 	}
 	junction_put(mtfs_dev2junction(device));
 	mtfs_device_free(device);

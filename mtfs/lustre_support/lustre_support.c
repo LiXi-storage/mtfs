@@ -299,17 +299,15 @@ struct mtfs_junction mtfs_lustre_junction = {
 	mj_fs_ops:               &mtfs_lustre_operations,
 };
 
-struct lowerfs_operations lowerfs_lustre_ops = {
-	lowerfs_owner:           THIS_MODULE,
-	lowerfs_type:            "lustre",
-	lowerfs_magic:           LUSTRE_SUPER_MAGIC,
-	lowerfs_flag:            LF_RMDIR_NO_DDLETE | LF_UNLINK_NO_DDLETE,
-	//lowerfs_inode_set_flag:  lowerfs_inode_set_flag_default,
-	//lowerfs_inode_get_flag:  lowerfs_inode_get_flag_default,
-	lowerfs_inode_set_flag:  mtfs_ll_inode_set_flag,
-	lowerfs_inode_get_flag:  mtfs_ll_inode_get_flag,
-	lowerfs_idata_init:      NULL,
-	lowerfs_idata_finit:     NULL,
+struct mtfs_lowerfs lowerfs_lustre = {
+	ml_owner:           THIS_MODULE,
+	ml_type:            "lustre",
+	ml_magic:           LUSTRE_SUPER_MAGIC,
+	ml_flag:            MLOWERFS_FLAG_RMDIR_NO_DDLETE | MLOWERFS_FLAG_UNLINK_NO_DDLETE,
+	//ml_setflag:  ml_setflag_default,
+	//ml_getflag:  ml_getflag_default,
+	ml_setflag:  mtfs_ll_inode_set_flag,
+	ml_getflag:  mtfs_ll_inode_get_flag,
 };
 
 static int lustre_support_init(void)
@@ -318,7 +316,7 @@ static int lustre_support_init(void)
 
 	MDEBUG("registering mtfs_lustre support\n");
 
-	ret = lowerfs_register_ops(&lowerfs_lustre_ops);
+	ret = mlowerfs_register(&lowerfs_lustre);
 	if (ret) {
 		MERROR("failed to register lowerfs operation: error %d\n", ret);
 		goto out;
@@ -327,11 +325,11 @@ static int lustre_support_init(void)
 	ret = junction_register(&mtfs_lustre_junction);
 	if (ret) {
 		MERROR("failed to register junction: error %d\n", ret);
-		goto out_unregister_lowerfs_ops;
+		goto out_unregister_lowerfs;
 	}
 	goto out;
-out_unregister_lowerfs_ops:
-	lowerfs_unregister_ops(&lowerfs_lustre_ops);
+out_unregister_lowerfs:
+	mlowerfs_unregister(&lowerfs_lustre);
 out:
 	return ret;
 }
@@ -339,7 +337,7 @@ out:
 static void lustre_support_exit(void)
 {
 	MDEBUG("Unregistering mtfs_lustre support\n");
-	lowerfs_unregister_ops(&lowerfs_lustre_ops);
+	mlowerfs_unregister(&lowerfs_lustre);
 
 	junction_unregister(&mtfs_lustre_junction);
 }

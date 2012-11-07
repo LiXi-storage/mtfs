@@ -461,7 +461,7 @@ static void __exit mtfs_debug_module_exit(void)
 }
 
 MODULE_AUTHOR("MulTi File System Development Workgroup");
-MODULE_DESCRIPTION("mtfs_debug");
+MODULE_DESCRIPTION("Debug support module for MulTi File System");
 MODULE_LICENSE("GPL");
 
 module_init(mtfs_debug_module_init)

@@ -80,7 +80,7 @@ struct inode_operations mtfs_ntfs3g_main_iops =
 };
 
 struct dentry_operations mtfs_ntfs3g_dops = {
-	d_release:     mtfs_d_release,
+	d_release:      mtfs_d_release,
 };
 
 struct file_operations mtfs_ntfs3g_dir_fops =
@@ -153,32 +153,29 @@ struct mtfs_junction mtfs_ntfs3g_junction = {
 #include <mtfs_flag.h>
 #define XATTR_NAME_MTFS_FLAG_NTFS3G "user."XATTR_NAME_MTFS_FLAG
 
-int lowerfs_inode_get_flag_ntfs3g(struct inode *inode, __u32 *mtfs_flag)
+int mlowerfs_getflag_ntfs3g(struct inode *inode, __u32 *mtfs_flag)
 {
 	int ret = 0;
-	ret = lowerfs_inode_get_flag_xattr(inode, mtfs_flag, XATTR_NAME_MTFS_FLAG_NTFS3G);
+	ret = mlowerfs_getflag_xattr(inode, mtfs_flag, XATTR_NAME_MTFS_FLAG_NTFS3G);
 	MRETURN(ret);
 }
-EXPORT_SYMBOL(lowerfs_inode_get_flag_ntfs3g);
+EXPORT_SYMBOL(mlowerfs_getflag_ntfs3g);
 
-int lowerfs_inode_set_flag_ntfs3g(struct inode *inode, __u32 mtfs_flag)
+int mlowerfs_setflag_ntfs3g(struct inode *inode, __u32 mtfs_flag)
 {
 	int ret = 0;
-	ret = lowerfs_inode_set_flag_xattr(inode, mtfs_flag, XATTR_NAME_MTFS_FLAG_NTFS3G);
+	ret = mlowerfs_setflag_xattr(inode, mtfs_flag, XATTR_NAME_MTFS_FLAG_NTFS3G);
 	MRETURN(ret);
 }
-EXPORT_SYMBOL(lowerfs_inode_set_flag_ntfs3g);
+EXPORT_SYMBOL(mlowerfs_setflag_ntfs3g);
 
-struct lowerfs_operations lowerfs_ntfs3g_ops = {
-	lowerfs_owner:           THIS_MODULE,
-	lowerfs_type:            "fuseblk",
-	lowerfs_magic:           NTFS_SB_MAGIC,
-	lowerfs_version:         "1.0",
-	lowerfs_flag:            0,
-	lowerfs_inode_set_flag:  lowerfs_inode_set_flag_ntfs3g,
-	lowerfs_inode_get_flag:  lowerfs_inode_get_flag_ntfs3g,
-	lowerfs_idata_init:      NULL,
-	lowerfs_idata_finit:     NULL,
+struct mtfs_lowerfs lowerfs_ntfs3g = {
+	ml_owner:           THIS_MODULE,
+	ml_type:            "fuseblk",
+	ml_magic:           NTFS_SB_MAGIC,
+	ml_flag:            0,
+	ml_setflag:         mlowerfs_setflag_ntfs3g,
+	ml_getflag:         mlowerfs_getflag_ntfs3g,
 };
 
 static int ntfs3g_support_init(void)
@@ -187,7 +184,7 @@ static int ntfs3g_support_init(void)
 
 	MDEBUG("registering mtfs_ntfs3g support\n");
 
-	ret = lowerfs_register_ops(&lowerfs_ntfs3g_ops);
+	ret = mlowerfs_register(&lowerfs_ntfs3g);
 	if (ret) {
 		MERROR("failed to register lowerfs operation: error %d\n", ret);
 		goto out;
@@ -196,11 +193,11 @@ static int ntfs3g_support_init(void)
 	ret = junction_register(&mtfs_ntfs3g_junction);
 	if (ret) {
 		MERROR("failed to register junction: error %d\n", ret);
-		goto out_unregister_lowerfs_ops;
+		goto out_unregister_lowerfs;
 	}
 	goto out;
-out_unregister_lowerfs_ops:
-	lowerfs_unregister_ops(&lowerfs_ntfs3g_ops);
+out_unregister_lowerfs:
+	mlowerfs_unregister(&lowerfs_ntfs3g);
 out:
 	return ret;
 }
@@ -208,7 +205,7 @@ out:
 static void ntfs3g_support_exit(void)
 {
 	MDEBUG("unregistering mtfs_ntfs3g support\n");
-	lowerfs_unregister_ops(&lowerfs_ntfs3g_ops);
+	mlowerfs_unregister(&lowerfs_ntfs3g);
 
 	junction_unregister(&mtfs_ntfs3g_junction);
 }

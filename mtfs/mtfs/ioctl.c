@@ -20,7 +20,7 @@ static int mtfs_user_get_state(struct inode *inode, struct file *file, struct mt
 	struct mtfs_user_flag *state = NULL;
 	int state_size = 0;
 	struct inode *hidden_inode = NULL;
-	struct lowerfs_operations *lowerfs_ops = NULL;
+	struct mtfs_lowerfs *lowerfs = NULL;
 	MENTRY();
 
 	MASSERT(bnum <= max_bnum);
@@ -36,12 +36,12 @@ static int mtfs_user_get_state(struct inode *inode, struct file *file, struct mt
 
 	for(bindex = 0; bindex < bnum; bindex++) {
 		hidden_inode = mtfs_i2branch(inode, bindex);
-		lowerfs_ops = mtfs_i2bops(inode, bindex);
+		lowerfs = mtfs_i2bops(inode, bindex);
 		if (hidden_inode == NULL) {
 			(state->state[bindex]).flag = 0xffff;
 			continue;
 		}
-		ret = lowerfs_inode_get_flag(lowerfs_ops, hidden_inode, &branch_flag);
+		ret = mlowerfs_getflag(lowerfs, hidden_inode, &branch_flag);
 		if (ret) {
 			goto free_state;
 		}
@@ -64,7 +64,7 @@ static int mtfs_user_set_state(struct inode *inode, struct file *file, struct mt
 	struct mtfs_user_flag *state = NULL;
 	int state_size = 0;
 	struct inode *hidden_inode = NULL;
-	struct lowerfs_operations *lowerfs_ops = NULL;
+	struct mtfs_lowerfs *lowerfs = NULL;
 	MENTRY();
 
 	state_size = mtfs_user_flag_size(bnum);
@@ -104,13 +104,13 @@ static int mtfs_user_set_state(struct inode *inode, struct file *file, struct mt
 
 	for (bindex = 0; bindex < bnum; bindex++) {
 		hidden_inode = mtfs_i2branch(inode, bindex);
-		lowerfs_ops = mtfs_i2bops(inode, bindex);
+		lowerfs = mtfs_i2bops(inode, bindex);
 		if (hidden_inode == NULL) {
 			MDEBUG("branch[%d] of inode is NULL, skipping\n", bindex);
 		} else {
-			ret = lowerfs_inode_set_flag(lowerfs_ops, hidden_inode, state->state[bindex].flag);
+			ret = mlowerfs_setflag(lowerfs, hidden_inode, state->state[bindex].flag);
 			if (ret) {
-				MERROR("lowerfs_inode_set_flag failed, ret = %d\n", ret);
+				MERROR("ml_setflag failed, ret = %d\n", ret);
 				goto recover;
 			}
 		}

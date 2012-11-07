@@ -207,9 +207,5 @@ out:
 	MRETURN(hidden_file);
 }
 
-extern int lowerfs_inode_get_flag_xattr(struct inode *inode, __u32 *mtfs_flag, const char *xattr_name);
-extern int lowerfs_inode_set_flag_xattr(struct inode *inode, __u32 mtfs_flag, const char *xattr_name);
-extern int lowerfs_inode_get_flag_default(struct inode *inode, __u32 *mtfs_flag);
-extern int lowerfs_inode_set_flag_default(struct inode *inode, __u32 mtfs_flag);
 #endif /* defined (__linux__) && defined(__KERNEL__) */
 #endif /* __MTFS_FLAG_H__ */
