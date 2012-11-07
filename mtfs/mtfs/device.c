@@ -166,11 +166,9 @@ int mtfs_device_proc_read_name(char *page, char **start, off_t off, int count,
 {
 	int ret = 0;
 	struct mtfs_device *device = (struct mtfs_device *)data;
-	char *ptr = page;
 
 	*eof = 1;
-	ret = snprintf(ptr, count, "%s\n", mtfs_dev2name(device));
-	ptr += ret;
+	ret = snprintf(page, count, "%s\n", mtfs_dev2name(device));
 	return ret;
 }
 
@@ -179,11 +177,9 @@ int mtfs_device_proc_read_bnum(char *page, char **start, off_t off, int count,
 {
 	int ret = 0;
 	struct mtfs_device *device = (struct mtfs_device *)data;
-	char *ptr = page;
 
 	*eof = 1;
-	ret = snprintf(ptr, count, "%d\n", mtfs_dev2bnum(device));
-	ptr += ret;
+	ret = snprintf(page, count, "%d\n", mtfs_dev2bnum(device));
 	return ret;
 }
 
@@ -192,11 +188,9 @@ int mtfs_device_proc_read_noabort(char *page, char **start, off_t off, int count
 {
 	int ret = 0;
 	struct mtfs_device *device = (struct mtfs_device *)data;
-	char *ptr = page;
 
 	*eof = 1;
-	ret = snprintf(ptr, count, "%d\n", mtfs_dev2noabort(device));
-	ptr += ret;
+	ret = snprintf(page, count, "%d\n", mtfs_dev2noabort(device));
 	return ret;
 }
 
@@ -213,15 +207,13 @@ int mtfs_device_branch_proc_read_errno(char *page, char **start, off_t off, int 
 {
 	int ret = 0;
 	struct mtfs_device_branch *dev_branch = (struct mtfs_device_branch *)data;
-	char *ptr = page;
 
 	*eof = 1;
 	if (dev_branch->mdb_debug.mbd_active) {
-		ret = snprintf(ptr, count, "%d\n", dev_branch->mdb_debug.mbd_errno);
+		ret = snprintf(page, count, "%d\n", dev_branch->mdb_debug.mbd_errno);
 	} else {
-		ret = snprintf(ptr, count, MTFS_ERRNO_INACTIVE"\n");
+		ret = snprintf(page, count, MTFS_ERRNO_INACTIVE"\n");
 	}
-	ptr += ret;
 	return ret;
 }
 
@@ -550,7 +542,6 @@ int mtfs_proc_read_devices(char *page, char **start, off_t off,
 	int                 ret = 0;
 	mtfs_list_t        *p = NULL;
 	struct mtfs_device *found = NULL;
-	char               *ptr = page;
 	unsigned int        hash_num = 0;
 	char                hash_name[9];
 
@@ -558,18 +549,24 @@ int mtfs_proc_read_devices(char *page, char **start, off_t off,
 
 	spin_lock(&mtfs_device_lock);
 	mtfs_list_for_each(p, &mtfs_devs) {
+		if (ret >= count - 1) {
+			MERROR("not enough memory for proc read\n");
+			break;
+		}
 		found = mtfs_list_entry(p, typeof(*found), md_list);
-		hash_num = full_name_hash(mtfs_dev2name(found), mtfs_dev2namelen(found));
+		hash_num = full_name_hash(mtfs_dev2name(found),
+		                          mtfs_dev2namelen(found));
 		sprintf(hash_name, "%x", hash_num);
-		ret += snprintf(ptr, count, "%s %s\n", mtfs_dev2name(found), hash_name);
-		ptr += ret;
+		ret += snprintf(page + ret, count - ret, "%s %s\n",
+		                mtfs_dev2name(found), hash_name);
 	}
 	spin_unlock(&mtfs_device_lock);
 	return ret;
 }
 
 #define MTFS_DEFAULT_ERRNO (-EIO)
-int mtfs_device_branch_errno(struct mtfs_device *device, mtfs_bindex_t bindex, __u32 emask)
+int mtfs_device_branch_errno(struct mtfs_device *device,
+                             mtfs_bindex_t bindex, __u32 emask)
 {
 	struct mtfs_device_branch *dev_branch = mtfs_dev2branch(device, bindex);
 	int errno = 0;

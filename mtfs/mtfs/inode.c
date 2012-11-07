@@ -615,7 +615,7 @@ static int mtfs_create_branch(struct dentry *dentry, int mode,
 	}
 
 out:
-	MRETURN(ret);	
+	MRETURN(ret);
 }
 
 int mtfs_create(struct inode *dir, struct dentry *dentry, int mode, struct nameidata *nd)

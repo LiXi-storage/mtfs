@@ -40,6 +40,7 @@ int mtfs_init_super(struct super_block *sb, struct mtfs_device *device, struct d
 
 	ret = mtfs_subject_init(sb);
 	if (ret) {
+		MERROR("failed to init subject\n");
 		goto out;
 	}
 

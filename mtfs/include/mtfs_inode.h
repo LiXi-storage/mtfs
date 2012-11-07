@@ -33,6 +33,8 @@ struct mtfs_inode_info {
 #define mtfs_i2branch(inode, bindex) (mtfs_i2barray(inode)[bindex].binode)
 #define mtfs_i2resource(inode)       (&mtfs_i2info(inode)->mii_resource)
 #define mtfs_i2bucket(inode)         (&mtfs_i2info(inode)->mii_bucket)
+#define mtfs_bucket2info(bucket)     (container_of(bucket, struct mtfs_inode_info, mii_bucket))
+#define mtfs_bucket2inode(bucket)    (&mtfs_bucket2info(bucket)->mii_inode)
 
 /* The values for mtfs_interpose's flag. */
 #define INTERPOSE_DEFAULT	0

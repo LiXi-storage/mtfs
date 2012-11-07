@@ -5,8 +5,9 @@
 #ifndef __MTFS_DEVICE_H__
 #define __MTFS_DEVICE_H__
 #if defined (__linux__) && defined(__KERNEL__)
-#include <mtfs_list.h>
 #include <parse_option.h>
+#include <mtfs_list.h>
+#include <mtfs_proc.h>
 #include <mtfs_common.h>
 #include <mtfs_junction.h>
 #include <mtfs_heal.h>

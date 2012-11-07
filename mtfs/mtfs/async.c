@@ -12,6 +12,7 @@
 #include <mtfs_inode.h>
 #include <mtfs_super.h>
 #include <mtfs_subject.h>
+#include <mtfs_device.h>
 #include "file_internal.h"
 #include "io_internal.h"
 #include "main_internal.h"
@@ -65,7 +66,7 @@ static inline void masync_info_write_unlock(struct msubject_async_info *info)
 	up_write(&info->msai_lock);
 }
 
-void masync_bucket_remove_from_lru_nonlock(struct masync_bucket *bucket)
+static void masync_bucket_remove_from_lru_nonlock(struct masync_bucket *bucket)
 {
 	struct msubject_async_info *info = NULL;
         MENTRY();
@@ -80,7 +81,7 @@ void masync_bucket_remove_from_lru_nonlock(struct masync_bucket *bucket)
 	_MRETURN();
 }
 
-void masync_bucket_remove_from_lru(struct masync_bucket *bucket)
+static void masync_bucket_remove_from_lru(struct masync_bucket *bucket)
 {
 	struct msubject_async_info *info = NULL;
         MENTRY();
@@ -153,7 +154,7 @@ static void masync_bucket_touch_in_lru_nonlock(struct masync_bucket *bucket)
 	_MRETURN();
 }
 
-void masync_bucket_touch_in_lru(struct masync_bucket *bucket)
+static void masync_bucket_touch_in_lru(struct masync_bucket *bucket)
 {
 	struct msubject_async_info *info = NULL;
         MENTRY();
@@ -193,7 +194,7 @@ static enum mtfs_interval_iter masync_overlap_cb(struct mtfs_interval_node *node
 	return MTFS_INTERVAL_ITER_CONT;
 }
 
-int masync_bucket_add(struct masync_bucket *bucket,
+static int masync_bucket_add(struct masync_bucket *bucket,
                       struct mtfs_interval_node_extent *extent)
 {
 	MTFS_LIST_HEAD(extent_list);
@@ -274,7 +275,7 @@ int masync_bucket_cleanup(struct masync_bucket *bucket)
 	MRETURN(ret);
 }
 
-int masync_calculate_all(struct msubject_async_info *info)
+static int masync_calculate_all(struct msubject_async_info *info)
 {
 	int ret = 0;
 	struct masync_bucket *bucket = NULL;
@@ -290,7 +291,7 @@ int masync_calculate_all(struct msubject_async_info *info)
 	MRETURN(ret);
 }
 
-int masync_bucket_cancel(struct masync_bucket *bucket, int nr_to_cacel)
+static int masync_bucket_cancel(struct masync_bucket *bucket, int nr_to_cacel)
 {
 	struct mtfs_interval *node = NULL;
 	int ret = 0;
@@ -313,7 +314,7 @@ int masync_bucket_cancel(struct masync_bucket *bucket, int nr_to_cacel)
 }
 
 /* Return nr that canceled */
-int masync_cancel(struct msubject_async_info *info, int nr_to_cacel)
+static int masync_cancel(struct msubject_async_info *info, int nr_to_cacel)
 {
 	int ret = 0;
 	struct masync_bucket *bucket = NULL;
@@ -402,7 +403,7 @@ out:
 	_MRETURN();
 }
 
-const struct mtfs_io_operations masync_io_ops[] = {
+static const struct mtfs_io_operations masync_io_ops[] = {
 	[MIT_READV] = {
 		.mio_init       = NULL,
 		.mio_fini       = NULL,
@@ -584,6 +585,66 @@ static int masync_shrink(SHRINKER_ARGS(sc, nr_to_scan, gfp_mask))
                               shrink_param(sc, gfp_mask));
 }
 
+static int masync_proc_read_dirty(char *page, char **start, off_t off, int count,
+                          int *eof, void *data)
+{
+	int ret = 0;
+	struct msubject_async_info *async_info = NULL;
+	struct masync_bucket *bucket = NULL;
+	MENTRY();
+
+	*eof = 1;
+
+	async_info = (struct msubject_async_info *)data;
+
+	masync_info_read_lock(async_info);
+	mtfs_list_for_each_entry(bucket, &async_info->msai_dirty_buckets, mab_linkage) {
+		if (ret >= count - 1) {
+			MERROR("not enough memory for proc read\n");
+			break;
+		}
+		ret += snprintf(page + ret, count - ret, "Inode: %p, NR: %d\n",
+		                mtfs_bucket2inode(bucket), atomic_read(&bucket->mab_nr));
+	}
+	masync_info_read_unlock(async_info);
+
+	MRETURN(ret);
+}
+
+static struct mtfs_proc_vars masync_proc_vars[] = {
+	{ "dirty", masync_proc_read_dirty, NULL, NULL },
+	{ 0 }
+};
+
+#define MASYNC_PROC_NAME "async_replica"
+static int masync_info_proc_init(struct msubject_async_info *async_info,
+                          struct super_block *sb)
+{
+	int ret = 0;
+	struct mtfs_device *device = mtfs_s2dev(sb);
+	MENTRY();
+
+	async_info->msai_proc_entry = mtfs_proc_register(MASYNC_PROC_NAME,
+	                                           mtfs_dev2proc(device),
+	                                           masync_proc_vars,
+	                                           async_info);
+	if (unlikely(async_info->msai_proc_entry == NULL)) {
+		MERROR("failed to register proc for async replica\n");
+		ret = -ENOMEM;
+	}
+	MRETURN(ret);
+}
+
+static int masync_info_proc_fini(struct msubject_async_info *info,
+                          struct super_block *sb)
+{
+	int ret = 0;
+	MENTRY();
+
+	mtfs_proc_remove(&info->msai_proc_entry);
+	MRETURN(ret);
+}
+
 int masync_subject_init(struct super_block *sb)
 {
 	int ret = 0;
@@ -600,10 +661,17 @@ int masync_subject_init(struct super_block *sb)
 	MTFS_INIT_LIST_HEAD(&info->msai_dirty_buckets);
 	masync_info_lock_init(info);
 
+	ret = masync_info_proc_init(info, sb);
+	if (ret) {
+		goto out_free_info;
+	}
+
 	masync_info = info;
         masync_shrinker = mtfs_set_shrinker(DEFAULT_SEEKS, masync_shrink);
 	mtfs_s2subinfo(sb) = (void *)info;
 	goto out;
+out_free_info:
+	MTFS_FREE_PTR(info);
 out:
 	MRETURN(ret);
 }
@@ -619,7 +687,8 @@ int masync_subject_fini(struct super_block *sb)
 	MASSERT(mtfs_list_empty(&info->msai_dirty_buckets));
 
 	mtfs_remove_shrinker(masync_shrinker);
-	
+	masync_info_proc_fini(info, sb);
+
 	MTFS_FREE_PTR(info);
 	MRETURN(ret);
 }

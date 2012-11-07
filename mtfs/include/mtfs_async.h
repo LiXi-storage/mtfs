@@ -10,6 +10,7 @@
 #include <linux/poll.h>
 #include <linux/mm.h>
 #include <linux/mutex.h>
+#include <mtfs_proc.h>
 #include <mtfs_interval_tree.h>
 #include <spinlock.h>
 
@@ -74,11 +75,10 @@ struct masync_bucket {
 };
 
 struct msubject_async_info {
-	//struct shrinker msai_shrinker; /* Can not for compat reasons */
-	mtfs_list_t                 msai_dirty_buckets;
-	//mtfs_spinlock_t             msai_lock;
-	struct rw_semaphore         msai_lock; /* Protect msai_dirty_buckets */
-	//struct semaphore            msai_lock; 
+	//struct shrinker          *msai_shrinker;      /* Can not for compat reasons */
+	mtfs_list_t                 msai_dirty_buckets; /* Dirty buckets LRU list */
+	struct rw_semaphore         msai_lock;          /* Protect msai_dirty_buckets */
+	struct proc_dir_entry      *msai_proc_entry;    /* Proc entrys for async debug */
 };
 
 extern struct mtfs_subject_operations masync_subject_ops;
