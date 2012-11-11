@@ -87,8 +87,6 @@ out:
 	return valid;
 }
 
-#define XATTR_NAME_MTFS_FLAG    "trusted.mtfs.flag"
-
 #if defined (__linux__) && defined(__KERNEL__)
 #include "mtfs_file.h"
 #include "mtfs_inode.h"

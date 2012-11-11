@@ -16,6 +16,7 @@
 #include "file_internal.h"
 #include "io_internal.h"
 #include "main_internal.h"
+#include "lowerfs_internal.h"
 
 static inline void masync_bucket_lock_init(struct masync_bucket *bucket)
 {
@@ -701,10 +702,18 @@ int masync_super_fini(struct super_block *sb)
 int masync_inode_init(struct inode *inode)
 {
 	int ret = 0;
+	mtfs_bindex_t bindex = 0;
+	mtfs_bindex_t bnum = mtfs_i2bnum(inode);
 	MENTRY();
 
 	masync_bucket_init((struct msubject_async_info *)mtfs_s2subinfo(inode->i_sb),
 	                   mtfs_i2bucket(inode));
+
+	for (bindex = 0; bindex < bnum; bindex++) {
+		if (mtfs_i2branch(inode, bindex)) {
+			mlowerfs_bucket_init(mtfs_i2bbucket(inode, bindex));
+		}
+	}
 	MRETURN(ret);
 }
 

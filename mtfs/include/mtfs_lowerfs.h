@@ -12,6 +12,9 @@
 #include <linux/fs.h>
 #include <linux/mutex.h>
 
+#define MLOWERFS_XATTR_NAME_FLAG    "trusted.mtfs.flag"
+#define MLOWERFS_XATTR_NAME_BUCKET  "trusted.mtfs.bucket"
+
 #define MLOWERFS_FLAG_RMDIR_NO_DDLETE  0x00000001 /* When rmdir lowerfs, avoid d_delete in vfs_rmdir */
 #define MLOWERFS_FLAG_UNLINK_NO_DDLETE 0x00000002 /* When unlink lowerfs, avoid d_delete in vfs_rmdir */
 #define MLOWERFS_FLAG_ALL (MLOWERFS_FLAG_RMDIR_NO_DDLETE | MLOWERFS_FLAG_UNLINK_NO_DDLETE)
@@ -47,6 +50,7 @@ struct mlowerfs_bucket;
 
 struct mlowerfs_bucket_type_object {
 	mlowerfs_bucket_type_t mbto_type;
+	int  (* mbto_init)(struct mlowerfs_bucket *bucket);  /* Init bucket */
 	int  (* mbto_read)(struct mlowerfs_bucket *bucket);  /* Read bucket from lowerfs */
 	int  (* mbto_flush)(struct mlowerfs_bucket *bucket); /* Flush bucket to lowerfs */
 };
@@ -66,9 +70,15 @@ extern int mlowerfs_setflag_default(struct inode *inode, __u32 mtfs_flag);
 
 #define MLOWERFS_BUCKET_NUMBER (64)
 
-struct mlowerfs_interval {
+struct mlowerfs_slot {
 	int                              mi_used;
 	struct mtfs_interval_node_extent mi_extent;
+};
+
+struct mlowerfs_disk_bucket {
+	__u64                               mdb_generation; /* Generation of bucket */
+	__u64                               mb_reference;
+	struct mlowerfs_slot                mb_slots[MLOWERFS_BUCKET_NUMBER];
 };
 
 struct mlowerfs_bucket {
@@ -80,8 +90,19 @@ struct mlowerfs_bucket {
 	struct semaphore                    mb_lock;       /* Lock */
 #endif /* defined (__linux__) && defined(__KERNEL__) */
 	__u64                               mb_reference;
-	struct mlowerfs_interval            mb_intervals[MLOWERFS_BUCKET_NUMBER];
+	struct mlowerfs_slot                mb_slots[MLOWERFS_BUCKET_NUMBER];
 };
+
+#define mlowerfs_bucket2type(bucket)             (bucket->mb_type)
+#define mlowerfs_bucket2generation(bucket)       (&bucket->mb_generation)
+#define mlowerfs_bucket2lock(bucket)             (&bucket->mb_lock)
+#define mlowerfs_bucket2reference(bucket)        (&bucket->mb_reference)
+#define mlowerfs_bucket2slots(bucket)            (bucket->mb_slots)
+#define mlowerfs_bucket2slot(bucket, bindex)     (mlowerfs_bucket2slots(bucket)[bindex])
+#define mlowerfs_bucket2s_used(bucket, bindex)   (mlowerfs_bucket2slot(bucket, bindex).mi_used)
+#define mlowerfs_bucket2s_extent(bucket, bindex) (mlowerfs_bucket2slot(bucket, bindex).mi_extent)
+#define mlowerfs_bucket2s_start(bucket, bindex)  (mlowerfs_bucket2s_extent(bucket, bindex).start)
+#define mlowerfs_bucket2s_end(bucket, bindex)    (mlowerfs_bucket2s_extent(bucket, bindex).end)
 
 #if !defined (__KERNEL__)
 int _mlowerfs_bucket_add(struct mlowerfs_bucket *bucket,

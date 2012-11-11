@@ -19,7 +19,7 @@ void _mlowerfs_bucket_dump(struct mlowerfs_bucket *bucket)
 	MENTRY();
 
 	for (i = 0; i < MLOWERFS_BUCKET_NUMBER; i++) {
-		if (!bucket->mb_intervals[i].mi_used) {
+		if (!mlowerfs_bucket2s_used(bucket, i)) {
 			continue;
 		}
 
@@ -34,7 +34,7 @@ void _mlowerfs_bucket_dump(struct mlowerfs_bucket *bucket)
 				       last_extent.end);
 			}
 		}
-		last_extent = bucket->mb_intervals[i].mi_extent;
+		last_extent = mlowerfs_bucket2s_extent(bucket, i);
 		last_id = i;
 		inited = 1;
 	}
@@ -61,14 +61,14 @@ int _mlowerfs_bucket_is_valid(struct mlowerfs_bucket *bucket)
 	MENTRY();
 
 	for (i = 0; i < MLOWERFS_BUCKET_NUMBER; i++) {
-		if (!bucket->mb_intervals[i].mi_used) {
+		if (!mlowerfs_bucket2s_used(bucket, i)) {
 			continue;
 		}
 
 		if (inited) {
-			MASSERT(last_extent.start <= last_extent.end);
-			MASSERT(last_extent.end <= bucket->mb_intervals[i].mi_extent.start);
-			last_extent = bucket->mb_intervals[i].mi_extent;
+			MASSERT(mlowerfs_bucket2s_start(bucket, i) <= mlowerfs_bucket2s_end(bucket, i));
+			MASSERT(last_extent.end < mlowerfs_bucket2s_start(bucket, i));
+			last_extent = mlowerfs_bucket2s_extent(bucket, i);
 			inited = 1;
 		}
 	}
@@ -83,13 +83,13 @@ int _mlowerfs_bucket_check(struct mlowerfs_bucket *bucket, __u64 position)
 	MENTRY();
 
 	for (i = 0; i < MLOWERFS_BUCKET_NUMBER; i++) {
-		if (!bucket->mb_intervals[i].mi_used) {
+		if (!mlowerfs_bucket2s_used(bucket, i)) {
 			continue;
 		}
 
-		if (position > bucket->mb_intervals[i].mi_extent.end) {
+		if (position > mlowerfs_bucket2s_end(bucket, i)) {
 			continue;
-		} else if (position < bucket->mb_intervals[i].mi_extent.start) {
+		} else if (position < mlowerfs_bucket2s_start(bucket, i)) {
 			break;
 		} else {
 			ret = 1;
@@ -112,7 +112,7 @@ int _mlowerfs_bucket_shift_head(struct mlowerfs_bucket *bucket)
 	MENTRY();
 
 	for (i = 0; i < MLOWERFS_BUCKET_NUMBER; i++) {
-		if (!bucket->mb_intervals[i].mi_used) {
+		if (!mlowerfs_bucket2s_used(bucket, i)) {
 			break;
 		}
 	}
@@ -123,9 +123,9 @@ int _mlowerfs_bucket_shift_head(struct mlowerfs_bucket *bucket)
 	}
 
 	if (i != 0) {
-		memmove(&bucket->mb_intervals[1],
-		        &bucket->mb_intervals[0],
-		        sizeof(struct mlowerfs_interval) * i);
+		memmove(&mlowerfs_bucket2slot(bucket, 1),
+		        &mlowerfs_bucket2slot(bucket, 0),
+		        sizeof(struct mlowerfs_slot) * i);
 	}
 out:
 	MRETURN(ret);
@@ -143,7 +143,7 @@ int _mlowerfs_bucket_shift_tail(struct mlowerfs_bucket *bucket)
 	MENTRY();
 
 	for (i = 0; i < MLOWERFS_BUCKET_NUMBER; i++) {
-		if (!bucket->mb_intervals[MLOWERFS_BUCKET_NUMBER - 1 - i].mi_used) {
+		if (!mlowerfs_bucket2s_used(bucket, MLOWERFS_BUCKET_NUMBER - 1 - i)) {
 			break;
 		}
 	}
@@ -154,9 +154,9 @@ int _mlowerfs_bucket_shift_tail(struct mlowerfs_bucket *bucket)
 	}
 
 	if (i != 0) {
-		memmove(&bucket->mb_intervals[MLOWERFS_BUCKET_NUMBER - 1 - i],
-		        &bucket->mb_intervals[MLOWERFS_BUCKET_NUMBER - i],
-		        sizeof(struct mlowerfs_interval) * i);
+		memmove(&mlowerfs_bucket2slot(bucket, MLOWERFS_BUCKET_NUMBER - 1 - i),
+		        &mlowerfs_bucket2slot(bucket, MLOWERFS_BUCKET_NUMBER - i),
+		        sizeof(struct mlowerfs_slot) * i);
 	}
 out:
 	MRETURN(ret);
@@ -192,21 +192,21 @@ int _mlowerfs_bucket_shift_idle(struct mlowerfs_bucket *bucket, int head_index)
 		MASSERT(head_index < MLOWERFS_BUCKET_NUMBER - 1);
 
 		for (i = head_index; i >= 0; i--) {
-			if (!bucket->mb_intervals[i].mi_used) {
+			if (!mlowerfs_bucket2s_used(bucket, i)) {
 				break;
 			}
 		}
 		if (i >= 0) {
 			if (i < head_index) {
-				memmove(&bucket->mb_intervals[i],
-			 	       &bucket->mb_intervals[i + 1],
-			 	       sizeof(struct mlowerfs_interval) * (head_index - i));
+				memmove(&mlowerfs_bucket2slot(bucket, i),
+			 	       &mlowerfs_bucket2slot(bucket, i + 1),
+			 	       sizeof(struct mlowerfs_slot) * (head_index - i));
 			}
 			selected_index = head_index;
 		} else {
 			/* This is the hardest condition to cover for tests */
 			for (i = head_index + 1; i < MLOWERFS_BUCKET_NUMBER; i++) {
-				if (!bucket->mb_intervals[i].mi_used) {
+				if (!mlowerfs_bucket2s_used(bucket, i)) {
 					break;
 				}
 			}
@@ -217,9 +217,9 @@ int _mlowerfs_bucket_shift_idle(struct mlowerfs_bucket *bucket, int head_index)
 			
 			if (i - head_index - 1 != 0) {
 				MASSERT(head_index + 2 < MLOWERFS_BUCKET_NUMBER);
-				memmove(&bucket->mb_intervals[head_index + 1],
-				        &bucket->mb_intervals[head_index + 2],
-				        sizeof(struct mlowerfs_interval) * (i - head_index - 1));
+				memmove(&mlowerfs_bucket2slot(bucket, head_index + 1),
+				        &mlowerfs_bucket2slot(bucket, head_index + 2),
+				        sizeof(struct mlowerfs_slot) * (i - head_index - 1));
 			}
 			selected_index = head_index + 1;
 		}
@@ -227,7 +227,7 @@ int _mlowerfs_bucket_shift_idle(struct mlowerfs_bucket *bucket, int head_index)
 
 	MASSERT(selected_index >= 0);
 	MASSERT(selected_index < MLOWERFS_BUCKET_NUMBER);
-	bucket->mb_intervals[selected_index].mi_used = 0;
+	mlowerfs_bucket2s_used(bucket, selected_index) = 0;
 
 out:
 	MRETURN(selected_index);
@@ -250,17 +250,19 @@ int _mlowerfs_bucket_add(struct mlowerfs_bucket *bucket,
 	__u64 min_interval = MTFS_INTERVAL_EOF;
 	__u64 tmp_interval = 0;
 	__u64 head_index = 0;
+	struct mtfs_interval_node_extent last_extent = {0, 0};
+	int last_inited = 0;
 	MENTRY();
 
 	MASSERT(extent->start <= extent->end);
 	/* Collect information */
 	for (i = 0; i < MLOWERFS_BUCKET_NUMBER; i++) {
-		if (!bucket->mb_intervals[i].mi_used) {
+		if (!mlowerfs_bucket2s_used(bucket, i)) {
 			continue;
 		}
 
-		tmp_start = bucket->mb_intervals[i].mi_extent.start;
-		tmp_end = bucket->mb_intervals[i].mi_extent.end;
+		tmp_start = mlowerfs_bucket2s_start(bucket, i);
+		tmp_end = mlowerfs_bucket2s_end(bucket, i);
 		if (start_index == MLOWERFS_BUCKET_NUMBER) {
 			if (extent->start < tmp_start) {
 				start_inited = 1;
@@ -294,13 +296,13 @@ int _mlowerfs_bucket_add(struct mlowerfs_bucket *bucket,
 	for (i = (0 > start_index ? 0 : start_index);
 	     i < (MLOWERFS_BUCKET_NUMBER < end_index + 1 ? MLOWERFS_BUCKET_NUMBER : end_index + 1);
 	     i++) {
-		if (!bucket->mb_intervals[i].mi_used) {
+		if (!mlowerfs_bucket2s_used(bucket, i)) {
 			continue;
 		}
 
-		if (extent_overlapped(extent, &bucket->mb_intervals[i].mi_extent)) {
+		if (extent_overlapped(extent, &mlowerfs_bucket2s_extent(bucket, i))) {
 		    	/* Overlaped */
-			bucket->mb_intervals[i].mi_used = 0;
+			mlowerfs_bucket2s_used(bucket, i) = 0;
 			if (selected_index == -1) {
 				selected_index = i;
 			}
@@ -335,17 +337,27 @@ int _mlowerfs_bucket_add(struct mlowerfs_bucket *bucket,
 	/* All intervals is used */
 	if (start_index == -1) {
 		head_index = -1;
-		min_interval = bucket->mb_intervals[0].mi_extent.start - extent->end;
-		end =  bucket->mb_intervals[0].mi_extent.end;
+		min_interval = mlowerfs_bucket2s_start(bucket, 0) - extent->end;
+		end =  mlowerfs_bucket2s_end(bucket, 0);
 	}
 
 	/* Get min interval */
 	for (i = 0; i < MLOWERFS_BUCKET_NUMBER - 1; i++) {
-		tmp_interval = bucket->mb_intervals[i + 1].mi_extent.start -
-		               bucket->mb_intervals[i].mi_extent.end;
-		if (min_interval > tmp_interval) {
-			min_interval = tmp_interval;
-			head_index = i;
+		if (!mlowerfs_bucket2s_used(bucket, i)) {
+			continue;
+		}
+
+		if (last_inited) {
+			tmp_interval = mlowerfs_bucket2s_start(bucket, i) - last_extent.end;
+			MASSERT(tmp_interval > 0);
+
+			if (min_interval > tmp_interval) {
+				min_interval = tmp_interval;
+				head_index = i;
+			}
+
+			last_extent = mlowerfs_bucket2s_extent(bucket, i);
+			last_inited = 1;
 		}
 	}
 
@@ -353,35 +365,33 @@ int _mlowerfs_bucket_add(struct mlowerfs_bucket *bucket,
 	if (start_index == -1) {
 		if (head_index == -1) {
 			/* Merge to head */
-			bucket->mb_intervals[0].mi_extent.start = 
-				         extent->start;
+			 mlowerfs_bucket2s_start(bucket, 0) = extent->start;
 			goto out;
 		}
 	} else if (start_index == MLOWERFS_BUCKET_NUMBER) {
 		tmp_interval = extent->start -
-		               bucket->mb_intervals[MLOWERFS_BUCKET_NUMBER - 1].mi_extent.end;
+		               mlowerfs_bucket2s_end(bucket, MLOWERFS_BUCKET_NUMBER - 1);
+		MASSERT(tmp_interval > 0);
 		if (min_interval > tmp_interval) {
 			/* Merge to tail */
-			bucket->mb_intervals[MLOWERFS_BUCKET_NUMBER - 1].mi_extent.end = 
-				         extent->end;
+			 mlowerfs_bucket2s_end(bucket, MLOWERFS_BUCKET_NUMBER - 1) = extent->end;
 		}
 	} else {
 		MASSERT(start_index >= 0);
 		MASSERT(start_index < MLOWERFS_BUCKET_NUMBER - 1);
-		tmp_interval = extent->start -
-			       bucket->mb_intervals[start_index].mi_extent.end;
+		tmp_interval = extent->start - mlowerfs_bucket2s_end(bucket, start_index);
+		MASSERT(tmp_interval > 0);
 		if (min_interval > tmp_interval) {
 			min_interval = tmp_interval;
-				tmp_interval = bucket->mb_intervals[start_index + 1].mi_extent.start -
+				tmp_interval = mlowerfs_bucket2s_start(bucket, start_index + 1) -
 			                       extent->end;
+			MASSERT(tmp_interval > 0);
 			if (min_interval > tmp_interval) {
 				/* Merge to $start_index + 1 */
-				bucket->mb_intervals[start_index + 1].mi_extent.start = 
-				         extent->start;
+				mlowerfs_bucket2s_start(bucket, start_index + 1) = extent->start;
 			} else {
 				/* Merge to $start_index */
-				bucket->mb_intervals[start_index].mi_extent.end = 
-				         extent->end;
+				mlowerfs_bucket2s_end(bucket, start_index) = extent->end;
 			}
 			goto out;
 		}
@@ -390,19 +400,19 @@ int _mlowerfs_bucket_add(struct mlowerfs_bucket *bucket,
 	/* Merge old intervals and then insert new interval */
 	MASSERT(head_index >= 0);
 	MASSERT(head_index < MLOWERFS_BUCKET_NUMBER - 1);
-	bucket->mb_intervals[head_index].mi_extent.end =
-	        bucket->mb_intervals[head_index + 1].mi_extent.end;
-	bucket->mb_intervals[head_index + 1].mi_used = 0;
+	mlowerfs_bucket2s_end(bucket, head_index) = mlowerfs_bucket2s_end(bucket, head_index + 1);
+	mlowerfs_bucket2s_used(bucket, head_index + 1) = 0;
 	selected_index = _mlowerfs_bucket_shift_idle(bucket, start_index);
 	MASSERT(selected_index != -1);
 
 out_selected:
 	MASSERT(start_inited);
 	MASSERT(end_inited);
-	MASSERT(!bucket->mb_intervals[selected_index].mi_used);
-	bucket->mb_intervals[selected_index].mi_extent.start = start;
-	bucket->mb_intervals[selected_index].mi_extent.end = end;
-	bucket->mb_intervals[selected_index].mi_used = 1;
+	MASSERT(!mlowerfs_bucket2s_used(bucket, selected_index));
+
+	mlowerfs_bucket2s_start(bucket, selected_index) = start;
+	mlowerfs_bucket2s_end(bucket, selected_index) = end;
+	mlowerfs_bucket2s_used(bucket, selected_index) = 1;
 out:
 	MRETURN(ret);
 }
@@ -585,6 +595,67 @@ void mlowerfs_put(struct mtfs_lowerfs *fs_ops)
 	_MRETURN();
 }
 
+int mlowerfs_getxattr(struct inode *inode,
+                      const char *xattr_name,
+                      void *value,
+                      size_t size)
+{
+	struct dentry de = { .d_inode = inode };
+	int ret = 0;
+	int need_unlock = 0;
+	MENTRY();
+
+	MASSERT(inode);
+	MASSERT(inode->i_op);
+	MASSERT(inode->i_op->getxattr);
+
+	if (!inode_is_locked(inode)) {
+		mutex_lock(&inode->i_mutex);
+		need_unlock = 1;
+	}
+
+	ret = inode->i_op->getxattr(&de, xattr_name,
+                                    &value, size);
+
+	if (need_unlock) {
+		mutex_unlock(&inode->i_mutex);
+	}
+	MRETURN(ret);
+}
+
+int mlowerfs_setxattr(struct inode *inode,
+                      const char *xattr_name,
+                      void *value,
+                      size_t size)
+{
+	int ret = 0;
+	struct dentry de = { .d_inode = inode };
+	int need_unlock = 0;
+	/*
+	 * Should success all the time,
+	 * so NO XATTR_CREATE or XATTR_REPLACE
+	 */
+	int flag = 0;
+	MENTRY();
+
+	MASSERT(inode);
+	MASSERT(inode->i_op);
+	MASSERT(inode->i_op->setxattr);
+
+	if (!inode_is_locked(inode)) {
+		mutex_lock(&inode->i_mutex);
+		need_unlock = 1;
+	}
+
+	ret = inode->i_op->setxattr(&de, xattr_name,
+                                    &value, size, flag);
+
+	if (need_unlock) {
+		mutex_unlock(&inode->i_mutex);
+	}
+	MRETURN(ret);
+}
+
 int mlowerfs_getflag_xattr(struct inode *inode, __u32 *mtfs_flag, const char *xattr_name)
 {
 	struct dentry de = { .d_inode = inode };
@@ -603,7 +674,7 @@ int mlowerfs_getflag_xattr(struct inode *inode, __u32 *mtfs_flag, const char *xa
 	}
 
 	ret = inode->i_op->getxattr(&de, xattr_name,
-                              &disk_flag, sizeof(disk_flag));
+                                    &disk_flag, sizeof(disk_flag));
 	if (ret == -ENODATA) {
 		MDEBUG("not set\n");
 		*mtfs_flag = 0;
@@ -642,7 +713,7 @@ int mlowerfs_getflag_default(struct inode *inode, __u32 *mtfs_flag)
 	int ret = 0;
 	MENTRY();
 
-	ret = mlowerfs_getflag_xattr(inode, mtfs_flag, XATTR_NAME_MTFS_FLAG);
+	ret = mlowerfs_getflag_xattr(inode, mtfs_flag, MLOWERFS_XATTR_NAME_FLAG);
 
 	MRETURN(ret);
 }
@@ -695,7 +766,7 @@ int mlowerfs_setflag_default(struct inode *inode, __u32 mtfs_flag)
 	int ret = 0;
 	MENTRY();
 
-	ret = mlowerfs_setflag_xattr(inode, mtfs_flag, XATTR_NAME_MTFS_FLAG);
+	ret = mlowerfs_setflag_xattr(inode, mtfs_flag, MLOWERFS_XATTR_NAME_FLAG);
 
 	MRETURN(ret);
 }
@@ -703,17 +774,17 @@ EXPORT_SYMBOL(mlowerfs_setflag_default);
 
 static inline void mlowerfs_bucket_lock_init(struct mlowerfs_bucket *bucket)
 {
-	init_MUTEX(&bucket->mb_lock);
+	init_MUTEX(mlowerfs_bucket2lock(bucket));
 }
 
 static inline void mlowerfs_bucket_lock(struct mlowerfs_bucket *bucket)
 {
-	down(&bucket->mb_lock);
+	down(mlowerfs_bucket2lock(bucket));
 }
 
 static inline void mlowerfs_bucket_unlock(struct mlowerfs_bucket *bucket)
 {
-	up(&bucket->mb_lock);
+	up(mlowerfs_bucket2lock(bucket));
 }
 
 int mlowerfs_bucket_init(struct mlowerfs_bucket *bucket)
@@ -721,8 +792,14 @@ int mlowerfs_bucket_init(struct mlowerfs_bucket *bucket)
 	int ret = 0;
 	MENTRY();
 
+	MASSERT(mlowerfs_bucket2inode(bucket));
+
 	mlowerfs_bucket_lock_init(bucket);
-	bucket->mb_type = MLOWERFS_BUCKET_TYPE_DEFAULT;
+	mlowerfs_bucket2type(bucket) = MLOWERFS_BUCKET_TYPE_DEFAULT;
+
+	if (mlowerfs_bucket2type(bucket)->mbto_init) {
+		ret = mlowerfs_bucket2type(bucket)->mbto_init(bucket);
+	}
 
 	MRETURN(ret);
 }
@@ -742,7 +819,7 @@ int mlowerfs_bucket_read(struct mlowerfs_bucket *bucket)
 	}
 
 	for (i = 0; i < MLOWERFS_BUCKET_NUMBER; i++) {
-		bucket->mb_intervals[i].mi_used = 0;
+		mlowerfs_bucket2s_used(bucket, i) = 0;
 	}
 	mlowerfs_bucket_unlock(bucket);
 
@@ -763,10 +840,25 @@ int mlowerfs_bucket_add(struct mlowerfs_bucket *bucket,
 	MRETURN(ret);
 }
 
+int mlowerfs_bucket_flush_xattr(struct mlowerfs_bucket *bucket)
+{
+	int ret = 0;
+	struct inode *inode = mlowerfs_bucket2inode(bucket);
+	MENTRY();
+
+	MASSERT(inode);
+	mlowerfs_setxattr(inode, MLOWERFS_XATTR_NAME_BUCKET,
+                          bucket,
+                          sizeof(bucket));
+	
+	MRETURN(ret);
+}
+
 struct mlowerfs_bucket_type_object mlowerfs_bucket_xattr = {
 	.mbto_type     = MLOWERFS_BUCKET_TYPE_XATTR,
+	.mbto_init     = NULL,
 	.mbto_read     = NULL,
-	.mbto_flush    = NULL,
+	.mbto_flush    = mlowerfs_bucket_flush_xattr,
 };
 
 #endif /* !defined (__linux__) && defined(__KERNEL__) */

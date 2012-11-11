@@ -32,14 +32,15 @@ struct mtfs_inode_info {
 };
 
 /* DO NOT access mtfs_*_info_t directly, use following macros */
-#define mtfs_i2info(inode)           (container_of(inode, struct mtfs_inode_info, mii_inode))
-#define mtfs_i2bnum(inode)           (mtfs_i2info(inode)->mii_bnum)
-#define mtfs_i2barray(inode)         (mtfs_i2info(inode)->mii_barray)
-#define mtfs_i2branch(inode, bindex) (mtfs_i2barray(inode)[bindex].mib_inode)
-#define mtfs_i2resource(inode)       (&mtfs_i2info(inode)->mii_resource)
-#define mtfs_i2bucket(inode)         (&mtfs_i2info(inode)->mii_bucket)
-#define mtfs_bucket2info(bucket)     (container_of(bucket, struct mtfs_inode_info, mii_bucket))
-#define mtfs_bucket2inode(bucket)    (&mtfs_bucket2info(bucket)->mii_inode)
+#define mtfs_i2info(inode)            (container_of(inode, struct mtfs_inode_info, mii_inode))
+#define mtfs_i2bnum(inode)            (mtfs_i2info(inode)->mii_bnum)
+#define mtfs_i2barray(inode)          (mtfs_i2info(inode)->mii_barray)
+#define mtfs_i2branch(inode, bindex)  (mtfs_i2barray(inode)[bindex].mib_inode)
+#define mtfs_i2bbucket(inode, bindex) (&mtfs_i2barray(inode)[bindex].mib_bucket)
+#define mtfs_i2resource(inode)        (&mtfs_i2info(inode)->mii_resource)
+#define mtfs_i2bucket(inode)          (&mtfs_i2info(inode)->mii_bucket)
+#define mtfs_bucket2info(bucket)      (container_of(bucket, struct mtfs_inode_info, mii_bucket))
+#define mtfs_bucket2inode(bucket)     (&mtfs_bucket2info(bucket)->mii_inode)
 
 /* The values for mtfs_interpose's flag. */
 #define INTERPOSE_DEFAULT	0

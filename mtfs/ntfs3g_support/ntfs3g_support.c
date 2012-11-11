@@ -151,12 +151,12 @@ struct mtfs_junction mtfs_ntfs3g_junction = {
 };
 
 #include <mtfs_flag.h>
-#define XATTR_NAME_MTFS_FLAG_NTFS3G "user."XATTR_NAME_MTFS_FLAG
+#define MLOWERFS_XATTR_NAME_FLAG_NTFS3G "user."MLOWERFS_XATTR_NAME_FLAG
 
 int mlowerfs_getflag_ntfs3g(struct inode *inode, __u32 *mtfs_flag)
 {
 	int ret = 0;
-	ret = mlowerfs_getflag_xattr(inode, mtfs_flag, XATTR_NAME_MTFS_FLAG_NTFS3G);
+	ret = mlowerfs_getflag_xattr(inode, mtfs_flag, MLOWERFS_XATTR_NAME_FLAG_NTFS3G);
 	MRETURN(ret);
 }
 EXPORT_SYMBOL(mlowerfs_getflag_ntfs3g);
@@ -164,7 +164,7 @@ EXPORT_SYMBOL(mlowerfs_getflag_ntfs3g);
 int mlowerfs_setflag_ntfs3g(struct inode *inode, __u32 mtfs_flag)
 {
 	int ret = 0;
-	ret = mlowerfs_setflag_xattr(inode, mtfs_flag, XATTR_NAME_MTFS_FLAG_NTFS3G);
+	ret = mlowerfs_setflag_xattr(inode, mtfs_flag, MLOWERFS_XATTR_NAME_FLAG_NTFS3G);
 	MRETURN(ret);
 }
 EXPORT_SYMBOL(mlowerfs_setflag_ntfs3g);

@@ -11,7 +11,7 @@
 
 typedef enum operation_type {
 	OPERATION_TYPE_ADD = 0,
-	OPERATION_TYPE_CHECK,
+	//OPERATION_TYPE_CHECK,
 	OPERATION_TYPE_NUM,
 } operation_type_t;
 
@@ -40,8 +40,8 @@ int random_test(struct mlowerfs_bucket *bucket, mtfs_bitmap_t *bitmap, int limit
 		for (i = extent.start; i <= extent.end; i++) {
 			mtfs_bitmap_set(bitmap, i);
 		}
-		break;
-	case OPERATION_TYPE_CHECK:
+		//break;
+	//case OPERATION_TYPE_CHECK:
 		mtfs_foreach_bit(bitmap, i) {
 			if (!_mlowerfs_bucket_check(bucket, (__u64)i)) {
 				_mlowerfs_bucket_dump(bucket);
