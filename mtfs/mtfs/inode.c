@@ -20,6 +20,7 @@
 #include "mmap_internal.h"
 #include "dentry_internal.h"
 #include "async_internal.h"
+#include "subject_internal.h"
 
 int mtfs_inode_dump(struct inode *inode)
 {
@@ -93,8 +94,7 @@ int mtfs_inode_init(struct inode *inode, struct dentry *dentry)
 	}
 
 	mlock_resource_init(mtfs_i2resource(inode));
-	masync_bucket_init((struct msubject_async_info *)mtfs_s2subinfo(inode->i_sb),
-	                   mtfs_i2bucket(inode));
+	msubject_inode_init(inode);
 	MRETURN(ret);
 }
 

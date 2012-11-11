@@ -5,18 +5,20 @@
 #ifndef __MTFS_LOWERFS_H__
 #define __MTFS_LOWERFS_H__
 
+#include "mtfs_interval_tree.h"
 #if defined (__linux__) && defined(__KERNEL__)
 
 #include <linux/list.h>
 #include <linux/fs.h>
+#include <linux/mutex.h>
 
 #define MLOWERFS_FLAG_RMDIR_NO_DDLETE  0x00000001 /* When rmdir lowerfs, avoid d_delete in vfs_rmdir */
 #define MLOWERFS_FLAG_UNLINK_NO_DDLETE 0x00000002 /* When unlink lowerfs, avoid d_delete in vfs_rmdir */
 #define MLOWERFS_FLAG_ALL (MLOWERFS_FLAG_RMDIR_NO_DDLETE | MLOWERFS_FLAG_UNLINK_NO_DDLETE)
 
-static inline int mml_flag_is_valid(unsigned long ml_flag)
+static inline int mlowerfs_flag_is_valid(unsigned long flag)
 {
-	if (ml_flag & (~MLOWERFS_FLAG_ALL)) {
+	if (flag & (~MLOWERFS_FLAG_ALL)) {
 		return 0;
 	}
 	return 1;
@@ -34,14 +36,59 @@ struct mtfs_lowerfs {
 	int (* ml_getflag)(struct inode *inode, __u32 *mtfs_flag);
 };
 
+/* lowerfs bucket types */
+typedef enum {
+	MLOWERFS_BUCKET_TYPE_MIN    = 0,
+	MLOWERFS_BUCKET_TYPE_XATTR  = 1,
+	MLOWERFS_BUCKET_TYPE_MAX
+} mlowerfs_bucket_type_t;
+
+struct mlowerfs_bucket;
+
+struct mlowerfs_bucket_type_object {
+	mlowerfs_bucket_type_t mbto_type;
+	int  (* mbto_read)(struct mlowerfs_bucket *bucket);  /* Read bucket from lowerfs */
+	int  (* mbto_flush)(struct mlowerfs_bucket *bucket); /* Flush bucket to lowerfs */
+};
+
+extern struct mlowerfs_bucket_type_object mlowerfs_bucket_xattr;
+
+#define MLOWERFS_BUCKET_TYPE_DEFAULT (&mlowerfs_bucket_xattr)
+
+
 extern int mlowerfs_register(struct mtfs_lowerfs *fs_ops);
 extern void mlowerfs_unregister(struct mtfs_lowerfs *fs_ops);
 extern int mlowerfs_getflag_xattr(struct inode *inode, __u32 *mtfs_flag, const char *xattr_name);
 extern int mlowerfs_setflag_xattr(struct inode *inode, __u32 mtfs_flag, const char *xattr_name);
 extern int mlowerfs_getflag_default(struct inode *inode, __u32 *mtfs_flag);
 extern int mlowerfs_setflag_default(struct inode *inode, __u32 mtfs_flag);
-#else /* !defined (__linux__) && defined(__KERNEL__) */
-#error This head is only for kernel space use
-#endif /* !defined (__linux__) && defined(__KERNEL__) */
+#endif /* defined (__linux__) && defined(__KERNEL__) */
+
+#define MLOWERFS_BUCKET_NUMBER (64)
+
+struct mlowerfs_interval {
+	int                              mi_used;
+	struct mtfs_interval_node_extent mi_extent;
+};
+
+struct mlowerfs_bucket {
+#if defined (__linux__) && defined(__KERNEL__)
+	struct mlowerfs_bucket_type_object *mb_type;
+#endif /* defined (__linux__) && defined(__KERNEL__) */
+	__u64                               mb_generation; /* Generation of bucket */
+#if defined (__linux__) && defined(__KERNEL__)
+	struct semaphore                    mb_lock;       /* Lock */
+#endif /* defined (__linux__) && defined(__KERNEL__) */
+	__u64                               mb_reference;
+	struct mlowerfs_interval            mb_intervals[MLOWERFS_BUCKET_NUMBER];
+};
+
+#if !defined (__KERNEL__)
+int _mlowerfs_bucket_add(struct mlowerfs_bucket *bucket,
+                         struct mtfs_interval_node_extent *extent);
+void _mlowerfs_bucket_dump(struct mlowerfs_bucket *bucket);
+int _mlowerfs_bucket_is_valid(struct mlowerfs_bucket *bucket);
+int _mlowerfs_bucket_check(struct mlowerfs_bucket *bucket, __u64 position);
+#endif /* !defined (__KERNEL__) */
 
 #endif /* __MTFS_LOWERFS_H__ */

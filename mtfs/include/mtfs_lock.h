@@ -23,9 +23,9 @@ typedef enum {
 /* lock types */
 typedef enum {
 	MLOCK_TYPE_MIN    = 0,
-        MLOCK_TYPE_PLAIN  = 1,
-        MLOCK_TYPE_EXTENT = 2,
-        MLOCK_TYPE_MAX
+	MLOCK_TYPE_PLAIN  = 1,
+	MLOCK_TYPE_EXTENT = 2,
+	MLOCK_TYPE_MAX
 } mlock_type_t;
 
 #define MLOCK_COMPAT_WRITE (MLOCK_MODE_NULL)
@@ -36,15 +36,15 @@ extern mlock_mode_t mlock_compat_array[];
 
 static inline int mlock_mode_compat(mlock_mode_t exist_mode, mlock_mode_t new_mode)
 {
-       return (mlock_compat_array[exist_mode] & new_mode);
+	return (mlock_compat_array[exist_mode] & new_mode);
 }
 
 struct mlock;
 struct mlock_resource;
 struct mlock_extent {
 	__u64 start;
- 	__u64 end;
- 	__u64 gid;
+	__u64 end;
+	__u64 gid;
 };
 
 #define MLOCK_EXTENT_EOF 0xffffffffffffffffULL
@@ -67,9 +67,9 @@ struct mlock_type_object {
 };
 
 struct mlock_interval_tree {
-        int                         mlit_size; /* Number of granted locks */
-        mlock_mode_t                mlit_mode; /* Lock mode */
-        struct mtfs_interval_node  *mlit_root; /* Actual tree */
+	int                         mlit_size; /* Number of granted locks */
+	mlock_mode_t                mlit_mode; /* Lock mode */
+	struct mtfs_interval_node  *mlit_root; /* Actual tree */
 };
 
 struct mlock_resource {
@@ -101,8 +101,8 @@ static inline int mlock_resource_is_locked(struct mlock_resource *resource)
 /* lock state */
 typedef enum {
 	MLOCK_STATE_NEW      = 0,
-        MLOCK_STATE_WAITING  = 1,
-        MLOCK_STATE_GRANTED  = 2,
+	MLOCK_STATE_WAITING  = 1,
+	MLOCK_STATE_GRANTED  = 2,
 } mlock_state_t;
 
 struct mlock {

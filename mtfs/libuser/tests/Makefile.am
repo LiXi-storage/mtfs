@@ -14,6 +14,8 @@ noinst_PROGRAMS = err2str
 noinst_PROGRAMS += test_rule_tree test_branch_bitmap
 noinst_PROGRAMS += test_parse_option test_cfg
 noinst_PROGRAMS += test_interval_tree test_mlock
+noinst_PROGRAMS += test_mlowerfs_bucket
+noinst_PROGRAMS += test_mlowerfs_bucket_random
 
 test_rule_tree_SOURCES = test_rule_tree.c
 test_rule_tree_CFLAGS = $(LL_CFLAGS)
@@ -44,6 +46,17 @@ test_mlock_SOURCES = test_mlock.c
 test_mlock_CFLAGS = $(LL_CFLAGS)
 test_mlock_LDADD := $(LIBMTFS_LIBS) -lpthread
 test_mlock_DEPENDENCIES := $(LIBMTFS_LIBS)
+
+test_mlowerfs_bucket_SOURCES = test_mlowerfs_bucket.c
+test_mlowerfs_bucket_CFLAGS = $(LL_CFLAGS)
+test_mlowerfs_bucket_LDADD := $(LIBMTFS_LIBS)
+test_mlowerfs_bucket_DEPENDENCIES := $(LIBMTFS_LIBS)
+
+test_mlowerfs_bucket_random_SOURCES = test_mlowerfs_bucket_random.c
+test_mlowerfs_bucket_random_CFLAGS = $(LL_CFLAGS)
+test_mlowerfs_bucket_random_LDADD := $(LIBMTFS_LIBS)
+test_mlowerfs_bucket_random_DEPENDENCIES := $(LIBMTFS_LIBS)
+
 endif #LIBMTFS_TESTS
 
 noinst_DATA = 

@@ -1,7 +1,7 @@
 SUBDIRS := 
 if LIBMTFS
 noinst_LIBRARIES = libmtfs.a
-libmtfs_a_SOURCES = rule_tree.c queue.c parse_option.c interval_tree.c lock.c
+libmtfs_a_SOURCES = rule_tree.c queue.c parse_option.c interval_tree.c lock.c lowerfs.c
 libmtfs_a_CPPFLAGS = $(LLCPPFLAGS)
 libmtfs_a_CFLAGS = $(LLCFLAGS)
 endif

@@ -38,7 +38,7 @@ int mtfs_init_super(struct super_block *sb, struct mtfs_device *device, struct d
 
 	mtfs_s2dev(sb) = device;
 
-	ret = mtfs_subject_init(sb);
+	ret = msubject_super_init(sb);
 	if (ret) {
 		MERROR("failed to init subject\n");
 		goto out;
@@ -75,7 +75,7 @@ int mtfs_init_super(struct super_block *sb, struct mtfs_device *device, struct d
 	}
 	goto out;
 out_fini_subject:
-	mtfs_subject_fini(sb);
+	msubject_super_fini(sb);
 out:
 	MRETURN(ret);
 }

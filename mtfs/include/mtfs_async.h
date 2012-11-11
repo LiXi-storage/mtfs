@@ -12,7 +12,6 @@
 #include <linux/mutex.h>
 #include <mtfs_proc.h>
 #include <mtfs_interval_tree.h>
-#include <spinlock.h>
 
 #ifdef HAVE_SHRINK_CONTROL
 # define SHRINKER_ARGS(sc, nr_to_scan, gfp_mask)  \
@@ -99,8 +98,6 @@ extern ssize_t masync_file_aio_write(struct kiocb *iocb, const struct iovec *iov
                                      unsigned long nr_segs, loff_t pos);
 #endif /* ! HAVE_FILE_WRITEV */
 
-extern int masync_subject_init(struct super_block *sb);
-extern int masync_subject_fini(struct super_block *sb);
 #else /* !defined (__linux__) && defined(__KERNEL__) */
 #error This head is only for kernel space use
 #endif /* !defined (__linux__) && defined(__KERNEL__) */

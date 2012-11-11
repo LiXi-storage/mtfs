@@ -371,7 +371,7 @@ EXPORT_SYMBOL(mtrace_file_aio_write);
 
 #endif /* !HAVE_FILE_READV */
 
-int mtrace_subject_init(struct super_block *sb)
+int mtrace_super_init(struct super_block *sb)
 {
 	int ret = 0;
 	struct mrecord_handle *handle = NULL;
@@ -422,9 +422,8 @@ out_free_handle:
 out:
 	MRETURN(ret);
 }
-EXPORT_SYMBOL(mtrace_subject_init);
 
-int mtrace_subject_fini(struct super_block *sb)
+int mtrace_super_fini(struct super_block *sb)
 {
 	int ret = 0;
 	struct msubject_trace_info *info = NULL;
@@ -436,10 +435,9 @@ int mtrace_subject_fini(struct super_block *sb)
 	MTFS_FREE_PTR(info);
 	MRETURN(ret);
 }
-EXPORT_SYMBOL(mtrace_subject_fini);
 
 struct mtfs_subject_operations mtrace_subject_ops = {
-	mso_init:                 mtrace_subject_init,
-	mso_fini:                 mtrace_subject_fini,
+	mso_super_init:                 mtrace_super_init,
+	mso_super_fini:                 mtrace_super_fini,
 };
 EXPORT_SYMBOL(mtrace_subject_ops);

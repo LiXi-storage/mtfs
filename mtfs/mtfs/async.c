@@ -126,6 +126,7 @@ static void masync_bucket_add_to_lru(struct masync_bucket *bucket)
 	masync_info_write_lock(info);
 	masync_bucket_add_to_lru_nonlock(bucket);
 	masync_info_write_unlock(info);
+
 	_MRETURN();
 }
 
@@ -151,6 +152,7 @@ static void masync_bucket_touch_in_lru_nonlock(struct masync_bucket *bucket)
 	MASSERT(info);
 	MASSERT(!mtfs_list_empty(&bucket->mab_linkage));
 	mtfs_list_move_tail(&bucket->mab_linkage, &info->msai_dirty_buckets);
+
 	_MRETURN();
 }
 
@@ -178,6 +180,7 @@ void masync_bucket_init(struct msubject_async_info *info, struct masync_bucket *
 	bucket->mab_info = info;
 	atomic_set(&bucket->mab_nr, 0);
 	MTFS_INIT_LIST_HEAD(&bucket->mab_linkage);
+
 	_MRETURN();
 }
 
@@ -355,7 +358,6 @@ static int masync_cancel(struct msubject_async_info *info, int nr_to_cacel)
 			break;
 		}
 	}
-	
 
 	MRETURN(ret);
 }
@@ -573,6 +575,7 @@ static int _masync_shrink(int nr_to_scan, unsigned int gfp_mask)
 		MERROR("trying to shrink %d, canceled %d\n",
 		       nr_to_scan, canceled);
 	}
+
 out_calc:
 	ret = (masync_calculate_all(masync_info) / 100) * sysctl_vfs_cache_pressure;
 out:
@@ -632,6 +635,7 @@ static int masync_info_proc_init(struct msubject_async_info *async_info,
 		MERROR("failed to register proc for async replica\n");
 		ret = -ENOMEM;
 	}
+
 	MRETURN(ret);
 }
 
@@ -642,10 +646,11 @@ static int masync_info_proc_fini(struct msubject_async_info *info,
 	MENTRY();
 
 	mtfs_proc_remove(&info->msai_proc_entry);
+
 	MRETURN(ret);
 }
 
-int masync_subject_init(struct super_block *sb)
+int masync_super_init(struct super_block *sb)
 {
 	int ret = 0;
 	struct msubject_async_info *info = NULL;
@@ -675,9 +680,8 @@ out_free_info:
 out:
 	MRETURN(ret);
 }
-EXPORT_SYMBOL(masync_subject_init);
 
-int masync_subject_fini(struct super_block *sb)
+int masync_super_fini(struct super_block *sb)
 {
 	int ret = 0;
 	struct msubject_async_info *info = NULL;
@@ -690,12 +694,33 @@ int masync_subject_fini(struct super_block *sb)
 	masync_info_proc_fini(info, sb);
 
 	MTFS_FREE_PTR(info);
+
 	MRETURN(ret);
 }
-EXPORT_SYMBOL(masync_subject_fini);
+
+int masync_inode_init(struct inode *inode)
+{
+	int ret = 0;
+	MENTRY();
+
+	masync_bucket_init((struct msubject_async_info *)mtfs_s2subinfo(inode->i_sb),
+	                   mtfs_i2bucket(inode));
+	MRETURN(ret);
+}
+
+int masync_inode_fini(struct inode *inode)
+{
+	int ret = 0;
+	MENTRY();
+
+	masync_bucket_cleanup(mtfs_i2bucket(inode));
+	MRETURN(ret);
+}
 
 struct mtfs_subject_operations masync_subject_ops = {
-	mso_init:                 masync_subject_init,
-	mso_fini:                 masync_subject_fini,
+	mso_super_init:                 masync_super_init,
+	mso_super_fini:                 masync_super_fini,
+	mso_inode_init:                 masync_inode_init,
+	mso_inode_fini:                 masync_inode_fini,
 };
 EXPORT_SYMBOL(masync_subject_ops);

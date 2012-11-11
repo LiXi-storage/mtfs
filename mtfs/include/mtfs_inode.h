@@ -12,16 +12,21 @@
 #include "mtfs_async.h"
 #include "mtfs_common.h"
 #include "mtfs_lock.h"
+#include "mtfs_lowerfs.h"
 
 struct mtfs_inode_branch {
-	struct inode *binode;
+	struct inode           *mib_inode;
+	struct mlowerfs_bucket  mib_bucket; /* Used by async_replica */
 };
+
+#define mlowerfs_bucket2branch(bucket) (container_of(bucket, struct mtfs_inode_branch, mib_bucket))
+#define mlowerfs_bucket2inode(bucket)  (mlowerfs_bucket2branch(bucket)->mib_inode)
 
 /* mtfs inode data in memory */
 struct mtfs_inode_info {
 	struct inode             mii_inode;
-	struct mlock_resource    mii_resource;
-	struct masync_bucket     mii_bucket;
+	struct mlock_resource    mii_resource; /* Used by mlock */
+	struct masync_bucket     mii_bucket;   /* Used by async_replica */
 	mtfs_bindex_t            mii_bnum;
 	struct mtfs_inode_branch mii_barray[MTFS_BRANCH_MAX];
 };
@@ -30,7 +35,7 @@ struct mtfs_inode_info {
 #define mtfs_i2info(inode)           (container_of(inode, struct mtfs_inode_info, mii_inode))
 #define mtfs_i2bnum(inode)           (mtfs_i2info(inode)->mii_bnum)
 #define mtfs_i2barray(inode)         (mtfs_i2info(inode)->mii_barray)
-#define mtfs_i2branch(inode, bindex) (mtfs_i2barray(inode)[bindex].binode)
+#define mtfs_i2branch(inode, bindex) (mtfs_i2barray(inode)[bindex].mib_inode)
 #define mtfs_i2resource(inode)       (&mtfs_i2info(inode)->mii_resource)
 #define mtfs_i2bucket(inode)         (&mtfs_i2info(inode)->mii_bucket)
 #define mtfs_bucket2info(bucket)     (container_of(bucket, struct mtfs_inode_info, mii_bucket))

@@ -273,7 +273,7 @@ int mtfs_bitmap_check_empty(mtfs_bitmap_t *bitmap)
 #define mtfs_foreach_bit(bitmap, pos) \
 	for((pos)=mtfs_find_first_bit((bitmap)->data, bitmap->size);   \
             (pos) < (bitmap)->size;                               \
-            (pos) = mtfs_find_next_bit((bitmap)->data, (bitmap)->size, (pos)))
+            (pos) = mtfs_find_next_bit((bitmap)->data, (bitmap)->size, (pos + 1)))
 
 static inline void mtfs_bitmap_dump(mtfs_bitmap_t *bitmap)
 {
@@ -284,20 +284,25 @@ static inline void mtfs_bitmap_dump(mtfs_bitmap_t *bitmap)
 	MPRINT("\n");
 }
 
+static inline void mtfs_bitmap_cleanup(mtfs_bitmap_t *bitmap)
+{
+	/* Clear all bits */
+	memset(bitmap, 0, MTFS_BITMAP_SIZE(bitmap->size));
+}
+
 static inline mtfs_bitmap_t *mtfs_bitmap_allocate(int size)
 {
-	mtfs_bitmap_t *ptr = NULL;
+	mtfs_bitmap_t *bitmap = NULL;
 
-	MTFS_ALLOC(ptr, MTFS_BITMAP_SIZE(size));
-	if (ptr == NULL) {
-		return (ptr);
+	MTFS_ALLOC(bitmap, MTFS_BITMAP_SIZE(size));
+	if (bitmap == NULL) {
+		return (bitmap);
 	}
 
-	/* Clear all bits */
-	memset(ptr, 0, MTFS_BITMAP_SIZE(size));
-	ptr->size = size;
+	bitmap->size = size;
+	mtfs_bitmap_cleanup(bitmap);
 
-	return (ptr);
+	return (bitmap);
 }
 
 #define mtfs_bitmap_freee(ptr) MTFS_FREE(ptr, MTFS_BITMAP_SIZE(ptr->size));

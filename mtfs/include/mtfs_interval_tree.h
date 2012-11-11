@@ -9,6 +9,8 @@
 #include <debug.h>
 #include <mtfs_list.h>
 
+#define MTFS_INTERVAL_EOF (0xffffffffffffffffULL)
+
 struct mtfs_interval_node {
 	struct mtfs_interval_node   *in_left;
 	struct mtfs_interval_node   *in_right;
@@ -95,4 +97,11 @@ int mtfs_interval_is_overlapped(struct mtfs_interval_node *root,
                            struct mtfs_interval_node_extent *ex);
 struct mtfs_interval_node *mtfs_interval_find(struct mtfs_interval_node *root,
                                               struct mtfs_interval_node_extent *ex);
+
+static inline int extent_overlapped(struct mtfs_interval_node_extent *e1, 
+                                    struct mtfs_interval_node_extent *e2)
+{
+	return (e1->start <= e2->end) && (e2->start <= e1->end);
+}
+
 #endif /* _MTFS_INTERVAL_TREE_H_ */

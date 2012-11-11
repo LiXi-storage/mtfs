@@ -9,8 +9,10 @@
 #include <linux/fs.h>
 
 struct mtfs_subject_operations {
-	int (*mso_init)(struct super_block *sb);
-	int (*mso_fini)(struct super_block *sb);
+	int (*mso_super_init)(struct super_block *sb);
+	int (*mso_super_fini)(struct super_block *sb);
+	int (*mso_inode_init)(struct inode *inode);
+	int (*mso_inode_fini)(struct inode *inode);
 };
 
 #else /* !defined (__linux__) && defined(__KERNEL__) */

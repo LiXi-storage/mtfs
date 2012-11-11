@@ -47,7 +47,7 @@ void mtfs_destroy_inode(struct inode *inode)
 	struct mtfs_inode_info *inode_info = mtfs_i2info(inode);
 	MENTRY();
 
-	masync_bucket_cleanup(mtfs_i2bucket(inode));
+	msubject_inode_fini(inode);
 	mtfs_ii_free(inode_info);
 	_MRETURN();
 }
@@ -59,7 +59,7 @@ void mtfs_put_super(struct super_block *sb)
 	MENTRY();
 
 	if (mtfs_s2info(sb)) {
-		mtfs_subject_fini(sb);
+		msubject_super_fini(sb);
 		MASSERT(mtfs_s2dev(sb));
 		mtfs_freedev(mtfs_s2dev(sb));
 		mtfs_reserve_fini(sb);

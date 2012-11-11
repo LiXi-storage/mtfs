@@ -200,7 +200,7 @@ void mlock_interval_attach(struct mtfs_interval *node,
 
 struct mtfs_interval *mlock_interval_detach(struct mlock *lock)
 {
-        struct mtfs_interval *node = lock->ml_tree_node;
+	struct mtfs_interval *node = lock->ml_tree_node;
 	MENTRY();
 
 	MASSERT(node);
@@ -208,7 +208,7 @@ struct mtfs_interval *mlock_interval_detach(struct mlock *lock)
 	lock->ml_tree_node = NULL;
 	mtfs_list_del_init(&lock->ml_policy_link);
 
-        return (mtfs_list_empty(&node->mi_linkage) ? node : NULL);
+	MRETURN(mtfs_list_empty(&node->mi_linkage) ? node : NULL);
 }
 
 static int mlock_extent_init(struct mlock *lock, struct mlock_enqueue_info *einfo)

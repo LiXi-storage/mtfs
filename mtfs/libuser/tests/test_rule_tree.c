@@ -45,7 +45,6 @@ int main()
 	char check_str[MAX_RULE_LEN * 2];
 	int check_num = 0;
 
-	
 	fscanf(stdin, "%d", &str_num);
 	MTFS_ALLOC(rule_array, sizeof(*rule_array) * str_num);
 	if (rule_array == NULL) {
@@ -74,9 +73,9 @@ int main()
 		MERROR("construct rule tree failed\n");
 		goto free_all;
 	}
-	
+
 	rule_tree_dump(root);
-	
+
 	fscanf(stdin, "%d", &check_num);
 	for(i = 0; i < check_num; i++) {
 		fscanf(stdin, "%s", check_str);
@@ -84,7 +83,7 @@ int main()
 		raid = raid_type;
 		MPRINT("%d\n", raid);
 	}
-	
+
 	ret = rule_tree_destruct(root);
 free_all:
 	if (rule_array != NULL) {

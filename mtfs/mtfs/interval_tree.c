@@ -79,12 +79,6 @@ static inline int extent_equal(struct mtfs_interval_node_extent *e1,
 	return (e1->start == e2->start) && (e1->end == e2->end);
 }
 
-static inline int extent_overlapped(struct mtfs_interval_node_extent *e1, 
-                                    struct mtfs_interval_node_extent *e2)
-{
-	return (e1->start <= e2->end) && (e2->start <= e1->end);
-}
-
 static inline int node_compare(struct mtfs_interval_node *n1,
                                struct mtfs_interval_node *n2)
 {

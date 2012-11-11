@@ -7,5 +7,7 @@
 /test_cfg
 /test_interval_tree
 /test_mlock
+/test_mlowerfs_bucket
+/test_mlowerfs_bucket_random
 /test_parse_option
 /test_rule_tree
