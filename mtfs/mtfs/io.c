@@ -183,7 +183,7 @@ out:
 	_MRETURN();
 }
 
-static void mtfs_io_iter_fini_writev(struct mtfs_io *io, int init_ret)
+static void mtfs_io_iter_fini_write_ops(struct mtfs_io *io, int init_ret)
 {
 	MENTRY();
 
@@ -230,6 +230,47 @@ void mtfs_io_iter_start_getattr(struct mtfs_io *io)
 	if (io->mi_result.ret) {
 		io->mi_successful = 0;
 	} else {
+		io->mi_successful = 1;
+	}
+
+	_MRETURN();
+}
+
+void mtfs_io_iter_start_getxattr(struct mtfs_io *io)
+{
+	struct mtfs_io_getxattr *io_getxattr = &io->u.mi_getxattr;
+	mtfs_bindex_t global_bindex = io->mi_oplist.op_binfo[io->mi_bindex].bindex;
+	MENTRY();
+
+	io->mi_result.size = mtfs_getxattr_branch(io_getxattr->dentry,
+	                                         io_getxattr->name,
+	                                         io_getxattr->value,
+	                                         io_getxattr->size,
+	                                         global_bindex);
+	if (io->mi_result.size == io_getxattr->size) {
+		io->mi_successful = 1;
+	} else {
+		io->mi_successful = 0;
+	}
+
+	_MRETURN();
+}
+
+void mtfs_io_iter_start_setxattr(struct mtfs_io *io)
+{
+	struct mtfs_io_setxattr *io_setxattr = &io->u.mi_setxattr;
+	mtfs_bindex_t global_bindex = io->mi_oplist.op_binfo[io->mi_bindex].bindex;
+	MENTRY();
+
+	io->mi_result.ret = mtfs_setxattr_branch(io_setxattr->dentry,
+	                                         io_setxattr->name,
+	                                         io_setxattr->value,
+	                                         io_setxattr->size,
+	                                         io_setxattr->flags,
+	                                         global_bindex);
+	if (!io->mi_result.ret) {
+		io->mi_successful = 1;
+	} else {
 		io->mi_successful = 0;
 	}
 
@@ -255,7 +296,7 @@ const struct mtfs_io_operations mtfs_io_ops[] = {
 		.mio_iter_init  = mtfs_io_iter_init_rw,
 		.mio_iter_start = mtfs_io_iter_start_rw,
 		.mio_iter_end   = mtfs_io_iter_end_oplist,
-		.mio_iter_fini  = mtfs_io_iter_fini_writev,
+		.mio_iter_fini  = mtfs_io_iter_fini_write_ops,
 	},
 	[MIT_GETATTR] = {
 		.mio_init       = mtfs_io_init_oplist,
@@ -266,6 +307,26 @@ const struct mtfs_io_operations mtfs_io_ops[] = {
 		.mio_iter_start = mtfs_io_iter_start_getattr,
 		.mio_iter_end   = NULL,
 		.mio_iter_fini  = mtfs_io_iter_fini_read_ops,
+	},
+	[MIT_GETXATTR] = {
+		.mio_init       = mtfs_io_init_oplist,
+		.mio_fini       = NULL,
+		.mio_lock       = NULL,
+		.mio_unlock     = NULL,
+		.mio_iter_init  = NULL,
+		.mio_iter_start = mtfs_io_iter_start_getxattr,
+		.mio_iter_end   = NULL,
+		.mio_iter_fini  = mtfs_io_iter_fini_read_ops,
+	},
+	[MIT_SETXATTR] = {
+		.mio_init       = mtfs_io_init_oplist,
+		.mio_fini       = mtfs_io_fini_oplist,
+		.mio_lock       = NULL,
+		.mio_unlock     = NULL,
+		.mio_iter_init  = NULL,
+		.mio_iter_start = mtfs_io_iter_start_setxattr,
+		.mio_iter_end   = mtfs_io_iter_end_oplist,
+		.mio_iter_fini  = mtfs_io_iter_fini_write_ops,
 	},
 };
 

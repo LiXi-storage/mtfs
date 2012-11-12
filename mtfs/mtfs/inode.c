@@ -1940,28 +1940,28 @@ int mtfs_getattr_branch(struct vfsmount *mnt,
 		goto out; 
 	}
 
-	if (hidden_dentry == NULL) {
-		MERROR("branch[%d] of dentry [%.*s] is NULL\n",
-		       bindex, dentry->d_name.len,
-		       dentry->d_name.name);
+	if (hidden_dentry && hidden_dentry->d_inode) {
+		hidden_dentry = dget(hidden_dentry);
+		hidden_mnt = mtfs_s2mntbranch(dentry->d_sb, bindex);
+		MASSERT(hidden_mnt);
+		ret = vfs_getattr(hidden_mnt, hidden_dentry, stat);
+		dput(hidden_dentry);
+		if (!ret) {
+			fsstack_copy_attr_all(dentry->d_inode, hidden_dentry->d_inode, mtfs_get_nlinks);
+		}
+	} else {
+		MDEBUG("branch[%d] of dentry [%.*s] is %s\n",
+		       bindex, dentry->d_name.len, dentry->d_name.name,
+		       hidden_dentry == NULL ? "NULL" : "negative");
 		ret = -ENOENT;
-		goto out;
-	}
-
-	hidden_dentry = dget(hidden_dentry);
-	hidden_mnt = mtfs_s2mntbranch(dentry->d_sb, bindex);
-	MASSERT(hidden_mnt);
-	ret = vfs_getattr(hidden_mnt, hidden_dentry, stat);
-	dput(hidden_dentry);
-
-	if (!ret) {
-		fsstack_copy_attr_all(dentry->d_inode, hidden_dentry->d_inode, mtfs_get_nlinks);
 	}
 out:
 	MRETURN(ret);
 }
 
-int mtfs_getattr(struct vfsmount *mnt, struct dentry *dentry, struct kstat *stat)
+int mtfs_getattr(struct vfsmount *mnt,
+                 struct dentry *dentry,
+                 struct kstat *stat)
 {
 	int ret = 0;
 	struct mtfs_io *io = NULL;
@@ -1985,7 +1985,7 @@ int mtfs_getattr(struct vfsmount *mnt, struct dentry *dentry, struct kstat *stat
 	io->mi_bnum = mtfs_d2bnum(dentry);
 	io->mi_break = 0;
 	io->mi_ops = &mtfs_io_ops[MIT_GETATTR];
-	
+
 	io_getattr->mnt = mnt;
 	io_getattr->dentry = dentry;
 	io_getattr->stat = stat;
@@ -2003,32 +2003,90 @@ out:
 }
 EXPORT_SYMBOL(mtfs_getattr);
 
-
-ssize_t mtfs_getxattr(struct dentry *dentry, const char *name, void *value, size_t size) 
+ssize_t mtfs_getxattr_branch(struct dentry *dentry,
+                             const char *name,
+                             void *value,
+                             size_t size,
+                             mtfs_bindex_t bindex)
 {
-	struct dentry *hidden_dentry = NULL;
-	ssize_t ret = -EOPNOTSUPP; 
+	int ret = 0;
+	struct dentry *hidden_dentry = mtfs_d2branch(dentry, bindex);
 	MENTRY();
 
-	MDEBUG("getxattr [%.*s]\n", dentry->d_name.len, dentry->d_name.name);
-	MASSERT(dentry->d_inode);
-	hidden_dentry = mtfs_d_choose_branch(dentry, MTFS_ATTR_VALID);
-	if (IS_ERR(hidden_dentry)) {
-		ret = PTR_ERR(hidden_dentry);
+	ret = mtfs_device_branch_errno(mtfs_d2dev(dentry), bindex, BOPS_MASK_READ);
+	if (ret) {
+		MDEBUG("branch[%d] is abandoned\n", bindex);
+		goto out; 
+	}
+
+	if (hidden_dentry && hidden_dentry->d_inode) {
+		MASSERT(hidden_dentry->d_inode->i_op);
+		MASSERT(hidden_dentry->d_inode->i_op->getxattr);
+		mutex_lock(&hidden_dentry->d_inode->i_mutex);
+		ret = hidden_dentry->d_inode->i_op->getxattr(hidden_dentry, name, value, size);
+		mutex_unlock(&hidden_dentry->d_inode->i_mutex);
+	} else {
+		MDEBUG("branch[%d] of dentry [%.*s] is %s\n",
+		       bindex, dentry->d_name.len, dentry->d_name.name,
+		       hidden_dentry == NULL ? "NULL" : "negative");
+		ret = -ENOENT;
+	}
+out:
+	MRETURN(ret);
+}
+
+ssize_t mtfs_getxattr(struct dentry *dentry,
+                      const char *name,
+                      void *value,
+                      size_t size) 
+{
+	ssize_t ret = 0;
+	struct mtfs_io *io = NULL;
+	struct mtfs_io_getxattr *io_getxattr = NULL;
+	MENTRY();
+
+	MDEBUG("getxattr %s of [%.*s]\n", name, dentry->d_name.len, dentry->d_name.name);
+
+	MTFS_SLAB_ALLOC_PTR(io, mtfs_io_cache);
+	if (io == NULL) {
+		MERROR("not enough memory\n");
+		ret = -ENOMEM;
 		goto out;
 	}
 
-	MASSERT(hidden_dentry->d_inode);
-	MASSERT(hidden_dentry->d_inode->i_op);
-	MASSERT(hidden_dentry->d_inode->i_op->getxattr);
-	ret = hidden_dentry->d_inode->i_op->getxattr(hidden_dentry, name, value, size);
+	io_getxattr = &io->u.mi_getxattr;
 
+	io->mi_type = MIT_GETXATTR;
+	io->mi_bindex = 0;
+	io->mi_oplist_dentry = dentry;
+	io->mi_bnum = mtfs_d2bnum(dentry);
+	io->mi_break = 0;
+	io->mi_ops = &mtfs_io_ops[MIT_GETXATTR];
+
+	io_getxattr->dentry = dentry;
+	io_getxattr->name = name;
+	io_getxattr->value = value;
+	io_getxattr->size = size;
+
+	ret = mtfs_io_loop(io);
+	if (ret) {
+		MERROR("failed to loop on io\n");
+	} else {
+		ret = io->mi_result.size;
+	}
+
+	MTFS_SLAB_FREE_PTR(io, mtfs_io_cache);
 out:
 	MRETURN(ret);
 }
 EXPORT_SYMBOL(mtfs_getxattr);
 
-int mtfs_setxattr_branch(struct dentry *dentry, const char *name, const void *value, size_t size, int flags, mtfs_bindex_t bindex)
+int mtfs_setxattr_branch(struct dentry *dentry,
+                         const char *name,
+                         const void *value,
+                         size_t size,
+                         int flags,
+                         mtfs_bindex_t bindex)
 {
 	int ret = 0;
 	struct dentry *hidden_dentry = mtfs_d2branch(dentry, bindex);
@@ -2037,12 +2095,12 @@ int mtfs_setxattr_branch(struct dentry *dentry, const char *name, const void *va
 	ret = mtfs_device_branch_errno(mtfs_d2dev(dentry), bindex, BOPS_MASK_WRITE);
 	if (ret) {
 		MDEBUG("branch[%d] is abandoned\n", bindex);
-		hidden_dentry = ERR_PTR(ret); 
 		goto out; 
 	}
 
 	if (hidden_dentry && hidden_dentry->d_inode) {
 		MASSERT(hidden_dentry->d_inode->i_op);
+		MASSERT(hidden_dentry->d_inode->i_op->setxattr);
 		mutex_lock(&hidden_dentry->d_inode->i_mutex);
 		ret = hidden_dentry->d_inode->i_op->setxattr(hidden_dentry, name, value, size, flags);
 		mutex_unlock(&hidden_dentry->d_inode->i_mutex);
@@ -2057,74 +2115,57 @@ out:
 	MRETURN(ret);
 }
 
-int mtfs_setxattr(struct dentry *dentry, const char *name, const void *value, size_t size, int flags)
+int mtfs_setxattr(struct dentry *dentry,
+                  const char *name,
+                  const void *value,
+                  size_t size,
+                  int flags)
 {
 	int ret = 0;
-	mtfs_bindex_t bindex = 0;
-	mtfs_bindex_t i = 0;
-	struct mtfs_operation_list *list = NULL;
-	mtfs_operation_result_t result = {0};
+	struct mtfs_io *io = NULL;
+	struct mtfs_io_setxattr *io_setxattr = NULL;
 	MENTRY();
 
-	MDEBUG("setxattr [%.*s]\n", dentry->d_name.len, dentry->d_name.name);
-	MASSERT(dentry->d_inode);
+	MDEBUG("setxattr %s of [%.*s]\n", name, dentry->d_name.len, dentry->d_name.name);
 
-	list = mtfs_oplist_build(dentry->d_inode);
-	if (unlikely(list == NULL)) {
-		MERROR("failed to build operation list\n");
+	MTFS_SLAB_ALLOC_PTR(io, mtfs_io_cache);
+	if (io == NULL) {
+		MERROR("not enough memory\n");
 		ret = -ENOMEM;
 		goto out;
 	}
 
-	if (list->latest_bnum == 0) {
-		MERROR("dentry [%.*s] has no valid branch, please check it\n",
-		       dentry->d_name.len, dentry->d_name.name);
-		if (!mtfs_dev2noabort(mtfs_d2dev(dentry))) {
-			ret = -EIO;
-			goto out_free_oplist;
-		}
-	}
+	io_setxattr = &io->u.mi_setxattr;
 
-	for (i = 0; i < mtfs_d2bnum(dentry); i++) {
-		bindex = list->op_binfo[i].bindex;
-		ret = mtfs_setxattr_branch(dentry, name, value, size, flags, bindex);
-		result.ret = ret;
-		mtfs_oplist_setbranch(list, i, (ret == 0 ? 1 : 0), result);
-		if (i == list->latest_bnum - 1) {
-			mtfs_oplist_check(list);
-			if (list->success_latest_bnum <= 0) {
-				MDEBUG("operation failed for all latest %d branches\n", list->latest_bnum);
-				if (!mtfs_dev2noabort(mtfs_d2dev(dentry))) {
-					result = mtfs_oplist_result(list);
-					ret = result.ret;
-					goto out_free_oplist;
-				}
-			}
-		}
-	}
+	io->mi_type = MIT_SETXATTR;
+	io->mi_bindex = 0;
+	io->mi_oplist_dentry = dentry;
+	io->mi_bnum = mtfs_d2bnum(dentry);
+	io->mi_break = 0;
+	io->mi_ops = &mtfs_io_ops[MIT_SETXATTR];
 
-	mtfs_oplist_check(list);
-	if (list->success_bnum <= 0) {
-		result = mtfs_oplist_result(list);
-		ret = result.ret;
-		goto out_free_oplist;
-	}
+	io_setxattr->dentry = dentry;
+	io_setxattr->name = name;
+	io_setxattr->value = value;
+	io_setxattr->size = size;
+	io_setxattr->flags = flags;
 
-	ret = mtfs_oplist_update(dentry->d_inode, list);
+	ret = mtfs_io_loop(io);
 	if (ret) {
-		MERROR("failed to update inode\n");
-		MBUG();
+		MERROR("failed to loop on io\n");
+	} else {
+		ret = io->mi_result.ret;
 	}
 
-	goto out_free_oplist;
-out_free_oplist:
-	mtfs_oplist_free(list);
+	MTFS_SLAB_FREE_PTR(io, mtfs_io_cache);
 out:
 	MRETURN(ret);
 }
 EXPORT_SYMBOL(mtfs_setxattr);
 
-int mtfs_removexattr_branch(struct dentry *dentry, const char *name, mtfs_bindex_t bindex)
+int mtfs_removexattr_branch(struct dentry *dentry,
+                            const char *name,
+                            mtfs_bindex_t bindex)
 {
 	int ret = 0;
 	struct dentry *hidden_dentry = mtfs_d2branch(dentry, bindex);

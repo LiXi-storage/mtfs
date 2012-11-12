@@ -21,7 +21,17 @@ int mtfs_getattr_branch(struct vfsmount *mnt,
                         struct dentry *dentry,
                         struct kstat *stat,
                         mtfs_bindex_t bindex);
-
+ssize_t mtfs_getxattr_branch(struct dentry *dentry,
+                             const char *name,
+                             void *value,
+                             size_t size,
+                             mtfs_bindex_t bindex);
+int mtfs_setxattr_branch(struct dentry *dentry,
+                         const char *name,
+                         const void *value,
+                         size_t size,
+                         int flags,
+                         mtfs_bindex_t bindex);
 static inline struct mtfs_inode_info *mtfs_ii_alloc(void)
 {
 	struct mtfs_inode_info *i_info = NULL;
