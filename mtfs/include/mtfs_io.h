@@ -16,6 +16,7 @@
 typedef enum mtfs_io_type {
 	MIT_READV,
 	MIT_WRITEV,
+	MIT_GETATTR,
 } mtfs_io_type_t;
 
 struct mtfs_io_trace {
@@ -47,6 +48,12 @@ struct mtfs_io_rw {
 	size_t iov_length;
 };
 
+struct mtfs_io_getattr {
+	struct vfsmount *mnt;
+	struct dentry *dentry;
+	struct kstat *stat;
+};
+
 struct mtfs_io {
 	const struct mtfs_io_operations *mi_ops;
 	mtfs_io_type_t mi_type;
@@ -73,7 +80,8 @@ struct mtfs_io {
 	struct mlock_enqueue_info mi_einfo;
 
 	union {
-		struct mtfs_io_rw mi_rw;
+		struct mtfs_io_rw      mi_rw;
+		struct mtfs_io_getattr mi_getattr;
 	} u;
 	union {
 		struct mtfs_io_trace mi_trace;

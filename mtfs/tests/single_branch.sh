@@ -38,11 +38,13 @@ if [ "$SKIP_ABANDON_BRANCH0" != "yes" ]; then
 	bash multi_mnt.sh
 fi
 
-make_single $MTFS_DIR2/test/single_tests
-bash posix.sh
-bash multi_mnt.sh
-rm $DIR -fr
+if [ "$SKIP_ABANDON_BRANCH1" != "yes" ]; then
+	make_single $MTFS_DIR2/test/single_tests
+	bash posix.sh
+	bash multi_mnt.sh
+fi
 
+rm $DIR -fr
 
 export DIR=$ORIGIN_DIR
 export DIR1=$ORIGIN_DIR1

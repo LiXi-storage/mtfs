@@ -645,7 +645,6 @@ int mtfs_io_init_rw_common(struct mtfs_io *io, int is_write,
 
 	type = is_write ? MIT_WRITEV : MIT_READV;
 	io->mi_type = type;
-	io->mi_oplist_dentry = file->f_dentry;
 	io->mi_bindex = 0;
 	io->mi_bnum = mtfs_f2bnum(file);
 	io->mi_break = 0;

@@ -37,9 +37,11 @@ fi
 
 cleanup_abandon
 
-export ABANDON_BINDEX="1"
-bash posix.sh
-bash multi_mnt.sh
+if [ "$SKIP_ABANDON_BRANCH1" != "yes" ]; then
+	export ABANDON_BINDEX="1"
+	bash posix.sh
+	bash multi_mnt.sh
+fi
 
 export ABANDON_BINDEX="-1"
 

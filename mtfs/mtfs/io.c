@@ -8,6 +8,7 @@
 #include <mtfs_oplist.h>
 #include "file_internal.h"
 #include "io_internal.h"
+#include "inode_internal.h"
 
 static int mtfs_io_init_oplist(struct mtfs_io *io)
 {
@@ -158,7 +159,7 @@ void mtfs_io_iter_start_rw(struct mtfs_io *io)
 	_MRETURN();
 }
 
-static void mtfs_io_iter_fini_readv(struct mtfs_io *io, int init_ret)
+static void mtfs_io_iter_fini_read_ops(struct mtfs_io *io, int init_ret)
 {
 	MENTRY();
 
@@ -216,6 +217,25 @@ out:
 	_MRETURN();
 }
 
+void mtfs_io_iter_start_getattr(struct mtfs_io *io)
+{
+	struct mtfs_io_getattr *io_getattr = &io->u.mi_getattr;
+	mtfs_bindex_t global_bindex = io->mi_oplist.op_binfo[io->mi_bindex].bindex;
+	MENTRY();
+
+	io->mi_result.ret = mtfs_getattr_branch(io_getattr->mnt,
+	                                        io_getattr->dentry,
+	                                        io_getattr->stat,
+	                                        global_bindex);
+	if (io->mi_result.ret) {
+		io->mi_successful = 0;
+	} else {
+		io->mi_successful = 0;
+	}
+
+	_MRETURN();
+}
+
 const struct mtfs_io_operations mtfs_io_ops[] = {
 	[MIT_READV] = {
 		.mio_init       = mtfs_io_init_oplist,
@@ -225,7 +245,7 @@ const struct mtfs_io_operations mtfs_io_ops[] = {
 		.mio_iter_init  = mtfs_io_iter_init_rw,
 		.mio_iter_start = mtfs_io_iter_start_rw,
 		.mio_iter_end   = NULL,
-		.mio_iter_fini  = mtfs_io_iter_fini_readv,
+		.mio_iter_fini  = mtfs_io_iter_fini_read_ops,
 	},
 	[MIT_WRITEV] = {
 		.mio_init       = mtfs_io_init_oplist,
@@ -236,6 +256,16 @@ const struct mtfs_io_operations mtfs_io_ops[] = {
 		.mio_iter_start = mtfs_io_iter_start_rw,
 		.mio_iter_end   = mtfs_io_iter_end_oplist,
 		.mio_iter_fini  = mtfs_io_iter_fini_writev,
+	},
+	[MIT_GETATTR] = {
+		.mio_init       = mtfs_io_init_oplist,
+		.mio_fini       = NULL,
+		.mio_lock       = NULL,
+		.mio_unlock     = NULL,
+		.mio_iter_init  = NULL,
+		.mio_iter_start = mtfs_io_iter_start_getattr,
+		.mio_iter_end   = NULL,
+		.mio_iter_fini  = mtfs_io_iter_fini_read_ops,
 	},
 };
 

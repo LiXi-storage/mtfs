@@ -13,6 +13,7 @@
 #include <mtfs_oplist.h>
 #include <mtfs_dentry.h>
 #include <mtfs_inode.h>
+#include "io_internal.h"
 #include "lowerfs_internal.h"
 #include "inode_internal.h"
 #include "heal_internal.h"
@@ -1923,41 +1924,85 @@ out:
 }
 EXPORT_SYMBOL(mtfs_setattr);
 
+int mtfs_getattr_branch(struct vfsmount *mnt,
+                        struct dentry *dentry,
+                        struct kstat *stat,
+                        mtfs_bindex_t bindex)
+{
+	int ret = 0;
+	struct dentry *hidden_dentry = mtfs_d2branch(dentry, bindex);
+	struct vfsmount *hidden_mnt = NULL;
+	MENTRY();
+
+	ret = mtfs_device_branch_errno(mtfs_d2dev(dentry), bindex, BOPS_MASK_READ);
+	if (ret) {
+		MDEBUG("branch[%d] is abandoned\n", bindex);
+		goto out; 
+	}
+
+	if (hidden_dentry == NULL) {
+		MERROR("branch[%d] of dentry [%.*s] is NULL\n",
+		       bindex, dentry->d_name.len,
+		       dentry->d_name.name);
+		ret = -ENOENT;
+		goto out;
+	}
+
+	hidden_dentry = dget(hidden_dentry);
+	hidden_mnt = mtfs_s2mntbranch(dentry->d_sb, bindex);
+	MASSERT(hidden_mnt);
+	ret = vfs_getattr(hidden_mnt, hidden_dentry, stat);
+	dput(hidden_dentry);
+
+	if (!ret) {
+		fsstack_copy_attr_all(dentry->d_inode, hidden_dentry->d_inode, mtfs_get_nlinks);
+	}
+out:
+	MRETURN(ret);
+}
+
 int mtfs_getattr(struct vfsmount *mnt, struct dentry *dentry, struct kstat *stat)
 {
 	int ret = 0;
-	struct inode *inode = dentry->d_inode;
-	mtfs_bindex_t bindex = -1;
-	struct dentry *hidden_dentry = NULL;
-	struct vfsmount *hidden_mnt = NULL;
+	struct mtfs_io *io = NULL;
+	struct mtfs_io_getattr *io_getattr = NULL;
 	MENTRY();
 
 	MDEBUG("getattr [%.*s]\n", dentry->d_name.len, dentry->d_name.name);
 
-	ret = mtfs_i_choose_bindex(inode, MTFS_BRANCH_VALID, &bindex);
-	if (ret) {
-		MERROR("choose bindex failed, ret = %d\n", ret);
+	MTFS_SLAB_ALLOC_PTR(io, mtfs_io_cache);
+	if (io == NULL) {
+		MERROR("not enough memory\n");
+		ret = -ENOMEM;
 		goto out;
 	}
 
-	MASSERT(bindex >=0 && bindex < mtfs_i2bnum(inode));
-	hidden_dentry = mtfs_d2branch(dentry, bindex);
-	MASSERT(hidden_dentry);
-	MASSERT(hidden_dentry->d_inode);
+	io_getattr = &io->u.mi_getattr;
 
-	hidden_dentry = dget(hidden_dentry);
+	io->mi_type = MIT_GETATTR;
+	io->mi_bindex = 0;
+	io->mi_oplist_dentry = dentry;
+	io->mi_bnum = mtfs_d2bnum(dentry);
+	io->mi_break = 0;
+	io->mi_ops = &mtfs_io_ops[MIT_GETATTR];
+	
+	io_getattr->mnt = mnt;
+	io_getattr->dentry = dentry;
+	io_getattr->stat = stat;
 
-	hidden_mnt = mtfs_s2mntbranch(dentry->d_sb, bindex);
-	MASSERT(hidden_mnt);
-	ret = vfs_getattr(hidden_mnt, hidden_dentry, stat);
+	ret = mtfs_io_loop(io);
+	if (ret) {
+		MERROR("failed to loop on io\n");
+	} else {
+		ret = io->mi_result.ret;
+	}
 
-	dput(hidden_dentry);
-	fsstack_copy_attr_all(inode, hidden_dentry->d_inode, mtfs_get_nlinks);
-
+	MTFS_SLAB_FREE_PTR(io, mtfs_io_cache);
 out:
 	MRETURN(ret);
 }
 EXPORT_SYMBOL(mtfs_getattr);
+
 
 ssize_t mtfs_getxattr(struct dentry *dentry, const char *name, void *value, size_t size) 
 {

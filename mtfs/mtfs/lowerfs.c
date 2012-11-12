@@ -615,7 +615,7 @@ int mlowerfs_getxattr(struct inode *inode,
 	}
 
 	ret = inode->i_op->getxattr(&de, xattr_name,
-                                    &value, size);
+                                    value, size);
 
 	if (need_unlock) {
 		mutex_unlock(&inode->i_mutex);
@@ -648,7 +648,7 @@ int mlowerfs_setxattr(struct inode *inode,
 	}
 
 	ret = inode->i_op->setxattr(&de, xattr_name,
-                                    &value, size, flag);
+                                    value, size, flag);
 
 	if (need_unlock) {
 		mutex_unlock(&inode->i_mutex);
@@ -793,7 +793,8 @@ int mlowerfs_bucket_init(struct mlowerfs_bucket *bucket)
 	MENTRY();
 
 	MASSERT(mlowerfs_bucket2inode(bucket));
-
+	memset(mlowerfs_bucket2disk(bucket), 0,
+	       sizeof(struct mlowerfs_disk_bucket));
 	mlowerfs_bucket_lock_init(bucket);
 	mlowerfs_bucket2type(bucket) = MLOWERFS_BUCKET_TYPE_DEFAULT;
 
@@ -807,19 +808,11 @@ int mlowerfs_bucket_init(struct mlowerfs_bucket *bucket)
 int mlowerfs_bucket_read(struct mlowerfs_bucket *bucket)
 {
 	int ret = 0;
-	int i = 0;
-	struct inode *inode = NULL;
 	MENTRY();
 
 	mlowerfs_bucket_lock(bucket);
-	inode = mlowerfs_bucket2inode(bucket);
-
-	if (bucket->mb_type->mbto_read) {
-		bucket->mb_type->mbto_read(bucket);
-	}
-
-	for (i = 0; i < MLOWERFS_BUCKET_NUMBER; i++) {
-		mlowerfs_bucket2s_used(bucket, i) = 0;
+	if (mlowerfs_bucket2type(bucket)->mbto_read) {
+		ret = mlowerfs_bucket2type(bucket)->mbto_read(bucket);
 	}
 	mlowerfs_bucket_unlock(bucket);
 
@@ -840,6 +833,20 @@ int mlowerfs_bucket_add(struct mlowerfs_bucket *bucket,
 	MRETURN(ret);
 }
 
+int mlowerfs_bucket_flush(struct mlowerfs_bucket *bucket)
+{
+	int ret = 0;
+	MENTRY();
+
+	mlowerfs_bucket_lock(bucket);
+	if (mlowerfs_bucket2type(bucket)->mbto_flush) {
+		ret = mlowerfs_bucket2type(bucket)->mbto_flush(bucket);
+	}
+	mlowerfs_bucket_unlock(bucket);
+
+	MRETURN(ret);
+}
+
 int mlowerfs_bucket_flush_xattr(struct mlowerfs_bucket *bucket)
 {
 	int ret = 0;
@@ -847,17 +854,45 @@ int mlowerfs_bucket_flush_xattr(struct mlowerfs_bucket *bucket)
 	MENTRY();
 
 	MASSERT(inode);
-	mlowerfs_setxattr(inode, MLOWERFS_XATTR_NAME_BUCKET,
-                          bucket,
-                          sizeof(bucket));
-	
+	memset(mlowerfs_bucket2disk(bucket), 0,
+	       sizeof(struct mlowerfs_disk_bucket));
+	mlowerfs_bucket2generation(bucket) = 7777777;
+	mlowerfs_bucket2reference(bucket) = 7777777;
+	ret = mlowerfs_setxattr(inode, MLOWERFS_XATTR_NAME_BUCKET,
+	                        mlowerfs_bucket2disk(bucket),
+	                        sizeof(struct mlowerfs_disk_bucket));
+	if (ret) {
+		MERROR("failed to flush bucket\n");
+	}
+
+	MRETURN(ret);
+}
+
+int mlowerfs_bucket_read_xattr(struct mlowerfs_bucket *bucket)
+{
+	int ret = 0;
+	struct inode *inode = mlowerfs_bucket2inode(bucket);
+	MENTRY();
+
+	MASSERT(inode);
+	memset(mlowerfs_bucket2disk(bucket), 0,
+	       sizeof(struct mlowerfs_disk_bucket));
+	ret = mlowerfs_getxattr(inode, MLOWERFS_XATTR_NAME_BUCKET,
+	                        &bucket->mb_disk,
+	                        sizeof(struct mlowerfs_disk_bucket));
+	if (ret != sizeof(struct mlowerfs_disk_bucket)) {
+		MERROR("failed to read bucket, expect %d, got %d\n",
+		       sizeof(struct mlowerfs_disk_bucket), ret);
+		goto out;
+	}
+out:
 	MRETURN(ret);
 }
 
 struct mlowerfs_bucket_type_object mlowerfs_bucket_xattr = {
 	.mbto_type     = MLOWERFS_BUCKET_TYPE_XATTR,
 	.mbto_init     = NULL,
-	.mbto_read     = NULL,
+	.mbto_read     = mlowerfs_bucket_read_xattr,
 	.mbto_flush    = mlowerfs_bucket_flush_xattr,
 };
 

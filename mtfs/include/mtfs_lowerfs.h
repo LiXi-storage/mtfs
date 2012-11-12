@@ -77,27 +77,26 @@ struct mlowerfs_slot {
 
 struct mlowerfs_disk_bucket {
 	__u64                               mdb_generation; /* Generation of bucket */
-	__u64                               mb_reference;
-	struct mlowerfs_slot                mb_slots[MLOWERFS_BUCKET_NUMBER];
+	__u64                               mdb_reference;
+	struct mlowerfs_slot                mdb_slots[MLOWERFS_BUCKET_NUMBER];
 };
 
 struct mlowerfs_bucket {
 #if defined (__linux__) && defined(__KERNEL__)
 	struct mlowerfs_bucket_type_object *mb_type;
+	struct semaphore                    mb_lock; /* Lock */
 #endif /* defined (__linux__) && defined(__KERNEL__) */
-	__u64                               mb_generation; /* Generation of bucket */
-#if defined (__linux__) && defined(__KERNEL__)
-	struct semaphore                    mb_lock;       /* Lock */
-#endif /* defined (__linux__) && defined(__KERNEL__) */
-	__u64                               mb_reference;
-	struct mlowerfs_slot                mb_slots[MLOWERFS_BUCKET_NUMBER];
+	struct mlowerfs_disk_bucket         mb_disk;
 };
 
 #define mlowerfs_bucket2type(bucket)             (bucket->mb_type)
-#define mlowerfs_bucket2generation(bucket)       (&bucket->mb_generation)
 #define mlowerfs_bucket2lock(bucket)             (&bucket->mb_lock)
-#define mlowerfs_bucket2reference(bucket)        (&bucket->mb_reference)
-#define mlowerfs_bucket2slots(bucket)            (bucket->mb_slots)
+#define mlowerfs_bucket2disk(bucket)             (&bucket->mb_disk)
+
+#define mlowerfs_bucket2generation(bucket)       (mlowerfs_bucket2disk(bucket)->mdb_generation)
+#define mlowerfs_bucket2reference(bucket)        (mlowerfs_bucket2disk(bucket)->mdb_reference)
+#define mlowerfs_bucket2slots(bucket)            (mlowerfs_bucket2disk(bucket)->mdb_slots)
+
 #define mlowerfs_bucket2slot(bucket, bindex)     (mlowerfs_bucket2slots(bucket)[bindex])
 #define mlowerfs_bucket2s_used(bucket, bindex)   (mlowerfs_bucket2slot(bucket, bindex).mi_used)
 #define mlowerfs_bucket2s_extent(bucket, bindex) (mlowerfs_bucket2slot(bucket, bindex).mi_extent)

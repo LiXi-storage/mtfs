@@ -366,20 +366,17 @@ static int masync_cancel(struct msubject_async_info *info, int nr_to_cacel)
 static void masync_io_iter_start_rw(struct mtfs_io *io)
 {
 	struct mtfs_io_rw *io_rw = &io->u.mi_rw;
+	struct mtfs_interval_node_extent extent;
 	MENTRY();
 
 	if (io->mi_bindex == 0) {
-		mtfs_io_iter_start_rw_nonoplist(io);
+		if (io->mi_type == MIT_WRITEV) {
+			extent.start = *(io_rw->ppos);
+			extent.end = extent.start + io_rw->rw_size - 1;
+			masync_bucket_add(mtfs_i2bucket(io_rw->file->f_dentry->d_inode), &extent);
+		}
 	} else {
-		struct mtfs_interval_node_extent extent = {
-			.start = *(io_rw->ppos) - io->mi_result.size,
-			.end = *(io_rw->ppos) - 1,
-		};
-		MASSERT(io->mi_type == MIT_WRITEV);
-		MASSERT(io->mi_successful);
-		MASSERT(extent.start >= 0);
-		MASSERT(extent.end >= extent.start);
-		masync_bucket_add(mtfs_i2bucket(io_rw->file->f_dentry->d_inode), &extent);
+		mtfs_io_iter_start_rw_nonoplist(io);
 	}
 
 	_MRETURN();
@@ -395,9 +392,7 @@ static void masync_io_iter_fini_rw(struct mtfs_io *io, int init_ret)
 		goto out;
 	}
 
-	if ((io->mi_bindex == io->mi_bnum - 1) ||
-	    (io->mi_type == MIT_READV) ||
-	    (io->mi_type == MIT_WRITEV && !io->mi_successful)) {
+	if (io->mi_bindex == io->mi_bnum - 1) {
 	    	io->mi_break = 1;
 	} else {
 		io->mi_bindex++;
