@@ -117,7 +117,7 @@ int mtfs_invalid_branch(struct inode *inode, mtfs_bindex_t bindex, __u32 valid_f
 	mtfs_flag |= MTFS_FLAG_SETED;
 	MDEBUG("mtfs_flag = %x\n", mtfs_flag);
 	MASSERT(mtfs_flag_is_valid(mtfs_flag));
-	ret = lowerfs->ml_getflag(hidden_inode, &mtfs_flag);	
+	ret = lowerfs->ml_setflag(hidden_inode, mtfs_flag);	
 	if (ret) {
 		MERROR("set flag failed, ret %d\n", ret);
 		goto out;

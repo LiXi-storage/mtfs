@@ -74,6 +74,7 @@ static void mtfs_io_fini_oplist(struct mtfs_io *io)
 	MASSERT(inode);
 
 	mtfs_oplist_merge(oplist);
+	MASSERT(oplist->opinfo);
 	io->mi_result = oplist->opinfo->result;
 	io->mi_successful = oplist->opinfo->is_suceessful;
 

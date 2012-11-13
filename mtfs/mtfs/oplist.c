@@ -224,10 +224,18 @@ void mtfs_oplist_merge(struct mtfs_operation_list *oplist)
 	MASSERT(oplist->valid_bnum <= oplist->bnum);
 	MASSERT(oplist->checked_bnum <= oplist->bnum);
 
-	if (oplist->opinfo == NULL) {
-		oplist->opinfo = &(oplist->op_binfo[0]);
-	} else if (bindex_chosed != -1) {
+	if (bindex_chosed != -1) {
 		oplist->opinfo = &(oplist->op_binfo[bindex_chosed]);
+	} else if (oplist->fault_bnum) {
+		for (bindex = 0; bindex < oplist->checked_bnum; bindex++) {
+			if (oplist->op_binfo[bindex].is_suceessful) {
+				bindex_chosed = bindex;
+				break;
+			}
+		}
+		if (bindex_chosed == -1) {
+			oplist->opinfo = &(oplist->op_binfo[0]);
+		}
 	}
 
 	_MRETURN();

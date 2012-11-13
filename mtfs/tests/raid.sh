@@ -66,9 +66,9 @@ remove_bad_branch()
 	local BRANCH_DIR=${!BRANCH}
 
 	rm $DIR/$tfile -f 2>&1 > /dev/null
-	echo "rm $DIR/$tfile -f"
 	check_nonexist $BRANCH_0/$tfile || error "branch[0]: exist $?"
 	check_nonexist $BRANCH_1/$tfile || error "branch[1]: exist $?"
+	check_nonexist $DIR/$tfile || error "exist $? after remove"
 	touch $DIR/$tfile || error "create failed"
 	check_exist $BRANCH_0/$tfile || error "branch[0]: not exist $?"
 	check_exist $BRANCH_1/$tfile || error "branch[1]: not exist $?"
@@ -110,6 +110,7 @@ remove_good_branch()
 	rm $DIR/$tfile -f 2>&1 > /dev/null
 	check_nonexist $BRANCH_0/$tfile || error "branch[0]: $BRANCH_0/$tfile exist $?"
 	check_nonexist $BRANCH_1/$tfile || error "branch[1]: $BRANCH_1/$tfile exist $?"
+	check_nonexist $DIR/$tfile || error "exist $? after remove"
 	touch $DIR/$tfile || error "create failed"
 	check_exist $BRANCH_0/$tfile || error "branch[0]: not exist $?"
 	check_exist $BRANCH_1/$tfile || error "branch[1]: not exist $?"
