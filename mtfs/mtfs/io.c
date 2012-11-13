@@ -19,14 +19,23 @@ static int mtfs_io_init_oplist(struct mtfs_io *io)
 	MENTRY();
 
 	dentry = io->mi_oplist_dentry;
-	MASSERT(dentry);
-	inode = dentry->d_inode;
+	if (dentry) {
+		inode = dentry->d_inode;
+	} else {
+		MASSERT(io->mi_oplist_inode);
+		inode = io->mi_oplist_inode;
+	}
 	MASSERT(inode);
 
 	mtfs_oplist_init(oplist, inode);
 	if (oplist->latest_bnum == 0) {
-		MERROR("[%.*s] has no valid branch, please check it\n",
-		       dentry->d_name.len, dentry->d_name.name);
+		if (dentry) {
+			MERROR("[%.*s] has no valid branch, please check it\n",
+			       dentry->d_name.len, dentry->d_name.name);
+		} else {
+			MERROR("file has no valid branch, please check it\n");
+		}
+
 		if (!mtfs_dev2noabort(mtfs_i2dev(inode))) {
 			ret = -EIO;
 		}
@@ -56,8 +65,12 @@ static void mtfs_io_fini_oplist(struct mtfs_io *io)
 	MENTRY();
 
 	dentry = io->mi_oplist_dentry;
-	MASSERT(dentry);
-	inode = dentry->d_inode;
+	if (dentry) {
+		inode = dentry->d_inode;
+	} else {
+		MASSERT(io->mi_oplist_inode);
+		inode = io->mi_oplist_inode;
+	}
 	MASSERT(inode);
 
 	mtfs_oplist_merge(oplist);
@@ -66,8 +79,12 @@ static void mtfs_io_fini_oplist(struct mtfs_io *io)
 
 	ret = mtfs_oplist_update(inode, oplist);
 	if (ret) {
-		MERROR("failed to update oplist for [%.*s]\n",
-		       dentry->d_name.len, dentry->d_name.name);
+		if (dentry) {
+			MERROR("failed to update oplist for [%.*s]\n",
+			       dentry->d_name.len, dentry->d_name.name);
+		} else {
+			MERROR("failed to update oplist\n");
+		}	
 		MBUG();
 	}
 
@@ -201,9 +218,17 @@ static void mtfs_io_iter_fini_write_ops(struct mtfs_io *io, int init_ret)
 		if (io->mi_oplist.success_latest_bnum <= 0) {
 			MDEBUG("operation failed for all latest %d branches\n",
 			       io->mi_oplist.latest_bnum);
-			if (!mtfs_dev2noabort(mtfs_i2dev(io->mi_oplist_dentry->d_inode))) {
-				io->mi_break = 1;
-				goto out;
+			if (io->mi_oplist_dentry) {
+				if (!mtfs_dev2noabort(mtfs_i2dev(io->mi_oplist_dentry->d_inode))) {
+					io->mi_break = 1;
+					goto out;
+				}
+			} else {
+				MASSERT(io->mi_oplist_inode);
+				if (!mtfs_dev2noabort(mtfs_i2dev(io->mi_oplist_inode))) {
+					io->mi_break = 1;
+					goto out;
+				}
 			}
 		}
 	}
@@ -214,6 +239,27 @@ static void mtfs_io_iter_fini_write_ops(struct mtfs_io *io, int init_ret)
 		io->mi_bindex++;
 	}
 out:
+	_MRETURN();
+}
+
+static void mtfs_io_iter_start_create(struct mtfs_io *io)
+{
+	struct mtfs_io_create *io_create = &io->u.mi_create;
+	mtfs_bindex_t global_bindex = io->mi_oplist.op_binfo[io->mi_bindex].bindex;
+	MENTRY();
+
+	io->mi_result.ret = mtfs_create_branch(io_create->dir,
+	                                       io_create->dentry,
+	                                       io_create->mode,
+	                                       io_create->nd,
+	                                       global_bindex);
+
+	if (!io->mi_result.ret) {
+		io->mi_successful = 1;
+	} else {
+		io->mi_successful = 0;
+	}
+
 	_MRETURN();
 }
 
@@ -339,6 +385,16 @@ static void mtfs_io_iter_start_listxattr(struct mtfs_io *io)
 }
 
 const struct mtfs_io_operations mtfs_io_ops[] = {
+	[MIT_CREATE] = {
+		.mio_init       = mtfs_io_init_oplist,
+		.mio_fini       = mtfs_io_fini_oplist,
+		.mio_lock       = NULL,
+		.mio_unlock     = NULL,
+		.mio_iter_init  = NULL,
+		.mio_iter_start = mtfs_io_iter_start_create,
+		.mio_iter_end   = mtfs_io_iter_end_oplist,
+		.mio_iter_fini  = mtfs_io_iter_fini_write_ops,
+	},
 	[MIT_READV] = {
 		.mio_init       = mtfs_io_init_oplist,
 		.mio_fini       = NULL,

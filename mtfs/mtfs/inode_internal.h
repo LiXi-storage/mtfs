@@ -42,6 +42,11 @@ ssize_t mtfs_listxattr_branch(struct dentry *dentry,
                               char *list,
                               size_t size,
                               mtfs_bindex_t bindex);
+int mtfs_create_branch(struct inode *dir,
+                       struct dentry *dentry,
+                       int mode,
+                       struct nameidata *nd,
+                       mtfs_bindex_t bindex);
 static inline struct mtfs_inode_info *mtfs_ii_alloc(void)
 {
 	struct mtfs_inode_info *i_info = NULL;

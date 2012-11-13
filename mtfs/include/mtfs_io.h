@@ -14,6 +14,7 @@
 #endif
 
 typedef enum mtfs_io_type {
+	MIT_CREATE,
 	MIT_READV,
 	MIT_WRITEV,
 	MIT_GETATTR,
@@ -39,6 +40,13 @@ struct mtfs_io_trace {
 #include <linux/uio.h>
 #include <mtfs_lock.h>
 #include <mtfs_trace.h>
+
+struct mtfs_io_create {
+	struct inode *dir;
+	struct dentry *dentry;
+	int mode;
+	struct nameidata *nd;
+};
 
 struct mtfs_io_rw {
 	struct file *file;
@@ -106,6 +114,8 @@ struct mtfs_io {
 	 */
 	struct mtfs_operation_list         mi_oplist;
 	struct dentry                     *mi_oplist_dentry;
+	/* mi_oplist_dentry may not be available */
+	struct inode                      *mi_oplist_inode;
 	/*
 	 * Locked when ->mio_lock
 	 * Unlocked when ->mio_unlock
@@ -116,6 +126,7 @@ struct mtfs_io {
 	struct mlock_enqueue_info          mi_einfo;
 
 	union {
+		struct mtfs_io_create      mi_create;
 		struct mtfs_io_rw          mi_rw;
 		struct mtfs_io_getattr     mi_getattr;
 		struct mtfs_io_setattr     mi_setattr;
