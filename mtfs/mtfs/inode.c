@@ -800,6 +800,10 @@ int mtfs_link(struct dentry *old_dentry,
 		ret = io->mi_result.ret;
 	}
 
+	if (ret) {
+		goto out_free_io;
+	}
+
 	for (bindex = 0; bindex < mtfs_i2bnum(dir); bindex++) {
 		dput(mtfs_d2branch(new_dentry, bindex));
 	}
@@ -834,7 +838,9 @@ static inline int __vfs_unlink(struct inode *dir, struct dentry *dentry)
 	return ret;
 }
 
-static int mtfs_unlink_branch(struct dentry *dentry, mtfs_bindex_t bindex)
+int mtfs_unlink_branch(struct inode *dir,
+                       struct dentry *dentry,
+                       mtfs_bindex_t bindex)
 {
 	struct dentry *hidden_dentry = mtfs_d2branch(dentry, bindex);
 	struct dentry *hidden_dir_dentry = NULL;
@@ -887,81 +893,55 @@ out:
 int mtfs_unlink(struct inode *dir, struct dentry *dentry)
 {
 	int ret = 0;
-	mtfs_bindex_t bindex = 0;
-	mtfs_bindex_t i = 0;
-	struct inode *hidden_dir = NULL;
-	struct inode *inode = dentry->d_inode;
-	struct mtfs_operation_list *list = NULL;
-	mtfs_operation_result_t result = {0};	
+	struct mtfs_io *io = NULL;
+	struct mtfs_io_unlink *io_unlink = NULL;
 	MENTRY();
 
-	MDEBUG("unlink [%.*s]\n", dentry->d_name.len, dentry->d_name.name);
+	MDEBUG("unlink [%.*s]\n",
+	       dentry->d_name.len, dentry->d_name.name);
 	MASSERT(inode_is_locked(dir));
-	MASSERT(inode);
-	MASSERT(inode_is_locked(inode));
+	MASSERT(dentry->d_inode);
+	MASSERT(inode_is_locked(dentry->d_inode));
 
 	dget(dentry);
 
-	list = mtfs_oplist_build(dir);
-	if (unlikely(list == NULL)) {
-		MERROR("failed to build operation list\n");
+	MTFS_SLAB_ALLOC_PTR(io, mtfs_io_cache);
+	if (io == NULL) {
+		MERROR("not enough memory\n");
 		ret = -ENOMEM;
 		goto out;
 	}
 
-	if (list->latest_bnum == 0) {
-		MERROR("dir [%.*s] has no valid branch, please check it\n",
-		       dentry->d_parent->d_name.len, dentry->d_parent->d_name.name);
-		if (!mtfs_dev2noabort(mtfs_i2dev(dir))) {
-			ret = -EIO;
-			goto out_free_oplist;
-		}
-	}
+	io_unlink = &io->u.mi_unlink;
 
-	for (i = 0; i < mtfs_i2bnum(dir); i++) {
-		bindex = list->op_binfo[i].bindex;
-		ret = mtfs_unlink_branch(dentry, bindex);
-		result.ret = ret;
-		mtfs_oplist_setbranch(list, i, (ret == 0 ? 1 : 0), result);
-		if (i == list->latest_bnum - 1) {
-			mtfs_oplist_check(list);
-			if (list->success_latest_bnum <= 0) {
-				MDEBUG("operation failed for all latest %d branches\n", list->latest_bnum);
-				if (!mtfs_dev2noabort(mtfs_i2dev(dir))) {
-					result = mtfs_oplist_result(list);
-					ret = result.ret;
-					goto out_free_oplist;
-				}
-			}
-		}
-	}
+	io->mi_type = MIT_UNLINK;
+	io->mi_bindex = 0;
+	io->mi_oplist_inode = dir;
+	io->mi_bnum = mtfs_i2bnum(dir);
+	io->mi_break = 0;
+	io->mi_ops = &mtfs_io_ops[MIT_UNLINK];
 
-	mtfs_oplist_check(list);
-	if (list->success_bnum <= 0) {
-		result = mtfs_oplist_result(list);
-		ret = result.ret;
-		goto out_free_oplist;
-	}
+	io_unlink->dir = dir;
+	io_unlink->dentry = dentry;
 
-	ret = mtfs_oplist_update(dir, list);
+	ret = mtfs_io_loop(io);
 	if (ret) {
-		MERROR("failed to update inode\n");
-		MBUG();
+		MERROR("failed to loop on io\n");
+	} else {
+		ret = io->mi_result.ret;
 	}
 
-	hidden_dir = mtfs_i_choose_branch(dir, MTFS_ATTR_VALID);
-	if (IS_ERR(hidden_dir)) {
-		ret = PTR_ERR(hidden_dir);
-		MERROR("choose branch failed, ret = %d\n", ret);
-		goto out_free_oplist;
+	if (ret) {
+		goto out_free_io;
 	}
-	fsstack_copy_attr_times(dir, hidden_dir);
+
+	mtfs_update_attr_times(dir);
 	dentry->d_inode->i_nlink = mtfs_get_nlinks(dentry->d_inode);
-
-	/* call d_drop so the system "forgets" about us */
+	/* Call d_drop so the system "forgets" about us */
 	d_drop(dentry);
-out_free_oplist:
-	mtfs_oplist_free(list);
+
+out_free_io:
+	MTFS_SLAB_FREE_PTR(io, mtfs_io_cache);
 out:
 	dput(dentry);
 	MRETURN(ret);

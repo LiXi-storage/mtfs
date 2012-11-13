@@ -270,9 +270,9 @@ static void mtfs_io_iter_start_link(struct mtfs_io *io)
 	MENTRY();
 
 	io->mi_result.ret = mtfs_link_branch(io_link->old_dentry,
-	                                       io_link->dir,
-	                                       io_link->new_dentry,
-	                                       global_bindex);
+	                                     io_link->dir,
+	                                     io_link->new_dentry,
+	                                     global_bindex);
 
 	if (!io->mi_result.ret) {
 		io->mi_successful = 1;
@@ -283,6 +283,24 @@ static void mtfs_io_iter_start_link(struct mtfs_io *io)
 	_MRETURN();
 }
 
+static void mtfs_io_iter_start_unlink(struct mtfs_io *io)
+{
+	struct mtfs_io_unlink *io_unlink = &io->u.mi_unlink;
+	mtfs_bindex_t global_bindex = io->mi_oplist.op_binfo[io->mi_bindex].bindex;
+	MENTRY();
+
+	io->mi_result.ret = mtfs_unlink_branch(io_unlink->dir,
+	                                       io_unlink->dentry,
+	                                       global_bindex);
+
+	if (!io->mi_result.ret) {
+		io->mi_successful = 1;
+	} else {
+		io->mi_successful = 0;
+	}
+
+	_MRETURN();
+}
 
 static void mtfs_io_iter_start_getattr(struct mtfs_io *io)
 {
@@ -423,6 +441,16 @@ const struct mtfs_io_operations mtfs_io_ops[] = {
 		.mio_unlock     = NULL,
 		.mio_iter_init  = NULL,
 		.mio_iter_start = mtfs_io_iter_start_link,
+		.mio_iter_end   = mtfs_io_iter_end_oplist,
+		.mio_iter_fini  = mtfs_io_iter_fini_write_ops,
+	},
+	[MIT_UNLINK] = {
+		.mio_init       = mtfs_io_init_oplist,
+		.mio_fini       = mtfs_io_fini_oplist,
+		.mio_lock       = NULL,
+		.mio_unlock     = NULL,
+		.mio_iter_init  = NULL,
+		.mio_iter_start = mtfs_io_iter_start_unlink,
 		.mio_iter_end   = mtfs_io_iter_end_oplist,
 		.mio_iter_fini  = mtfs_io_iter_fini_write_ops,
 	},
