@@ -2233,25 +2233,76 @@ out:
 }
 EXPORT_SYMBOL(mtfs_removexattr);
 
-ssize_t mtfs_listxattr(struct dentry *dentry, char *list, size_t size)
+ssize_t mtfs_listxattr_branch(struct dentry *dentry,
+                              char *list,
+                              size_t size,
+                              mtfs_bindex_t bindex)
 {
-	struct dentry *hidden_dentry = NULL;
-	ssize_t ret = -EOPNOTSUPP; 
+	ssize_t ret = 0;
+	struct dentry *hidden_dentry = mtfs_d2branch(dentry, bindex);
 	MENTRY();
 
-	MDEBUG("listxattr [%.*s]\n", dentry->d_name.len, dentry->d_name.name);
-	hidden_dentry = mtfs_d_choose_branch(dentry, MTFS_ATTR_VALID);
-	if (IS_ERR(hidden_dentry)) {
-		ret = PTR_ERR(hidden_dentry);
+	ret = mtfs_device_branch_errno(mtfs_d2dev(dentry), bindex, BOPS_MASK_READ);
+	if (ret) {
+		MDEBUG("branch[%d] is abandoned\n", bindex);
+		goto out; 
+	}
+
+	if (hidden_dentry && hidden_dentry->d_inode) {
+		MASSERT(hidden_dentry->d_inode->i_op);
+		MASSERT(hidden_dentry->d_inode->i_op->listxattr);
+		ret = hidden_dentry->d_inode->i_op->listxattr(hidden_dentry, list, size);
+	} else {
+		MDEBUG("branch[%d] of dentry [%.*s] is %s\n",
+		       bindex, dentry->d_name.len, dentry->d_name.name,
+		       hidden_dentry == NULL ? "NULL" : "negative");
+		ret = -ENOENT;
+	}
+out:
+	MRETURN(ret);
+}
+
+ssize_t mtfs_listxattr(struct dentry *dentry,
+                       char *list,
+                       size_t size)
+{
+	ssize_t ret = 0;
+	struct mtfs_io *io = NULL;
+	struct mtfs_io_listxattr *io_listxattr = NULL;
+	MENTRY();
+
+	MDEBUG("listxattr [%.*s]\n",
+	       dentry->d_name.len, dentry->d_name.name);
+	MASSERT(dentry->d_inode);
+
+	MTFS_SLAB_ALLOC_PTR(io, mtfs_io_cache);
+	if (io == NULL) {
+		MERROR("not enough memory\n");
+		ret = -ENOMEM;
 		goto out;
 	}
 
-	MASSERT(hidden_dentry->d_inode);
-	MASSERT(hidden_dentry->d_inode->i_op);
-	if (hidden_dentry->d_inode->i_op->listxattr) {
-		ret = hidden_dentry->d_inode->i_op->listxattr(hidden_dentry, list, size);
+	io_listxattr = &io->u.mi_listxattr;
+
+	io->mi_type = MIT_LISTXATTR;
+	io->mi_bindex = 0;
+	io->mi_oplist_dentry = dentry;
+	io->mi_bnum = mtfs_d2bnum(dentry);
+	io->mi_break = 0;
+	io->mi_ops = &mtfs_io_ops[MIT_LISTXATTR];
+
+	io_listxattr->dentry = dentry;
+	io_listxattr->list = list;
+	io_listxattr->size = size;
+
+	ret = mtfs_io_loop(io);
+	if (ret) {
+		MERROR("failed to loop on io\n");
+	} else {
+		ret = io->mi_result.ssize;
 	}
 
+	MTFS_SLAB_FREE_PTR(io, mtfs_io_cache);
 out:
 	MRETURN(ret);
 }

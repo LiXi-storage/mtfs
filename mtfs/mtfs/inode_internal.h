@@ -38,6 +38,10 @@ int mtfs_setxattr_branch(struct dentry *dentry,
 int mtfs_removexattr_branch(struct dentry *dentry,
                             const char *name,
                             mtfs_bindex_t bindex);
+ssize_t mtfs_listxattr_branch(struct dentry *dentry,
+                              char *list,
+                              size_t size,
+                              mtfs_bindex_t bindex);
 static inline struct mtfs_inode_info *mtfs_ii_alloc(void)
 {
 	struct mtfs_inode_info *i_info = NULL;

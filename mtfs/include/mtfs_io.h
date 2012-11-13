@@ -21,6 +21,7 @@ typedef enum mtfs_io_type {
 	MIT_GETXATTR,
 	MIT_SETXATTR,
 	MIT_REMOVEXATTR,
+	MIT_LISTXATTR,
 } mtfs_io_type_t;
 
 struct mtfs_io_trace {
@@ -83,6 +84,12 @@ struct mtfs_io_removexattr {
 	const char *name;
 };
 
+struct mtfs_io_listxattr {
+	struct dentry *dentry;
+	char *list;
+	size_t size;
+};
+
 struct mtfs_io {
 	const struct mtfs_io_operations   *mi_ops;
 	mtfs_io_type_t                     mi_type;
@@ -115,6 +122,7 @@ struct mtfs_io {
 		struct mtfs_io_getxattr    mi_getxattr;
 		struct mtfs_io_setxattr    mi_setxattr;
 		struct mtfs_io_removexattr mi_removexattr;
+		struct mtfs_io_listxattr   mi_listxattr;
 	} u;
 	union {
 		struct mtfs_io_trace     mi_trace;

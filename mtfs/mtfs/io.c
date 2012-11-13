@@ -316,6 +316,28 @@ static void mtfs_io_iter_start_removexattr(struct mtfs_io *io)
 	_MRETURN();
 }
 
+static void mtfs_io_iter_start_listxattr(struct mtfs_io *io)
+{
+	struct mtfs_io_listxattr *io_listxattr = &io->u.mi_listxattr;
+	mtfs_bindex_t global_bindex = io->mi_oplist.op_binfo[io->mi_bindex].bindex;
+	MENTRY();
+
+	io->mi_result.ssize = mtfs_listxattr_branch(io_listxattr->dentry,
+	                                            io_listxattr->list,
+	                                            io_listxattr->size,
+	                                            global_bindex);
+	if (!io->mi_result.ssize) {
+		if (io_listxattr->size > 0) {
+			MASSERT(io->mi_result.ssize <= io_listxattr->size);
+		}
+		io->mi_successful = 1;
+	} else {
+		io->mi_successful = 0;
+	}
+
+	_MRETURN();
+}
+
 const struct mtfs_io_operations mtfs_io_ops[] = {
 	[MIT_READV] = {
 		.mio_init       = mtfs_io_init_oplist,
@@ -386,6 +408,16 @@ const struct mtfs_io_operations mtfs_io_ops[] = {
 		.mio_iter_start = mtfs_io_iter_start_removexattr,
 		.mio_iter_end   = mtfs_io_iter_end_oplist,
 		.mio_iter_fini  = mtfs_io_iter_fini_write_ops,
+	},
+	[MIT_LISTXATTR] = {
+		.mio_init       = mtfs_io_init_oplist,
+		.mio_fini       = NULL,
+		.mio_lock       = NULL,
+		.mio_unlock     = NULL,
+		.mio_iter_init  = NULL,
+		.mio_iter_start = mtfs_io_iter_start_listxattr,
+		.mio_iter_end   = NULL,
+		.mio_iter_fini  = mtfs_io_iter_fini_read_ops,
 	},
 };
 
