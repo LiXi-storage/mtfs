@@ -9,7 +9,7 @@
 typedef union mtfs_operation_result {
 	int ret;
 	void *ptr;
-	ssize_t size;
+	ssize_t ssize;
 } mtfs_operation_result_t;
 
 #if defined (__linux__) && defined(__KERNEL__)

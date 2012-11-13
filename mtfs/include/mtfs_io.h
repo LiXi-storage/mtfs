@@ -20,6 +20,7 @@ typedef enum mtfs_io_type {
 	MIT_SETATTR,
 	MIT_GETXATTR,
 	MIT_SETXATTR,
+	MIT_REMOVEXATTR,
 } mtfs_io_type_t;
 
 struct mtfs_io_trace {
@@ -77,37 +78,43 @@ struct mtfs_io_setxattr {
 	int flags;
 };
 
+struct mtfs_io_removexattr {
+	struct dentry *dentry;
+	const char *name;
+};
+
 struct mtfs_io {
-	const struct mtfs_io_operations *mi_ops;
-	mtfs_io_type_t                   mi_type;
-	mtfs_bindex_t                    mi_bindex;
-	mtfs_bindex_t                    mi_bnum;
-	mtfs_operation_result_t          mi_result;
-	int                              mi_successful;
-	int                              mi_break;
+	const struct mtfs_io_operations   *mi_ops;
+	mtfs_io_type_t                     mi_type;
+	mtfs_bindex_t                      mi_bindex;
+	mtfs_bindex_t                      mi_bnum;
+	mtfs_operation_result_t            mi_result;
+	int                                mi_successful;
+	int                                mi_break;
 
 	/*
 	 * Inited when ->mio_init
 	 * Set when ->mio_iter_end
 	 * Checked when ->mio_fini
 	 */
-	struct mtfs_operation_list       mi_oplist;
-	struct dentry                   *mi_oplist_dentry;
+	struct mtfs_operation_list         mi_oplist;
+	struct dentry                     *mi_oplist_dentry;
 	/*
 	 * Locked when ->mio_lock
 	 * Unlocked when ->mio_unlock
 	 * TODO: alloc with io
 	 */
-	struct mlock                    *mi_mlock;
-	struct mlock_resource           *mi_resource;
-	struct mlock_enqueue_info        mi_einfo;
+	struct mlock                      *mi_mlock;
+	struct mlock_resource             *mi_resource;
+	struct mlock_enqueue_info          mi_einfo;
 
 	union {
-		struct mtfs_io_rw       mi_rw;
-		struct mtfs_io_getattr  mi_getattr;
-		struct mtfs_io_setattr  mi_setattr;
-		struct mtfs_io_getxattr mi_getxattr;
-		struct mtfs_io_setxattr mi_setxattr;
+		struct mtfs_io_rw          mi_rw;
+		struct mtfs_io_getattr     mi_getattr;
+		struct mtfs_io_setattr     mi_setattr;
+		struct mtfs_io_getxattr    mi_getxattr;
+		struct mtfs_io_setxattr    mi_setxattr;
+		struct mtfs_io_removexattr mi_removexattr;
 	} u;
 	union {
 		struct mtfs_io_trace     mi_trace;

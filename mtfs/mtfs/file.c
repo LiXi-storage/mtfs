@@ -733,7 +733,7 @@ static ssize_t mtfs_file_rw(int is_write, struct file *file, const struct iovec 
 		MERROR("failed to loop on io\n");
 		size = ret;
 	} else {
-		size = io->mi_result.size;
+		size = io->mi_result.ssize;
 	}
 
 	mtfs_io_fini_rw(io);

@@ -43,7 +43,7 @@ void mtrace_dump(struct mtfs_io_trace *trace)
 	MPRINT("type = %d\n", trace->type);
 	MPRINT("result = %d:%p:%ld\n", trace->result.ret,
 	       trace->result.ptr,
-	       trace->result.size);
+	       trace->result.ssize);
 	MPRINT("start = %lu.%06lu\n",
 	       trace->start.tv_sec,
 	       trace->start.tv_usec);

@@ -1956,7 +1956,8 @@ int mtfs_getattr(struct vfsmount *mnt,
 	struct mtfs_io_getattr *io_getattr = NULL;
 	MENTRY();
 
-	MDEBUG("getattr [%.*s]\n", dentry->d_name.len, dentry->d_name.name);
+	MDEBUG("getattr [%.*s]\n",
+	       dentry->d_name.len, dentry->d_name.name);
 	MASSERT(dentry->d_inode);
 
 	MTFS_SLAB_ALLOC_PTR(io, mtfs_io_cache);
@@ -1998,7 +1999,7 @@ ssize_t mtfs_getxattr_branch(struct dentry *dentry,
                              size_t size,
                              mtfs_bindex_t bindex)
 {
-	int ret = 0;
+	ssize_t ret = 0;
 	struct dentry *hidden_dentry = mtfs_d2branch(dentry, bindex);
 	MENTRY();
 
@@ -2032,7 +2033,8 @@ ssize_t mtfs_getxattr(struct dentry *dentry,
 	struct mtfs_io_getxattr *io_getxattr = NULL;
 	MENTRY();
 
-	MDEBUG("getxattr %s of [%.*s]\n", name, dentry->d_name.len, dentry->d_name.name);
+	MDEBUG("getxattr %s of [%.*s]\n", name,
+	       dentry->d_name.len, dentry->d_name.name);
 	MASSERT(dentry->d_inode);
 
 	MTFS_SLAB_ALLOC_PTR(io, mtfs_io_cache);
@@ -2060,7 +2062,7 @@ ssize_t mtfs_getxattr(struct dentry *dentry,
 	if (ret) {
 		MERROR("failed to loop on io\n");
 	} else {
-		ret = io->mi_result.size;
+		ret = io->mi_result.ssize;
 	}
 
 	MTFS_SLAB_FREE_PTR(io, mtfs_io_cache);
@@ -2080,7 +2082,8 @@ int mtfs_setxattr_branch(struct dentry *dentry,
 	struct dentry *hidden_dentry = mtfs_d2branch(dentry, bindex);
 	MENTRY();
 
-	ret = mtfs_device_branch_errno(mtfs_d2dev(dentry), bindex, BOPS_MASK_WRITE);
+	ret = mtfs_device_branch_errno(mtfs_d2dev(dentry), bindex,
+	                               BOPS_MASK_WRITE);
 	if (ret) {
 		MDEBUG("branch[%d] is abandoned\n", bindex);
 		goto out; 
@@ -2114,7 +2117,8 @@ int mtfs_setxattr(struct dentry *dentry,
 	struct mtfs_io_setxattr *io_setxattr = NULL;
 	MENTRY();
 
-	MDEBUG("setxattr %s of [%.*s]\n", name, dentry->d_name.len, dentry->d_name.name);
+	MDEBUG("setxattr %s of [%.*s]\n", name,
+	       dentry->d_name.len, dentry->d_name.name);
 	MASSERT(dentry->d_inode);
 	MASSERT(inode_is_locked(dentry->d_inode));
 
@@ -2161,7 +2165,8 @@ int mtfs_removexattr_branch(struct dentry *dentry,
 	struct dentry *hidden_dentry = mtfs_d2branch(dentry, bindex);
 	MENTRY();
 
-	ret = mtfs_device_branch_errno(mtfs_d2dev(dentry), bindex, BOPS_MASK_WRITE);
+	ret = mtfs_device_branch_errno(mtfs_d2dev(dentry), bindex,
+	                               BOPS_MASK_WRITE);
 	if (ret) {
 		MDEBUG("branch[%d] is abandoned\n", bindex);
 		goto out; 
@@ -2187,65 +2192,42 @@ out:
 int mtfs_removexattr(struct dentry *dentry, const char *name)
 {
 	int ret = 0;
-	mtfs_bindex_t bindex = 0;
-	mtfs_bindex_t i = 0;
-	struct mtfs_operation_list *list = NULL;
-	mtfs_operation_result_t result = {0};
+	struct mtfs_io *io = NULL;
+	struct mtfs_io_removexattr *io_removexattr = NULL;
 	MENTRY();
 
-	MDEBUG("removexattr [%.*s]\n", dentry->d_name.len, dentry->d_name.name);
+	MDEBUG("removexattr %s of [%.*s]\n", name,
+	       dentry->d_name.len, dentry->d_name.name);
 	MASSERT(dentry->d_inode);
 	MASSERT(inode_is_locked(dentry->d_inode));
 
-	list = mtfs_oplist_build(dentry->d_inode);
-	if (unlikely(list == NULL)) {
-		MERROR("failed to build operation list\n");
+	MTFS_SLAB_ALLOC_PTR(io, mtfs_io_cache);
+	if (io == NULL) {
+		MERROR("not enough memory\n");
 		ret = -ENOMEM;
 		goto out;
 	}
 
-	if (list->latest_bnum == 0) {
-		MERROR("dir [%.*s] has no valid branch, please check it\n",
-		       dentry->d_parent->d_name.len, dentry->d_parent->d_name.name);
-		if (!mtfs_dev2noabort(mtfs_d2dev(dentry))) {
-			ret = -EIO;
-			goto out_free_oplist;
-		}
-	}
+	io_removexattr = &io->u.mi_removexattr;
 
-	for (i = 0; i < mtfs_d2bnum(dentry); i++) {
-		bindex = list->op_binfo[i].bindex;
-		ret = mtfs_removexattr_branch(dentry, name, bindex);
-		result.ret = ret;
-		mtfs_oplist_setbranch(list, i, (ret == 0 ? 1 : 0), result);
-		if (i == list->latest_bnum - 1) {
-			mtfs_oplist_check(list);
-			if (list->success_latest_bnum <= 0) {
-				MDEBUG("operation failed for all latest %d branches\n", list->latest_bnum);
-				if (!mtfs_dev2noabort(mtfs_d2dev(dentry))) {
-					result = mtfs_oplist_result(list);
-					ret = result.ret;
-					goto out_free_oplist;
-				}
-			}
-		}
-	}
+	io->mi_type = MIT_REMOVEXATTR;
+	io->mi_bindex = 0;
+	io->mi_oplist_dentry = dentry;
+	io->mi_bnum = mtfs_d2bnum(dentry);
+	io->mi_break = 0;
+	io->mi_ops = &mtfs_io_ops[MIT_REMOVEXATTR];
 
-	mtfs_oplist_check(list);
-	if (list->success_bnum <= 0) {
-		result = mtfs_oplist_result(list);
-		ret = result.ret;
-		goto out_free_oplist;
-	}
+	io_removexattr->dentry = dentry;
+	io_removexattr->name = name;
 
-	ret = mtfs_oplist_update(dentry->d_inode, list);
+	ret = mtfs_io_loop(io);
 	if (ret) {
-		MERROR("failed to update inode\n");
-		MBUG();
+		MERROR("failed to loop on io\n");
+	} else {
+		ret = io->mi_result.ret;
 	}
 
-out_free_oplist:
-	mtfs_oplist_free(list);
+	MTFS_SLAB_FREE_PTR(io, mtfs_io_cache);
 out:
 	MRETURN(ret);
 }

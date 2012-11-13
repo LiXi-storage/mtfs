@@ -119,13 +119,13 @@ void mtfs_io_iter_start_rw_nonoplist(struct mtfs_io *io)
 	MENTRY();
 
 	is_write = (io->mi_type == MIT_WRITEV) ? 1 : 0;
-	io->mi_result.size = mtfs_file_rw_branch(is_write,
+	io->mi_result.ssize = mtfs_file_rw_branch(is_write,
 	                                         io_rw->file,
 	                                         io_rw->iov,
 	                                         io_rw->nr_segs,
 	                                         io_rw->ppos,
 	                                         io->mi_bindex);
-	if (io->mi_result.size > 0) {
+	if (io->mi_result.ssize > 0) {
 		/* TODO: this check is weak */
 		io->mi_successful = 1;
 	} else {
@@ -143,13 +143,13 @@ void mtfs_io_iter_start_rw(struct mtfs_io *io)
 	MENTRY();
 
 	is_write = (io->mi_type == MIT_WRITEV) ? 1 : 0;
-	io->mi_result.size = mtfs_file_rw_branch(is_write,
+	io->mi_result.ssize = mtfs_file_rw_branch(is_write,
 	                                         io_rw->file,
 	                                         io_rw->iov_tmp,
 	                                         io_rw->nr_segs,
 	                                         &io_rw->pos_tmp,
 	                                         global_bindex);
-	if (io->mi_result.size > 0) {
+	if (io->mi_result.ssize > 0) {
 		/* TODO: this check is weak */
 		io->mi_successful = 1;
 	} else {
@@ -217,7 +217,7 @@ out:
 	_MRETURN();
 }
 
-void mtfs_io_iter_start_getattr(struct mtfs_io *io)
+static void mtfs_io_iter_start_getattr(struct mtfs_io *io)
 {
 	struct mtfs_io_getattr *io_getattr = &io->u.mi_getattr;
 	mtfs_bindex_t global_bindex = io->mi_oplist.op_binfo[io->mi_bindex].bindex;
@@ -236,7 +236,7 @@ void mtfs_io_iter_start_getattr(struct mtfs_io *io)
 	_MRETURN();
 }
 
-void mtfs_io_iter_start_setattr(struct mtfs_io *io)
+static void mtfs_io_iter_start_setattr(struct mtfs_io *io)
 {
 	struct mtfs_io_setattr *io_setattr = &io->u.mi_setattr;
 	mtfs_bindex_t global_bindex = io->mi_oplist.op_binfo[io->mi_bindex].bindex;
@@ -254,19 +254,21 @@ void mtfs_io_iter_start_setattr(struct mtfs_io *io)
 	_MRETURN();
 }
 
-void mtfs_io_iter_start_getxattr(struct mtfs_io *io)
+static void mtfs_io_iter_start_getxattr(struct mtfs_io *io)
 {
 	struct mtfs_io_getxattr *io_getxattr = &io->u.mi_getxattr;
 	mtfs_bindex_t global_bindex = io->mi_oplist.op_binfo[io->mi_bindex].bindex;
 	MENTRY();
 
-	io->mi_result.size = mtfs_getxattr_branch(io_getxattr->dentry,
-	                                          io_getxattr->name,
-	                                          io_getxattr->value,
-	                                          io_getxattr->size,
-	                                          global_bindex);
-	if (io->mi_result.size >= 0) {
-		MASSERT(io->mi_result.size <= io_getxattr->size);
+	io->mi_result.ssize = mtfs_getxattr_branch(io_getxattr->dentry,
+	                                           io_getxattr->name,
+	                                           io_getxattr->value,
+	                                           io_getxattr->size,
+	                                           global_bindex);
+	if (io->mi_result.ssize >= 0) {
+		if (io_getxattr->size > 0) {
+			MASSERT(io->mi_result.ssize <= io_getxattr->size);
+		}
 		io->mi_successful = 1;
 	} else {
 		io->mi_successful = 0;
@@ -275,7 +277,7 @@ void mtfs_io_iter_start_getxattr(struct mtfs_io *io)
 	_MRETURN();
 }
 
-void mtfs_io_iter_start_setxattr(struct mtfs_io *io)
+static void mtfs_io_iter_start_setxattr(struct mtfs_io *io)
 {
 	struct mtfs_io_setxattr *io_setxattr = &io->u.mi_setxattr;
 	mtfs_bindex_t global_bindex = io->mi_oplist.op_binfo[io->mi_bindex].bindex;
@@ -287,6 +289,24 @@ void mtfs_io_iter_start_setxattr(struct mtfs_io *io)
 	                                         io_setxattr->size,
 	                                         io_setxattr->flags,
 	                                         global_bindex);
+	if (!io->mi_result.ret) {
+		io->mi_successful = 1;
+	} else {
+		io->mi_successful = 0;
+	}
+
+	_MRETURN();
+}
+
+static void mtfs_io_iter_start_removexattr(struct mtfs_io *io)
+{
+	struct mtfs_io_removexattr *io_removexattr = &io->u.mi_removexattr;
+	mtfs_bindex_t global_bindex = io->mi_oplist.op_binfo[io->mi_bindex].bindex;
+	MENTRY();
+
+	io->mi_result.ret = mtfs_removexattr_branch(io_removexattr->dentry,
+	                                            io_removexattr->name,
+	                                            global_bindex);
 	if (!io->mi_result.ret) {
 		io->mi_successful = 1;
 	} else {
@@ -354,6 +374,16 @@ const struct mtfs_io_operations mtfs_io_ops[] = {
 		.mio_unlock     = NULL,
 		.mio_iter_init  = NULL,
 		.mio_iter_start = mtfs_io_iter_start_setxattr,
+		.mio_iter_end   = mtfs_io_iter_end_oplist,
+		.mio_iter_fini  = mtfs_io_iter_fini_write_ops,
+	},
+	[MIT_REMOVEXATTR] = {
+		.mio_init       = mtfs_io_init_oplist,
+		.mio_fini       = mtfs_io_fini_oplist,
+		.mio_lock       = NULL,
+		.mio_unlock     = NULL,
+		.mio_iter_init  = NULL,
+		.mio_iter_start = mtfs_io_iter_start_removexattr,
 		.mio_iter_end   = mtfs_io_iter_end_oplist,
 		.mio_iter_fini  = mtfs_io_iter_fini_write_ops,
 	},

@@ -2054,8 +2054,6 @@ test_102a() {
         touch $testfile
 
 	[ "$UID" != 0 ] && skip "must run as root" && return
-	[ -z "`lctl get_param -n mdc.*.connect_flags | grep xattr`" ] &&
-	skip "must have user_xattr" && return
 	[ -z "$(which setfattr 2>/dev/null)" ] && skip "could not find setfattr" && return
 
 	echo "set/get xattr..."
@@ -2087,10 +2085,6 @@ test_102a() {
         setfattr -x user.author1 $testfile || error
         getfattr -d -m user $testfile 2> /dev/null | \
         grep "user.author1" && error || true
-
-	# b10667: setting mtfs special xattr be silently discarded
-	echo "set mtfs special xattr ..."
-	setfattr -n "trusted.lov" -v "invalid value" $testfile || error
 
 	rm -f $testfile
 }

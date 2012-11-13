@@ -472,7 +472,7 @@ static ssize_t masync_file_rw(int is_write, struct file *file, const struct iove
 		MERROR("failed to loop on io\n");
 		size = ret;
 	} else {
-		size = io->mi_result.size;
+		size = io->mi_result.ssize;
 	}
 
 out_free_io:

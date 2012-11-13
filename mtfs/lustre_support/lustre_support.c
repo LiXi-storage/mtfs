@@ -153,7 +153,7 @@ ssize_t mtfs_lustre_file_writev(struct file *file, const struct iovec *iov,
 	mtfs_oplist_check(oplist);
 	if (oplist->success_bnum <= 0) {
 		result = mtfs_oplist_result(oplist);
-		size = result.size;
+		size = result.ssize;
 		goto out_free_oplist;
 	}
 
@@ -165,7 +165,7 @@ ssize_t mtfs_lustre_file_writev(struct file *file, const struct iovec *iov,
 
 	MASSERT(oplist->success_bnum > 0);
 	result = mtfs_oplist_result(oplist);
-	size = result.size;
+	size = result.ssize;
 	*ppos = *ppos + size;
 
 out_free_oplist:

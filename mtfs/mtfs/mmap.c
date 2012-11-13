@@ -125,7 +125,7 @@ int mtfs_writepage(struct page *page, struct writeback_control *wbc)
 	mtfs_oplist_check(list);
 	if (list->success_bnum <= 0) {
 		result = mtfs_oplist_result(list);
-		ret = result.size;
+		ret = result.ret;
 		goto out_free_oplist;
 	}
 
