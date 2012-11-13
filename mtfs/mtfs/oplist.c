@@ -243,22 +243,28 @@ int mtfs_oplist_update(struct inode *inode, struct mtfs_operation_list *list)
 	int ret = 0;
 	MENTRY();
 
-	MASSERT(list->checked_bnum == list->bnum);
-	MASSERT(list->valid_bnum > 0);
+	/* All valid branches should have been checked */
+	MASSERT(list->valid_bnum == list->checked_bnum);
 	
-	
-	if (list->success_latest_bnum == 0) {
-		/* No success at all*/
+	/*
+	 * Degradate only if some of latest branches failed
+	 * and others succeeded 
+	 */
+	if (list->success_latest_bnum == 0 ||
+	    list->fault_latest_bnum == 0) {
 		goto out;
 	}
 
-	if (list->fault_latest_bnum == 0) {
-		goto out;
-	}
-
-	for (i = 0; i < list->bnum; i++) {
+	/*
+	 * During write_ops, some non-latest branches
+	 * may be skipped and not checked. 
+	 */
+	for (i = 0; i < list->checked_bnum; i++) {
 		bindex = list->op_binfo[i].bindex;
 		if (!list->op_binfo[i].valid) {
+			/*
+			 * No one after me is valid.
+			 */
 			break;
 		}
 

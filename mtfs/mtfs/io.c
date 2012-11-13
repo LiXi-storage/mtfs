@@ -227,10 +227,28 @@ void mtfs_io_iter_start_getattr(struct mtfs_io *io)
 	                                        io_getattr->dentry,
 	                                        io_getattr->stat,
 	                                        global_bindex);
-	if (io->mi_result.ret) {
-		io->mi_successful = 0;
-	} else {
+	if (!io->mi_result.ret) {
 		io->mi_successful = 1;
+	} else {
+		io->mi_successful = 0;
+	}
+
+	_MRETURN();
+}
+
+void mtfs_io_iter_start_setattr(struct mtfs_io *io)
+{
+	struct mtfs_io_setattr *io_setattr = &io->u.mi_setattr;
+	mtfs_bindex_t global_bindex = io->mi_oplist.op_binfo[io->mi_bindex].bindex;
+	MENTRY();
+
+	io->mi_result.ret = mtfs_setattr_branch(io_setattr->dentry,
+	                                        io_setattr->ia,
+	                                        global_bindex);
+	if (!io->mi_result.ret) {
+		io->mi_successful = 1;
+	} else {
+		io->mi_successful = 0;
 	}
 
 	_MRETURN();
@@ -243,11 +261,12 @@ void mtfs_io_iter_start_getxattr(struct mtfs_io *io)
 	MENTRY();
 
 	io->mi_result.size = mtfs_getxattr_branch(io_getxattr->dentry,
-	                                         io_getxattr->name,
-	                                         io_getxattr->value,
-	                                         io_getxattr->size,
-	                                         global_bindex);
-	if (io->mi_result.size == io_getxattr->size) {
+	                                          io_getxattr->name,
+	                                          io_getxattr->value,
+	                                          io_getxattr->size,
+	                                          global_bindex);
+	if (io->mi_result.size >= 0) {
+		MASSERT(io->mi_result.size <= io_getxattr->size);
 		io->mi_successful = 1;
 	} else {
 		io->mi_successful = 0;
@@ -307,6 +326,16 @@ const struct mtfs_io_operations mtfs_io_ops[] = {
 		.mio_iter_start = mtfs_io_iter_start_getattr,
 		.mio_iter_end   = NULL,
 		.mio_iter_fini  = mtfs_io_iter_fini_read_ops,
+	},
+	[MIT_SETATTR] = {
+		.mio_init       = mtfs_io_init_oplist,
+		.mio_fini       = mtfs_io_fini_oplist,
+		.mio_lock       = NULL,
+		.mio_unlock     = NULL,
+		.mio_iter_init  = NULL,
+		.mio_iter_start = mtfs_io_iter_start_setattr,
+		.mio_iter_end   = mtfs_io_iter_end_oplist,
+		.mio_iter_fini  = mtfs_io_iter_fini_write_ops,
 	},
 	[MIT_GETXATTR] = {
 		.mio_init       = mtfs_io_init_oplist,

@@ -57,6 +57,11 @@ struct mtfs_io_getattr {
 	struct kstat *stat;
 };
 
+struct mtfs_io_setattr {
+	struct dentry *dentry;
+	struct iattr *ia;
+};
+
 struct mtfs_io_getxattr {
 	struct dentry *dentry;
 	const char *name;
@@ -98,10 +103,11 @@ struct mtfs_io {
 	struct mlock_enqueue_info        mi_einfo;
 
 	union {
-		struct mtfs_io_rw        mi_rw;
-		struct mtfs_io_getattr   mi_getattr;
-		struct mtfs_io_getxattr  mi_getxattr;
-		struct mtfs_io_setxattr  mi_setxattr;
+		struct mtfs_io_rw       mi_rw;
+		struct mtfs_io_getattr  mi_getattr;
+		struct mtfs_io_setattr  mi_setattr;
+		struct mtfs_io_getxattr mi_getxattr;
+		struct mtfs_io_setxattr mi_setxattr;
 	} u;
 	union {
 		struct mtfs_io_trace     mi_trace;

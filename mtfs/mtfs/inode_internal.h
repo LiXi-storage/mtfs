@@ -21,6 +21,9 @@ int mtfs_getattr_branch(struct vfsmount *mnt,
                         struct dentry *dentry,
                         struct kstat *stat,
                         mtfs_bindex_t bindex);
+int mtfs_setattr_branch(struct dentry *dentry,
+                        struct iattr *ia,
+                        mtfs_bindex_t bindex);
 ssize_t mtfs_getxattr_branch(struct dentry *dentry,
                              const char *name,
                              void *value,

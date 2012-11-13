@@ -1833,7 +1833,9 @@ out:
 }
 EXPORT_SYMBOL(mtfs_permission);
 
-static int mtfs_setattr_branch(struct dentry *dentry, struct iattr *ia, mtfs_bindex_t bindex)
+int mtfs_setattr_branch(struct dentry *dentry,
+                        struct iattr *ia,
+                        mtfs_bindex_t bindex)
 {
 	int ret = 0;
 	struct iattr temp_ia = (*ia);
@@ -1865,62 +1867,48 @@ out:
 int mtfs_setattr(struct dentry *dentry, struct iattr *ia)
 {
 	int ret = 0;
-	struct inode *inode = dentry->d_inode;
-	struct inode *hidden_inode = NULL;
-	mtfs_bindex_t bindex = 0;
-	mtfs_bindex_t i = 0;
-	struct mtfs_operation_list *list = NULL;
-	mtfs_operation_result_t result = {0};
+	struct mtfs_io *io = NULL;
+	struct mtfs_io_setattr *io_setattr = NULL;
 	MENTRY();
 
 	MDEBUG("setattr [%.*s]\n", dentry->d_name.len, dentry->d_name.name);
-	MASSERT(inode);
-	MASSERT(inode_is_locked(inode));	
+	MASSERT(dentry->d_inode);
+	MASSERT(inode_is_locked(dentry->d_inode));
 
-	list = mtfs_oplist_build(inode);
-	if (unlikely(list == NULL)) {
-		MERROR("failed to build operation list\n");
+	MTFS_SLAB_ALLOC_PTR(io, mtfs_io_cache);
+	if (io == NULL) {
+		MERROR("not enough memory\n");
 		ret = -ENOMEM;
 		goto out;
 	}
 
-	for (i = 0; i < mtfs_d2bnum(dentry); i++) {
-		bindex = list->op_binfo[i].bindex;
-		ret = mtfs_setattr_branch(dentry, ia, bindex);
-		result.ret = ret;
-		mtfs_oplist_setbranch(list, i, (ret == 0 ? 1 : 0), result);
-		if (i == list->latest_bnum - 1) {
-			mtfs_oplist_check(list);
-			if (list->success_latest_bnum <= 0) {
-				MDEBUG("operation failed for all branches\n");
-				//goto out_free_oplist;
-				break;
-			} else {
-				if (list->fault_latest_bnum > 0) {
-					/* TODO: setflag */
-				}
-			}
-		}
-	}
-	result = mtfs_oplist_result(list);
-	ret = result.ret;
+	io_setattr = &io->u.mi_setattr;
 
-	hidden_inode = mtfs_i_choose_branch(inode, MTFS_BRANCH_VALID);
-	if (IS_ERR(hidden_inode)) {
-		ret = PTR_ERR(hidden_inode);
-		MERROR("choose branch failed, ret = %d\n", ret);
-		goto out_free_oplist;
-	}
-	fsstack_copy_attr_all(inode, hidden_inode, mtfs_get_nlinks);
+	io->mi_type = MIT_SETATTR;
+	io->mi_bindex = 0;
+	io->mi_oplist_dentry = dentry;
+	io->mi_bnum = mtfs_d2bnum(dentry);
+	io->mi_break = 0;
+	io->mi_ops = &mtfs_io_ops[MIT_SETATTR];
 
+	io_setattr->dentry = dentry;
+	io_setattr->ia = ia;
+
+	ret = mtfs_io_loop(io);
+	if (ret) {
+		MERROR("failed to loop on io\n");
+	} else {
+		ret = io->mi_result.ret;
+	}
+
+	mtfs_update_inode_attr(dentry->d_inode);
 	if (ia->ia_valid & ATTR_SIZE) {
-		mtfs_update_inode_size(inode);
+		mtfs_update_inode_size(dentry->d_inode);
 	}
 
-out_free_oplist:
-	mtfs_oplist_free(list);
+	MTFS_SLAB_FREE_PTR(io, mtfs_io_cache);
 out:
-	MRETURN(ret);	
+	MRETURN(ret);
 }
 EXPORT_SYMBOL(mtfs_setattr);
 
@@ -1945,10 +1933,10 @@ int mtfs_getattr_branch(struct vfsmount *mnt,
 		hidden_mnt = mtfs_s2mntbranch(dentry->d_sb, bindex);
 		MASSERT(hidden_mnt);
 		ret = vfs_getattr(hidden_mnt, hidden_dentry, stat);
-		dput(hidden_dentry);
 		if (!ret) {
 			fsstack_copy_attr_all(dentry->d_inode, hidden_dentry->d_inode, mtfs_get_nlinks);
 		}
+		dput(hidden_dentry);
 	} else {
 		MDEBUG("branch[%d] of dentry [%.*s] is %s\n",
 		       bindex, dentry->d_name.len, dentry->d_name.name,
@@ -1969,6 +1957,7 @@ int mtfs_getattr(struct vfsmount *mnt,
 	MENTRY();
 
 	MDEBUG("getattr [%.*s]\n", dentry->d_name.len, dentry->d_name.name);
+	MASSERT(dentry->d_inode);
 
 	MTFS_SLAB_ALLOC_PTR(io, mtfs_io_cache);
 	if (io == NULL) {
@@ -2022,9 +2011,7 @@ ssize_t mtfs_getxattr_branch(struct dentry *dentry,
 	if (hidden_dentry && hidden_dentry->d_inode) {
 		MASSERT(hidden_dentry->d_inode->i_op);
 		MASSERT(hidden_dentry->d_inode->i_op->getxattr);
-		mutex_lock(&hidden_dentry->d_inode->i_mutex);
 		ret = hidden_dentry->d_inode->i_op->getxattr(hidden_dentry, name, value, size);
-		mutex_unlock(&hidden_dentry->d_inode->i_mutex);
 	} else {
 		MDEBUG("branch[%d] of dentry [%.*s] is %s\n",
 		       bindex, dentry->d_name.len, dentry->d_name.name,
@@ -2046,6 +2033,7 @@ ssize_t mtfs_getxattr(struct dentry *dentry,
 	MENTRY();
 
 	MDEBUG("getxattr %s of [%.*s]\n", name, dentry->d_name.len, dentry->d_name.name);
+	MASSERT(dentry->d_inode);
 
 	MTFS_SLAB_ALLOC_PTR(io, mtfs_io_cache);
 	if (io == NULL) {
@@ -2127,6 +2115,8 @@ int mtfs_setxattr(struct dentry *dentry,
 	MENTRY();
 
 	MDEBUG("setxattr %s of [%.*s]\n", name, dentry->d_name.len, dentry->d_name.name);
+	MASSERT(dentry->d_inode);
+	MASSERT(inode_is_locked(dentry->d_inode));
 
 	MTFS_SLAB_ALLOC_PTR(io, mtfs_io_cache);
 	if (io == NULL) {
@@ -2205,6 +2195,7 @@ int mtfs_removexattr(struct dentry *dentry, const char *name)
 
 	MDEBUG("removexattr [%.*s]\n", dentry->d_name.len, dentry->d_name.name);
 	MASSERT(dentry->d_inode);
+	MASSERT(inode_is_locked(dentry->d_inode));
 
 	list = mtfs_oplist_build(dentry->d_inode);
 	if (unlikely(list == NULL)) {

@@ -93,3 +93,9 @@ LOWERFS_STRICT_TIMESTAMP=${LOWERFS_STRICT_TIMESTAMP:-yes}
 # Skip tests that abandon branch[0].
 #
 SKIP_ABANDON_BRANCH0=${SKIP_ABANDON_BRANCH0:-yes}
+
+#
+# Skip tests that abandon branch[1].
+#
+SKIP_ABANDON_BRANCH1=${SKIP_ABANDON_BRANCH1:-no}
+
