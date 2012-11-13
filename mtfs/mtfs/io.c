@@ -321,6 +321,26 @@ static void mtfs_io_iter_start_rmdir(struct mtfs_io *io)
 	_MRETURN();
 }
 
+static void mtfs_io_iter_start_symlink(struct mtfs_io *io)
+{
+	struct mtfs_io_symlink *io_symlink = &io->u.mi_symlink;
+	mtfs_bindex_t global_bindex = io->mi_oplist.op_binfo[io->mi_bindex].bindex;
+	MENTRY();
+
+	io->mi_result.ret = mtfs_symlink_branch(io_symlink->dir,
+	                                        io_symlink->dentry,
+	                                        io_symlink->symname,
+	                                        global_bindex);
+
+	if (!io->mi_result.ret) {
+		io->mi_successful = 1;
+	} else {
+		io->mi_successful = 0;
+	}
+
+	_MRETURN();
+}
+
 static void mtfs_io_iter_start_getattr(struct mtfs_io *io)
 {
 	struct mtfs_io_getattr *io_getattr = &io->u.mi_getattr;
@@ -480,6 +500,16 @@ const struct mtfs_io_operations mtfs_io_ops[] = {
 		.mio_unlock     = NULL,
 		.mio_iter_init  = NULL,
 		.mio_iter_start = mtfs_io_iter_start_rmdir,
+		.mio_iter_end   = mtfs_io_iter_end_oplist,
+		.mio_iter_fini  = mtfs_io_iter_fini_write_ops,
+	},
+	[MIT_SYMLINK] = {
+		.mio_init       = mtfs_io_init_oplist,
+		.mio_fini       = mtfs_io_fini_oplist,
+		.mio_lock       = NULL,
+		.mio_unlock     = NULL,
+		.mio_iter_init  = NULL,
+		.mio_iter_start = mtfs_io_iter_start_symlink,
 		.mio_iter_end   = mtfs_io_iter_end_oplist,
 		.mio_iter_fini  = mtfs_io_iter_fini_write_ops,
 	},

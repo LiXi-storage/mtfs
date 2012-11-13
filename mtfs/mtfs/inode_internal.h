@@ -57,6 +57,10 @@ int mtfs_unlink_branch(struct inode *dir,
 int mtfs_rmdir_branch(struct inode *dir,
                       struct dentry *dentry,
                       mtfs_bindex_t bindex);
+int mtfs_symlink_branch(struct inode *dir,
+                        struct dentry *dentry,
+                        const char *symname,
+                        mtfs_bindex_t bindex);
 static inline struct mtfs_inode_info *mtfs_ii_alloc(void)
 {
 	struct mtfs_inode_info *i_info = NULL;
