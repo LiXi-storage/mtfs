@@ -302,6 +302,26 @@ static void mtfs_io_iter_start_unlink(struct mtfs_io *io)
 	_MRETURN();
 }
 
+static void mtfs_io_iter_start_mkdir(struct mtfs_io *io)
+{
+	struct mtfs_io_mkdir *io_mkdir = &io->u.mi_mkdir;
+	mtfs_bindex_t global_bindex = io->mi_oplist.op_binfo[io->mi_bindex].bindex;
+	MENTRY();
+
+	io->mi_result.ret = mtfs_mkdir_branch(io_mkdir->dir,
+	                                      io_mkdir->dentry,
+	                                      io_mkdir->mode,
+	                                      global_bindex);
+
+	if (!io->mi_result.ret) {
+		io->mi_successful = 1;
+	} else {
+		io->mi_successful = 0;
+	}
+
+	_MRETURN();
+}
+
 static void mtfs_io_iter_start_rmdir(struct mtfs_io *io)
 {
 	struct mtfs_io_rmdir *io_rmdir = &io->u.mi_rmdir;
@@ -320,6 +340,28 @@ static void mtfs_io_iter_start_rmdir(struct mtfs_io *io)
 
 	_MRETURN();
 }
+
+static void mtfs_io_iter_start_mknod(struct mtfs_io *io)
+{
+	struct mtfs_io_mknod *io_mknod = &io->u.mi_mknod;
+	mtfs_bindex_t global_bindex = io->mi_oplist.op_binfo[io->mi_bindex].bindex;
+	MENTRY();
+
+	io->mi_result.ret = mtfs_mknod_branch(io_mknod->dir,
+	                                      io_mknod->dentry,
+	                                      io_mknod->mode,
+	                                      io_mknod->dev,
+	                                      global_bindex);
+
+	if (!io->mi_result.ret) {
+		io->mi_successful = 1;
+	} else {
+		io->mi_successful = 0;
+	}
+
+	_MRETURN();
+}
+
 
 static void mtfs_io_iter_start_symlink(struct mtfs_io *io)
 {
@@ -493,6 +535,16 @@ const struct mtfs_io_operations mtfs_io_ops[] = {
 		.mio_iter_end   = mtfs_io_iter_end_oplist,
 		.mio_iter_fini  = mtfs_io_iter_fini_write_ops,
 	},
+	[MIT_MKDIR] = {
+		.mio_init       = mtfs_io_init_oplist,
+		.mio_fini       = mtfs_io_fini_oplist,
+		.mio_lock       = NULL,
+		.mio_unlock     = NULL,
+		.mio_iter_init  = NULL,
+		.mio_iter_start = mtfs_io_iter_start_mkdir,
+		.mio_iter_end   = mtfs_io_iter_end_oplist,
+		.mio_iter_fini  = mtfs_io_iter_fini_write_ops,
+	},
 	[MIT_RMDIR] = {
 		.mio_init       = mtfs_io_init_oplist,
 		.mio_fini       = mtfs_io_fini_oplist,
@@ -500,6 +552,16 @@ const struct mtfs_io_operations mtfs_io_ops[] = {
 		.mio_unlock     = NULL,
 		.mio_iter_init  = NULL,
 		.mio_iter_start = mtfs_io_iter_start_rmdir,
+		.mio_iter_end   = mtfs_io_iter_end_oplist,
+		.mio_iter_fini  = mtfs_io_iter_fini_write_ops,
+	},
+	[MIT_MKNOD] = {
+		.mio_init       = mtfs_io_init_oplist,
+		.mio_fini       = mtfs_io_fini_oplist,
+		.mio_lock       = NULL,
+		.mio_unlock     = NULL,
+		.mio_iter_init  = NULL,
+		.mio_iter_start = mtfs_io_iter_start_mknod,
 		.mio_iter_end   = mtfs_io_iter_end_oplist,
 		.mio_iter_fini  = mtfs_io_iter_fini_write_ops,
 	},

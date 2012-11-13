@@ -16,7 +16,9 @@ rm $SINGLE_DIR -fr
 make_single()
 {
 	local REMOVED_DIR=$1
-	rm $DIR -fr
+	if [ -e $DIR ]; then
+		rm $DIR -fr
+	fi
 	mkdir $DIR
 	rm $REMOVED_DIR -fr
 	if [ -e $REMOVED_DIR ]; then
