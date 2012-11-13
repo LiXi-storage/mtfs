@@ -17,6 +17,7 @@ typedef enum mtfs_io_type {
 	MIT_CREATE,
 	MIT_LINK,
 	MIT_UNLINK,
+	MIT_RMDIR,
 	MIT_READV,
 	MIT_WRITEV,
 	MIT_GETATTR,
@@ -57,6 +58,11 @@ struct mtfs_io_link {
 };
 
 struct mtfs_io_unlink {
+	struct inode *dir;
+	struct dentry *dentry;
+};
+
+struct mtfs_io_rmdir {
 	struct inode *dir;
 	struct dentry *dentry;
 };
@@ -142,6 +148,7 @@ struct mtfs_io {
 		struct mtfs_io_create      mi_create;
 		struct mtfs_io_link        mi_link;
 		struct mtfs_io_unlink      mi_unlink;
+		struct mtfs_io_rmdir       mi_rmdir;
 		struct mtfs_io_rw          mi_rw;
 		struct mtfs_io_getattr     mi_getattr;
 		struct mtfs_io_setattr     mi_setattr;
