@@ -33,7 +33,6 @@ export DIR2=$MTFS_MNT2/$DIR_SUB/abandon_tests
 
 if [ "$SKIP_ABANDON_BRANCH0" != "yes" ]; then
 	export ABANDON_BINDEX="0"
-	echo 3xxxx
 	bash posix.sh
 	bash multi_mnt.sh
 fi

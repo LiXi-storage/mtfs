@@ -370,7 +370,7 @@ static void masync_io_iter_start_rw(struct mtfs_io *io)
 	MENTRY();
 
 	if (io->mi_bindex == 0) {
-		if (io->mi_type == MIT_WRITEV) {
+		if (io->mi_type == MIOT_WRITEV) {
 			extent.start = *(io_rw->ppos);
 			extent.end = extent.start + io_rw->rw_size - 1;
 			masync_bucket_add(mtfs_i2bucket(io_rw->file->f_dentry->d_inode), &extent);
@@ -402,7 +402,7 @@ out:
 }
 
 static const struct mtfs_io_operations masync_io_ops[] = {
-	[MIT_READV] = {
+	[MIOT_READV] = {
 		.mio_init       = NULL,
 		.mio_fini       = NULL,
 		.mio_lock       = NULL,
@@ -412,7 +412,7 @@ static const struct mtfs_io_operations masync_io_ops[] = {
 		.mio_iter_end   = NULL,
 		.mio_iter_fini  = masync_io_iter_fini_rw,
 	},
-	[MIT_WRITEV] = {
+	[MIOT_WRITEV] = {
 		.mio_init       = NULL,
 		.mio_fini       = NULL,
 		.mio_lock       = NULL,
@@ -433,7 +433,7 @@ static int masync_io_init_rw(struct mtfs_io *io, int is_write,
 	MENTRY();
 
 	mtfs_io_init_rw_common(io, is_write, file, iov, nr_segs, ppos, rw_size);
-	type = is_write ? MIT_WRITEV : MIT_READV;
+	type = is_write ? MIOT_WRITEV : MIOT_READV;
 	io->mi_ops = &masync_io_ops[type];
 
 	MRETURN(ret);

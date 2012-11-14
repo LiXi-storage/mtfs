@@ -113,4 +113,5 @@ static inline loff_t calculate_inode_size(struct inode *inode, int bindex, loff_
 
 	return low_ia_size;
 }
+int mtfs_update_attr_atime(struct inode *inode);
 #endif /* __MTFS_INODE_INTERNAL_H__ */

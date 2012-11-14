@@ -77,11 +77,20 @@ static int mtfs_f_free(struct file *file)
 	return ret;
 }
 
-int mtfs_readdir_branch(struct file *file, void *dirent, filldir_t filldir, mtfs_bindex_t bindex)
+int mtfs_readdir_branch(struct file *file,
+                        void *dirent,
+                        filldir_t filldir,
+                        mtfs_bindex_t bindex)
 {
 	int ret = 0;
 	struct file *hidden_file = mtfs_f2branch(file, bindex);
 	MENTRY();
+
+	ret = mtfs_device_branch_errno(mtfs_f2dev(file), bindex, BOPS_MASK_READ);
+	if (ret) {
+		MDEBUG("branch[%d] is abandoned\n", bindex);
+		goto out; 
+	}
 
 	if (hidden_file) {
 		hidden_file->f_pos = file->f_pos;
@@ -94,51 +103,57 @@ int mtfs_readdir_branch(struct file *file, void *dirent, filldir_t filldir, mtfs
 		ret = -ENOENT;
 	}
 
+out:
 	MRETURN(ret);
 }
 
 int mtfs_readdir(struct file *file, void *dirent, filldir_t filldir)
 {
 	int ret = 0;
-	struct file *hidden_file = NULL;
-	struct mtfs_operation_list *list = NULL;
-	mtfs_bindex_t bindex = 0;
-	mtfs_bindex_t i = 0;
+	struct mtfs_io *io = NULL;
+	struct mtfs_io_readdir *io_readdir = NULL;
 	MENTRY();
 
-	MDEBUG("readdir [%.*s]\n", file->f_dentry->d_name.len, file->f_dentry->d_name.name);
+	MDEBUG("readdir [%.*s]\n",
+	       file->f_dentry->d_name.len,
+	       file->f_dentry->d_name.name);
+	MASSERT(file->f_dentry->d_inode);
 
-	list = mtfs_oplist_build(file->f_dentry->d_inode);
-	if (unlikely(list == NULL)) {
-		MERROR("failed to build operation list\n");
+	MTFS_SLAB_ALLOC_PTR(io, mtfs_io_cache);
+	if (io == NULL) {
+		MERROR("not enough memory\n");
 		ret = -ENOMEM;
 		goto out;
 	}
 
-	if (list->latest_bnum == 0) {
-		MERROR("dir [%.*s] has no valid branch, try to read broken branches\n",
-		       file->f_dentry->d_name.len, file->f_dentry->d_name.name);
+	io_readdir = &io->u.mi_readdir;
+
+	io->mi_type = MIOT_READDIR;
+	io->mi_bindex = 0;
+	io->mi_oplist_dentry = file->f_dentry;
+	io->mi_bnum = mtfs_f2bnum(file);
+	io->mi_break = 0;
+	io->mi_ops = &mtfs_io_ops[MIOT_READDIR];
+
+	io_readdir->file = file;
+	io_readdir->dirent = dirent;
+	io_readdir->filldir = filldir;
+
+	ret = mtfs_io_loop(io);
+	if (ret) {
+		MERROR("failed to loop on io\n");
+	} else {
+		ret = io->mi_result.ret;
 	}
 
-	for (i = 0; i < mtfs_f2bnum(file); i++) {
-		bindex = list->op_binfo[i].bindex;
-		ret = mtfs_readdir_branch(file, dirent, filldir, bindex);
-		if (ret == 0) {
-			break;
-		}
-
-		if (list->latest_bnum > 0 && i == list->latest_bnum - 1) {
-			MERROR("dir [%.*s] has no readable valid branch, try to read broken branches\n",
-			       file->f_dentry->d_name.len, file->f_dentry->d_name.name);
-		}
+	if (ret) {
+		goto out_free_io;
 	}
 
-	if (ret == 0) {
-		hidden_file = mtfs_f2branch(file, bindex);
-		fsstack_copy_attr_atime(file->f_dentry->d_inode, hidden_file->f_dentry->d_inode);
-	}
-//out_free_oplist:
-	mtfs_oplist_free(list);
+	mtfs_update_attr_atime(file->f_dentry->d_inode);
+
+out_free_io:
+	MTFS_SLAB_FREE_PTR(io, mtfs_io_cache);
 out:
 	MRETURN(ret);
 }
@@ -163,7 +178,9 @@ out:
 }
 EXPORT_SYMBOL(mtfs_poll);
 
-int mtfs_open_branch(struct inode *inode, struct file *file, mtfs_bindex_t bindex)
+int mtfs_open_branch(struct inode *inode,
+                     struct file *file,
+                     mtfs_bindex_t bindex)
 {
 	struct dentry *dentry = file->f_dentry;
 	struct vfsmount *hidden_mnt = mtfs_s2mntbranch(inode->i_sb, bindex);
@@ -172,6 +189,12 @@ int mtfs_open_branch(struct inode *inode, struct file *file, mtfs_bindex_t binde
 	struct file *hidden_file = NULL;
 	int ret = 0;
 	MENTRY();
+
+	ret = mtfs_device_branch_errno(mtfs_f2dev(file), bindex, BOPS_MASK_WRITE);
+	if (ret) {
+		MDEBUG("branch[%d] is abandoned\n", bindex);
+		goto out; 
+	}
 
 	if (hidden_dentry && hidden_dentry->d_inode) {
 		dget(hidden_dentry);
@@ -196,72 +219,64 @@ int mtfs_open_branch(struct inode *inode, struct file *file, mtfs_bindex_t binde
 		ret = -ENOENT;
 	}
 
+out:
 	MRETURN(ret);
 }
 
 int mtfs_open(struct inode *inode, struct file *file)
 {
-	int ret = -ENOMEM;
-	struct file *hidden_file = NULL;
-	mtfs_bindex_t i = 0;
+	int ret = 0;
+	struct mtfs_io *io = NULL;
+	struct mtfs_io_open *io_open = NULL;
 	mtfs_bindex_t bindex = 0;
 	mtfs_bindex_t bnum = 0;
-	struct mtfs_operation_list *list = NULL;
-	mtfs_operation_result_t result = {0};
+	struct file *hidden_file = NULL;
 	MENTRY();
 
+	MDEBUG("readdir [%.*s]\n",
+	       file->f_dentry->d_name.len,
+	       file->f_dentry->d_name.name);
 	MASSERT(inode);
 	MASSERT(file->f_dentry);
 
-	list = mtfs_oplist_build(inode);
-	if (unlikely(list == NULL)) {
-		MERROR("failed to build operation list\n");
+	MTFS_SLAB_ALLOC_PTR(io, mtfs_io_cache);
+	if (unlikely(io == NULL)) {
+		MERROR("not enough memory\n");
 		ret = -ENOMEM;
 		goto out;
-	}
-
-	if (list->latest_bnum == 0) {
-		MERROR("file [%.*s] has no valid branch, please check it\n",
-		       file->f_dentry->d_name.len, file->f_dentry->d_name.name);
-		if (!mtfs_dev2noabort(mtfs_i2dev(inode))) {
-			ret = -EIO;
-			goto out_free_oplist;
-		}
 	}
 
 	bnum = mtfs_i2bnum(inode);
 	ret = mtfs_f_alloc(file, bnum);
 	if (unlikely(ret)) {
-		goto out_free_oplist;
+		MERROR("not enough memory\n");
+		goto out_free_io;
 	}
 
-	for (i = 0; i < bnum; i++) {
-		bindex = list->op_binfo[i].bindex;
-		ret = mtfs_open_branch(inode, file, bindex);
-		result.ret = ret;
-		mtfs_oplist_setbranch(list, i, (ret == 0 ? 1 : 0), result);
-		if (i == list->latest_bnum - 1) {
-			mtfs_oplist_check(list);
-			if (list->success_latest_bnum <= 0) {
-				MDEBUG("operation failed for all latest branches\n");
-				if (!mtfs_dev2noabort(mtfs_i2dev(inode))) {
-					result = mtfs_oplist_result(list);
-					ret = result.ret;
-					goto out_free_file;
-				}
-			}
-		}
+	io_open = &io->u.mi_open;
+
+	io->mi_type = MIOT_OPEN;
+	io->mi_bindex = 0;
+	io->mi_oplist_dentry = file->f_dentry;
+	io->mi_bnum = mtfs_f2bnum(file);
+	io->mi_break = 0;
+	io->mi_ops = &mtfs_io_ops[MIOT_OPEN];
+
+	io_open->inode = inode;
+	io_open->file = file;
+
+	ret = mtfs_io_loop(io);
+	if (ret) {
+		MERROR("failed to loop on io\n");
+	} else {
+		ret = io->mi_result.ret;
 	}
 
-	mtfs_oplist_check(list);
-	if (list->success_bnum <= 0) {
-		result = mtfs_oplist_result(list);
-		ret = result.ret;
+	if (ret) {
 		goto out_free_file;
 	}
-	ret = 0;
 
-	goto out_free_oplist;
+	goto out_free_io;
 out_free_file:
 	for (bindex = 0; bindex < bnum; bindex++) {
 		hidden_file = mtfs_f2branch(file, bindex);
@@ -271,8 +286,8 @@ out_free_file:
 		}
 	}
 	mtfs_f_free(file);
-out_free_oplist:
-	mtfs_oplist_free(list);
+out_free_io:
+	MTFS_SLAB_FREE_PTR(io, mtfs_io_cache);
 out:
 	MRETURN(ret);
 }
@@ -643,7 +658,7 @@ int mtfs_io_init_rw_common(struct mtfs_io *io, int is_write,
 	struct mtfs_io_rw *io_rw = &io->u.mi_rw;
 	MENTRY();
 
-	type = is_write ? MIT_WRITEV : MIT_READV;
+	type = is_write ? MIOT_WRITEV : MIOT_READV;
 	io->mi_type = type;
 	io->mi_bindex = 0;
 	io->mi_bnum = mtfs_f2bnum(file);
@@ -670,7 +685,7 @@ static int mtfs_io_init_rw(struct mtfs_io *io, int is_write,
 	MENTRY();
 
 	mtfs_io_init_rw_common(io, is_write, file, iov, nr_segs, ppos, rw_size);
-	type = is_write ? MIT_WRITEV : MIT_READV;
+	type = is_write ? MIOT_WRITEV : MIOT_READV;
 	io->mi_ops = &mtfs_io_ops[type];
 	io->mi_resource = mtfs_i2resource(file->f_dentry->d_inode);
 	io->mi_einfo.mode = is_write ? MLOCK_MODE_WRITE : MLOCK_MODE_READ;

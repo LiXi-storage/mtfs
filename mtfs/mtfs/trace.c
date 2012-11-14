@@ -165,19 +165,19 @@ static void mtrace_io_iter_start_rw(struct mtfs_io *io)
 
 	info = (struct msubject_trace_info *)mtfs_f2subinfo(io_rw->file);
 	if (io->mi_bindex != io->mi_bnum - 1) {
-		if ((io->mi_type == MIT_WRITEV && mtrace_trace_type(TOPS_WRITE)) || 
-		    (io->mi_type == MIT_READV && mtrace_trace_type(TOPS_READ))) {
+		if ((io->mi_type == MIOT_WRITEV && mtrace_trace_type(TOPS_WRITE)) || 
+		    (io->mi_type == MIOT_READV && mtrace_trace_type(TOPS_READ))) {
 			do_gettimeofday(&io_trace->start);
 		}
 		mtfs_io_iter_start_rw_nonoplist(io);
-		if ((io->mi_type == MIT_WRITEV && mtrace_trace_type(TOPS_WRITE)) || 
-		    (io->mi_type == MIT_READV && mtrace_trace_type(TOPS_READ))) {
+		if ((io->mi_type == MIOT_WRITEV && mtrace_trace_type(TOPS_WRITE)) || 
+		    (io->mi_type == MIOT_READV && mtrace_trace_type(TOPS_READ))) {
 			do_gettimeofday(&io_trace->end);
 		}
 	} else {
 		/* Trace branch */
-		if ((io->mi_type == MIT_WRITEV && mtrace_trace_type(TOPS_WRITE)) || 
-		    (io->mi_type == MIT_READV && mtrace_trace_type(TOPS_READ))) {
+		if ((io->mi_type == MIOT_WRITEV && mtrace_trace_type(TOPS_WRITE)) || 
+		    (io->mi_type == MIOT_READV && mtrace_trace_type(TOPS_READ))) {
 			head->mrh_len = sizeof(*io_trace);
 			io_trace->type = io->mi_type;
 			io_trace->result = io->mi_result;
@@ -211,7 +211,7 @@ out:
 }
 
 const struct mtfs_io_operations mtrace_io_ops[] = {
-	[MIT_READV] = {
+	[MIOT_READV] = {
 		.mio_init       = NULL,
 		.mio_fini       = NULL,
 		.mio_lock       = NULL,
@@ -221,7 +221,7 @@ const struct mtfs_io_operations mtrace_io_ops[] = {
 		.mio_iter_end   = NULL,
 		.mio_iter_fini  = mtrace_io_iter_fini_rw,
 	},
-	[MIT_WRITEV] = {
+	[MIOT_WRITEV] = {
 		.mio_init       = NULL,
 		.mio_fini       = NULL,
 		.mio_lock       = NULL,
@@ -242,7 +242,7 @@ static int mtrace_io_init_rw(struct mtfs_io *io, int is_write,
 	struct mtfs_io_rw *io_rw = &io->u.mi_rw;
 	MENTRY();
 
-	type = is_write ? MIT_WRITEV : MIT_READV;
+	type = is_write ? MIOT_WRITEV : MIOT_READV;
 	io->mi_ops = &mtrace_io_ops[type];
 	io->mi_type = type;
 	io->mi_oplist_dentry = file->f_dentry;

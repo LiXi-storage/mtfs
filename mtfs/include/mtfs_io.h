@@ -14,24 +14,26 @@
 #endif
 
 typedef enum mtfs_io_type {
-	MIT_CREATE,
-	MIT_LINK,
-	MIT_UNLINK,
-	MIT_MKDIR,
-	MIT_RMDIR,
-	MIT_MKNOD,
-	MIT_RENAME,
-	MIT_SYMLINK,
-	MIT_READLINK,
-	MIT_PERMISSION,
-	MIT_READV,
-	MIT_WRITEV,
-	MIT_GETATTR,
-	MIT_SETATTR,
-	MIT_GETXATTR,
-	MIT_SETXATTR,
-	MIT_REMOVEXATTR,
-	MIT_LISTXATTR,
+	MIOT_CREATE,
+	MIOT_LINK,
+	MIOT_UNLINK,
+	MIOT_MKDIR,
+	MIOT_RMDIR,
+	MIOT_MKNOD,
+	MIOT_RENAME,
+	MIOT_SYMLINK,
+	MIOT_READLINK,
+	MIOT_PERMISSION,
+	MIOT_READV,
+	MIOT_WRITEV,
+	MIOT_GETATTR,
+	MIOT_SETATTR,
+	MIOT_GETXATTR,
+	MIOT_SETXATTR,
+	MIOT_REMOVEXATTR,
+	MIOT_LISTXATTR,
+	MIOT_READDIR,
+	MIOT_OPEN,
 } mtfs_io_type_t;
 
 struct mtfs_io_trace {
@@ -161,6 +163,18 @@ struct mtfs_io_listxattr {
 	size_t size;
 };
 
+struct mtfs_io_readdir {
+	struct file *file;
+	void *dirent;
+	filldir_t filldir;
+};
+
+struct mtfs_io_open {
+	struct inode *inode;
+	struct file *file;
+};
+
+
 struct mtfs_io {
 	const struct mtfs_io_operations   *mi_ops;
 	mtfs_io_type_t                     mi_type;
@@ -206,6 +220,8 @@ struct mtfs_io {
 		struct mtfs_io_listxattr   mi_listxattr;
 		struct mtfs_io_rename      mi_rename;
 		struct mtfs_io_permission  mi_permission;
+		struct mtfs_io_readdir     mi_readdir;
+		struct mtfs_io_open        mi_open;
 	} u;
 	union {
 		struct mtfs_io_trace     mi_trace;
