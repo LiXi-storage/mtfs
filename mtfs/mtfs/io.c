@@ -363,6 +363,26 @@ static void mtfs_io_iter_start_mknod(struct mtfs_io *io)
 	_MRETURN();
 }
 
+static void mtfs_io_iter_start_rename(struct mtfs_io *io)
+{
+	struct mtfs_io_rename *io_rename = &io->u.mi_rename;
+	mtfs_bindex_t global_bindex = io->mi_oplist.op_binfo[io->mi_bindex].bindex;
+	MENTRY();
+
+	io->mi_result.ret = mtfs_rename_branch(io_rename->old_dir,
+	                                       io_rename->old_dentry,
+	                                       io_rename->new_dir,
+	                                       io_rename->new_dentry,
+	                                       global_bindex);
+
+	if (!io->mi_result.ret) {
+		io->mi_successful = 1;
+	} else {
+		io->mi_successful = 0;
+	}
+
+	_MRETURN();
+}
 
 static void mtfs_io_iter_start_symlink(struct mtfs_io *io)
 {
@@ -384,24 +404,44 @@ static void mtfs_io_iter_start_symlink(struct mtfs_io *io)
 	_MRETURN();
 }
 
-static void mtfs_io_iter_start_rename(struct mtfs_io *io)
+static void mtfs_io_iter_start_readlink(struct mtfs_io *io)
 {
-	struct mtfs_io_rename *io_rename = &io->u.mi_rename;
+	struct mtfs_io_readlink *io_readlink = &io->u.mi_readlink;
 	mtfs_bindex_t global_bindex = io->mi_oplist.op_binfo[io->mi_bindex].bindex;
 	MENTRY();
 
-	io->mi_result.ret = mtfs_rename_branch(io_rename->old_dir,
-	                                       io_rename->old_dentry,
-	                                       io_rename->new_dir,
-	                                       io_rename->new_dentry,
-	                                       global_bindex);
+	io->mi_result.ret = mtfs_readlink_branch(io_readlink->dentry,
+	                                         io_readlink->buf,
+	                                         io_readlink->bufsiz,
+	                                         global_bindex);
 
-	if (!io->mi_result.ret) {
+	if (io->mi_result.ret >= 0) {
 		io->mi_successful = 1;
 	} else {
 		io->mi_successful = 0;
 	}
 
+	_MRETURN();
+}
+
+static void mtfs_io_iter_start_permission(struct mtfs_io *io)
+{
+	struct mtfs_io_permission *io_permission = &io->u.mi_permission;
+	mtfs_bindex_t global_bindex = io->mi_oplist.op_binfo[io->mi_bindex].bindex;
+	MENTRY();
+
+#ifdef HAVE_INODE_PERMISION_2ARGS
+	io->mi_result.ret = mtfs_permission_branch(io_permission->inode,
+	                                           io_permission->mask,
+	                                           global_bindex);
+#else /* HAVE_INODE_PERMISION_2ARGS */
+	io->mi_result.ret = mtfs_permission_branch(io_permission->inode,
+	                                           io_permission->mask,
+	                                           io_permission->nd,
+	                                           global_bindex);
+#endif /* HAVE_INODE_PERMISION_2ARGS */
+
+	io->mi_successful = 1;
 	_MRETURN();
 }
 
@@ -587,6 +627,16 @@ const struct mtfs_io_operations mtfs_io_ops[] = {
 		.mio_iter_end   = mtfs_io_iter_end_oplist,
 		.mio_iter_fini  = mtfs_io_iter_fini_write_ops,
 	},
+	[MIT_RENAME] = {
+		.mio_init       = mtfs_io_init_oplist,
+		.mio_fini       = mtfs_io_fini_oplist,
+		.mio_lock       = NULL,
+		.mio_unlock     = NULL,
+		.mio_iter_init  = NULL,
+		.mio_iter_start = mtfs_io_iter_start_rename,
+		.mio_iter_end   = mtfs_io_iter_end_oplist,
+		.mio_iter_fini  = mtfs_io_iter_fini_write_ops,
+	},
 	[MIT_SYMLINK] = {
 		.mio_init       = mtfs_io_init_oplist,
 		.mio_fini       = mtfs_io_fini_oplist,
@@ -597,15 +647,25 @@ const struct mtfs_io_operations mtfs_io_ops[] = {
 		.mio_iter_end   = mtfs_io_iter_end_oplist,
 		.mio_iter_fini  = mtfs_io_iter_fini_write_ops,
 	},
-	[MIT_RENAME] = {
+	[MIT_READLINK] = {
 		.mio_init       = mtfs_io_init_oplist,
-		.mio_fini       = mtfs_io_fini_oplist,
+		.mio_fini       = NULL,
 		.mio_lock       = NULL,
 		.mio_unlock     = NULL,
 		.mio_iter_init  = NULL,
-		.mio_iter_start = mtfs_io_iter_start_rename,
-		.mio_iter_end   = mtfs_io_iter_end_oplist,
-		.mio_iter_fini  = mtfs_io_iter_fini_write_ops,
+		.mio_iter_start = mtfs_io_iter_start_readlink,
+		.mio_iter_end   = NULL,
+		.mio_iter_fini  = mtfs_io_iter_fini_read_ops,
+	},
+	[MIT_PERMISSION] = {
+		.mio_init       = mtfs_io_init_oplist,
+		.mio_fini       = NULL,
+		.mio_lock       = NULL,
+		.mio_unlock     = NULL,
+		.mio_iter_init  = NULL,
+		.mio_iter_start = mtfs_io_iter_start_permission,
+		.mio_iter_end   = NULL,
+		.mio_iter_fini  = mtfs_io_iter_fini_read_ops,
 	},
 	[MIT_READV] = {
 		.mio_init       = mtfs_io_init_oplist,

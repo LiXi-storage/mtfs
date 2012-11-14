@@ -1041,3 +1041,94 @@ wait_remote_prog () {
 	
 	return $rc
 }
+
+check_nonexist()
+{
+	local LOCAL_FILE=$1
+	local LOCAL_DIR=$(dirname $1)
+	local LOCAL_BASE=$(basename $1)
+	local EXIST=0
+
+	$CHECKSTAT -t file $LOCAL_FILE > /dev/null 2>&1
+	local RETVAL=$?
+	if [ $RETVAL -eq 0 ]; then
+		EXIST=`expr $EXIST + 1`
+	fi
+
+	ls $LOCAL_FILE > /dev/null 2>&1
+	RETVAL=$?
+	if [ $RETVAL -eq 0 ]; then
+		EXIST=`expr $EXIST + 2`
+	fi
+
+	ls $LOCAL_DIR | grep -q $LOCAL_BASE > /dev/null 2>&1
+	RETVAL=$?
+	if [ $RETVAL -eq 0 ]; then
+		EXIST=`expr $EXIST + 4`
+	fi
+
+	return $EXIST
+}
+
+check_exist()
+{
+	check_nonexist $1
+	local RETVAL=$?
+	if [ $RETVAL -eq 7 ]; then
+		return 0
+	fi
+	return $RETVAL
+}
+
+check_common_nonexist()
+{
+	local LOCAL_TYPE=$1
+	local LOCAL_FILE=$2
+	local LOCAL_DIR=$(dirname $LOCAL_FILE)
+	local LOCAL_BASE=$(basename $LOCAL_FILE)
+	local EXIST=0
+
+	$CHECKSTAT -t $LOCAL_TYPE $LOCAL_FILE > /dev/null 2>&1
+	local RETVAL=$?
+	if [ $RETVAL -eq 0 ]; then
+		EXIST=`expr $EXIST + 1`
+	fi
+
+	ls $LOCAL_FILE > /dev/null 2>&1
+	RETVAL=$?
+	if [ $RETVAL -eq 0 ]; then
+		EXIST=`expr $EXIST + 2`
+	fi
+
+	ls $LOCAL_DIR | grep -q $LOCAL_BASE > /dev/null 2>&1
+	RETVAL=$?
+	if [ $RETVAL -eq 0 ]; then
+		EXIST=`expr $EXIST + 4`
+	fi
+
+	return $EXIST
+}
+
+check_common_exist()
+{
+	check_common_nonexist $1 $2
+	local RETVAL=$?
+	if [ $RETVAL -eq 7 ]; then
+		return 0
+	fi
+	return $RETVAL
+}
+
+check_dir_nonexist()
+{
+	check_common_nonexist dir $1
+	return $?
+}
+
+check_dir_exist()
+{
+	check_common_exist dir $1
+	return $?
+}
+
+

@@ -20,8 +20,10 @@ typedef enum mtfs_io_type {
 	MIT_MKDIR,
 	MIT_RMDIR,
 	MIT_MKNOD,
-	MIT_SYMLINK,
 	MIT_RENAME,
+	MIT_SYMLINK,
+	MIT_READLINK,
+	MIT_PERMISSION,
 	MIT_READV,
 	MIT_WRITEV,
 	MIT_GETATTR,
@@ -77,12 +79,6 @@ struct mtfs_io_rmdir {
 	struct dentry *dentry;
 };
 
-struct mtfs_io_symlink {
-	struct inode *dir;
-	struct dentry *dentry;
-	const char *symname;
-};
-
 struct mtfs_io_mknod {
 	struct inode *dir;
 	struct dentry *dentry;
@@ -95,6 +91,24 @@ struct mtfs_io_rename {
 	struct dentry *old_dentry;
 	struct inode *new_dir;
 	struct dentry *new_dentry;
+};
+
+struct mtfs_io_symlink {
+	struct inode *dir;
+	struct dentry *dentry;
+	const char *symname;
+};
+
+struct mtfs_io_readlink {
+	struct dentry *dentry;
+	char __user *buf;
+	int bufsiz;
+};
+
+struct mtfs_io_permission {
+	struct inode *inode;
+	int mask;
+	struct nameidata *nd;
 };
 
 struct mtfs_io_rw {
@@ -182,6 +196,7 @@ struct mtfs_io {
 		struct mtfs_io_rmdir       mi_rmdir;
 		struct mtfs_io_mknod       mi_mknod;
 		struct mtfs_io_symlink     mi_symlink;
+		struct mtfs_io_readlink    mi_readlink;
 		struct mtfs_io_rw          mi_rw;
 		struct mtfs_io_getattr     mi_getattr;
 		struct mtfs_io_setattr     mi_setattr;
@@ -190,6 +205,7 @@ struct mtfs_io {
 		struct mtfs_io_removexattr mi_removexattr;
 		struct mtfs_io_listxattr   mi_listxattr;
 		struct mtfs_io_rename      mi_rename;
+		struct mtfs_io_permission  mi_permission;
 	} u;
 	union {
 		struct mtfs_io_trace     mi_trace;

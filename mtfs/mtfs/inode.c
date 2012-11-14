@@ -69,6 +69,24 @@ out:
 	MRETURN(ret);
 }
 
+int mtfs_update_attr_atime(struct inode *inode)
+{
+	struct inode *hidden_inode = NULL;
+	int ret = 0;
+	MENTRY();
+
+	MASSERT(inode);
+	hidden_inode = mtfs_i_choose_branch(inode, MTFS_ATTR_VALID);
+	if(IS_ERR(hidden_inode)) {
+		ret = PTR_ERR(hidden_inode);
+		goto out;
+	}
+
+	inode->i_atime = hidden_inode->i_atime;
+out:
+	MRETURN(ret);
+}
+
 int mtfs_inode_init(struct inode *inode, struct dentry *dentry)
 {
 	int ret = 0;
@@ -1466,7 +1484,6 @@ out:
 	MRETURN(ret);
 }
 
-#ifndef LIIX
 int mtfs_rename(struct inode *old_dir,
                 struct dentry *old_dentry,
                 struct inode *new_dir,
@@ -1540,143 +1557,83 @@ out_free_io:
 out:
 	MRETURN(ret);
 }
-#else
-int mtfs_rename(struct inode *old_dir, struct dentry *old_dentry, struct inode *new_dir, struct dentry *new_dentry)
+EXPORT_SYMBOL(mtfs_rename);
+
+int mtfs_readlink_branch(struct dentry *dentry,
+                         char __user *buf,
+                         int bufsiz,
+                         mtfs_bindex_t bindex)
 {
 	int ret = 0;
-	mtfs_bindex_t bindex = 0;
-	struct inode *hidden_new_dir = NULL;
-	struct inode *hidden_old_dir = NULL;
-	struct inode *old_inode = old_dentry->d_inode;
-	mtfs_bindex_t i = 0;
-	struct mtfs_operation_list *list = NULL;
-	mtfs_operation_result_t result = {0};
+	struct dentry *hidden_dentry = mtfs_d2branch(dentry, bindex);
 	MENTRY();
 
-	MDEBUG("rename [%.*s] to [%.*s]\n",
-	       old_dentry->d_name.len, old_dentry->d_name.name,
-	       new_dentry->d_name.len, new_dentry->d_name.name);
-	MASSERT(inode_is_locked(old_dir));
-	MASSERT(inode_is_locked(new_dir));
-	MASSERT(old_inode);
-	if (new_dentry->d_inode) {
-		MASSERT(inode_is_locked(new_dentry->d_inode));
-	}
-
-	MDEBUG("old_dentry = %p, old_name = \"%s\", new_dentry = %p, new_name = \"%s\"\n", 
-	       old_dentry, old_dentry->d_name.name, new_dentry, new_dentry->d_name.name);
-
-	/* TODO: build according to new_dir */
-	list = mtfs_oplist_build(old_dir);
-	if (unlikely(list == NULL)) {
-		MERROR("failed to build operation list\n");
-		ret = -ENOMEM;
-		goto out;
-	}
-
-	if (list->latest_bnum == 0) {
-		MERROR("dir [%.*s] has no valid branch, please check it\n",
-		       old_dentry->d_parent->d_name.len, old_dentry->d_parent->d_name.name);
-		if (!mtfs_dev2noabort(mtfs_i2dev(old_dir))) {
-			ret = -EIO;
-			goto out_free_oplist;
-		}
-	}
-
-	for (i = 0; i < mtfs_i2bnum(old_dir); i++) {
-		bindex = list->op_binfo[i].bindex;
-		ret = mtfs_rename_branch(old_dentry, new_dentry, bindex);
-		result.ret = ret;
-		mtfs_oplist_setbranch(list, i, (ret == 0 ? 1 : 0), result);
-		if (i == list->latest_bnum - 1) {
-			mtfs_oplist_check(list);
-			if (list->success_latest_bnum <= 0) {
-				MDEBUG("rename failed for all latest %d branches\n", list->latest_bnum);
-				if (!mtfs_dev2noabort(mtfs_i2dev(old_dir))) {
-					result = mtfs_oplist_result(list);
-					ret = result.ret;
-					goto out_free_oplist;
-				}
-			}
-		}
-	}
-
-	mtfs_oplist_check(list);
-	if (list->success_bnum <= 0) {
-		result = mtfs_oplist_result(list);
-		ret = result.ret;
-		goto out_free_oplist;
-	}
-
-	ret = mtfs_oplist_update(old_dir, list);
+	ret = mtfs_device_branch_errno(mtfs_d2dev(dentry), bindex, BOPS_MASK_READ);
 	if (ret) {
-		MERROR("failed to update old inode\n");
-		MBUG();
+		MDEBUG("branch[%d] is abandoned\n", bindex);
+		goto out; 
 	}
 
-	if (new_dir != old_dir) {
-		ret = mtfs_oplist_update(new_dir, list);
-		if (ret) {
-			MERROR("failed to update new inode\n");
-			MBUG();
-		}
+	if (hidden_dentry && hidden_dentry->d_inode) {
+		MASSERT(hidden_dentry->d_inode->i_op);
+		MASSERT(hidden_dentry->d_inode->i_op->readlink);
+		ret = hidden_dentry->d_inode->i_op->readlink(hidden_dentry, buf, bufsiz);
+	} else {
+		MDEBUG("branch[%d] of dentry [%.*s] is %s\n",
+		       bindex, dentry->d_name.len, dentry->d_name.name,
+		       hidden_dentry == NULL ? "NULL" : "negative");
+		ret = -ENOENT;
 	}
-	ret = 0;
-
-	/* Update parent dir */
-	hidden_new_dir = mtfs_i_choose_branch(new_dir, MTFS_ATTR_VALID);
-	if (IS_ERR(hidden_new_dir)) {
-		ret = PTR_ERR(hidden_new_dir);
-		MERROR("choose branch failed, ret = %d\n", ret);
-		//goto out_free_oplist;
-	}
-	fsstack_copy_attr_all(new_dir, hidden_new_dir, mtfs_get_nlinks);
-
-	if (new_dir != old_dir) {
-		hidden_old_dir = mtfs_i_choose_branch(old_dir, MTFS_ATTR_VALID);
-		if (IS_ERR(hidden_old_dir)) {
-			ret = PTR_ERR(hidden_old_dir);
-			MERROR("choose branch failed, ret = %d\n", ret);
-			//goto out_free_oplist;
-		} else {
-			fsstack_copy_attr_all(new_dir, hidden_old_dir, mtfs_get_nlinks);
-		}
-	}
-
-	/* This flag is seted: FS_RENAME_DOES_D_MOVE */
-	d_move(old_dentry, new_dentry);
-	goto out_free_oplist;
-out_free_oplist:
-	mtfs_oplist_free(list);
 out:
 	MRETURN(ret);
 }
-#endif
-EXPORT_SYMBOL(mtfs_rename);
 
 int mtfs_readlink(struct dentry *dentry, char __user *buf, int bufsiz)
 {
 	int ret = 0;
-	struct dentry *hidden_dentry = NULL;
+	struct mtfs_io *io = NULL;
+	struct mtfs_io_readlink *io_readlink = NULL;
 	MENTRY();
 
-	MDEBUG("readlink [%.*s]\n", dentry->d_name.len, dentry->d_name.name);
-	hidden_dentry = mtfs_d_choose_branch(dentry, MTFS_ATTR_VALID);
-	if (IS_ERR(hidden_dentry)) {
-		ret = PTR_ERR(hidden_dentry);
+	MDEBUG("readlink [%.*s]\n",
+	       dentry->d_name.len, dentry->d_name.name);
+	MASSERT(dentry->d_inode);
+
+	MTFS_SLAB_ALLOC_PTR(io, mtfs_io_cache);
+	if (io == NULL) {
+		MERROR("not enough memory\n");
+		ret = -ENOMEM;
 		goto out;
 	}
 
-	MASSERT(hidden_dentry->d_inode);
-	MASSERT(hidden_dentry->d_inode->i_op);
-	MASSERT(hidden_dentry->d_inode->i_op->readlink);
+	io_readlink = &io->u.mi_readlink;
 
-	ret = hidden_dentry->d_inode->i_op->readlink(hidden_dentry, buf, bufsiz);
+	io->mi_type = MIT_READLINK;
+	io->mi_bindex = 0;
+	io->mi_oplist_dentry = dentry;
+	io->mi_bnum = mtfs_d2bnum(dentry);
+	io->mi_break = 0;
+	io->mi_ops = &mtfs_io_ops[MIT_READLINK];
 
-	if (ret >= 0) {
-		fsstack_copy_attr_atime(dentry->d_inode, hidden_dentry->d_inode);
+	io_readlink->dentry = dentry;
+	io_readlink->buf = buf;
+	io_readlink->bufsiz = bufsiz;
+
+	ret = mtfs_io_loop(io);
+	if (ret) {
+		MERROR("failed to loop on io\n");
+	} else {
+		ret = io->mi_result.ret;
 	}
 
+	if (ret < 0) {
+		goto out_free_io;
+	}
+
+	mtfs_update_attr_atime(dentry->d_inode);
+
+out_free_io:
+	MTFS_SLAB_FREE_PTR(io, mtfs_io_cache);
 out:
 	MRETURN(ret);
 }
@@ -1732,29 +1689,81 @@ void mtfs_put_link(struct dentry *dentry, struct nameidata *nd, void *ptr)
 EXPORT_SYMBOL(mtfs_put_link);
 
 #ifdef HAVE_INODE_PERMISION_2ARGS
+int mtfs_permission_branch(struct inode *inode,
+                           int mask,
+                           mtfs_bindex_t bindex)
+#else /* !HAVE_INODE_PERMISION_2ARGS */
+int mtfs_permission_branch(struct inode *inode,
+                           int mask,
+                           struct nameidata *nd,
+                           mtfs_bindex_t bindex)
+#endif /* !HAVE_INODE_PERMISION_2ARGS */
+{
+	int ret = 0;
+	struct inode *hidden_inode = mtfs_i2branch(inode, bindex);
+	MENTRY();
+
+	ret = mtfs_device_branch_errno(mtfs_i2dev(inode), bindex, BOPS_MASK_READ);
+	if (ret) {
+		MDEBUG("branch[%d] is abandoned\n", bindex);
+		goto out; 
+	}
+
+	if (hidden_inode) {
+#ifdef HAVE_INODE_PERMISION
+		ret = inode_permission(hidden_inode, mask);
+#else /* !HAVE_INODE_PERMISION */
+		ret = permission(hidden_inode, mask, nd);
+#endif /* !HAVE_INODE_PERMISION */
+	} else {
+		MDEBUG("branch[%d] of inode is NULL\n");
+		ret = -ENOENT;
+	}
+out:
+	MRETURN(ret);
+}
+
+#ifdef HAVE_INODE_PERMISION_2ARGS
 int mtfs_permission(struct inode *inode, int mask)
 #else /* !HAVE_INODE_PERMISION_2ARGS */
 int mtfs_permission(struct inode *inode, int mask, struct nameidata *nd)
 #endif /* !HAVE_INODE_PERMISION_2ARGS */
 {
 	int ret = 0;
-	struct inode *hidden_inode = NULL;
+	struct mtfs_io *io = NULL;
+	struct mtfs_io_permission *io_permission = NULL;
 	MENTRY();
 
-	MDEBUG("permission [%lu]\n", inode->i_ino);
-	hidden_inode = mtfs_i_choose_branch(inode, MTFS_BRANCH_VALID);
-	if (IS_ERR(hidden_inode)) {
-		ret = PTR_ERR(hidden_inode);
-		MERROR("choose branch failed, ret = %d\n", ret);
+	MDEBUG("permission\n");
+
+	MTFS_SLAB_ALLOC_PTR(io, mtfs_io_cache);
+	if (io == NULL) {
+		MERROR("not enough memory\n");
+		ret = -ENOMEM;
 		goto out;
 	}
 
-#ifdef HAVE_INODE_PERMISION
-	ret = inode_permission(hidden_inode, mask);
-#else /* !HAVE_INODE_PERMISION */
-	ret = permission(hidden_inode, mask, nd);
-#endif /* !HAVE_INODE_PERMISION */
+	io_permission = &io->u.mi_permission;
 
+	io->mi_type = MIT_PERMISSION;
+	io->mi_bindex = 0;
+	io->mi_oplist_inode = inode;
+	io->mi_bnum = mtfs_i2bnum(inode);
+	io->mi_break = 0;
+	io->mi_ops = &mtfs_io_ops[MIT_PERMISSION];
+
+	io_permission->inode = inode;
+	io_permission->mask = mask;
+	io_permission->nd = nd;
+
+	ret = mtfs_io_loop(io);
+	if (ret) {
+		MERROR("failed to loop on io\n");
+	} else {
+		ret = io->mi_result.ret;
+	}
+
+	MTFS_SLAB_FREE_PTR(io, mtfs_io_cache);
 out:
 	MRETURN(ret);
 }

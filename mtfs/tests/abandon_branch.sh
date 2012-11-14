@@ -23,7 +23,9 @@ ORIGIN_DIR2=$DIR2
 
 export ABANDON_DIR=${ABANDON_DIR:-$ORIGIN_DIR/abandon_tests}
 rm $ABANDON_DIR -fr
+check_dir_nonexist $ABANDON_DIR ||  error "$ABANDON_DIR: exist $?"
 mkdir $ABANDON_DIR || error "mkdir $ABANDON_DIR failed"
+check_dir_exist $ABANDON_DIR ||  error "$ABANDON_DIR: not exist $?"
 
 export DIR=$ABANDON_DIR
 export DIR1=$MTFS_MNT1/$DIR_SUB/abandon_tests
@@ -31,6 +33,7 @@ export DIR2=$MTFS_MNT2/$DIR_SUB/abandon_tests
 
 if [ "$SKIP_ABANDON_BRANCH0" != "yes" ]; then
 	export ABANDON_BINDEX="0"
+	echo 3xxxx
 	bash posix.sh
 	bash multi_mnt.sh
 fi

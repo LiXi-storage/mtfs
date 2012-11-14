@@ -13,44 +13,6 @@ init_test_env
 
 echo "==== $0: started ===="
 
-check_nonexist()
-{
-	local LOCAL_FILE=$1
-	local LOCAL_DIR=$(dirname $1)
-	local LOCAL_BASE=$(basename $1)
-	local EXIST=0
-
-	$CHECKSTAT -t file $LOCAL_FILE > /dev/null 2>&1
-	local RETVAL=$?
-	if [ $RETVAL -eq 0 ]; then
-		EXIST=`expr $EXIST + 1`
-	fi
-
-	ls $LOCAL_FILE > /dev/null 2>&1
-	RETVAL=$?
-	if [ $RETVAL -eq 0 ]; then
-		EXIST=`expr $EXIST + 2`
-	fi
-
-	ls $LOCAL_DIR | grep -q $LOCAL_BASE > /dev/null 2>&1
-	RETVAL=$?
-	if [ $RETVAL -eq 0 ]; then
-		EXIST=`expr $EXIST + 4`
-	fi
-
-	return $EXIST
-}
-
-check_exist()
-{
-	check_nonexist $1
-	local RETVAL=$?
-	if [ $RETVAL -eq 7 ]; then
-		return 0
-	fi
-	return $RETVAL
-}
-
 liberate_file()
 {
 	local FILE=$1

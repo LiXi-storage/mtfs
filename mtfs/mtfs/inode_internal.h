@@ -75,7 +75,20 @@ int mtfs_rename_branch(struct inode *old_dir,
                        struct inode *new_dir,
                        struct dentry *new_dentry,
                        mtfs_bindex_t bindex);
-
+int mtfs_readlink_branch(struct dentry *dentry,
+                         char __user *buf,
+                         int bufsiz,
+                         mtfs_bindex_t bindex);
+#ifdef HAVE_INODE_PERMISION_2ARGS
+int mtfs_permission_branch(struct inode *inode,
+                           int mask,
+                           mtfs_bindex_t bindex);
+#else /* !HAVE_INODE_PERMISION_2ARGS */
+int mtfs_permission_branch(struct inode *inode,
+                           int mask,
+                           struct nameidata *nd,
+                           mtfs_bindex_t bindex);
+#endif /* !HAVE_INODE_PERMISION_2ARGS */
 static inline struct mtfs_inode_info *mtfs_ii_alloc(void)
 {
 	struct mtfs_inode_info *i_info = NULL;
