@@ -21,6 +21,7 @@ typedef enum mtfs_io_type {
 	MIT_RMDIR,
 	MIT_MKNOD,
 	MIT_SYMLINK,
+	MIT_RENAME,
 	MIT_READV,
 	MIT_WRITEV,
 	MIT_GETATTR,
@@ -87,6 +88,13 @@ struct mtfs_io_mknod {
 	struct dentry *dentry;
 	int mode;
 	dev_t dev;
+};
+
+struct mtfs_io_rename {
+	struct inode *old_dir;
+	struct dentry *old_dentry;
+	struct inode *new_dir;
+	struct dentry *new_dentry;
 };
 
 struct mtfs_io_rw {
@@ -181,6 +189,7 @@ struct mtfs_io {
 		struct mtfs_io_setxattr    mi_setxattr;
 		struct mtfs_io_removexattr mi_removexattr;
 		struct mtfs_io_listxattr   mi_listxattr;
+		struct mtfs_io_rename      mi_rename;
 	} u;
 	union {
 		struct mtfs_io_trace     mi_trace;

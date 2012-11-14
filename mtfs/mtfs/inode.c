@@ -1137,7 +1137,7 @@ int mtfs_symlink(struct inode *dir, struct dentry *dentry, const char *symname)
 	MENTRY();
 
 	MDEBUG("symlink [%.*s] to [%s]\n",
-	       dentry->d_name.len, dentry->d_name.name, symname);;
+	       dentry->d_name.len, dentry->d_name.name, symname);
 	MASSERT(inode_is_locked(dir));
 	MASSERT(dentry->d_inode == NULL);
 
@@ -1241,7 +1241,7 @@ int mtfs_mkdir(struct inode *dir, struct dentry *dentry, int mode)
 	MENTRY();
 
 	MDEBUG("mkdir [%.*s]\n",
-	       dentry->d_name.len, dentry->d_name.name);;
+	       dentry->d_name.len, dentry->d_name.name);
 	MASSERT(inode_is_locked(dir));
 	MASSERT(dentry->d_inode == NULL);
 
@@ -1353,7 +1353,7 @@ int mtfs_mknod(struct inode *dir,
 	MENTRY();
 
 	MDEBUG("mknode [%.*s]\n",
-	       dentry->d_name.len, dentry->d_name.name);;
+	       dentry->d_name.len, dentry->d_name.name);
 	MASSERT(inode_is_locked(dir));
 	MASSERT(dentry->d_inode == NULL);
 
@@ -1406,7 +1406,11 @@ out:
 }
 EXPORT_SYMBOL(mtfs_mknod);
 
-static int mtfs_rename_branch(struct dentry *old_dentry, struct dentry *new_dentry, mtfs_bindex_t bindex)
+int mtfs_rename_branch(struct inode *old_dir,
+                       struct dentry *old_dentry,
+                       struct inode *new_dir,
+                       struct dentry *new_dentry,
+                       mtfs_bindex_t bindex)
 {
 	struct dentry *hidden_old_dentry = mtfs_d2branch(old_dentry, bindex);
 	struct dentry *hidden_new_dentry = mtfs_d2branch(new_dentry, bindex);
@@ -1462,6 +1466,81 @@ out:
 	MRETURN(ret);
 }
 
+#ifndef LIIX
+int mtfs_rename(struct inode *old_dir,
+                struct dentry *old_dentry,
+                struct inode *new_dir,
+                struct dentry *new_dentry)
+{
+	int ret = 0;
+	struct mtfs_io *io = NULL;
+	struct mtfs_io_rename *io_rename = NULL;
+	MENTRY();
+
+	MDEBUG("rename [%.*s] to [%.*s]\n",
+	       old_dentry->d_name.len, old_dentry->d_name.name,
+	       new_dentry->d_name.len, new_dentry->d_name.name);
+	MASSERT(inode_is_locked(old_dir));
+	MASSERT(inode_is_locked(new_dir));
+	MASSERT(old_dentry->d_inode);
+	if (new_dentry->d_inode) {
+		MASSERT(inode_is_locked(new_dentry->d_inode));
+	}
+
+	/* TODO: build according to new_dir */
+	MTFS_SLAB_ALLOC_PTR(io, mtfs_io_cache);
+	if (io == NULL) {
+		MERROR("not enough memory\n");
+		ret = -ENOMEM;
+		goto out;
+	}
+
+	io_rename = &io->u.mi_rename;
+
+	io->mi_type = MIT_RENAME;
+	io->mi_bindex = 0;
+	/* TODO: build according to new_dir */
+	io->mi_oplist_inode = old_dir;
+	io->mi_bnum = mtfs_i2bnum(old_dir);
+	io->mi_break = 0;
+	io->mi_ops = &mtfs_io_ops[MIT_RENAME];
+
+	io_rename->old_dir = old_dir;
+	io_rename->old_dentry = old_dentry;
+	io_rename->new_dir = new_dir;
+	io_rename->new_dentry = new_dentry;
+
+	ret = mtfs_io_loop(io);
+	if (ret) {
+		MERROR("failed to loop on io\n");
+	} else {
+		ret = io->mi_result.ret;
+	}
+
+	if (ret) {
+		goto out_free_io;
+	}
+
+	/* TODO: write a new mtfs_io_fini_oplist() */
+	ret = mtfs_oplist_update(new_dir, &io->mi_oplist);
+	if (ret) {
+		MERROR("failed to update old inode\n");
+		MBUG();
+	}
+
+	mtfs_update_inode_attr(old_dir);
+	if (new_dir != old_dir) {
+		mtfs_update_inode_attr(new_dir);
+	}
+
+	/* This flag is seted: FS_RENAME_DOES_D_MOVE */
+	d_move(old_dentry, new_dentry);
+out_free_io:
+	MTFS_SLAB_FREE_PTR(io, mtfs_io_cache);
+out:
+	MRETURN(ret);
+}
+#else
 int mtfs_rename(struct inode *old_dir, struct dentry *old_dentry, struct inode *new_dir, struct dentry *new_dentry)
 {
 	int ret = 0;
@@ -1572,6 +1651,7 @@ out_free_oplist:
 out:
 	MRETURN(ret);
 }
+#endif
 EXPORT_SYMBOL(mtfs_rename);
 
 int mtfs_readlink(struct dentry *dentry, char __user *buf, int bufsiz)

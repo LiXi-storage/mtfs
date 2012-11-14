@@ -384,6 +384,27 @@ static void mtfs_io_iter_start_symlink(struct mtfs_io *io)
 	_MRETURN();
 }
 
+static void mtfs_io_iter_start_rename(struct mtfs_io *io)
+{
+	struct mtfs_io_rename *io_rename = &io->u.mi_rename;
+	mtfs_bindex_t global_bindex = io->mi_oplist.op_binfo[io->mi_bindex].bindex;
+	MENTRY();
+
+	io->mi_result.ret = mtfs_rename_branch(io_rename->old_dir,
+	                                       io_rename->old_dentry,
+	                                       io_rename->new_dir,
+	                                       io_rename->new_dentry,
+	                                       global_bindex);
+
+	if (!io->mi_result.ret) {
+		io->mi_successful = 1;
+	} else {
+		io->mi_successful = 0;
+	}
+
+	_MRETURN();
+}
+
 static void mtfs_io_iter_start_getattr(struct mtfs_io *io)
 {
 	struct mtfs_io_getattr *io_getattr = &io->u.mi_getattr;
@@ -573,6 +594,16 @@ const struct mtfs_io_operations mtfs_io_ops[] = {
 		.mio_unlock     = NULL,
 		.mio_iter_init  = NULL,
 		.mio_iter_start = mtfs_io_iter_start_symlink,
+		.mio_iter_end   = mtfs_io_iter_end_oplist,
+		.mio_iter_fini  = mtfs_io_iter_fini_write_ops,
+	},
+	[MIT_RENAME] = {
+		.mio_init       = mtfs_io_init_oplist,
+		.mio_fini       = mtfs_io_fini_oplist,
+		.mio_lock       = NULL,
+		.mio_unlock     = NULL,
+		.mio_iter_init  = NULL,
+		.mio_iter_start = mtfs_io_iter_start_rename,
 		.mio_iter_end   = mtfs_io_iter_end_oplist,
 		.mio_iter_fini  = mtfs_io_iter_fini_write_ops,
 	},

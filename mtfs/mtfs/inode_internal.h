@@ -70,6 +70,12 @@ int mtfs_mknod_branch(struct inode *dir,
                       int mode,
                       dev_t dev,
                       mtfs_bindex_t bindex);
+int mtfs_rename_branch(struct inode *old_dir,
+                       struct dentry *old_dentry,
+                       struct inode *new_dir,
+                       struct dentry *new_dentry,
+                       mtfs_bindex_t bindex);
+
 static inline struct mtfs_inode_info *mtfs_ii_alloc(void)
 {
 	struct mtfs_inode_info *i_info = NULL;
