@@ -688,7 +688,7 @@ int mtfs_create(struct inode *dir,
 	io->mi_oplist_inode = dir;
 	io->mi_bnum = mtfs_d2bnum(dentry);
 	io->mi_break = 0;
-	io->mi_ops = &mtfs_io_ops[MIOT_CREATE];
+	io->mi_ops = &((*(mtfs_i2ops(dir)->io_ops))[io->mi_type]);
 
 	io_create->dir = dir;
 	io_create->dentry = dentry;
@@ -805,7 +805,7 @@ int mtfs_link(struct dentry *old_dentry,
 	io->mi_oplist_inode = dir;
 	io->mi_bnum = mtfs_i2bnum(dir);
 	io->mi_break = 0;
-	io->mi_ops = &mtfs_io_ops[MIOT_LINK];
+	io->mi_ops = &((*(mtfs_i2ops(dir)->io_ops))[io->mi_type]);
 
 	io_link->old_dentry = old_dentry;
 	io_link->dir = dir;
@@ -937,7 +937,7 @@ int mtfs_unlink(struct inode *dir, struct dentry *dentry)
 	io->mi_oplist_inode = dir;
 	io->mi_bnum = mtfs_i2bnum(dir);
 	io->mi_break = 0;
-	io->mi_ops = &mtfs_io_ops[MIOT_UNLINK];
+	io->mi_ops = &((*(mtfs_i2ops(dir)->io_ops))[io->mi_type]);
 
 	io_unlink->dir = dir;
 	io_unlink->dentry = dentry;
@@ -1068,7 +1068,7 @@ int mtfs_rmdir(struct inode *dir, struct dentry *dentry)
 	io->mi_oplist_inode = dir;
 	io->mi_bnum = mtfs_i2bnum(dir);
 	io->mi_break = 0;
-	io->mi_ops = &mtfs_io_ops[MIOT_RMDIR];
+	io->mi_ops = &((*(mtfs_i2ops(dir)->io_ops))[io->mi_type]);
 
 	io_rmdir->dir = dir;
 	io_rmdir->dentry = dentry;
@@ -1173,7 +1173,7 @@ int mtfs_symlink(struct inode *dir, struct dentry *dentry, const char *symname)
 	io->mi_oplist_inode = dir;
 	io->mi_bnum = mtfs_i2bnum(dir);
 	io->mi_break = 0;
-	io->mi_ops = &mtfs_io_ops[MIOT_SYMLINK];
+	io->mi_ops = &((*(mtfs_i2ops(dir)->io_ops))[io->mi_type]);
 
 	io_symlink->dir = dir;
 	io_symlink->dentry = dentry;
@@ -1277,7 +1277,7 @@ int mtfs_mkdir(struct inode *dir, struct dentry *dentry, int mode)
 	io->mi_oplist_inode = dir;
 	io->mi_bnum = mtfs_i2bnum(dir);
 	io->mi_break = 0;
-	io->mi_ops = &mtfs_io_ops[MIOT_MKDIR];
+	io->mi_ops = &((*(mtfs_i2ops(dir)->io_ops))[io->mi_type]);
 
 	io_mkdir->dir = dir;
 	io_mkdir->dentry = dentry;
@@ -1389,7 +1389,7 @@ int mtfs_mknod(struct inode *dir,
 	io->mi_oplist_inode = dir;
 	io->mi_bnum = mtfs_i2bnum(dir);
 	io->mi_break = 0;
-	io->mi_ops = &mtfs_io_ops[MIOT_MKNOD];
+	io->mi_ops = &((*(mtfs_i2ops(dir)->io_ops))[io->mi_type]);
 
 	io_mknod->dir = dir;
 	io_mknod->dentry = dentry;
@@ -1520,7 +1520,7 @@ int mtfs_rename(struct inode *old_dir,
 	io->mi_oplist_inode = old_dir;
 	io->mi_bnum = mtfs_i2bnum(old_dir);
 	io->mi_break = 0;
-	io->mi_ops = &mtfs_io_ops[MIOT_RENAME];
+	io->mi_ops = &((*(mtfs_i2ops(old_dir)->io_ops))[io->mi_type]);
 
 	io_rename->old_dir = old_dir;
 	io_rename->old_dentry = old_dentry;
@@ -1536,13 +1536,6 @@ int mtfs_rename(struct inode *old_dir,
 
 	if (ret) {
 		goto out_free_io;
-	}
-
-	/* TODO: write a new mtfs_io_fini_oplist() */
-	ret = mtfs_oplist_update(new_dir, &io->mi_oplist);
-	if (ret) {
-		MERROR("failed to update old inode\n");
-		MBUG();
 	}
 
 	mtfs_update_inode_attr(old_dir);
@@ -1613,7 +1606,7 @@ int mtfs_readlink(struct dentry *dentry, char __user *buf, int bufsiz)
 	io->mi_oplist_dentry = dentry;
 	io->mi_bnum = mtfs_d2bnum(dentry);
 	io->mi_break = 0;
-	io->mi_ops = &mtfs_io_ops[MIOT_READLINK];
+	io->mi_ops = &((*(mtfs_d2ops(dentry)->io_ops))[io->mi_type]);
 
 	io_readlink->dentry = dentry;
 	io_readlink->buf = buf;
@@ -1752,7 +1745,7 @@ int mtfs_permission(struct inode *inode, int mask, struct nameidata *nd)
 	io->mi_oplist_inode = inode;
 	io->mi_bnum = mtfs_i2bnum(inode);
 	io->mi_break = 0;
-	io->mi_ops = &mtfs_io_ops[MIOT_PERMISSION];
+	io->mi_ops = &((*(mtfs_i2ops(inode)->io_ops))[io->mi_type]);
 
 	io_permission->inode = inode;
 	io_permission->mask = mask;
@@ -1827,7 +1820,7 @@ int mtfs_setattr(struct dentry *dentry, struct iattr *ia)
 	io->mi_oplist_dentry = dentry;
 	io->mi_bnum = mtfs_d2bnum(dentry);
 	io->mi_break = 0;
-	io->mi_ops = &mtfs_io_ops[MIOT_SETATTR];
+	io->mi_ops = &((*(mtfs_d2ops(dentry)->io_ops))[io->mi_type]);
 
 	io_setattr->dentry = dentry;
 	io_setattr->ia = ia;
@@ -1912,7 +1905,7 @@ int mtfs_getattr(struct vfsmount *mnt,
 	io->mi_oplist_dentry = dentry;
 	io->mi_bnum = mtfs_d2bnum(dentry);
 	io->mi_break = 0;
-	io->mi_ops = &mtfs_io_ops[MIOT_GETATTR];
+	io->mi_ops = &((*(mtfs_d2ops(dentry)->io_ops))[io->mi_type]);
 
 	io_getattr->mnt = mnt;
 	io_getattr->dentry = dentry;
@@ -1989,7 +1982,7 @@ ssize_t mtfs_getxattr(struct dentry *dentry,
 	io->mi_oplist_dentry = dentry;
 	io->mi_bnum = mtfs_d2bnum(dentry);
 	io->mi_break = 0;
-	io->mi_ops = &mtfs_io_ops[MIOT_GETXATTR];
+	io->mi_ops = &((*(mtfs_d2ops(dentry)->io_ops))[io->mi_type]);
 
 	io_getxattr->dentry = dentry;
 	io_getxattr->name = name;
@@ -2074,7 +2067,7 @@ int mtfs_setxattr(struct dentry *dentry,
 	io->mi_oplist_dentry = dentry;
 	io->mi_bnum = mtfs_d2bnum(dentry);
 	io->mi_break = 0;
-	io->mi_ops = &mtfs_io_ops[MIOT_SETXATTR];
+	io->mi_ops = &((*(mtfs_d2ops(dentry)->io_ops))[io->mi_type]);
 
 	io_setxattr->dentry = dentry;
 	io_setxattr->name = name;
@@ -2153,7 +2146,7 @@ int mtfs_removexattr(struct dentry *dentry, const char *name)
 	io->mi_oplist_dentry = dentry;
 	io->mi_bnum = mtfs_d2bnum(dentry);
 	io->mi_break = 0;
-	io->mi_ops = &mtfs_io_ops[MIOT_REMOVEXATTR];
+	io->mi_ops = &((*(mtfs_d2ops(dentry)->io_ops))[io->mi_type]);
 
 	io_removexattr->dentry = dentry;
 	io_removexattr->name = name;
@@ -2227,7 +2220,7 @@ ssize_t mtfs_listxattr(struct dentry *dentry,
 	io->mi_oplist_dentry = dentry;
 	io->mi_bnum = mtfs_d2bnum(dentry);
 	io->mi_break = 0;
-	io->mi_ops = &mtfs_io_ops[MIOT_LISTXATTR];
+	io->mi_ops = &((*(mtfs_d2ops(dentry)->io_ops))[io->mi_type]);
 
 	io_listxattr->dentry = dentry;
 	io_listxattr->list = list;

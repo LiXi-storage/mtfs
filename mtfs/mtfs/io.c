@@ -10,7 +10,7 @@
 #include "io_internal.h"
 #include "inode_internal.h"
 
-static int mtfs_io_init_oplist(struct mtfs_io *io)
+int mtfs_io_init_oplist(struct mtfs_io *io)
 {
 	int ret = 0;
 	struct dentry *dentry = NULL;
@@ -44,7 +44,7 @@ static int mtfs_io_init_oplist(struct mtfs_io *io)
 	MRETURN(ret);
 }
 
-static void mtfs_io_iter_end_oplist(struct mtfs_io *io)
+void mtfs_io_iter_end_oplist(struct mtfs_io *io)
 {
 	struct mtfs_operation_list *oplist = &io->mi_oplist;
 	MENTRY();
@@ -56,7 +56,7 @@ static void mtfs_io_iter_end_oplist(struct mtfs_io *io)
 	_MRETURN();
 }
 
-static void mtfs_io_fini_oplist_noupdate(struct mtfs_io *io)
+void mtfs_io_fini_oplist_noupdate(struct mtfs_io *io)
 {
 	struct mtfs_operation_list *oplist = &io->mi_oplist;
 	MENTRY();
@@ -69,7 +69,7 @@ static void mtfs_io_fini_oplist_noupdate(struct mtfs_io *io)
 	_MRETURN();
 }
 
-static void mtfs_io_fini_oplist(struct mtfs_io *io)
+void mtfs_io_fini_oplist(struct mtfs_io *io)
 {
 	int ret = 0;
 	struct dentry *dentry = NULL;
@@ -99,6 +99,43 @@ static void mtfs_io_fini_oplist(struct mtfs_io *io)
 		} else {
 			MERROR("failed to update oplist\n");
 		}	
+		MBUG();
+	}
+
+	_MRETURN();
+}
+
+void mtfs_io_fini_oplist_rename(struct mtfs_io *io)
+{
+	int ret = 0;
+	struct dentry *dentry = NULL;
+	struct inode *inode = NULL;
+	struct mtfs_operation_list *oplist = &io->mi_oplist;
+	MENTRY();
+
+	mtfs_oplist_merge(oplist);
+	MASSERT(oplist->opinfo);
+	io->mi_result = oplist->opinfo->result;
+	io->mi_successful = oplist->opinfo->is_suceessful;
+
+	dentry = io->mi_oplist_dentry;
+	if (dentry) {
+		inode = dentry->d_inode;
+	} else {
+		MASSERT(io->mi_oplist_inode);
+		inode = io->mi_oplist_inode;
+	}
+	MASSERT(inode);
+
+	ret = mtfs_oplist_update(io->u.mi_rename.old_dir, oplist);
+	if (ret) {
+		MERROR("failed to update old dir\n");
+		MBUG();
+	}
+
+	ret = mtfs_oplist_update(io->u.mi_rename.new_dir, oplist);
+	if (ret) {
+		MERROR("failed to update new dir\n");
 		MBUG();
 	}
 
@@ -190,12 +227,12 @@ void mtfs_io_iter_start_rw(struct mtfs_io *io)
 	_MRETURN();
 }
 
-static void mtfs_io_iter_fini_read_ops(struct mtfs_io *io, int init_ret)
+void mtfs_io_iter_fini_read_ops(struct mtfs_io *io, int init_ret)
 {
 	MENTRY();
 
 	if (unlikely(init_ret)) {
-		if (io->mi_bindex == io->mi_bnum - 1) {
+		if (io->mi_bindex == io->mi_oplist.latest_bnum - 1) {
 			io->mi_break = 1;
 		} else {
 			io->mi_bindex++;
@@ -203,9 +240,26 @@ static void mtfs_io_iter_fini_read_ops(struct mtfs_io *io, int init_ret)
 		goto out;
 	}
 
-	if (io->mi_successful ||
-	    io->mi_bindex == io->mi_oplist.latest_bnum - 1) {
-	    	io->mi_break = 1;
+	if (io->mi_successful) {
+		io->mi_break = 1;
+		goto out;
+	}
+
+	if (io->mi_bindex == io->mi_oplist.latest_bnum - 1) {
+		if (io->mi_oplist_dentry) {
+			if (!mtfs_dev2noabort(mtfs_i2dev(io->mi_oplist_dentry->d_inode))) {
+				io->mi_break = 1;
+			}
+		} else {
+			MASSERT(io->mi_oplist_inode);
+			if (!mtfs_dev2noabort(mtfs_i2dev(io->mi_oplist_inode))) {
+				io->mi_break = 1;
+			}
+		}
+	}
+
+	if (io->mi_bindex == io->mi_bnum - 1) {
+		io->mi_break = 1;
 	} else {
 		io->mi_bindex++;
 	}
@@ -214,7 +268,7 @@ out:
 	_MRETURN();
 }
 
-static void mtfs_io_iter_fini_write_ops(struct mtfs_io *io, int init_ret)
+void mtfs_io_iter_fini_write_ops(struct mtfs_io *io, int init_ret)
 {
 	MENTRY();
 
@@ -256,7 +310,7 @@ out:
 	_MRETURN();
 }
 
-static void mtfs_io_iter_start_create(struct mtfs_io *io)
+void mtfs_io_iter_start_create(struct mtfs_io *io)
 {
 	struct mtfs_io_create *io_create = &io->u.mi_create;
 	mtfs_bindex_t global_bindex = io->mi_oplist.op_binfo[io->mi_bindex].bindex;
@@ -277,7 +331,7 @@ static void mtfs_io_iter_start_create(struct mtfs_io *io)
 	_MRETURN();
 }
 
-static void mtfs_io_iter_start_link(struct mtfs_io *io)
+void mtfs_io_iter_start_link(struct mtfs_io *io)
 {
 	struct mtfs_io_link *io_link = &io->u.mi_link;
 	mtfs_bindex_t global_bindex = io->mi_oplist.op_binfo[io->mi_bindex].bindex;
@@ -297,7 +351,7 @@ static void mtfs_io_iter_start_link(struct mtfs_io *io)
 	_MRETURN();
 }
 
-static void mtfs_io_iter_start_unlink(struct mtfs_io *io)
+void mtfs_io_iter_start_unlink(struct mtfs_io *io)
 {
 	struct mtfs_io_unlink *io_unlink = &io->u.mi_unlink;
 	mtfs_bindex_t global_bindex = io->mi_oplist.op_binfo[io->mi_bindex].bindex;
@@ -316,7 +370,7 @@ static void mtfs_io_iter_start_unlink(struct mtfs_io *io)
 	_MRETURN();
 }
 
-static void mtfs_io_iter_start_mkdir(struct mtfs_io *io)
+void mtfs_io_iter_start_mkdir(struct mtfs_io *io)
 {
 	struct mtfs_io_mkdir *io_mkdir = &io->u.mi_mkdir;
 	mtfs_bindex_t global_bindex = io->mi_oplist.op_binfo[io->mi_bindex].bindex;
@@ -336,7 +390,7 @@ static void mtfs_io_iter_start_mkdir(struct mtfs_io *io)
 	_MRETURN();
 }
 
-static void mtfs_io_iter_start_rmdir(struct mtfs_io *io)
+void mtfs_io_iter_start_rmdir(struct mtfs_io *io)
 {
 	struct mtfs_io_rmdir *io_rmdir = &io->u.mi_rmdir;
 	mtfs_bindex_t global_bindex = io->mi_oplist.op_binfo[io->mi_bindex].bindex;
@@ -355,7 +409,7 @@ static void mtfs_io_iter_start_rmdir(struct mtfs_io *io)
 	_MRETURN();
 }
 
-static void mtfs_io_iter_start_mknod(struct mtfs_io *io)
+void mtfs_io_iter_start_mknod(struct mtfs_io *io)
 {
 	struct mtfs_io_mknod *io_mknod = &io->u.mi_mknod;
 	mtfs_bindex_t global_bindex = io->mi_oplist.op_binfo[io->mi_bindex].bindex;
@@ -376,7 +430,7 @@ static void mtfs_io_iter_start_mknod(struct mtfs_io *io)
 	_MRETURN();
 }
 
-static void mtfs_io_iter_start_rename(struct mtfs_io *io)
+void mtfs_io_iter_start_rename(struct mtfs_io *io)
 {
 	struct mtfs_io_rename *io_rename = &io->u.mi_rename;
 	mtfs_bindex_t global_bindex = io->mi_oplist.op_binfo[io->mi_bindex].bindex;
@@ -397,7 +451,7 @@ static void mtfs_io_iter_start_rename(struct mtfs_io *io)
 	_MRETURN();
 }
 
-static void mtfs_io_iter_start_symlink(struct mtfs_io *io)
+void mtfs_io_iter_start_symlink(struct mtfs_io *io)
 {
 	struct mtfs_io_symlink *io_symlink = &io->u.mi_symlink;
 	mtfs_bindex_t global_bindex = io->mi_oplist.op_binfo[io->mi_bindex].bindex;
@@ -417,7 +471,7 @@ static void mtfs_io_iter_start_symlink(struct mtfs_io *io)
 	_MRETURN();
 }
 
-static void mtfs_io_iter_start_readlink(struct mtfs_io *io)
+void mtfs_io_iter_start_readlink(struct mtfs_io *io)
 {
 	struct mtfs_io_readlink *io_readlink = &io->u.mi_readlink;
 	mtfs_bindex_t global_bindex = io->mi_oplist.op_binfo[io->mi_bindex].bindex;
@@ -437,7 +491,7 @@ static void mtfs_io_iter_start_readlink(struct mtfs_io *io)
 	_MRETURN();
 }
 
-static void mtfs_io_iter_start_permission(struct mtfs_io *io)
+void mtfs_io_iter_start_permission(struct mtfs_io *io)
 {
 	struct mtfs_io_permission *io_permission = &io->u.mi_permission;
 	mtfs_bindex_t global_bindex = io->mi_oplist.op_binfo[io->mi_bindex].bindex;
@@ -458,7 +512,7 @@ static void mtfs_io_iter_start_permission(struct mtfs_io *io)
 	_MRETURN();
 }
 
-static void mtfs_io_iter_start_getattr(struct mtfs_io *io)
+void mtfs_io_iter_start_getattr(struct mtfs_io *io)
 {
 	struct mtfs_io_getattr *io_getattr = &io->u.mi_getattr;
 	mtfs_bindex_t global_bindex = io->mi_oplist.op_binfo[io->mi_bindex].bindex;
@@ -477,7 +531,7 @@ static void mtfs_io_iter_start_getattr(struct mtfs_io *io)
 	_MRETURN();
 }
 
-static void mtfs_io_iter_start_setattr(struct mtfs_io *io)
+void mtfs_io_iter_start_setattr(struct mtfs_io *io)
 {
 	struct mtfs_io_setattr *io_setattr = &io->u.mi_setattr;
 	mtfs_bindex_t global_bindex = io->mi_oplist.op_binfo[io->mi_bindex].bindex;
@@ -495,7 +549,7 @@ static void mtfs_io_iter_start_setattr(struct mtfs_io *io)
 	_MRETURN();
 }
 
-static void mtfs_io_iter_start_getxattr(struct mtfs_io *io)
+void mtfs_io_iter_start_getxattr(struct mtfs_io *io)
 {
 	struct mtfs_io_getxattr *io_getxattr = &io->u.mi_getxattr;
 	mtfs_bindex_t global_bindex = io->mi_oplist.op_binfo[io->mi_bindex].bindex;
@@ -518,7 +572,7 @@ static void mtfs_io_iter_start_getxattr(struct mtfs_io *io)
 	_MRETURN();
 }
 
-static void mtfs_io_iter_start_setxattr(struct mtfs_io *io)
+void mtfs_io_iter_start_setxattr(struct mtfs_io *io)
 {
 	struct mtfs_io_setxattr *io_setxattr = &io->u.mi_setxattr;
 	mtfs_bindex_t global_bindex = io->mi_oplist.op_binfo[io->mi_bindex].bindex;
@@ -539,7 +593,7 @@ static void mtfs_io_iter_start_setxattr(struct mtfs_io *io)
 	_MRETURN();
 }
 
-static void mtfs_io_iter_start_removexattr(struct mtfs_io *io)
+void mtfs_io_iter_start_removexattr(struct mtfs_io *io)
 {
 	struct mtfs_io_removexattr *io_removexattr = &io->u.mi_removexattr;
 	mtfs_bindex_t global_bindex = io->mi_oplist.op_binfo[io->mi_bindex].bindex;
@@ -557,7 +611,7 @@ static void mtfs_io_iter_start_removexattr(struct mtfs_io *io)
 	_MRETURN();
 }
 
-static void mtfs_io_iter_start_listxattr(struct mtfs_io *io)
+void mtfs_io_iter_start_listxattr(struct mtfs_io *io)
 {
 	struct mtfs_io_listxattr *io_listxattr = &io->u.mi_listxattr;
 	mtfs_bindex_t global_bindex = io->mi_oplist.op_binfo[io->mi_bindex].bindex;
@@ -579,7 +633,7 @@ static void mtfs_io_iter_start_listxattr(struct mtfs_io *io)
 	_MRETURN();
 }
 
-static void mtfs_io_iter_start_readdir(struct mtfs_io *io)
+void mtfs_io_iter_start_readdir(struct mtfs_io *io)
 {
 	struct mtfs_io_readdir *io_readdir = &io->u.mi_readdir;
 	mtfs_bindex_t global_bindex = io->mi_oplist.op_binfo[io->mi_bindex].bindex;
@@ -598,7 +652,7 @@ static void mtfs_io_iter_start_readdir(struct mtfs_io *io)
 	_MRETURN();
 }
 
-static void mtfs_io_iter_start_open(struct mtfs_io *io)
+void mtfs_io_iter_start_open(struct mtfs_io *io)
 {
 	struct mtfs_io_open *io_open = &io->u.mi_open;
 	mtfs_bindex_t global_bindex = io->mi_oplist.op_binfo[io->mi_bindex].bindex;
@@ -679,7 +733,7 @@ const struct mtfs_io_operations mtfs_io_ops[] = {
 	},
 	[MIOT_RENAME] = {
 		.mio_init       = mtfs_io_init_oplist,
-		.mio_fini       = mtfs_io_fini_oplist,
+		.mio_fini       = mtfs_io_fini_oplist_rename,
 		.mio_lock       = NULL,
 		.mio_unlock     = NULL,
 		.mio_iter_init  = NULL,
@@ -828,6 +882,7 @@ const struct mtfs_io_operations mtfs_io_ops[] = {
 		.mio_iter_fini  = mtfs_io_iter_fini_write_ops,
 	},
 };
+EXPORT_SYMBOL(mtfs_io_ops);
 
 static int mtfs_io_init(struct mtfs_io *io)
 {

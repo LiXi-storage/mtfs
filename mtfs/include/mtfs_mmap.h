@@ -15,7 +15,8 @@ extern ssize_t mtfs_direct_IO(int rw, struct kiocb *kiocb,
 						      unsigned long nr_segs);
 extern struct page *mtfs_nopage(struct vm_area_struct *vma, unsigned long address,
                          int *type);
-
+extern struct address_space_operations mtfs_aops;
+extern struct vm_operations_struct mtfs_file_vm_ops;
 #else /* !defined (__linux__) && defined(__KERNEL__) */
 #error This head is only for kernel space use
 #endif /* !defined (__linux__) && defined(__KERNEL__) */

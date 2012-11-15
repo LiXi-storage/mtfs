@@ -59,6 +59,30 @@ static struct mtfs_junction *_junction_search(const char *subject,
 	return NULL;
 }
 
+static int mjunction_operations_check(struct mtfs_operations *operations)
+{
+	int ret = 0;
+
+	if (operations->symlink_iops == NULL ||
+	    operations->dir_iops == NULL ||
+	    operations->main_iops == NULL ||
+	    operations->main_fops == NULL ||
+	    operations->dir_fops == NULL ||
+	    operations->sops == NULL ||
+	    operations->dops == NULL ||
+	    operations->aops == NULL ||
+	    operations->vm_ops == NULL ||
+	    //operations->ioctl == NULL ||
+	    //operations->heal_ops == NULL ||
+	    //operations->subject_ops == NULL ||
+	    operations->io_ops == NULL) {
+	    	MERROR("invalid mtfs_operations\n");
+	    	ret = -EINVAL;
+	}
+
+	return ret;
+}
+
 static int junction_check(struct mtfs_junction *junction)
 {
 	int ret = 0;
@@ -68,7 +92,9 @@ static int junction_check(struct mtfs_junction *junction)
 	    junction->mj_subject == NULL ||
 	    junction->mj_primary_type == NULL ||
 	    junction->mj_secondary_types == NULL ||
-	    junction->mj_fs_ops == NULL) {
+	    junction->mj_fs_ops == NULL ||
+	    mjunction_operations_check(junction->mj_fs_ops)) {
+	    	MERROR("invalid junction\n");
 	    	ret = -EINVAL;
 	}
 

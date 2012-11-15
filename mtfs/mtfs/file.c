@@ -133,7 +133,7 @@ int mtfs_readdir(struct file *file, void *dirent, filldir_t filldir)
 	io->mi_oplist_dentry = file->f_dentry;
 	io->mi_bnum = mtfs_f2bnum(file);
 	io->mi_break = 0;
-	io->mi_ops = &mtfs_io_ops[MIOT_READDIR];
+	io->mi_ops = &((*(mtfs_f2ops(file)->io_ops))[io->mi_type]);
 
 	io_readdir->file = file;
 	io_readdir->dirent = dirent;
@@ -193,7 +193,7 @@ int mtfs_open_branch(struct inode *inode,
 	ret = mtfs_device_branch_errno(mtfs_f2dev(file), bindex, BOPS_MASK_WRITE);
 	if (ret) {
 		MDEBUG("branch[%d] is abandoned\n", bindex);
-		goto out; 
+		goto out;
 	}
 
 	if (hidden_dentry && hidden_dentry->d_inode) {
@@ -260,7 +260,7 @@ int mtfs_open(struct inode *inode, struct file *file)
 	io->mi_oplist_dentry = file->f_dentry;
 	io->mi_bnum = mtfs_f2bnum(file);
 	io->mi_break = 0;
-	io->mi_ops = &mtfs_io_ops[MIOT_OPEN];
+	io->mi_ops = &((*(mtfs_f2ops(file)->io_ops))[io->mi_type]);
 
 	io_open->inode = inode;
 	io_open->file = file;
@@ -686,7 +686,7 @@ static int mtfs_io_init_rw(struct mtfs_io *io, int is_write,
 
 	mtfs_io_init_rw_common(io, is_write, file, iov, nr_segs, ppos, rw_size);
 	type = is_write ? MIOT_WRITEV : MIOT_READV;
-	io->mi_ops = &mtfs_io_ops[type];
+	io->mi_ops = &((*(mtfs_f2ops(file)->io_ops))[io->mi_type]);
 	io->mi_resource = mtfs_i2resource(file->f_dentry->d_inode);
 	io->mi_einfo.mode = is_write ? MLOCK_MODE_WRITE : MLOCK_MODE_READ;
 	io->mi_einfo.data.mlp_extent.start = *ppos;

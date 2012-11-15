@@ -14,7 +14,7 @@
 #endif
 
 typedef enum mtfs_io_type {
-	MIOT_CREATE,
+	MIOT_CREATE = 0,
 	MIOT_LINK,
 	MIOT_UNLINK,
 	MIOT_MKDIR,
@@ -263,6 +263,8 @@ struct mtfs_io_operations {
 };
 
 extern int mtfs_io_loop(struct mtfs_io *io);
+
+extern const struct mtfs_io_operations mtfs_io_ops[];
 #endif /* defined (__linux__) && defined(__KERNEL__) */
 
 #endif /* __MTFS_IO_H__ */

@@ -9,6 +9,7 @@
 #include <mtfs_dentry.h>
 #include <mtfs_inode.h>
 #include <mtfs_file.h>
+#include <mtfs_mmap.h>
 #include <mtfs_junction.h>
 #include "async_replica_ext2.h"
 
@@ -194,8 +195,11 @@ struct mtfs_operations mtfs_ext2_operations = {
 	dir_fops:                &mtfs_ext_dir_fops,
 	sops:                    &mtfs_ext_sops,
 	dops:                    &mtfs_ext_dops,
+	aops:                    &mtfs_aops,
+	vm_ops:                  &mtfs_file_vm_ops,
 	ioctl:                   &mtfs_ext2_ioctl,
 	subject_ops:             &masync_subject_ops,
+	io_ops:                  &masync_io_ops,
 };
 
 const char *ext2_supported_secondary_types[] = {

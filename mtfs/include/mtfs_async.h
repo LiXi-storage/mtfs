@@ -11,6 +11,7 @@
 #include <linux/mm.h>
 #include <linux/mutex.h>
 #include <mtfs_proc.h>
+#include <mtfs_io.h>
 #include <mtfs_interval_tree.h>
 
 #ifdef HAVE_SHRINK_CONTROL
@@ -98,6 +99,7 @@ extern ssize_t masync_file_aio_write(struct kiocb *iocb, const struct iovec *iov
                                      unsigned long nr_segs, loff_t pos);
 #endif /* ! HAVE_FILE_WRITEV */
 
+extern const struct mtfs_io_operations masync_io_ops[];
 #else /* !defined (__linux__) && defined(__KERNEL__) */
 #error This head is only for kernel space use
 #endif /* !defined (__linux__) && defined(__KERNEL__) */

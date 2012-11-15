@@ -338,6 +338,7 @@ struct address_space_operations mtfs_aops =
 	writepage:      mtfs_writepage,
 	readpage:       mtfs_readpage,
 };
+EXPORT_SYMBOL(mtfs_aops);
 
 struct vm_operations_struct mtfs_file_vm_ops = {
 #ifdef HAVE_VM_OP_FAULT
@@ -347,3 +348,4 @@ struct vm_operations_struct mtfs_file_vm_ops = {
 	populate:       filemap_populate,
 #endif /* ! HAVE_VM_OP_FAULT */
 };
+EXPORT_SYMBOL(mtfs_file_vm_ops);

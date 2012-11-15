@@ -9,6 +9,7 @@
 #include <mtfs_dentry.h>
 #include <mtfs_inode.h>
 #include <mtfs_file.h>
+#include <mtfs_mmap.h>
 #include <mtfs_junction.h>
 #include "replica_ext.h"
 
@@ -194,7 +195,10 @@ struct mtfs_operations mtfs_ext2_operations = {
 	dir_fops:                &mtfs_ext_dir_fops,
 	sops:                    &mtfs_ext_sops,
 	dops:                    &mtfs_ext_dops,
+	aops:                    &mtfs_aops,
+	vm_ops:                  &mtfs_file_vm_ops,
 	ioctl:                   &mtfs_ext2_ioctl,
+	io_ops:                  &mtfs_io_ops,
 };
 
 struct mtfs_operations mtfs_ext3_operations = {
@@ -205,7 +209,10 @@ struct mtfs_operations mtfs_ext3_operations = {
 	dir_fops:                &mtfs_ext_dir_fops,
 	sops:                    &mtfs_ext_sops,
 	dops:                    &mtfs_ext_dops,
+	aops:                    &mtfs_aops,
+	vm_ops:                  &mtfs_file_vm_ops,
 	ioctl:                    NULL,
+	io_ops:                  &mtfs_io_ops,
 };
 
 struct mtfs_operations mtfs_ext4_operations = {
@@ -216,7 +223,10 @@ struct mtfs_operations mtfs_ext4_operations = {
 	dir_fops:                &mtfs_ext_dir_fops,
 	sops:                    &mtfs_ext_sops,
 	dops:                    &mtfs_ext_dops,
+	aops:                    &mtfs_aops,
+	vm_ops:                  &mtfs_file_vm_ops,
 	ioctl:                    NULL,
+	io_ops:                  &mtfs_io_ops,
 };
 
 const char *ext2_supported_secondary_types[] = {
@@ -261,7 +271,7 @@ struct mtfs_junction mtfs_ext4_junction = {
 	mj_fs_ops:              &mtfs_ext4_operations,
 };
 
-static int ext2_support_init(void)
+static int ext_support_init(void)
 {
 	int ret = 0;
 
@@ -294,7 +304,7 @@ out:
 	return ret;
 }
 
-static void ext2_support_exit(void)
+static void ext_support_exit(void)
 {
 	MDEBUG("unregistering mtfs async juntion for ext2\n");
 
@@ -307,5 +317,5 @@ MODULE_AUTHOR("MulTi File System Workgroup");
 MODULE_DESCRIPTION("mtfs's support for ext2");
 MODULE_LICENSE("GPL");
 
-module_init(ext2_support_init);
-module_exit(ext2_support_exit);
+module_init(ext_support_init);
+module_exit(ext_support_exit);
