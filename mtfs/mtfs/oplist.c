@@ -114,54 +114,6 @@ out:
 }
 EXPORT_SYMBOL(mtfs_oplist_build);
 
-int mtfs_oplist_check(struct mtfs_operation_list *list)
-{
-	mtfs_bindex_t bindex = 0;
-	int ret = 0;
-	MENTRY();
-
-	if (list->checked_bnum == 0) {
-		MASSERT(list->valid_bnum == 0);
-		MASSERT(list->success_bnum == 0);
-		MASSERT(list->success_latest_bnum == 0);
-		MASSERT(list->success_nonlatest_bnum == 0);
-		MASSERT(list->fault_bnum == 0);
-		MASSERT(list->fault_latest_bnum == 0);
-		MASSERT(list->fault_nonlatest_bnum == 0);
-	}
-
-	for (bindex = list->checked_bnum; bindex < list->bnum; bindex++) {
-		if (!list->op_binfo[bindex].valid) {
-			break;
-		}
-
-		list->checked_bnum++;
-		list->valid_bnum++;
-		if (list->op_binfo[bindex].is_suceessful) {
-			list->success_bnum++;
-			if (bindex < list->latest_bnum) {
-				list->success_latest_bnum++;
-			} else {
-				list->success_nonlatest_bnum++;
-			}
-		} else {
-			list->fault_bnum++;
-			if (bindex < list->latest_bnum) {
-				list->fault_latest_bnum++;
-			} else {
-				list->fault_nonlatest_bnum++;
-			}
-		}
-	}
-	MASSERT(list->fault_latest_bnum + list->fault_nonlatest_bnum == list->fault_bnum);
-	MASSERT(list->success_latest_bnum + list->success_nonlatest_bnum == list->success_bnum);
-	MASSERT(list->success_bnum + list->fault_bnum == list->valid_bnum);
-	MASSERT(list->valid_bnum <= list->bnum);
-	MASSERT(list->checked_bnum <= list->bnum);
-	MRETURN(ret);
-}
-EXPORT_SYMBOL(mtfs_oplist_check);
-
 /* Choose a operation status returned */
 mtfs_operation_result_t mtfs_oplist_result(struct mtfs_operation_list *list)
 {

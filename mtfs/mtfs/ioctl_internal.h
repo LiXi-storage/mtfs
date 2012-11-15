@@ -39,4 +39,11 @@ static inline int mtfs_inode_to_lowerfs_flags(int iflags, int keep)
 	              ((iflags & S_IMMUTABLE) ? MTFS_IMMUTABLE_FL : 0));
 }
 
+int mtfs_ioctl_branch(struct inode *inode,
+                      struct file *file,
+                      unsigned int cmd,
+                      unsigned long arg,
+                      mtfs_bindex_t bindex,
+                      int is_kernel_ds);
+
 #endif /* __MTFS_IOCTL_INTERNAL_H__ */

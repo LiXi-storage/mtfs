@@ -36,5 +36,8 @@ void mtfs_io_iter_start_removexattr(struct mtfs_io *io);
 void mtfs_io_iter_start_listxattr(struct mtfs_io *io);
 void mtfs_io_iter_start_readdir(struct mtfs_io *io);
 void mtfs_io_iter_start_open(struct mtfs_io *io);
+void mtfs_io_iter_start_ioctl(struct mtfs_io *io);
+void mtfs_io_iter_start_writepage(struct mtfs_io *io);
+void mtfs_io_iter_start_readpage(struct mtfs_io *io);
 
 #endif /* __MTFS_IO_INTERNAL_H__ */

@@ -59,7 +59,6 @@ static inline int mtfs_oplist_setbranch(struct mtfs_operation_list *list,
 
 mtfs_operation_result_t mtfs_oplist_result(struct mtfs_operation_list *list);
 int mtfs_oplist_update(struct inode *inode, struct mtfs_operation_list *list);
-int mtfs_oplist_check(struct mtfs_operation_list *list);
 
 #endif /* defined (__linux__) && defined(__KERNEL__) */
 

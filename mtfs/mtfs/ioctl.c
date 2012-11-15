@@ -247,6 +247,9 @@ static long __vfs_ioctl(struct file *filp, unsigned int cmd,
 					filp, cmd, arg);
 #endif
 		//unlock_kernel();
+	} else {
+		ret = -EOPNOTSUPP;
+		MERROR("ioctl is not supported by lowerfs\n");
 	}
 out_ds:
 	if (is_kernel_ds) {
@@ -257,7 +260,12 @@ out_ds:
 }
 
 
-static int mtfs_ioctl_do_branch(struct inode *inode, struct file *file, unsigned int cmd, unsigned long arg, mtfs_bindex_t bindex, int is_kernel_ds)
+int mtfs_ioctl_branch(struct inode *inode,
+                      struct file *file,
+                      unsigned int cmd,
+                      unsigned long arg,
+                      mtfs_bindex_t bindex,
+                      int is_kernel_ds)
 {
 	int ret = 0;
 	struct file *hidden_file = mtfs_f2branch(file, bindex);
@@ -282,88 +290,110 @@ out:
 	MRETURN(ret);
 }
 
-int mtfs_ioctl_write(struct inode *inode, struct file *file,
-                     unsigned int cmd, unsigned long arg, int is_kernel_ds)
+int mtfs_ioctl_write(struct inode *inode,
+                     struct file *file,
+                     unsigned int cmd,
+                     unsigned long arg,
+                     int is_kernel_ds)
 {
 	int ret = 0;
-	mtfs_bindex_t i = 0;
-	mtfs_bindex_t bindex = 0;
-	struct mtfs_operation_list *list = NULL;
-	mtfs_operation_result_t result = {0};	
+	struct mtfs_io *io = NULL;
+	struct mtfs_io_ioctl *io_ioctl = NULL;
 	MENTRY();
 
-	MASSERT(mtfs_f2info(file));
+	MDEBUG("ioctl [%.*s]\n",
+	       file->f_dentry->d_name.len, file->f_dentry->d_name.name);
 
-	list = mtfs_oplist_build(inode);
-	if (unlikely(list == NULL)) {
-		MERROR("failed to build operation list\n");
+	MTFS_SLAB_ALLOC_PTR(io, mtfs_io_cache);
+	if (io == NULL) {
+		MERROR("not enough memory\n");
 		ret = -ENOMEM;
 		goto out;
 	}
 
-	if (list->latest_bnum == 0) {
-		MERROR("file [%.*s] has no valid branch, please check it\n",
-		       file->f_dentry->d_name.len, file->f_dentry->d_name.name);
-		if (!mtfs_dev2noabort(mtfs_i2dev(inode))) {
-			ret = -EIO;
-			goto out_free_oplist;
-		}
-	}
+	io_ioctl = &io->u.mi_ioctl;
 
-	for (i = 0; i < mtfs_f2bnum(file); i++) {
-		bindex = list->op_binfo[i].bindex;
-		ret = mtfs_ioctl_do_branch(inode, file, cmd, arg, bindex, is_kernel_ds);
-		result.ret = ret;
-		mtfs_oplist_setbranch(list, i, (ret == 0 ? 1 : 0), result);
-		if (i == list->latest_bnum - 1) {
-			mtfs_oplist_check(list);
-			if (list->success_latest_bnum <= 0) {
-				MDEBUG("operation failed for all latest %d branches\n", list->latest_bnum);
-				if (!mtfs_dev2noabort(mtfs_i2dev(inode))) {
-					result = mtfs_oplist_result(list);
-					ret = result.ret;
-					goto out_free_oplist;
-				}
-			}
-		}
-	}
+	io->mi_type = MIOT_IOCTL_WRITE;
+	io->mi_bindex = 0;
+	io->mi_oplist_dentry = file->f_dentry;
+	io->mi_bnum = mtfs_f2bnum(file);
+	io->mi_break = 0;
+	io->mi_ops = &((*(mtfs_i2ops(inode)->io_ops))[io->mi_type]);
 
-	mtfs_oplist_check(list);
-	if (list->success_bnum <= 0) {
-		result = mtfs_oplist_result(list);
-		ret = result.ret;
-		goto out_free_oplist;
-	}
+	io_ioctl->inode = inode;
+	io_ioctl->file = file;
+	io_ioctl->cmd = cmd;
+	io_ioctl->arg = arg;
+	io_ioctl->is_kernel_ds = is_kernel_ds;
 
-	ret = mtfs_oplist_update(inode, list);
+	ret = mtfs_io_loop(io);
 	if (ret) {
-		MERROR("failed to update inode\n");
-		MBUG();
+		MERROR("failed to loop on io\n");
+	} else {
+		ret = io->mi_result.ret;
+	}
+
+	if (ret) {
+		goto out_free_io;
 	}
 
 	mtfs_update_inode_attr(inode);
-out_free_oplist:
-	mtfs_oplist_free(list);
+out_free_io:
+	MTFS_SLAB_FREE_PTR(io, mtfs_io_cache);
 out:
 	MRETURN(ret);
 }
 EXPORT_SYMBOL(mtfs_ioctl_write);
 
-int mtfs_ioctl_read(struct inode *inode, struct file *file,
-                    unsigned int cmd, unsigned long arg, int is_kernel_ds)
+int mtfs_ioctl_read(struct inode *inode,
+                    struct file *file,
+                    unsigned int cmd,
+                    unsigned long arg,
+                    int is_kernel_ds)
 {
-	mtfs_bindex_t bindex = -1;
 	int ret = 0;
+	struct mtfs_io *io = NULL;
+	struct mtfs_io_ioctl *io_ioctl = NULL;
 	MENTRY();
 
-	ret = mtfs_i_choose_bindex(inode, MTFS_BRANCH_VALID, &bindex);
-	if (ret) {
-		MERROR("choose bindex failed, ret = %d\n", ret);
+	MDEBUG("ioctl [%.*s]\n",
+	       file->f_dentry->d_name.len, file->f_dentry->d_name.name);
+
+	MTFS_SLAB_ALLOC_PTR(io, mtfs_io_cache);
+	if (io == NULL) {
+		MERROR("not enough memory\n");
+		ret = -ENOMEM;
 		goto out;
 	}
 
-	MASSERT(bindex >=0 && bindex < mtfs_i2bnum(inode));
-	ret = mtfs_ioctl_do_branch(inode, file, cmd, arg, bindex, is_kernel_ds);
+	io_ioctl = &io->u.mi_ioctl;
+
+	io->mi_type = MIOT_IOCTL_READ;
+	io->mi_bindex = 0;
+	io->mi_oplist_dentry = file->f_dentry;
+	io->mi_bnum = mtfs_f2bnum(file);
+	io->mi_break = 0;
+	io->mi_ops = &((*(mtfs_i2ops(inode)->io_ops))[io->mi_type]);
+
+	io_ioctl->inode = inode;
+	io_ioctl->file = file;
+	io_ioctl->cmd = cmd;
+	io_ioctl->arg = arg;
+	io_ioctl->is_kernel_ds = is_kernel_ds;
+
+	ret = mtfs_io_loop(io);
+	if (ret) {
+		MERROR("failed to loop on io\n");
+	} else {
+		ret = io->mi_result.ret;
+	}
+
+	if (ret) {
+		goto out_free_io;
+	}
+
+out_free_io:
+	MTFS_SLAB_FREE_PTR(io, mtfs_io_cache);
 out:
 	MRETURN(ret);
 }

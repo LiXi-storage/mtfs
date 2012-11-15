@@ -10,16 +10,22 @@
 #include <mtfs_inode.h>
 #include <mtfs_file.h>
 #include <mtfs_flag.h>
+#include <mtfs_io.h>
 #include "mmap_internal.h"
+#include "main_internal.h"
+#include "lowerfs_internal.h"
 
-static int mtfs_writepage_branch(struct page *page, struct inode *inode, mtfs_bindex_t bindex,
-                                 unsigned hidden_page_index, struct writeback_control *wbc)
+int mtfs_writepage_branch(struct page *page,
+                          struct writeback_control *wbc,
+                          mtfs_bindex_t bindex)
 {
 	int ret = 0;
-	struct inode *lower_inode = NULL;
-	struct page *lower_page = NULL;
+	struct inode *inode = page->mapping->host;
+	struct inode *hidden_inode = NULL;
+	struct page *hidden_page = NULL;
 	char *kaddr = NULL;
 	char *lower_kaddr = NULL;
+	unsigned hidden_page_index = page->index;
 	MENTRY();
 
 	ret = mtfs_device_branch_errno(mtfs_i2dev(inode), bindex, BOPS_MASK_WRITE);
@@ -28,15 +34,15 @@ static int mtfs_writepage_branch(struct page *page, struct inode *inode, mtfs_bi
 		goto out; 
 	}
 
-	lower_inode = mtfs_i2branch(inode, bindex);
-	if (lower_inode == NULL) {
+	hidden_inode = mtfs_i2branch(inode, bindex);
+	if (hidden_inode == NULL) {
 		ret = -ENOENT;
 		goto out;
 	}
 
 	/* This will lock_page */
-	lower_page = grab_cache_page(lower_inode->i_mapping, hidden_page_index);
-	if (!lower_page) {
+	hidden_page = grab_cache_page(hidden_inode->i_mapping, hidden_page_index);
+	if (!hidden_page) {
 		ret = -ENOMEM; /* Which errno*/
 		goto out;
 	}
@@ -46,36 +52,39 @@ static int mtfs_writepage_branch(struct page *page, struct inode *inode, mtfs_bi
 	 * And PageWriteback flag will be set by writepage in some fs.
 	 * So wait until it finishs.
 	 */
-	wait_on_page_writeback(lower_page);
-	MASSERT(!PageWriteback(lower_page));
+	wait_on_page_writeback(hidden_page);
+	MASSERT(!PageWriteback(hidden_page));
 
-	/* Copy data to lower_page */
+	/* Copy data to hidden_page */
 	kaddr = kmap(page);
-	lower_kaddr = kmap(lower_page);
+	lower_kaddr = kmap(hidden_page);
 	memcpy(lower_kaddr, kaddr, PAGE_CACHE_SIZE);
-	flush_dcache_page(lower_page);
-	kunmap(lower_page);
+	flush_dcache_page(hidden_page);
+	kunmap(hidden_page);
 	kunmap(page);
 
-	set_page_dirty(lower_page);
+	set_page_dirty(hidden_page);
 
-	if (!clear_page_dirty_for_io(lower_page)) {
-		MERROR("page(%p) is not dirty\n", lower_page);
-		unlock_page(lower_page);
-		page_cache_release(lower_page);
+	if (!clear_page_dirty_for_io(hidden_page)) {
+		MERROR("page(%p) is not dirty\n", hidden_page);
+		unlock_page(hidden_page);
+		page_cache_release(hidden_page);
 		MBUG();
 		goto out;
 	}
 
 	/* This will unlock_page */
-	ret = lower_inode->i_mapping->a_ops->writepage(lower_page, wbc);
+	MASSERT(hidden_inode->i_mapping);
+	MASSERT(hidden_inode->i_mapping->a_ops);
+	MASSERT(hidden_inode->i_mapping->a_ops->writepage);
+	ret = hidden_inode->i_mapping->a_ops->writepage(hidden_page, wbc);
 	if (ret == AOP_WRITEPAGE_ACTIVATE) {
 		MDEBUG("lowerfs choose to not start writepage\n");
-		unlock_page(lower_page);
+		unlock_page(hidden_page);
 		ret = 0;
 	}
 
-	page_cache_release(lower_page); /* because read_cache_page increased refcnt */
+	page_cache_release(hidden_page); /* because read_cache_page increased refcnt */
 out:
 	MRETURN(ret);
 }
@@ -83,56 +92,37 @@ out:
 int mtfs_writepage(struct page *page, struct writeback_control *wbc)
 {
 	int ret = 0;
+	struct mtfs_io *io = NULL;
+	struct mtfs_io_writepage *io_writepage = NULL;
 	struct inode *inode = page->mapping->host;
-	mtfs_bindex_t i = 0;
-	mtfs_bindex_t bindex = 0;
-	struct mtfs_operation_list *list = NULL;
-	mtfs_operation_result_t result = {0};
 	MENTRY();
 
-	list = mtfs_oplist_build(inode);
-	if (unlikely(list == NULL)) {
-		MERROR("failed to build operation list\n");
+	MDEBUG("writepage\n");
+
+	MTFS_SLAB_ALLOC_PTR(io, mtfs_io_cache);
+	if (io == NULL) {
+		MERROR("not enough memory\n");
 		ret = -ENOMEM;
 		goto out;
 	}
 
-	if (list->latest_bnum == 0) {
-		MERROR("page has no valid branch, please check it\n");
-		if (!mtfs_dev2noabort(mtfs_i2dev(inode))) {
-			ret = -EIO;
-			goto out_free_oplist;
-		}
-	}
+	io_writepage = &io->u.mi_writepage;
 
-	for (i = 0; i < mtfs_i2bnum(inode); i++) {
-		bindex = list->op_binfo[i].bindex;
-		ret = mtfs_writepage_branch(page, inode, bindex, page->index, wbc);
-		result.ret = ret;
-		mtfs_oplist_setbranch(list, i, (ret == 0 ? 1 : 0), result);
-		if (i == list->latest_bnum - 1) {
-			mtfs_oplist_check(list);
-			if (list->success_latest_bnum <= 0) {
-				MDEBUG("operation failed for all latest branches\n");
-				if (!mtfs_dev2noabort(mtfs_i2dev(inode))) {
-					ret = -EIO;
-					goto out_free_oplist;
-				}
-			}
-		}
-	}
+	io->mi_type = MIOT_WRITEPAGE;
+	io->mi_bindex = 0;
+	io->mi_oplist_inode = inode;
+	io->mi_bnum = mtfs_i2bnum(inode);
+	io->mi_break = 0;
+	io->mi_ops = &((*(mtfs_i2ops(inode)->io_ops))[io->mi_type]);
 
-	mtfs_oplist_check(list);
-	if (list->success_bnum <= 0) {
-		result = mtfs_oplist_result(list);
-		ret = result.ret;
-		goto out_free_oplist;
-	}
+	io_writepage->page = page;
+	io_writepage->wbc = wbc;
 
-	ret = mtfs_oplist_update(inode, list);
+	ret = mtfs_io_loop(io);
 	if (ret) {
-		MERROR("failed to update inode\n");
-		MBUG();
+		MERROR("failed to loop on io\n");
+	} else {
+		ret = io->mi_result.ret;
 	}
 
 	if (ret) {
@@ -141,15 +131,17 @@ int mtfs_writepage(struct page *page, struct writeback_control *wbc)
 		SetPageUptodate(page);
 	}
 
-out_free_oplist:
-	mtfs_oplist_free(list);
+	MTFS_SLAB_FREE_PTR(io, mtfs_io_cache);
 out:
 	unlock_page(page);
 	MRETURN(ret);
 }
 EXPORT_SYMBOL(mtfs_writepage);
 
-struct page *mtfs_read_cache_page(struct file *file, struct inode *hidden_inode, mtfs_bindex_t bindex, unsigned page_index)
+struct page *mtfs_read_cache_page(struct file *file,
+                                  struct inode *hidden_inode,
+                                  mtfs_bindex_t bindex,
+                                  unsigned page_index)
 {
 	struct page *hidden_page = NULL;
 	int err = 0;
@@ -173,7 +165,9 @@ out:
 	return hidden_page;
 }
 
-static int mtfs_readpage_branch(struct file *file, char *page_data, mtfs_bindex_t bindex, unsigned hidden_page_index)
+int mtfs_readpage_branch(struct file *file,
+                         struct page *page,
+                         mtfs_bindex_t bindex)
 {
 	int ret = 0;
 	struct dentry *dentry = NULL;
@@ -181,6 +175,8 @@ static int mtfs_readpage_branch(struct file *file, char *page_data, mtfs_bindex_
 	struct inode *inode = NULL;
 	struct inode *hidden_inode = NULL;
 	struct page *hidden_page = NULL;
+	unsigned hidden_page_index = page->index;
+	void *page_data = NULL;
 	MENTRY();
 
 	dentry = file->f_dentry;
@@ -190,41 +186,19 @@ static int mtfs_readpage_branch(struct file *file, char *page_data, mtfs_bindex_
 	hidden_file = mtfs_f2branch(file, bindex);
 	hidden_inode = mtfs_i2branch(inode, bindex);
 
-	hidden_page = mtfs_read_cache_page(hidden_file, hidden_inode, bindex, hidden_page_index);
+	hidden_page = mtfs_read_cache_page(hidden_file,
+	                                   hidden_inode,
+	                                   bindex,
+	                                   hidden_page_index);
 	if (IS_ERR(hidden_page)) {
 		ret = PTR_ERR(hidden_page);
 		goto out;
 	}
 
+	page_data = kmap(page);
 	copy_page_data(page_data, hidden_page, hidden_inode, hidden_page_index);
 	page_cache_release(hidden_page);
-
-out:
-	MRETURN(ret);
-}
-
-static int mtfs_readpage_nounlock(struct file *file, struct page *page)
-{
-	int ret = 0;
-	mtfs_bindex_t bindex = 0;
-	void *page_data = NULL;
-	MENTRY();
-
-	ret = mtfs_i_choose_bindex(page->mapping->host, MTFS_DATA_VALID, &bindex);
-	if (ret) {
-		MERROR("choose bindex failed, ret = %d\n", ret);
-		goto out;
-	}
-
-	page_data = kmap(page);
-	ret = mtfs_readpage_branch(file, page_data, bindex, page->index);
 	kunmap(page);
-
-	if (ret == 0) {
-		SetPageUptodate(page);
-	} else {
-		ClearPageUptodate(page);
-	}
 
 out:
 	MRETURN(ret);
@@ -233,15 +207,48 @@ out:
 int mtfs_readpage(struct file *file, struct page *page)
 {
 	int ret = 0;
+	struct mtfs_io *io = NULL;
+	struct mtfs_io_readpage *io_readpage = NULL;
+	struct inode *inode = page->mapping->host;
 	MENTRY();
 
-	MASSERT(PageLocked(page));
-	MASSERT(!PageUptodate(page));
-	MASSERT(atomic_read(&file->f_dentry->d_inode->i_count) > 0);
+	MDEBUG("readpage\n");
 
-	ret = mtfs_readpage_nounlock(file, page);
+	MTFS_SLAB_ALLOC_PTR(io, mtfs_io_cache);
+	if (io == NULL) {
+		MERROR("not enough memory\n");
+		ret = -ENOMEM;
+		goto out;
+	}
+
+	io_readpage = &io->u.mi_readpage;
+
+	io->mi_type = MIOT_READPAGE;
+	io->mi_bindex = 0;
+	io->mi_oplist_inode = inode;
+	io->mi_bnum = mtfs_i2bnum(inode);
+	io->mi_break = 0;
+	io->mi_ops = &((*(mtfs_i2ops(inode)->io_ops))[io->mi_type]);
+
+	io_readpage->file = file;
+	io_readpage->page = page;
+
+	ret = mtfs_io_loop(io);
+	if (ret) {
+		MERROR("failed to loop on io\n");
+	} else {
+		ret = io->mi_result.ret;
+	}
+
+	if (ret) {
+		ClearPageUptodate(page);
+	} else {
+		SetPageUptodate(page);
+	}
+
+	MTFS_SLAB_FREE_PTR(io, mtfs_io_cache);
+out:
 	unlock_page(page);
-
 	MRETURN(ret);
 }
 EXPORT_SYMBOL(mtfs_readpage);
@@ -342,7 +349,7 @@ EXPORT_SYMBOL(mtfs_aops);
 
 struct vm_operations_struct mtfs_file_vm_ops = {
 #ifdef HAVE_VM_OP_FAULT
-	fault:         mtfs_fault,
+	fault:          mtfs_fault,
 #else /* ! HAVE_VM_OP_FAULT */
 	nopage:         mtfs_nopage,
 	populate:       filemap_populate,

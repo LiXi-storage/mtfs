@@ -150,7 +150,7 @@ ssize_t mtfs_lustre_file_writev(struct file *file, const struct iovec *iov,
 		MERROR("failed to writev, ret = %d\n", ret);
 	}
 
-	mtfs_oplist_check(oplist);
+	mtfs_oplist_merge(oplist);
 	if (oplist->success_bnum <= 0) {
 		result = mtfs_oplist_result(oplist);
 		size = result.ssize;

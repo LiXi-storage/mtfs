@@ -34,6 +34,10 @@ typedef enum mtfs_io_type {
 	MIOT_LISTXATTR,
 	MIOT_READDIR,
 	MIOT_OPEN,
+	MIOT_IOCTL_WRITE,
+	MIOT_IOCTL_READ,
+	MIOT_WRITEPAGE,
+	MIOT_READPAGE,
 } mtfs_io_type_t;
 
 struct mtfs_io_trace {
@@ -174,6 +178,23 @@ struct mtfs_io_open {
 	struct file *file;
 };
 
+struct mtfs_io_ioctl {
+	struct inode *inode;
+	struct file *file;
+	unsigned int cmd;
+	unsigned long arg;
+	int is_kernel_ds;
+};
+
+struct mtfs_io_writepage {
+	struct page *page;
+	struct writeback_control *wbc;
+};
+
+struct mtfs_io_readpage {
+	struct file *file;
+	struct page *page;
+};
 
 struct mtfs_io {
 	const struct mtfs_io_operations   *mi_ops;
@@ -222,9 +243,12 @@ struct mtfs_io {
 		struct mtfs_io_permission  mi_permission;
 		struct mtfs_io_readdir     mi_readdir;
 		struct mtfs_io_open        mi_open;
+		struct mtfs_io_ioctl       mi_ioctl;
+		struct mtfs_io_writepage   mi_writepage;
+		struct mtfs_io_readpage    mi_readpage;
 	} u;
 	union {
-		struct mtfs_io_trace     mi_trace;
+		struct mtfs_io_trace       mi_trace;
 	} subject;
 };
 

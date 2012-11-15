@@ -444,7 +444,7 @@ int mtfs_lookup_backend(struct inode *dir, struct dentry *dentry, int interpose_
 		}
 	}
 
-	mtfs_oplist_check(list);
+	mtfs_oplist_merge(list);
 	if (list->success_latest_bnum == 0) {
 		if (list->latest_bnum > 0 && list->success_nonlatest_bnum > 0) {
 			/* TODO: remove branch */

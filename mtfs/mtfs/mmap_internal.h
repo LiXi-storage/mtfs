@@ -40,4 +40,11 @@ static inline int copy_page_data(void *broken_page_data, struct page *correct_pa
 	
 	return ret;
 }
+
+int mtfs_writepage_branch(struct page *page,
+                          struct writeback_control *wbc,
+                          mtfs_bindex_t bindex);
+int mtfs_readpage_branch(struct file *file,
+                         struct page *page,
+                         mtfs_bindex_t bindex);
 #endif /* __MTFS_MMAP_INTERNAL_H__ */

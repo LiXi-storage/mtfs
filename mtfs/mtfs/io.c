@@ -9,6 +9,8 @@
 #include "file_internal.h"
 #include "io_internal.h"
 #include "inode_internal.h"
+#include "ioctl_internal.h"
+#include "mmap_internal.h"
 
 int mtfs_io_init_oplist(struct mtfs_io *io)
 {
@@ -670,6 +672,63 @@ void mtfs_io_iter_start_open(struct mtfs_io *io)
 	_MRETURN();
 }
 
+void mtfs_io_iter_start_ioctl(struct mtfs_io *io)
+{
+	struct mtfs_io_ioctl *io_ioctl = &io->u.mi_ioctl;
+	mtfs_bindex_t global_bindex = io->mi_oplist.op_binfo[io->mi_bindex].bindex;
+	MENTRY();
+
+	io->mi_result.ret = mtfs_ioctl_branch(io_ioctl->inode,
+	                                      io_ioctl->file,
+	                                      io_ioctl->cmd,
+	                                      io_ioctl->arg,
+	                                      global_bindex,
+	                                      io_ioctl->is_kernel_ds);
+	if (!io->mi_result.ret) {
+		io->mi_successful = 1;
+	} else {
+		io->mi_successful = 0;
+	}
+
+	_MRETURN();
+}
+
+void mtfs_io_iter_start_writepage(struct mtfs_io *io)
+{
+	struct mtfs_io_writepage *io_writepage = &io->u.mi_writepage;
+	mtfs_bindex_t global_bindex = io->mi_oplist.op_binfo[io->mi_bindex].bindex;
+	MENTRY();
+
+	io->mi_result.ret = mtfs_writepage_branch(io_writepage->page,
+	                                          io_writepage->wbc,
+	                                          global_bindex);
+	if (!io->mi_result.ret) {
+		io->mi_successful = 1;
+	} else {
+		io->mi_successful = 0;
+	}
+
+	_MRETURN();
+}
+
+void mtfs_io_iter_start_readpage(struct mtfs_io *io)
+{
+	struct mtfs_io_readpage *io_readpage = &io->u.mi_readpage;
+	mtfs_bindex_t global_bindex = io->mi_oplist.op_binfo[io->mi_bindex].bindex;
+	MENTRY();
+
+	io->mi_result.ret = mtfs_readpage_branch(io_readpage->file,
+	                                         io_readpage->page,
+	                                         global_bindex);
+	if (!io->mi_result.ret) {
+		io->mi_successful = 1;
+	} else {
+		io->mi_successful = 0;
+	}
+
+	_MRETURN();
+}
+
 const struct mtfs_io_operations mtfs_io_ops[] = {
 	[MIOT_CREATE] = {
 		.mio_init       = mtfs_io_init_oplist,
@@ -880,6 +939,46 @@ const struct mtfs_io_operations mtfs_io_ops[] = {
 		.mio_iter_start = mtfs_io_iter_start_open,
 		.mio_iter_end   = mtfs_io_iter_end_oplist,
 		.mio_iter_fini  = mtfs_io_iter_fini_write_ops,
+	},
+	[MIOT_IOCTL_WRITE] = {
+		.mio_init       = mtfs_io_init_oplist,
+		.mio_fini       = mtfs_io_fini_oplist,
+		.mio_lock       = NULL,
+		.mio_unlock     = NULL,
+		.mio_iter_init  = NULL,
+		.mio_iter_start = mtfs_io_iter_start_ioctl,
+		.mio_iter_end   = mtfs_io_iter_end_oplist,
+		.mio_iter_fini  = mtfs_io_iter_fini_write_ops,
+	},
+	[MIOT_IOCTL_READ] = {
+		.mio_init       = mtfs_io_init_oplist,
+		.mio_fini       = NULL,
+		.mio_lock       = NULL,
+		.mio_unlock     = NULL,
+		.mio_iter_init  = NULL,
+		.mio_iter_start = mtfs_io_iter_start_ioctl,
+		.mio_iter_end   = NULL,
+		.mio_iter_fini  = mtfs_io_iter_fini_read_ops,
+	},
+	[MIOT_WRITEPAGE] = {
+		.mio_init       = mtfs_io_init_oplist,
+		.mio_fini       = mtfs_io_fini_oplist,
+		.mio_lock       = NULL,
+		.mio_unlock     = NULL,
+		.mio_iter_init  = NULL,
+		.mio_iter_start = mtfs_io_iter_start_writepage,
+		.mio_iter_end   = mtfs_io_iter_end_oplist,
+		.mio_iter_fini  = mtfs_io_iter_fini_write_ops,
+	},
+	[MIOT_READPAGE] = {
+		.mio_init       = mtfs_io_init_oplist,
+		.mio_fini       = NULL,
+		.mio_lock       = NULL,
+		.mio_unlock     = NULL,
+		.mio_iter_init  = NULL,
+		.mio_iter_start = mtfs_io_iter_start_readpage,
+		.mio_iter_end   = NULL,
+		.mio_iter_fini  = mtfs_io_iter_fini_read_ops,
 	},
 };
 EXPORT_SYMBOL(mtfs_io_ops);
