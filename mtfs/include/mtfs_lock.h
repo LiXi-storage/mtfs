@@ -15,7 +15,7 @@ typedef enum {
 	MLOCK_MODE_READ  = 1,
 	MLOCK_MODE_WRITE = 2,
 	MLOCK_MODE_NULL  = 4,
-        MLOCK_MODE_MAX
+	MLOCK_MODE_MAX
 } mlock_mode_t;
 
 #define MLOCK_MODE_NUM    3

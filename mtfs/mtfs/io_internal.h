@@ -6,8 +6,9 @@
 #define __MTFS_IO_INTERNAL_H__
 
 #include <mtfs_io.h>
+#include <mtfs_oplist.h>
 
-int mtfs_io_init_oplist(struct mtfs_io *io);
+int mtfs_io_init_oplist(struct mtfs_io *io, struct mtfs_oplist_object *oplist_obj);
 void mtfs_io_iter_end_oplist(struct mtfs_io *io);
 void mtfs_io_fini_oplist_noupdate(struct mtfs_io *io);
 void mtfs_io_fini_oplist(struct mtfs_io *io);

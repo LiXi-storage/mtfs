@@ -138,7 +138,7 @@ ssize_t mtfs_lustre_file_writev(struct file *file, const struct iovec *iov,
 	MENTRY();
 
 	inode = file->f_dentry->d_inode;
-        oplist = mtfs_oplist_build_keep_order(inode);
+	oplist = mtfs_oplist_build(inode, &mtfs_oplist_sequential);
 	if (unlikely(oplist == NULL)) {
 		MERROR("failed to build operation list\n");
 		ret = -ENOMEM;
@@ -150,14 +150,14 @@ ssize_t mtfs_lustre_file_writev(struct file *file, const struct iovec *iov,
 		MERROR("failed to writev, ret = %d\n", ret);
 	}
 
-	mtfs_oplist_merge(oplist);
+	mtfs_oplist_gather(oplist);
 	if (oplist->success_bnum <= 0) {
 		result = mtfs_oplist_result(oplist);
 		size = result.ssize;
 		goto out_free_oplist;
 	}
 
-	ret = mtfs_oplist_update(file->f_dentry->d_inode, oplist);
+	ret = mtfs_oplist_flush(oplist, inode);
 	if (ret) {
 		MERROR("failed to update inode\n");
 		MBUG();

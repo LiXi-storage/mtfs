@@ -632,7 +632,7 @@ ssize_t mtfs_file_rw_branch(int is_write, struct file *file, const struct iovec 
 
 	MASSERT(hidden_file->f_op);
 	ret = _do_readv_writev(is_write, hidden_file, iov, nr_segs, ppos);
-	if (ret > 0) {
+	if (ret > 0 && is_write) {
 		/*
 		 * Lustre update inode size whenever read/write.
 		 * TODO: Do not update unless file growes bigger.

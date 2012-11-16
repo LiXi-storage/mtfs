@@ -87,6 +87,8 @@ struct mlowerfs_bucket {
 	struct semaphore                    mb_lock; /* Lock */
 #endif /* defined (__linux__) && defined(__KERNEL__) */
 	struct mlowerfs_disk_bucket         mb_disk;
+	int                                 mb_inited; /* $mb_disk is inited or not */
+	int                                 mb_dirty; /* $mb_disk is flushed or not */
 };
 
 #define mlowerfs_bucket2type(bucket)             (bucket->mb_type)

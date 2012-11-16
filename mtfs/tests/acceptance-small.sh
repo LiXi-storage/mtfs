@@ -7,7 +7,7 @@
 # ONLY=0a ACC_SM_ONLY=EXAMPLE sh acceptance-small.sh
 
 set -e
-[ "$CONFIGS" ] || CONFIGS="async_replica_ext2"
+[ "$CONFIGS" ] || CONFIGS="replica_ext2"
 
 #export TESTSUITE_LIST="COMPILE"
 export TESTSUITE_LIST="MOUNT POSIX MULTI_MNT SINGLE_BRANCH ABANDON_BRANCH RAID RACER COMPILE PJD_FSTEST"

@@ -397,7 +397,7 @@ int mtfs_lookup_backend(struct inode *dir, struct dentry *dentry, int interpose_
 
 	MASSERT(inode_is_locked(dir));
 
-	list = mtfs_oplist_build(dir);
+	list = mtfs_oplist_build(dir, &mtfs_oplist_flag);
 	if (unlikely(list == NULL)) {
 		MERROR("failed to build operation list\n");
 		ret = -ENOMEM;
@@ -444,7 +444,7 @@ int mtfs_lookup_backend(struct inode *dir, struct dentry *dentry, int interpose_
 		}
 	}
 
-	mtfs_oplist_merge(list);
+	mtfs_oplist_gather(list);
 	if (list->success_latest_bnum == 0) {
 		if (list->latest_bnum > 0 && list->success_nonlatest_bnum > 0) {
 			/* TODO: remove branch */

@@ -106,14 +106,14 @@ struct file_operations mtfs_ext_main_fops =
 	sendfile:   mtfs_file_sendfile,
 #endif /* HAVE_KERNEL_SENDFILE */
 #ifdef HAVE_FILE_READV
-	readv:      masync_file_readv,
+	readv:      mtfs_file_readv,
 #else /* !HAVE_FILE_READV */
-	aio_read:   masync_file_aio_read,
+	aio_read:   mtfs_file_aio_read,
 #endif /* !HAVE_FILE_READV */
 #ifdef HAVE_FILE_WRITEV
-	writev:     masync_file_writev,
+	writev:     mtfs_file_writev,
 #else /* !HAVE_FILE_WRITEV */
-	aio_write:  masync_file_aio_write,
+	aio_write:  mtfs_file_aio_write,
 #endif /* !HAVE_FILE_WRITEV */
 	readdir:    mtfs_readdir,
 	poll:       mtfs_poll,
