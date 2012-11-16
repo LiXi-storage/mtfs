@@ -142,8 +142,8 @@ test_6b() {
 		touch $DIR/f6a
 		chmod 0666 $DIR/f6a
 	fi
-	$RUNAS chmod 0444 $DIR/f6a && error
-	$CHECKSTAT -t file -p 0666 -u \#$UID $DIR/f6a || error
+	$RUNAS chmod 0444 $DIR/f6a && error "unexpected chmod success"
+	$CHECKSTAT -t file -p 0666 -u \#$UID $DIR/f6a || error "checkstat failed"
 }
 run_test 6b "$RUNAS chmod .../f6a (should return error) =="
 

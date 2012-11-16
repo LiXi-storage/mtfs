@@ -852,14 +852,14 @@ int mlowerfs_bucket_add(struct mlowerfs_bucket *bucket,
 		MASSERT(!bucket->mb_dirty);
 		ret = mlowerfs_bucket_read_nonlock(bucket);
 		if (ret) {
-			MERROR("failed to read bucket\n");
+			MERROR("failed to read bucket, ret = %d\n", ret);
 			goto out_unlock;
 		}
 	}
 
 	ret = _mlowerfs_bucket_add(bucket, extent);
 	if (ret) {
-		MERROR("failed to add bucket\n");
+		MERROR("failed to add bucket, ret = %d\n", ret);
 		goto out_unlock;
 	}
 
@@ -867,7 +867,7 @@ int mlowerfs_bucket_add(struct mlowerfs_bucket *bucket,
 
 	ret = mlowerfs_bucket_flush_nonlock(bucket);
 	if (ret) {
-		MERROR("failed to flush bucket\n");
+		MERROR("failed to flush bucket, ret = %d\n", ret);
 		goto out_unlock;
 	}
 
@@ -892,7 +892,7 @@ int mlowerfs_bucket_flush_xattr(struct mlowerfs_bucket *bucket)
 	                        mlowerfs_bucket2disk(bucket),
 	                        sizeof(struct mlowerfs_disk_bucket));
 	if (ret) {
-		MERROR("failed to flush bucket\n");
+		MERROR("failed to flush bucket, ret = %d\n", ret);
 	}
 
 	MRETURN(ret);
@@ -916,7 +916,12 @@ int mlowerfs_bucket_read_xattr(struct mlowerfs_bucket *bucket)
 		} else {
 			MERROR("failed to read bucket, expect %d, got %d\n",
 			       sizeof(struct mlowerfs_disk_bucket), ret);
+			if (ret > 0) {
+				ret = -EINVAL;
+			}
 		}
+	} else {
+		ret = 0;
 	}
 
 	MRETURN(ret);

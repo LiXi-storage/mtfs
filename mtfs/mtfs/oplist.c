@@ -291,8 +291,6 @@ EXPORT_SYMBOL(mtfs_oplist_sequential);
 
 int mtfs_oplist_gather_master(struct mtfs_operation_list *oplist)
 {
-	mtfs_bindex_t bindex = 0;
-	mtfs_bindex_t bindex_chosed = -1;
 	int ret = 0;
 	MENTRY();
 
@@ -302,6 +300,7 @@ int mtfs_oplist_gather_master(struct mtfs_operation_list *oplist)
 	MASSERT(oplist->valid_bnum <= oplist->bnum);
 
 	oplist->opinfo = &(oplist->op_binfo[0]);
+	MASSERT(oplist->opinfo->valid);
 
 	MRETURN(ret);
 }

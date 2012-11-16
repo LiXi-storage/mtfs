@@ -70,6 +70,7 @@ void mtfs_io_fini_oplist_noupdate(struct mtfs_io *io)
 
 	mtfs_oplist_gather(oplist);
 	MASSERT(oplist->opinfo);
+	MASSERT(oplist->opinfo->valid);
 	io->mi_result = oplist->opinfo->result;
 	io->mi_successful = oplist->opinfo->is_suceessful;
 
@@ -86,6 +87,8 @@ void mtfs_io_fini_oplist(struct mtfs_io *io)
 
 	mtfs_oplist_gather(oplist);
 	MASSERT(oplist->opinfo);
+	MASSERT(oplist->opinfo->valid);
+
 	io->mi_result = oplist->opinfo->result;
 	io->mi_successful = oplist->opinfo->is_suceessful;
 
@@ -101,10 +104,10 @@ void mtfs_io_fini_oplist(struct mtfs_io *io)
 	ret = mtfs_oplist_flush(oplist, inode);
 	if (ret) {
 		if (dentry) {
-			MERROR("failed to update oplist for [%.*s]\n",
+			MERROR("failed to flush oplist for [%.*s]\n",
 			       dentry->d_name.len, dentry->d_name.name);
 		} else {
-			MERROR("failed to update oplist\n");
+			MERROR("failed to flush oplist\n");
 		}	
 		MBUG();
 	}
@@ -122,6 +125,7 @@ void mtfs_io_fini_oplist_rename(struct mtfs_io *io)
 
 	mtfs_oplist_gather(oplist);
 	MASSERT(oplist->opinfo);
+	MASSERT(oplist->opinfo->valid);
 	io->mi_result = oplist->opinfo->result;
 	io->mi_successful = oplist->opinfo->is_suceessful;
 
@@ -253,6 +257,7 @@ void mtfs_io_iter_fini_read_ops(struct mtfs_io *io, int init_ret)
 		} else {
 			io->mi_bindex++;
 		}
+		MBUG();
 		goto out;
 	}
 
@@ -290,11 +295,11 @@ void mtfs_io_iter_fini_write_ops(struct mtfs_io *io, int init_ret)
 		} else {
 			io->mi_bindex++;
 		}
+		MBUG();
 		goto out;
 	}
 
 	if (io->mi_bindex == io->mi_oplist.latest_bnum - 1) {
-		mtfs_oplist_gather(&io->mi_oplist);
 		if (io->mi_oplist.success_latest_bnum <= 0) {
 			MDEBUG("operation failed for all latest %d branches\n",
 			       io->mi_oplist.latest_bnum);
