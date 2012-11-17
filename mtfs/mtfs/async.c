@@ -198,7 +198,47 @@ static enum mtfs_interval_iter masync_overlap_cb(struct mtfs_interval_node *node
 	return MTFS_INTERVAL_ITER_CONT;
 }
 
-static int masync_bucket_add(struct masync_bucket *bucket,
+static int masycn_bucket_fget(struct masync_bucket *bucket, struct file *file)
+{
+	int ret = 0;
+	mtfs_bindex_t bindex = 0;
+	mtfs_bindex_t bnum = mtfs_f2bnum(file);
+	struct file *hidden_file = NULL;
+	MENTRY();
+
+	MASSERT(!bucket->mab_fvalid);
+	for (bindex = 0; bindex < bnum; bindex++) {
+		hidden_file = mtfs_f2branch(file, bindex);
+		MASSERT(hidden_file);
+		get_file(hidden_file);
+		bucket->mab_finfo.barray[bindex].bfile = hidden_file;
+	}
+	bucket->mab_finfo.bnum = bnum;
+	bucket->mab_fvalid = 1;
+
+	MRETURN(ret);
+}
+
+static int masycn_bucket_fput(struct masync_bucket *bucket)
+{
+	int ret = 0;
+	mtfs_bindex_t bindex = 0;
+	mtfs_bindex_t bnum = bucket->mab_finfo.bnum;
+	struct file *hidden_file = NULL;
+	MENTRY();
+
+	MASSERT(bucket->mab_fvalid);
+	for (bindex = 0; bindex < bnum; bindex++) {
+		hidden_file = bucket->mab_finfo.barray[bindex].bfile;
+		MASSERT(hidden_file);
+		fput(hidden_file);
+	}
+	bucket->mab_fvalid = 0;
+
+	MRETURN(ret);
+}
+
+static int masync_bucket_add(struct file *file,
                              struct mtfs_interval_node_extent *extent)
 {
 	MTFS_LIST_HEAD(extent_list);
@@ -208,6 +248,8 @@ static int masync_bucket_add(struct masync_bucket *bucket,
 	int ret = 0;
 	__u64 min_start = extent->start;
 	__u64 max_end = extent->end;
+	struct inode *inode = file->f_dentry->d_inode;
+	struct masync_bucket *bucket = mtfs_i2bucket(inode);
 	MENTRY();
 
 	MTFS_SLAB_ALLOC_PTR(node, mtfs_interval_cache);
@@ -245,8 +287,10 @@ static int masync_bucket_add(struct masync_bucket *bucket,
 	atomic_inc(&bucket->mab_nr);
 	MDEBUG("added [%lu, %lu]\n", min_start, max_end);
 	if (mtfs_list_empty(&bucket->mab_linkage)) {
+		masycn_bucket_fget(bucket, file);
 		masync_bucket_add_to_lru(bucket);
 	} else {
+		MASSERT(bucket->mab_fvalid);
 		masync_bucket_touch_in_lru(bucket);
 	}
 	masync_bucket_unlock(bucket);
@@ -272,6 +316,7 @@ int masync_bucket_cleanup(struct masync_bucket *bucket)
 	}
 	
 	if (!mtfs_list_empty(&bucket->mab_linkage)) {
+		masycn_bucket_fput(bucket);
 		masync_bucket_remove_from_lru(bucket);
 	}
 	masync_bucket_unlock(bucket);
@@ -310,6 +355,7 @@ static int masync_bucket_cancel(struct masync_bucket *bucket, int nr_to_cacel)
 	}
 	if (bucket->mab_root == NULL) {
 		if (!list_empty(&bucket->mab_linkage)) {
+			masycn_bucket_fput(bucket);
 			masync_bucket_remove_from_lru_nonlock(bucket);
 		}
 	}
@@ -367,7 +413,8 @@ static void masync_io_iter_start_rw(struct mtfs_io *io)
 {
 	struct mtfs_io_rw *io_rw = &io->u.mi_rw;
 	struct mtfs_interval_node_extent extent;
-	struct dentry *dentry = io_rw->file->f_dentry;
+	struct file *file = io_rw->file;
+	struct dentry *dentry = file->f_dentry;
 	struct inode *inode = dentry->d_inode;
 	mtfs_bindex_t bindex = io->mi_bindex;
 	int ret = 0;
@@ -392,7 +439,7 @@ static void masync_io_iter_start_rw(struct mtfs_io *io)
 				goto out;
 			}
 
-			masync_bucket_add(mtfs_i2bucket(inode), &extent);
+			masync_bucket_add(file, &extent);
 			if (ret) {
 				MASSERT(ret < 0);
 				MERROR("failed to add extent to bucket of [%.*s], ret = %d\n",
@@ -731,131 +778,6 @@ const struct mtfs_io_operations masync_io_ops[] = {
 };
 EXPORT_SYMBOL(masync_io_ops);
 
-static int masync_io_init_rw(struct mtfs_io *io, int is_write,
-                             struct file *file, const struct iovec *iov,
-                             unsigned long nr_segs, loff_t *ppos, size_t rw_size)
-{
-	int ret = 0;
-	mtfs_io_type_t type;
-	MENTRY();
-
-	mtfs_io_init_rw_common(io, is_write, file, iov, nr_segs, ppos, rw_size);
-	type = is_write ? MIOT_WRITEV : MIOT_READV;
-	io->mi_ops = &((*(mtfs_f2ops(file)->io_ops))[type]);
-
-	MRETURN(ret);
-}
-
-static ssize_t masync_file_rw(int is_write, struct file *file, const struct iovec *iov,
-                              unsigned long nr_segs, loff_t *ppos)
-{
-	ssize_t size = 0;
-	int ret = 0;
-	struct mtfs_io *io = NULL;
-	size_t rw_size = 0;
-	MENTRY();
-
-	rw_size = get_iov_count(iov, &nr_segs);
-	if (rw_size <= 0) {
-		ret = rw_size;
-		goto out;
-	}
-
-	MTFS_SLAB_ALLOC_PTR(io, mtfs_io_cache);
-	if (io == NULL) {
-		MERROR("not enough memory\n");
-		size = -ENOMEM;
-		goto out;
-	}
-
-	ret = masync_io_init_rw(io, is_write, file, iov, nr_segs, ppos, rw_size);
-	if (ret) {
-		size = ret;
-		goto out_free_io;
-	}
-
-	ret = mtfs_io_loop(io);
-	if (ret) {
-		MERROR("failed to loop on io\n");
-		size = ret;
-	} else {
-		size = io->mi_result.ssize;
-	}
-
-out_free_io:
-	MTFS_SLAB_FREE_PTR(io, mtfs_io_cache);
-out:
-	MRETURN(size);
-}
-
-#ifdef HAVE_FILE_READV
-ssize_t masync_file_readv(struct file *file, const struct iovec *iov,
-                          unsigned long nr_segs, loff_t *ppos)
-{
-	ssize_t size = 0;
-	MENTRY();
-
-	size = masync_file_rw(READ, file, iov, nr_segs, ppos);
-
-	MRETURN(size);
-}
-EXPORT_SYMBOL(masync_file_readv);
-
-ssize_t masync_file_read(struct file *file, char __user *buf, size_t len,
-                         loff_t *ppos)
-{
-	struct iovec local_iov = { .iov_base = (void __user *)buf,
-	                           .iov_len = len };
-	return masync_file_readv(file, &local_iov, 1, ppos);
-}
-EXPORT_SYMBOL(masync_file_read);
-
-ssize_t masync_file_writev(struct file *file, const struct iovec *iov,
-                        unsigned long nr_segs, loff_t *ppos)
-{
-	ssize_t size = 0;
-	MENTRY();
-
-	size = masync_file_rw(WRITE, file, iov, nr_segs, ppos);
-
-	MRETURN(size);
-}
-EXPORT_SYMBOL(masync_file_writev);
-#else /* !HAVE_FILE_READV */
-ssize_t masync_file_aio_read(struct kiocb *iocb, const struct iovec *iov,
-                             unsigned long nr_segs, loff_t pos)
-{
-	ssize_t size = 0;
-	struct file *file = iocb->ki_filp;
-	MENTRY();
-
-	size = masync_file_rw(READ, file, iov, nr_segs, &pos);
-	if (size > 0) {
-		iocb->ki_pos = pos + size;
-	}
-
-	MRETURN(size);
-}
-EXPORT_SYMBOL(masync_file_aio_read);
-
-ssize_t masync_file_aio_write(struct kiocb *iocb, const struct iovec *iov,
-                              unsigned long nr_segs, loff_t pos)
-{
-	ssize_t size = 0;
-	struct file *file = iocb->ki_filp;
-	MENTRY();
-
-	size = masync_file_rw(WRITE, file, iov, nr_segs, &pos);
-	if (size > 0) {
-		iocb->ki_pos = pos + size;
-	}
-
-	MRETURN(size);
-}
-EXPORT_SYMBOL(masync_file_aio_write);
-
-#endif /* !HAVE_FILE_READV */
-
 /* Could not put it into struct msubject_async_info */
 static struct shrinker *masync_shrinker;
 static struct msubject_async_info *masync_info;
@@ -881,6 +803,7 @@ static int _masync_shrink(int nr_to_scan, unsigned int gfp_mask)
 
 out_calc:
 	ret = (masync_calculate_all(masync_info) / 100) * sysctl_vfs_cache_pressure;
+	MERROR("shrinked %d\n", nr_to_scan);
 out:
 	MRETURN(ret);
 }

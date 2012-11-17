@@ -1380,20 +1380,15 @@ test_39b() {
 	rm -f $DIR/$tdir/funlink2
 	mv -f $DIR/$tdir/frename $DIR/$tdir/frename2
 
-	for (( i=0; i < 2; i++ )) ; do
-		local open_new2=`stat -c %Y $DIR/$tdir/fopen`
-		local link_new2=`stat -c %Y $DIR/$tdir/flink`
-		local unlink_new2=`stat -c %Y $DIR/$tdir/funlink`
-		local rename_new2=`stat -c %Y $DIR/$tdir/frename2`
+	local open_new2=`stat -c %Y $DIR/$tdir/fopen`
+	local link_new2=`stat -c %Y $DIR/$tdir/flink`
+	local unlink_new2=`stat -c %Y $DIR/$tdir/funlink`
+	local rename_new2=`stat -c %Y $DIR/$tdir/frename2`
 
-		[ $open_new2 -eq $open_new ] || error "open file reverses mtime"
-		[ $link_new2 -eq $link_new ] || error "link file reverses mtime"
-		[ $unlink_new2 -eq $unlink_new ] || error "unlink file reverses mtime"
-		[ $rename_new2 -eq $rename_new ] || error "rename file reverses mtime"
-
-		cancel_lru_locks osc
-		if [ $i = 0 ] ; then echo "repeat after cancel_lru_locks"; fi
-	done
+	[ $open_new2 -eq $open_new ] || error "open file reverses mtime"
+	[ $link_new2 -eq $link_new ] || error "link file reverses mtime"
+	[ $unlink_new2 -eq $unlink_new ] || error "unlink file reverses mtime"
+	[ $rename_new2 -eq $rename_new ] || error "rename file reverses mtime"
 }
 run_test 39b "mtime change on open, link, unlink, rename  ======"
 

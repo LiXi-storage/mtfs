@@ -12,6 +12,7 @@
 #include <linux/mutex.h>
 #include <mtfs_proc.h>
 #include <mtfs_io.h>
+#include <mtfs_file.h>
 #include <mtfs_interval_tree.h>
 
 #ifdef HAVE_SHRINK_CONTROL
@@ -72,6 +73,8 @@ struct masync_bucket {
 	atomic_t                    mab_nr;      /* Extent objects in tree */ 
 	struct mtfs_interval_node  *mab_root;    /* Extent tree */
 	struct semaphore            mab_lock;    /* Protect tree */
+	struct mtfs_file_info       mab_finfo;   /* Fget for healing  */
+	int                         mab_fvalid;  /* For debug  */
 };
 
 struct msubject_async_info {
@@ -82,22 +85,6 @@ struct msubject_async_info {
 };
 
 extern struct mtfs_subject_operations masync_subject_ops;
-
-#ifdef HAVE_FILE_READV
-extern ssize_t masync_file_readv(struct file *file, const struct iovec *iov,
-                                 unsigned long nr_segs, loff_t *ppos);
-#else /* ! HAVE_FILE_READV */
-extern ssize_t masync_file_aio_read(struct kiocb *iocb, const struct iovec *iov,
-                                    unsigned long nr_segs, loff_t pos);
-#endif /* ! HAVE_FILE_WRITEV */
-
-#ifdef HAVE_FILE_WRITEV
-extern ssize_t masync_file_writev(struct file *file, const struct iovec *iov,
-                                  unsigned long nr_segs, loff_t *ppos);
-#else /* ! HAVE_FILE_WRITEV */
-extern ssize_t masync_file_aio_write(struct kiocb *iocb, const struct iovec *iov,
-                                     unsigned long nr_segs, loff_t pos);
-#endif /* ! HAVE_FILE_WRITEV */
 
 extern const struct mtfs_io_operations masync_io_ops[];
 #else /* !defined (__linux__) && defined(__KERNEL__) */

@@ -65,8 +65,6 @@ extern ssize_t mtfs_file_rw_branch(int is_write, struct file *file, const struct
  * Alright, it is urgly.
  */
 struct mtfs_file_branch {
-	int is_used;
-	int is_valid;
 	struct file *bfile;
 };
 
