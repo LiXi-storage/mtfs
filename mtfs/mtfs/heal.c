@@ -565,8 +565,3 @@ int heal_discard_dentry(struct inode *dir, struct dentry *dentry, struct mtfs_op
 
 	MRETURN(ret);
 }
-
-int mheal_async_extent_heal(struct file *file, struct mtfs_interval_node_extent *extent)
-{
-	return 0;
-}

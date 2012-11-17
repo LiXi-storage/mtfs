@@ -113,6 +113,9 @@ static int selfheal_check_set(struct selfheal_request_set *set)
 		req = mtfs_list_entry(tmp,
 		                      struct mtfs_request,
 		                      rq_set_chain);
+		if (req->rq_phase == RQ_PHASE_COMPLETE) {
+			continue;
+		}
 
 		mtfs_req_interpret(req);
 		mtfs_reqphase_move(req, RQ_PHASE_COMPLETE);
@@ -170,7 +173,7 @@ static int selfheal_check(struct selfheal_daemon_ctl *sc)
 			mtfs_list_del_init(&req->rq_set_chain);
 			req->rq_set = NULL;
 			selfheal_req_finished(req);
-                }
+		}
 	}
 
 	if (ret == 0) {

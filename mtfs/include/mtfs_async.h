@@ -77,11 +77,21 @@ struct masync_bucket {
 	int                         mab_fvalid;  /* For debug  */
 };
 
+#define MASYNC_BULK_SIZE (4096)
+#define MASYNC_BULK_NUMBER (3)
+struct maync_heal_bulk {
+	char buf[MASYNC_BULK_SIZE];
+	int used;
+	mtfs_spinlock_t lock;
+};
+
 struct msubject_async_info {
-	//struct shrinker          *msai_shrinker;      /* Can not for compat reasons */
-	mtfs_list_t                 msai_dirty_buckets; /* Dirty buckets LRU list */
-	struct rw_semaphore         msai_lock;          /* Protect msai_dirty_buckets */
-	struct proc_dir_entry      *msai_proc_entry;    /* Proc entrys for async debug */
+	//struct shrinker          *msai_shrinker;                  /* Can not for compat reasons */
+	mtfs_list_t                 msai_dirty_buckets;             /* Dirty buckets LRU list */
+	struct rw_semaphore         msai_lock;                      /* Protect msai_dirty_buckets */
+	struct proc_dir_entry      *msai_proc_entry;                /* Proc entrys for async debug */
+	struct maync_heal_bulk      msai_bulks[MASYNC_BULK_NUMBER]; /* Bulks for heal */
+	struct semaphore            msai_sem;
 };
 
 extern struct mtfs_subject_operations masync_subject_ops;

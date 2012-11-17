@@ -299,29 +299,123 @@ out:
 	MRETURN(ret);
 }
 
+int masync_sync_file(struct masync_bucket *bucket, struct mtfs_interval_node_extent *extent)
+{
+	int ret = 0;
+	struct file *src_file = NULL;
+	struct file *dest_file = NULL;
+	char *buf = NULL;
+	int buf_size = MASYNC_BULK_SIZE;
+	struct maync_heal_bulk *bulk = NULL;
+	struct inode *inode = mtfs_bucket2inode(bucket);
+	struct super_block *sb = inode->i_sb;
+	struct msubject_async_info *info = NULL;
+	int i = 0;
+	int found = 0;
+	loff_t pos = 0;
+	loff_t tmp_pos = 0;
+	size_t len = 0;
+	size_t result = 0;
+	MENTRY();
+
+	info = (struct msubject_async_info *)mtfs_s2subinfo(sb);
+	down(&info->msai_sem);
+	for(i = 0; i < MASYNC_BULK_NUMBER; i++) {
+		bulk = &info->msai_bulks[i];
+		mtfs_spin_lock(&bulk->lock);
+		if (!bulk->used) {
+			bulk->used = 1;
+			found = 1;
+		}
+		mtfs_spin_unlock(&bulk->lock);
+		if (found) {
+			break;
+		}
+	}
+
+	MASSERT(found);
+	buf = bulk->buf;	
+
+	MASSERT(bucket->mab_fvalid);
+	src_file = bucket->mab_finfo.barray[0].bfile;
+	dest_file = bucket->mab_finfo.barray[1].bfile;
+	MASSERT(src_file);
+	MASSERT(dest_file);
+
+	pos = extent->start;
+	while (pos <= extent->end) {
+		len = extent->end - pos + 1;
+		if (len > buf_size) {
+			len = buf_size;
+		}
+
+		tmp_pos = pos;
+		result = _do_read_write(READ, src_file, buf, len, &tmp_pos);
+		if (result != len) {
+			MERROR("failed to read file, expected %ld, got %ld\n",
+			       len, result);
+			if (result == 0) {
+				/* Sync completed */
+				break;
+			}
+
+			if (result < 0) {
+				ret = result;
+				break;
+			}
+
+			len = result;
+		}
+
+		tmp_pos = pos;
+		result = _do_read_write(WRITE, dest_file, buf, len, &tmp_pos);
+		if (result != len) {
+			MERROR("failed to write file, expected %ld, got %ld\n",
+			       len, result);
+			if (result >= 0) {
+				ret = -EIO;
+				break;
+			}
+		}
+
+		pos += len;
+	}
+
+	mtfs_spin_lock(&bulk->lock);
+	MASSERT(bulk->used);
+	bulk->used = 0;
+	mtfs_spin_unlock(&bulk->lock);
+
+	up(&info->msai_sem);
+	MRETURN(ret);
+}
+
 /* Return nr that canceled */
 int masync_bucket_cleanup(struct masync_bucket *bucket)
 {
 	struct mtfs_interval *node = NULL;
 	int ret = 0;
+	int nr = 0;
 	MENTRY();
 
 	masync_bucket_lock(bucket);
-	ret = atomic_read(&bucket->mab_nr);
+	nr = atomic_read(&bucket->mab_nr);
 	while (bucket->mab_root) {
 		node = mtfs_node2interval(bucket->mab_root);
+		ret = masync_sync_file(bucket, &node->mi_node.in_extent);
+		MASSERT(!ret);
 		mtfs_interval_erase(bucket->mab_root, &bucket->mab_root);
 		MTFS_SLAB_FREE_PTR(node, mtfs_interval_cache);
 		atomic_dec(&bucket->mab_nr);
 	}
-	
+
 	if (!mtfs_list_empty(&bucket->mab_linkage)) {
 		masycn_bucket_fput(bucket);
 		masync_bucket_remove_from_lru(bucket);
 	}
 	masync_bucket_unlock(bucket);
 
-	MRETURN(ret);
+	MRETURN(nr);
 }
 
 static int masync_calculate_all(struct msubject_async_info *info)
@@ -343,15 +437,18 @@ static int masync_calculate_all(struct msubject_async_info *info)
 static int masync_bucket_cancel(struct masync_bucket *bucket, int nr_to_cacel)
 {
 	struct mtfs_interval *node = NULL;
+	int nr = 0;
 	int ret = 0;
 	MENTRY();
 
-	while (bucket->mab_root && ret < nr_to_cacel) {
+	while (bucket->mab_root && nr < nr_to_cacel) {
 		node = mtfs_node2interval(bucket->mab_root);
+		ret = masync_sync_file(bucket, &node->mi_node.in_extent);
+		MASSERT(!ret);
 		mtfs_interval_erase(bucket->mab_root, &bucket->mab_root);
 		MTFS_SLAB_FREE_PTR(node, mtfs_interval_cache);
 		atomic_dec(&bucket->mab_nr);
-		ret++;
+		nr++;
 	}
 	if (bucket->mab_root == NULL) {
 		if (!list_empty(&bucket->mab_linkage)) {
@@ -360,7 +457,7 @@ static int masync_bucket_cancel(struct masync_bucket *bucket, int nr_to_cacel)
 		}
 	}
 
-	MRETURN(ret);
+	MRETURN(nr);
 }
 
 /* Return nr that canceled */
@@ -876,6 +973,21 @@ static int masync_info_proc_fini(struct msubject_async_info *info,
 	MRETURN(ret);
 }
 
+int masync_info_bulk_init(struct msubject_async_info *info)
+{
+	int ret = 0;
+	int i = 0;
+	MENTRY();
+
+	sema_init(&info->msai_sem, MASYNC_BULK_NUMBER);
+	for (i = 0; i < MASYNC_BULK_NUMBER; i++) {
+		info->msai_bulks[i].used = 0;
+		mtfs_spin_lock_init(&info->msai_bulks[i].lock);
+	}
+
+	MRETURN(ret);
+}
+
 int masync_super_init(struct super_block *sb)
 {
 	int ret = 0;
@@ -891,6 +1003,7 @@ int masync_super_init(struct super_block *sb)
 
 	MTFS_INIT_LIST_HEAD(&info->msai_dirty_buckets);
 	masync_info_lock_init(info);
+	masync_info_bulk_init(info);
 
 	ret = masync_info_proc_init(info, sb);
 	if (ret) {

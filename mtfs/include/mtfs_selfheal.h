@@ -24,16 +24,22 @@ typedef enum {
 
 enum rq_phase {
 	RQ_PHASE_NEW            = 0xebc0de00,
-	RQ_PHASE_RPC            = 0xebc0de01,
-	RQ_PHASE_BULK           = 0xebc0de02,
-	RQ_PHASE_INTERPRET      = 0xebc0de03,
+//	RQ_PHASE_RPC            = 0xebc0de01,
+//	RQ_PHASE_BULK           = 0xebc0de02,
+//	RQ_PHASE_INTERPRET      = 0xebc0de03,
 	RQ_PHASE_COMPLETE       = 0xebc0de04,
-	RQ_PHASE_UNREGISTERING  = 0xebc0de05,
+//	RQ_PHASE_UNREGISTERING  = 0xebc0de05,
 	RQ_PHASE_UNDEFINED      = 0xebc0de06
 };
 
-struct selfheal_message {
-	struct inode *dir;
+typedef enum mselfheal_message_type {
+	MSMT_MIN = 0,
+	MSMT_FILE = 0,
+	MSMT_MAX,
+} mselfheal_message_type_t;
+
+struct mselfheal_message {
+	mselfheal_message_type_t msm_type;
 };
 
 struct mtfs_request {
@@ -42,8 +48,7 @@ struct mtfs_request {
 	enum rq_phase                rq_phase;
 	mtfs_list_t                  rq_set_chain;
 	struct selfheal_request_set *rq_set;
-	int                          rq_msg_len;
-	void                        *rq_message;
+	struct mselfheal_message    *rq_message;
 };
 
 #define MAX_SELFHEAL_NAME_LENGTH 16
