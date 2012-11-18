@@ -77,7 +77,7 @@ out:
 	MRETURN(ret);
 }
 
-int mtfs_oplist_gather_default(struct mtfs_operation_list *oplist)
+int mtfs_oplist_gather_optimistic(struct mtfs_operation_list *oplist)
 {
 	mtfs_bindex_t bindex = 0;
 	mtfs_bindex_t bindex_chosed = -1;
@@ -278,14 +278,14 @@ EXPORT_SYMBOL(mtfs_oplist_result);
 struct mtfs_oplist_object mtfs_oplist_flag = {
 	.mopo_init     = mtfs_oplist_init_flag,
 	.mopo_flush    = mtfs_oplist_flush_flag,
-	.mopo_gather   = mtfs_oplist_gather_default,
+	.mopo_gather   = mtfs_oplist_gather_optimistic,
 };
 EXPORT_SYMBOL(mtfs_oplist_flag);
 
 struct mtfs_oplist_object mtfs_oplist_sequential = {
 	.mopo_init     = mtfs_oplist_init_sequential,
 	.mopo_flush    = mtfs_oplist_flush_flag,
-	.mopo_gather   = mtfs_oplist_gather_default,
+	.mopo_gather   = mtfs_oplist_gather_optimistic,
 };
 EXPORT_SYMBOL(mtfs_oplist_sequential);
 
@@ -312,3 +312,9 @@ struct mtfs_oplist_object mtfs_oplist_master = {
 };
 EXPORT_SYMBOL(mtfs_oplist_master);
 
+struct mtfs_oplist_object mtfs_oplist_equal = {
+	.mopo_init     = mtfs_oplist_init_sequential,
+	.mopo_flush    = NULL,
+	.mopo_gather   = mtfs_oplist_gather_optimistic,
+};
+EXPORT_SYMBOL(mtfs_oplist_equal);
