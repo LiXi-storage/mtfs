@@ -13,6 +13,7 @@
 #include <mtfs_super.h>
 #include <mtfs_subject.h>
 #include <mtfs_device.h>
+#include <thread.h>
 #include "file_internal.h"
 #include "io_internal.h"
 #include "main_internal.h"
@@ -299,7 +300,7 @@ out:
 	MRETURN(ret);
 }
 
-int masync_sync_file(struct masync_bucket *bucket, struct mtfs_interval_node_extent *extent)
+static int masync_sync_file(struct masync_bucket *bucket, struct mtfs_interval_node_extent *extent)
 {
 	int ret = 0;
 	struct file *src_file = NULL;
@@ -487,7 +488,7 @@ static int masync_cancel(struct msubject_async_info *info, int nr_to_cacel)
 				MDEBUG("a bucket is too busy to be freed\n");
 				continue;
 			}
-	
+
 			canceled = masync_bucket_cancel(bucket, nr_to_cacel - ret);
 			masync_bucket_unlock(bucket);
 			ret += canceled;

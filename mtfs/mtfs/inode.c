@@ -1943,7 +1943,9 @@ int mtfs_permission(struct inode *inode, int mask, struct nameidata *nd)
 
 	io_permission->inode = inode;
 	io_permission->mask = mask;
+#ifndef HAVE_INODE_PERMISION_2ARGS
 	io_permission->nd = nd;
+#endif /* !HAVE_INODE_PERMISION_2ARGS */
 
 	ret = mtfs_io_loop(io);
 	if (ret) {

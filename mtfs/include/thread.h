@@ -169,6 +169,12 @@ sigset_t mtfs_block_sigs(sigset_t bits);
 sigset_t mtfs_block_sigsinv(unsigned long sigs);
 void mtfs_clear_sigpending(void);
 void mtfs_daemonize(char *str);
+
+static inline void mtfs_pause(signed long timeout)
+{
+        set_current_state(TASK_UNINTERRUPTIBLE);
+        schedule_timeout(timeout);
+}
 #else /* defined (__linux__) && defined(__KERNEL__) */
 #error This head is only for kernel space use
 #endif /* ! defined (__linux__) && defined(__KERNEL__) */
