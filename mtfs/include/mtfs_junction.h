@@ -24,6 +24,7 @@ struct mtfs_operations {
 	int (*ioctl)(struct inode *inode, struct file *file, unsigned int cmd, unsigned long arg);
 	struct heal_operations *heal_ops;
 	struct mtfs_subject_operations *subject_ops;
+	struct mtfs_iupdate_operations *iupdate_ops;
 	const struct mtfs_io_operations (*io_ops)[];
 };
 

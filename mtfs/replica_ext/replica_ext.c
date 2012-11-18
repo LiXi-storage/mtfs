@@ -198,6 +198,7 @@ struct mtfs_operations mtfs_ext2_operations = {
 	aops:                    &mtfs_aops,
 	vm_ops:                  &mtfs_file_vm_ops,
 	ioctl:                   &mtfs_ext2_ioctl,
+	iupdate_ops:              &mtfs_iupdate_choose,
 	io_ops:                  &mtfs_io_ops,
 };
 
@@ -212,6 +213,7 @@ struct mtfs_operations mtfs_ext3_operations = {
 	aops:                    &mtfs_aops,
 	vm_ops:                  &mtfs_file_vm_ops,
 	ioctl:                    NULL,
+	iupdate_ops:              &mtfs_iupdate_choose,
 	io_ops:                  &mtfs_io_ops,
 };
 
@@ -226,6 +228,7 @@ struct mtfs_operations mtfs_ext4_operations = {
 	aops:                    &mtfs_aops,
 	vm_ops:                  &mtfs_file_vm_ops,
 	ioctl:                    NULL,
+	iupdate_ops:              &mtfs_iupdate_choose,
 	io_ops:                  &mtfs_io_ops,
 };
 

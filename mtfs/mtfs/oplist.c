@@ -22,7 +22,7 @@ int mtfs_oplist_init_flag(struct mtfs_operation_list *oplist, struct inode *inod
 
 	/* NOT a good implementation, change me */
 	for (bindex = 0; bindex < bnum; bindex++) {
-		is_valid = mtfs_branch_is_valid(inode, bindex, MTFS_DATA_VALID);
+		is_valid = mtfs_branch_valid(inode, bindex, MTFS_DATA_VALID);
 		if (is_valid) {
 			binfo = &(oplist->op_binfo[bfirst]);
 			bfirst++;
@@ -36,8 +36,8 @@ int mtfs_oplist_init_flag(struct mtfs_operation_list *oplist, struct inode *inod
 	MRETURN(ret);
 }
 
-int mtfs_oplist_flush_flag(struct mtfs_operation_list *oplist,
-                           struct inode *inode)
+int mtfs_oplist_flush_invalidate(struct mtfs_operation_list *oplist,
+                              struct inode *inode)
 {
 	mtfs_bindex_t bindex = 0;
 	mtfs_bindex_t i = 0;
@@ -66,7 +66,7 @@ int mtfs_oplist_flush_flag(struct mtfs_operation_list *oplist,
 				continue;
 			}
 
-			ret = mtfs_invalid_branch(inode, bindex, MTFS_DATA_VALID);
+			ret = mtfs_branch_invalidate(inode, bindex, MTFS_DATA_VALID);
 			if (ret) {
 				MERROR("invalid inode failed, ret = %d\n", ret);
 				MBUG();
@@ -277,14 +277,14 @@ EXPORT_SYMBOL(mtfs_oplist_result);
 
 struct mtfs_oplist_object mtfs_oplist_flag = {
 	.mopo_init     = mtfs_oplist_init_flag,
-	.mopo_flush    = mtfs_oplist_flush_flag,
+	.mopo_flush    = mtfs_oplist_flush_invalidate,
 	.mopo_gather   = mtfs_oplist_gather_optimistic,
 };
 EXPORT_SYMBOL(mtfs_oplist_flag);
 
 struct mtfs_oplist_object mtfs_oplist_sequential = {
 	.mopo_init     = mtfs_oplist_init_sequential,
-	.mopo_flush    = mtfs_oplist_flush_flag,
+	.mopo_flush    = mtfs_oplist_flush_invalidate,
 	.mopo_gather   = mtfs_oplist_gather_optimistic,
 };
 EXPORT_SYMBOL(mtfs_oplist_sequential);

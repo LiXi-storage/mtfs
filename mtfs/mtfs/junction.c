@@ -75,6 +75,7 @@ static int mjunction_operations_check(struct mtfs_operations *operations)
 	    //operations->ioctl == NULL ||
 	    //operations->heal_ops == NULL ||
 	    //operations->subject_ops == NULL ||
+	    operations->iupdate_ops == NULL ||
 	    operations->io_ops == NULL) {
 	    	MERROR("invalid mtfs_operations\n");
 	    	ret = -EINVAL;

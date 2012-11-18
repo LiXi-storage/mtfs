@@ -337,7 +337,7 @@ int mtfs_ioctl_write(struct inode *inode,
 		goto out_free_io;
 	}
 
-	mtfs_update_inode_attr(inode);
+	mtfs_update_inode_attrs(inode);
 out_free_io:
 	MTFS_SLAB_FREE_PTR(io, mtfs_io_cache);
 out:

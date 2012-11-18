@@ -15,50 +15,6 @@ int mlowerfs_bucket_add(struct mlowerfs_bucket *bucket,
 struct mtfs_lowerfs *mlowerfs_get(const char *type);
 void mlowerfs_put(struct mtfs_lowerfs *fs_ops);
 
-static inline int mlowerfs_setflag(struct mtfs_lowerfs *fs_ops, struct inode *inode, __u32 flag)
-{
-	int ret = 0;
-	if (fs_ops->ml_setflag) {
-		ret = fs_ops->ml_setflag(inode, flag);
-	}
-	return ret;
-}
-
-static inline int mlowerfs_getflag(struct mtfs_lowerfs *fs_ops, struct inode *inode, __u32 *mtfs_flag)
-{
-	int ret = 0;
-	if (fs_ops->ml_getflag) {
-		ret = fs_ops->ml_getflag(inode, mtfs_flag);
-	}
-	return ret;
-}
-
-/*
- * Change to a atomic operation.
- * Send a command, let sever make it atomic.
- */
-static inline int mlowerfs_invalidate_data(struct mtfs_lowerfs *fs_ops, struct inode *inode)
-{
-	int ret = 0;
-	__u32 mtfs_flag = 0;
-
-	if (fs_ops->ml_getflag == NULL ||
-	    fs_ops->ml_setflag == NULL) {
-		ret = -EOPNOTSUPP;
-		goto out;
-	}
-
-	ret = fs_ops->ml_getflag(inode, &mtfs_flag);
-	if (ret) {
-		goto out;
-	}
-	mtfs_flag |= MTFS_FLAG_DATABAD | MTFS_FLAG_SETED;
-
-	ret = fs_ops->ml_setflag(inode, mtfs_flag);
-out:
-	return ret;
-}
-
 static inline int mlowerfs_get_raid_type(struct mtfs_lowerfs *fs_ops, struct inode *inode, raid_type_t *raid_type)
 {
 	int ret = 0;
@@ -125,4 +81,14 @@ static inline struct mtfs_operations *mtfs_f2ops(struct file *file)
 	struct dentry *dentry = file->f_dentry;
 	return mtfs_d2ops(dentry);
 }
+
+int mlowerfs_setflag(struct mtfs_lowerfs *lowerfs,
+                     struct inode *inode,
+                     __u32 mtfs_flag);
+int mlowerfs_getflag(struct mtfs_lowerfs *lowerfs,
+                     struct inode *inode,
+                     __u32 *mtfs_flag);
+int mlowerfs_invalidate(struct mtfs_lowerfs *lowerfs,
+                        struct inode *inode,
+                        __u32 valid_flags);
 #endif /* __MTFS_LOWERFS_INTERNAL_H__ */

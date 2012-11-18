@@ -74,8 +74,10 @@ extern int mtfs_setxattr(struct dentry *dentry, const char *name, const void *va
 extern int mtfs_removexattr(struct dentry *dentry, const char *name);
 extern ssize_t mtfs_listxattr(struct dentry *dentry, char *list, size_t size);
 extern int mtfs_lookup_backend(struct inode *dir, struct dentry *dentry, int interpose_flag);
+extern int mtfs_update_attr_times(struct inode *inode);
+extern int mtfs_update_attr_atime(struct inode *inode);
+extern int mtfs_update_inode_attrs(struct inode *inode);
 extern int mtfs_update_inode_size(struct inode *inode);
-extern int mtfs_update_inode_attr(struct inode *inode);
 
 static inline int mtfs_get_nlinks(struct inode *inode) 
 {
@@ -107,6 +109,16 @@ static inline const char *mtfs_mode2type(umode_t mode)
 	default:       return "unkown type file"; break;
 	}
 }
+
+struct mtfs_iupdate_operations {
+	int (*miuo_size)(struct inode *inode);
+	int (*miuo_atime)(struct inode *inode);
+	int (*miuo_times)(struct inode *inode);
+	int (*miuo_attrs)(struct inode *inode);
+};
+
+extern struct mtfs_iupdate_operations mtfs_iupdate_choose;
+extern struct mtfs_iupdate_operations mtfs_iupdate_master;
 
 #else /* !defined (__linux__) && defined(__KERNEL__) */
 #error This head is only for kernel space use

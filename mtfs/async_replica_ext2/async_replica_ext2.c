@@ -199,6 +199,7 @@ struct mtfs_operations mtfs_ext2_operations = {
 	vm_ops:                  &mtfs_file_vm_ops,
 	ioctl:                   &mtfs_ext2_ioctl,
 	subject_ops:             &masync_subject_ops,
+	iupdate_ops:              &mtfs_iupdate_master,
 	io_ops:                  &masync_io_ops,
 };
 

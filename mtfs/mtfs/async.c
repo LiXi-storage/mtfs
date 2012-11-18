@@ -404,7 +404,7 @@ int masync_bucket_cleanup(struct masync_bucket *bucket)
 	while (bucket->mab_root) {
 		node = mtfs_node2interval(bucket->mab_root);
 		ret = masync_sync_file(bucket, &node->mi_node.in_extent);
-		MASSERT(!ret);
+		//MASSERT(!ret);
 		mtfs_interval_erase(bucket->mab_root, &bucket->mab_root);
 		MTFS_SLAB_FREE_PTR(node, mtfs_interval_cache);
 		atomic_dec(&bucket->mab_nr);
@@ -445,7 +445,7 @@ static int masync_bucket_cancel(struct masync_bucket *bucket, int nr_to_cacel)
 	while (bucket->mab_root && nr < nr_to_cacel) {
 		node = mtfs_node2interval(bucket->mab_root);
 		ret = masync_sync_file(bucket, &node->mi_node.in_extent);
-		MASSERT(!ret);
+		//MASSERT(!ret);
 		mtfs_interval_erase(bucket->mab_root, &bucket->mab_root);
 		MTFS_SLAB_FREE_PTR(node, mtfs_interval_cache);
 		atomic_dec(&bucket->mab_nr);
@@ -950,7 +950,6 @@ static int _masync_shrink(int nr_to_scan, unsigned int gfp_mask)
 
 out_calc:
 	ret = (masync_calculate_all(masync_info) / 100) * sysctl_vfs_cache_pressure;
-	MERROR("shrinked %d\n", nr_to_scan);
 out:
 	MRETURN(ret);
 }

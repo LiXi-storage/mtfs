@@ -934,4 +934,100 @@ struct mlowerfs_bucket_type_object mlowerfs_bucket_xattr = {
 	.mbto_flush    = mlowerfs_bucket_flush_xattr,
 };
 
+int mlowerfs_getflag(struct mtfs_lowerfs *lowerfs,
+                     struct inode *inode,
+                     __u32 *mtfs_flag)
+{
+	int ret = 0;
+	MENTRY();
+
+	if (lowerfs->ml_getflag == NULL) {
+		ret = -EOPNOTSUPP;
+		MERROR("get flag not supported\n");
+		goto out;
+	}
+	
+	ret = lowerfs->ml_getflag(inode, mtfs_flag);
+	if (ret) {
+		MERROR("get flag failed, ret = %d\n", ret);
+	}
+out:
+	MRETURN(ret);
+}
+
+int mlowerfs_setflag(struct mtfs_lowerfs *lowerfs,
+                     struct inode *inode,
+                     __u32 mtfs_flag)
+{
+	int ret = 0;
+	MENTRY();
+
+	if (lowerfs->ml_setflag == NULL) {
+		ret = -EOPNOTSUPP;
+		MERROR("set flag not supported\n");
+		goto out;
+	}
+
+	MASSERT(mtfs_flag_is_valid(mtfs_flag));
+	ret = lowerfs->ml_setflag(inode, mtfs_flag);
+	if (ret) {
+		MERROR("set flag failed, ret = %d\n", ret);
+	}
+out:
+	MRETURN(ret);
+}
+
+/*
+ * TODO: Change to a atomic operation.
+ * Send a command, let sever make it atomic.
+ */
+int mlowerfs_invalidate(struct mtfs_lowerfs *lowerfs,
+                        struct inode *inode,
+                        __u32 valid_flags)
+{
+	int ret = 0;
+	__u32 mtfs_flag = 0;
+	MENTRY();
+
+	MASSERT(inode);
+	MASSERT(lowerfs);
+
+	if (lowerfs->ml_getflag == NULL) {
+		ret = -EOPNOTSUPP;
+		MERROR("get flag not supported\n");
+		goto out;
+	}
+
+	if (lowerfs->ml_setflag == NULL) {
+		ret = -EOPNOTSUPP;
+		MERROR("set flag not supported\n");
+		goto out;
+	}
+
+	ret = lowerfs->ml_getflag(inode, &mtfs_flag);
+	if (ret) {
+		MERROR("get flag failed, ret = %d\n", ret);
+		goto out;
+	}
+
+	if ((valid_flags & MTFS_ALL_VALID) == 0) {
+		MERROR("nothing to set\n");
+		goto out;
+	}
+
+	if (mtfs_flag & MTFS_FLAG_DATABAD) {
+		MERROR("already set\n");
+		goto out;
+	}
+
+	mtfs_flag |= MTFS_FLAG_DATABAD | MTFS_FLAG_SETED;
+	MASSERT(mtfs_flag_is_valid(mtfs_flag));
+	ret = lowerfs->ml_setflag(inode, mtfs_flag);
+	if (ret) {
+		MERROR("set flag failed, ret = %d\n", ret);
+	}
+out:
+	MRETURN(ret);
+}
+
 #endif /* !defined (__linux__) && defined(__KERNEL__) */

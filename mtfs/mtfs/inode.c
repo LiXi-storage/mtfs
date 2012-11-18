@@ -49,7 +49,7 @@ out:
 	return ret;
 }
 
-int mtfs_update_attr_times(struct inode *inode)
+static int mtfs_update_attr_times_choose(struct inode *inode)
 {
 	struct inode *hidden_inode = NULL;
 	int ret = 0;
@@ -69,7 +69,7 @@ out:
 	MRETURN(ret);
 }
 
-int mtfs_update_attr_atime(struct inode *inode)
+static int mtfs_update_attr_atime_choose(struct inode *inode)
 {
 	struct inode *hidden_inode = NULL;
 	int ret = 0;
@@ -86,6 +86,200 @@ int mtfs_update_attr_atime(struct inode *inode)
 out:
 	MRETURN(ret);
 }
+
+static int mtfs_update_inode_attrs_choose(struct inode *inode)
+{
+	struct inode* hidden_inode;
+	int ret = 0;
+	MENTRY();
+
+	MASSERT(inode);
+	hidden_inode = mtfs_i_choose_branch(inode, MTFS_ATTR_VALID);
+	if(IS_ERR(hidden_inode)) {
+		ret = PTR_ERR(hidden_inode);
+		goto out;
+	}
+
+	fsstack_copy_attr_all(inode, hidden_inode, mtfs_get_nlinks);
+out:
+	MRETURN(ret);
+}
+
+static int mtfs_update_inode_size_choose(struct inode *inode)
+{
+	unsigned i_size = 0;
+	unsigned i_blocks = 0;
+	struct inode* hidden_inode;
+	int ret = 0;
+	MENTRY();
+
+	MASSERT(inode);
+	if (S_ISREG(inode->i_mode)) {
+		hidden_inode = mtfs_i_choose_branch(inode, MTFS_DATA_VALID);
+		if(IS_ERR(hidden_inode)) {
+			ret = PTR_ERR(hidden_inode);
+			goto out;
+		}
+
+		i_size_write(inode, i_size_read(hidden_inode));
+		inode->i_blocks = hidden_inode->i_blocks;
+		MDEBUG("inode(%p) has i_size = %d, i_blocks = %d\n", inode, i_size, i_blocks);
+	}
+out:
+	MRETURN(ret);
+}
+
+static int mtfs_update_attr_times_master(struct inode *inode)
+{
+	struct inode *hidden_inode = NULL;
+	int ret = 0;
+	MENTRY();
+
+	MASSERT(inode);
+	hidden_inode = mtfs_i2branch(inode, 0);
+	if (hidden_inode == NULL) {
+		hidden_inode = mtfs_i2branch(inode, 1);
+	}
+	MASSERT(hidden_inode);
+
+	inode->i_atime = hidden_inode->i_atime;
+	inode->i_mtime = hidden_inode->i_mtime;
+	inode->i_ctime = hidden_inode->i_ctime;
+
+	MRETURN(ret);
+}
+
+static int mtfs_update_attr_atime_master(struct inode *inode)
+{
+	struct inode *hidden_inode = NULL;
+	int ret = 0;
+	MENTRY();
+
+	MASSERT(inode);
+	hidden_inode = mtfs_i2branch(inode, 0);
+	if (hidden_inode == NULL) {
+		hidden_inode = mtfs_i2branch(inode, 1);
+	}
+	MASSERT(hidden_inode);
+
+	inode->i_atime = hidden_inode->i_atime;
+
+	MRETURN(ret);
+}
+
+static int mtfs_update_inode_attrs_master(struct inode *inode)
+{
+	struct inode* hidden_inode;
+	int ret = 0;
+	MENTRY();
+
+	MASSERT(inode);
+	hidden_inode = mtfs_i2branch(inode, 0);
+	if (hidden_inode == NULL) {
+		hidden_inode = mtfs_i2branch(inode, 1);
+	}
+	MASSERT(hidden_inode);
+
+	fsstack_copy_attr_all(inode, hidden_inode, mtfs_get_nlinks);
+
+	MRETURN(ret);
+}
+
+static int mtfs_update_inode_size_master(struct inode *inode)
+{
+	unsigned i_size = 0;
+	unsigned i_blocks = 0;
+	struct inode* hidden_inode;
+	int ret = 0;
+	MENTRY();
+
+	MASSERT(inode);
+	if (S_ISREG(inode->i_mode)) {
+		hidden_inode = mtfs_i2branch(inode, 0);
+		if (hidden_inode == NULL) {
+			hidden_inode = mtfs_i2branch(inode, 1);
+		}
+		MASSERT(hidden_inode);
+
+		i_size_write(inode, i_size_read(hidden_inode));
+		inode->i_blocks = hidden_inode->i_blocks;
+		MDEBUG("inode(%p) has i_size = %d, i_blocks = %d\n", inode, i_size, i_blocks);
+	}
+
+	MRETURN(ret);
+}
+
+int mtfs_update_attr_times(struct inode *inode)
+{
+	int ret = 0;
+	struct mtfs_operations *ops = mtfs_i2ops(inode);
+	struct mtfs_iupdate_operations *iupdate_ops = ops->iupdate_ops;
+	MENTRY();
+
+	if (iupdate_ops && iupdate_ops->miuo_times) {
+		ret = iupdate_ops->miuo_times(inode);
+	}
+
+	MRETURN(ret);
+}
+
+int mtfs_update_attr_atime(struct inode *inode)
+{
+	int ret = 0;
+	struct mtfs_operations *ops = mtfs_i2ops(inode);
+	struct mtfs_iupdate_operations *iupdate_ops = ops->iupdate_ops;
+	MENTRY();
+
+	if (iupdate_ops && iupdate_ops->miuo_atime) {
+		ret = iupdate_ops->miuo_atime(inode);
+	}
+
+	MRETURN(ret);
+}
+
+int mtfs_update_inode_attrs(struct inode *inode)
+{
+	int ret = 0;
+	struct mtfs_operations *ops = mtfs_i2ops(inode);
+	struct mtfs_iupdate_operations *iupdate_ops = ops->iupdate_ops;
+	MENTRY();
+
+	if (iupdate_ops && iupdate_ops->miuo_attrs) {
+		ret = iupdate_ops->miuo_attrs(inode);
+	}
+
+	MRETURN(ret);
+}
+
+int mtfs_update_inode_size(struct inode *inode)
+{
+	int ret = 0;
+	struct mtfs_operations *ops = mtfs_i2ops(inode);
+	struct mtfs_iupdate_operations *iupdate_ops = ops->iupdate_ops;
+	MENTRY();
+
+	if (iupdate_ops && iupdate_ops->miuo_size) {
+		ret = iupdate_ops->miuo_size(inode);
+	}
+
+	MRETURN(ret);
+}
+
+struct mtfs_iupdate_operations mtfs_iupdate_choose = {
+	miuo_times:                mtfs_update_attr_times_choose,
+	miuo_atime:                mtfs_update_attr_atime_choose,
+	miuo_attrs:                mtfs_update_inode_attrs_choose,
+	miuo_size:                 mtfs_update_inode_size_choose,
+};
+EXPORT_SYMBOL(mtfs_iupdate_choose);
+
+struct mtfs_iupdate_operations mtfs_iupdate_master = {
+	miuo_times:                mtfs_update_attr_times_master,
+	miuo_atime:                mtfs_update_attr_atime_master,
+	miuo_attrs:                mtfs_update_inode_attrs_master,
+	miuo_size:                 mtfs_update_inode_size_master,
+};
+EXPORT_SYMBOL(mtfs_iupdate_master);
 
 int mtfs_inode_init(struct inode *inode, struct dentry *dentry)
 {
@@ -1538,9 +1732,9 @@ int mtfs_rename(struct inode *old_dir,
 		goto out_free_io;
 	}
 
-	mtfs_update_inode_attr(old_dir);
+	mtfs_update_inode_attrs(old_dir);
 	if (new_dir != old_dir) {
-		mtfs_update_inode_attr(new_dir);
+		mtfs_update_inode_attrs(new_dir);
 	}
 
 	/* This flag is seted: FS_RENAME_DOES_D_MOVE */
@@ -1832,7 +2026,7 @@ int mtfs_setattr(struct dentry *dentry, struct iattr *ia)
 		ret = io->mi_result.ret;
 	}
 
-	mtfs_update_inode_attr(dentry->d_inode);
+	mtfs_update_inode_attrs(dentry->d_inode);
 	if (ia->ia_valid & ATTR_SIZE) {
 		mtfs_update_inode_size(dentry->d_inode);
 	}
@@ -2238,50 +2432,6 @@ out:
 	MRETURN(ret);
 }
 EXPORT_SYMBOL(mtfs_listxattr);
-
-int mtfs_update_inode_size(struct inode *inode)
-{
-	unsigned i_size = 0;
-	unsigned i_blocks = 0;
-	struct inode* hidden_inode;
-	int ret = 0;
-	MENTRY();
-
-	MASSERT(inode);
-	if (S_ISREG(inode->i_mode)) {
-		hidden_inode = mtfs_i_choose_branch(inode, MTFS_DATA_VALID);
-		if(IS_ERR(hidden_inode)) {
-			ret = PTR_ERR(hidden_inode);
-			goto out;
-		}
-
-		i_size_write(inode, i_size_read(hidden_inode));
-		inode->i_blocks = hidden_inode->i_blocks;
-		MDEBUG("inode(%p) has i_size = %d, i_blocks = %d\n", inode, i_size, i_blocks);
-	}
-out:
-	MRETURN(ret);
-}
-EXPORT_SYMBOL(mtfs_update_inode_size);
-
-int mtfs_update_inode_attr(struct inode *inode)
-{
-	struct inode* hidden_inode;
-	int ret = 0;
-	MENTRY();
-
-	MASSERT(inode);
-	hidden_inode = mtfs_i_choose_branch(inode, MTFS_ATTR_VALID);
-	if(IS_ERR(hidden_inode)) {
-		ret = PTR_ERR(hidden_inode);
-		goto out;
-	}
-
-	fsstack_copy_attr_all(inode, hidden_inode, mtfs_get_nlinks);
-out:
-	MRETURN(ret);
-}
-EXPORT_SYMBOL(mtfs_update_inode_attr);
 
 struct inode_operations mtfs_symlink_iops =
 {

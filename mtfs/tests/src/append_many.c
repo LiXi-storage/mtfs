@@ -17,7 +17,7 @@ int main(int argc, const char *argv[])
 		return -1;
 	}
 
-	fd = open(argv[1], O_APPEND | O_CREAT | O_RDWR);
+	fd = open(argv[1], O_APPEND | O_CREAT | O_TRUNC | O_RDWR );
 	if (fd < 0) {
 		printf("failed to open file %s\n", argv[1]);
 		return -1;

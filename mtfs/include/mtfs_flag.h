@@ -91,8 +91,8 @@ out:
 #include "mtfs_file.h"
 #include "mtfs_inode.h"
 #include "mtfs_dentry.h"
-extern int mtfs_branch_is_valid(struct inode *inode, mtfs_bindex_t bindex, __u32 valid_flags);
-extern int mtfs_invalid_branch(struct inode *inode, mtfs_bindex_t bindex, __u32 valid_flags);
+extern int mtfs_branch_valid(struct inode *inode, mtfs_bindex_t bindex, __u32 valid_flags);
+extern int mtfs_branch_invalidate(struct inode *inode, mtfs_bindex_t bindex, __u32 valid_flags);
 
 static inline int mtfs_i_choose_bindex(struct inode *inode, __u32 valid_flags, mtfs_bindex_t *bindex)
 {
@@ -104,7 +104,7 @@ static inline int mtfs_i_choose_bindex(struct inode *inode, __u32 valid_flags, m
 	MASSERT(mtfs_valid_flags_is_valid(valid_flags));
 
 	for (i = 0; i < mtfs_i2bnum(inode); i++) {
-		ret = mtfs_branch_is_valid(inode, i, valid_flags);
+		ret = mtfs_branch_valid(inode, i, valid_flags);
 		if (ret == 1) {
 			*bindex = i;
 			ret = 0;
