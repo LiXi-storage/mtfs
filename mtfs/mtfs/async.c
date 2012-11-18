@@ -352,7 +352,8 @@ int masync_sync_file(struct masync_bucket *bucket, struct mtfs_interval_node_ext
 		tmp_pos = pos;
 		result = _do_read_write(READ, src_file, buf, len, &tmp_pos);
 		if (result != len) {
-			MERROR("failed to read file, expected %ld, got %ld\n",
+			/* TODO: MERROR */
+			MDEBUG("failed to read file, expected %ld, got %ld\n",
 			       len, result);
 			if (result == 0) {
 				/* Sync completed */
@@ -506,6 +507,25 @@ static int masync_cancel(struct msubject_async_info *info, int nr_to_cacel)
 	MRETURN(ret);
 }
 
+static int masync_bucket_fvalid(struct file *file)
+{
+	int ret = 1;
+	mtfs_bindex_t bindex = 0;
+	mtfs_bindex_t bnum = mtfs_f2bnum(file);
+	struct file *hidden_file = NULL;
+	MENTRY();
+
+	for (bindex = 0; bindex < bnum; bindex++) {
+		hidden_file = mtfs_f2branch(file, bindex);
+		if (hidden_file == NULL) {
+			ret = 0;
+			break;
+		}
+	}
+
+	MRETURN(ret);
+}
+
 static void masync_io_iter_start_rw(struct mtfs_io *io)
 {
 	struct mtfs_io_rw *io_rw = &io->u.mi_rw;
@@ -536,17 +556,21 @@ static void masync_io_iter_start_rw(struct mtfs_io *io)
 				goto out;
 			}
 
-			masync_bucket_add(file, &extent);
-			if (ret) {
-				MASSERT(ret < 0);
-				MERROR("failed to add extent to bucket of [%.*s], ret = %d\n",
-				       dentry->d_name.len, dentry->d_name.name,
-				       ret);
-				/* TODO: invalidate and reconstruct the bucket */
-				MBUG();
-				io->mi_result.ssize = ret;
-				io->mi_successful = 0;
-				goto out;
+			if (masync_bucket_fvalid(file)) {
+				masync_bucket_add(file, &extent);
+				if (ret) {
+					MASSERT(ret < 0);
+					MERROR("failed to add extent to bucket of [%.*s], ret = %d\n",
+					       dentry->d_name.len, dentry->d_name.name,
+					       ret);
+					/* TODO: invalidate and reconstruct the bucket */
+					MBUG();
+					io->mi_result.ssize = ret;
+					io->mi_successful = 0;
+					goto out;
+				}
+			} else {
+				/* TODO: reconstruct the bucket */
 			}
 		}
 		mtfs_io_iter_start_rw(io);
