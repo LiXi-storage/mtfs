@@ -312,19 +312,17 @@ out:
 	MRETURN(ret);
 }
 
-static int masync_sync_file(struct masync_bucket *bucket, struct mtfs_interval_node_extent *extent)
+static int masync_sync_file(struct masync_bucket *bucket,
+                            struct mtfs_interval_node_extent *extent,
+                            char *buf,
+                            int buf_size)
 {
 	int ret = 0;
 	struct file *src_file = NULL;
 	struct file *dest_file = NULL;
-	char *buf = NULL;
-	int buf_size = MASYNC_BULK_SIZE;
-	struct maync_heal_bulk *bulk = NULL;
 	struct inode *inode = mtfs_bucket2inode(bucket);
 	struct super_block *sb = inode->i_sb;
 	struct msubject_async_info *info = NULL;
-	int i = 0;
-	int found = 0;
 	loff_t pos = 0;
 	loff_t tmp_pos = 0;
 	size_t len = 0;
@@ -332,22 +330,6 @@ static int masync_sync_file(struct masync_bucket *bucket, struct mtfs_interval_n
 	MENTRY();
 
 	info = (struct msubject_async_info *)mtfs_s2subinfo(sb);
-	down(&info->msai_sem);
-	for(i = 0; i < MASYNC_BULK_NUMBER; i++) {
-		bulk = &info->msai_bulks[i];
-		mtfs_spin_lock(&bulk->lock);
-		if (!bulk->used) {
-			bulk->used = 1;
-			found = 1;
-		}
-		mtfs_spin_unlock(&bulk->lock);
-		if (found) {
-			break;
-		}
-	}
-
-	MASSERT(found);
-	buf = bulk->buf;	
 
 	MASSERT(bucket->mab_fvalid);
 	src_file = bucket->mab_finfo.barray[0].bfile;
@@ -395,12 +377,6 @@ static int masync_sync_file(struct masync_bucket *bucket, struct mtfs_interval_n
 		pos += len;
 	}
 
-	mtfs_spin_lock(&bulk->lock);
-	MASSERT(bulk->used);
-	bulk->used = 0;
-	mtfs_spin_unlock(&bulk->lock);
-
-	up(&info->msai_sem);
 	MRETURN(ret);
 }
 
@@ -410,14 +386,25 @@ int masync_bucket_cleanup(struct masync_bucket *bucket)
 	struct mtfs_interval *node = NULL;
 	int ret = 0;
 	int nr = 0;
+	int buf_size = MASYNC_BULK_SIZE;
+	char *buf = NULL;
 	MENTRY();
+
+	MTFS_ALLOC(buf, buf_size);
+	if (buf == NULL) {
+		MERROR("not enough memory\n");
+	}
 
 	masync_bucket_lock(bucket);
 	nr = atomic_read(&bucket->mab_nr);
 	while (bucket->mab_root) {
 		node = mtfs_node2interval(bucket->mab_root);
-		ret = masync_sync_file(bucket, &node->mi_node.in_extent);
-		//MASSERT(!ret);
+		if (buf != NULL) {
+			ret = masync_sync_file(bucket,
+			                       &node->mi_node.in_extent,
+			                       buf, buf_size);
+			//MASSERT(!ret);
+		}
 		mtfs_interval_erase(bucket->mab_root, &bucket->mab_root);
 		MTFS_SLAB_FREE_PTR(node, mtfs_interval_cache);
 		atomic_dec(&bucket->mab_nr);
@@ -429,6 +416,10 @@ int masync_bucket_cleanup(struct masync_bucket *bucket)
 		masync_bucket_remove_from_lru(bucket);
 	}
 	masync_bucket_unlock(bucket);
+
+	if (buf) {
+		MTFS_FREE(buf, buf_size);
+	}
 
 	MRETURN(nr);
 }
@@ -460,7 +451,9 @@ int masync_calculate_all(struct msubject_async_info *info)
 	MRETURN(ret);
 }
 
-static int masync_bucket_cancel(struct masync_bucket *bucket, int nr_to_cacel)
+int masync_bucket_cancel(struct masync_bucket *bucket,
+                         char *buf, int buf_len,
+                         int nr_to_cacel)
 {
 	struct mtfs_interval *node = NULL;
 	int nr = 0;
@@ -469,7 +462,9 @@ static int masync_bucket_cancel(struct masync_bucket *bucket, int nr_to_cacel)
 
 	while (bucket->mab_root && nr < nr_to_cacel) {
 		node = mtfs_node2interval(bucket->mab_root);
-		ret = masync_sync_file(bucket, &node->mi_node.in_extent);
+		ret = masync_sync_file(bucket,
+		                       &node->mi_node.in_extent,
+		                       buf, buf_len);
 		//MASSERT(!ret);
 		mtfs_interval_erase(bucket->mab_root, &bucket->mab_root);
 		MTFS_SLAB_FREE_PTR(node, mtfs_interval_cache);
@@ -488,7 +483,9 @@ static int masync_bucket_cancel(struct masync_bucket *bucket, int nr_to_cacel)
 }
 
 /* Return nr that canceled */
-int masync_cancel(struct msubject_async_info *info, int nr_to_cacel)
+int masync_cancel(struct msubject_async_info *info,
+                  char *buf, int buf_len,
+                  int nr_to_cacel)
 {
 	int ret = 0;
 	struct masync_bucket *bucket = NULL;
@@ -514,7 +511,7 @@ int masync_cancel(struct msubject_async_info *info, int nr_to_cacel)
 				continue;
 			}
 
-			canceled = masync_bucket_cancel(bucket, nr_to_cacel - ret);
+			canceled = masync_bucket_cancel(bucket, buf, buf_len, nr_to_cacel - ret);
 			masync_bucket_unlock(bucket);
 			ret += canceled;
 			if (ret >= nr_to_cacel) {
@@ -1028,9 +1025,20 @@ static int masync_service_main(struct mtfs_service *service, struct mservice_thr
 	int ret = 0;
 	int flushing = 0;
 	int flushed = 0;
+	char *buf = NULL;
+	int buf_size = MASYNC_BULK_SIZE;
 	MENTRY();
 
 	MASSERT(info);
+
+	MTFS_ALLOC(buf, buf_size);
+	if (buf == NULL) {
+		MERROR("not enough memory\n");
+		ret = -ENOMEM;
+		MBUG();
+		goto out;
+	}
+
 	while (1) {
 		if (mservice_wait_event(service, thread)) {
 			break;
@@ -1044,7 +1052,7 @@ static int masync_service_main(struct mtfs_service *service, struct mservice_thr
 		/* TODO: when exit, try to cancel all? */
 		/* TODO: Detect memory pressure? */
 		if (flushing) {
-			flushed = masync_cancel(info, flushing);
+			flushed = masync_cancel(info, buf, buf_size, flushing);
 			if (flushed != flushing) {
 				MERROR("try to flush %d, only flushed\n",
 				       flushing, flushed);
@@ -1052,6 +1060,8 @@ static int masync_service_main(struct mtfs_service *service, struct mservice_thr
 		}
 	}
 
+	MTFS_FREE(buf, buf_size);
+out:
 	MRETURN(ret);
 }
 
