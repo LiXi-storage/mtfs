@@ -7,6 +7,7 @@
 #if defined (__linux__) && defined(__KERNEL__)
 
 #include <linux/signal.h>
+#include <linux/sched.h>
 extern int mtfs_create_thread(int (*fn)(void *), void *arg, unsigned long flags);
 extern int mtfs_daemonize_ctxt(char *str);
 
@@ -69,7 +70,7 @@ struct mtfs_wait_info {
  * wait for @condition to become true, but no longer than timeout, specified
  * by @info.
  */
-#define __mtfs_wait_event(wq, condition, info, ret, mtfs_add_wait)                \
+#define __mtfs_wait_event(wq, condition, info, ret, mtfs_add_wait)             \
 do {                                                                           \
     wait_queue_t __wait;                                                       \
     long         __timeout = info->mwi_timeout;                                \
@@ -81,11 +82,11 @@ do {                                                                           \
                 break;                                                         \
                                                                                \
         init_waitqueue_entry(&__wait, current);                                \
-        mtfs_add_wait(&wq, &__wait);                                              \
+        mtfs_add_wait(&wq, &__wait);                                           \
                                                                                \
         /* Block all signals (just the non-fatal ones if no timeout). */       \
         if (info->mwi_on_signal != NULL && (__timeout == 0 || __allow_intr))   \
-                __blocked = mtfs_block_sigsinv(MTFS_FATAL_SIGS);             \
+                __blocked = mtfs_block_sigsinv(MTFS_FATAL_SIGS);               \
         else                                                                   \
                 __blocked = mtfs_block_sigsinv(0);                             \
                                                                                \
@@ -94,7 +95,7 @@ do {                                                                           \
                                                                                \
                 __wstate = info->mwi_on_signal != NULL &&                      \
                            (__timeout == 0 || __allow_intr) ?                  \
-                        TASK_INTERRUPTIBLE : TASK_UNINTERRUPTIBLE;             \
+                           TASK_INTERRUPTIBLE : TASK_UNINTERRUPTIBLE;          \
                                                                                \
                 set_current_state(TASK_INTERRUPTIBLE);                         \
                                                                                \
@@ -149,32 +150,60 @@ do {                                                                           \
         remove_wait_queue(&wq, &__wait);                                       \
 } while (0)
 
-#define mtfs_wait_event(wq, condition, info)                   \
-({                                                          \
-    int                 __ret;                              \
-    struct mtfs_wait_info *__info = (info);                    \
-                                                            \
-    __mtfs_wait_event(wq, condition, __info,                   \
-                   __ret, add_wait_queue);                   \
-    __ret;                                                  \
+#define mtfs_wait_event(wq, condition, info)                    \
+({                                                              \
+    int                 __ret;                                  \
+    struct mtfs_wait_info *__info = (info);                     \
+                                                                \
+    __mtfs_wait_event(wq, condition, __info,                    \
+                      __ret, add_wait_queue);                   \
+    __ret;                                                      \
 })
 
-#define mtfs_wait_condition(wq, condition)                     \
-({                                                          \
-    struct mtfs_wait_info mwi = { 0 };                         \
-    mtfs_wait_event(wq, condition, &mwi);                      \
+#define mtfs_wait_event_exclusive_head(wq, condition, info)     \
+({                                                              \
+    int                 __ret;                                  \
+    struct mtfs_wait_info *__info = (info);                     \
+                                                                \
+    __mtfs_wait_event(wq, condition, __info,                    \
+                      __ret, mtfs_waitq_add_exclusive_head);    \
+    __ret;                                                      \
+})
+
+#define mtfs_wait_condition(wq, condition)                      \
+({                                                              \
+    struct mtfs_wait_info mwi = { 0 };                          \
+    mtfs_wait_event(wq, condition, &mwi);                       \
 })
 
 sigset_t mtfs_block_sigs(sigset_t bits);
 sigset_t mtfs_block_sigsinv(unsigned long sigs);
 void mtfs_clear_sigpending(void);
 void mtfs_daemonize(char *str);
-
+void
+mtfs_waitq_add_exclusive_head(wait_queue_head_t *waitq, wait_queue_t *link);
 static inline void mtfs_pause(signed long timeout)
 {
         set_current_state(TASK_UNINTERRUPTIBLE);
         schedule_timeout(timeout);
 }
+
+#ifdef HAVE_SET_CPUS_ALLOWED
+#define mtfs_set_cpus_allowed(task, mask)  set_cpus_allowed(task, mask)
+#else
+#define mtfs_set_cpus_allowed(task, mask)  set_cpus_allowed_ptr(task, &(mask))
+#endif
+
+#ifndef HAVE_NODE_TO_CPUMASK
+#define node_to_cpumask(i)         (*(cpumask_of_node(i)))
+#endif
+
+
+static inline long mtfs_time_seconds(int seconds)
+{
+        return ((long)seconds) * HZ;
+}
+
 #else /* defined (__linux__) && defined(__KERNEL__) */
 #error This head is only for kernel space use
 #endif /* ! defined (__linux__) && defined(__KERNEL__) */

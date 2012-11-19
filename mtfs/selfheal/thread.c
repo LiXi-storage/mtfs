@@ -125,3 +125,24 @@ int mtfs_daemonize_ctxt(char *str)
 	return 0;
 }
 EXPORT_SYMBOL(mtfs_daemonize_ctxt);
+
+#ifndef HAVE___ADD_WAIT_QUEUE_EXCLUSIVE
+
+static inline void __add_wait_queue_exclusive(wait_queue_head_t *q,
+                                              wait_queue_t *wait)
+{
+        wait->flags |= WQ_FLAG_EXCLUSIVE;
+        __add_wait_queue(q, wait);
+}
+
+#endif /* HAVE___ADD_WAIT_QUEUE_EXCLUSIVE */
+
+void
+mtfs_waitq_add_exclusive_head(wait_queue_head_t *waitq, wait_queue_t *link)
+{
+        unsigned long flags;
+
+        spin_lock_irqsave(&waitq->lock, flags);
+        __add_wait_queue_exclusive(waitq, link);
+        spin_unlock_irqrestore(&waitq->lock, flags);
+}

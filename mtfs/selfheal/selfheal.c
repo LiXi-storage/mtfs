@@ -272,17 +272,6 @@ int selfheal_add_req(struct mtfs_request *req, mdl_policy_t policy, int idx)
 }
 EXPORT_SYMBOL(selfheal_add_req);
 
-#ifdef HAVE_SET_CPUS_ALLOWED
-#define mtfs_set_cpus_allowed(task, mask)  set_cpus_allowed(task, mask)
-#else
-#define mtfs_set_cpus_allowed(task, mask)  set_cpus_allowed_ptr(task, &(mask))
-#endif
-
-#ifndef HAVE_NODE_TO_CPUMASK
-#define node_to_cpumask(i)         (*(cpumask_of_node(i)))
-#endif
-
-
 #define MTFS_SELFHEAL_TIMEOUT 10
 static int selfheal_daemon_main(void *arg)
 {

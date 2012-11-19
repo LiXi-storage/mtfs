@@ -589,6 +589,29 @@ LB_LINUX_TRY_COMPILE([
 ])
 
 #
+# LC_ADD_WAIT_QUEUE_EXCLUSIVE
+#
+# 2.6.34 adds __add_wait_queue_exclusive
+#
+AC_DEFUN([LC_ADD_WAIT_QUEUE_EXCLUSIVE],
+[AC_MSG_CHECKING([if __add_wait_queue_exclusive exists])
+LB_LINUX_TRY_COMPILE([
+        #include <linux/wait.h>
+],[
+        wait_queue_head_t queue;
+        wait_queue_t      wait;
+
+        __add_wait_queue_exclusive(&queue, &wait);
+],[
+        AC_MSG_RESULT(yes)
+        AC_DEFINE(HAVE___ADD_WAIT_QUEUE_EXCLUSIVE, 1,                                                             
+                  [__add_wait_queue_exclusive exists])
+],[
+        AC_MSG_RESULT(no)
+])
+])
+
+#
 # LC_PROG_LINUX
 #
 # MTFS linux kernel checks
@@ -624,6 +647,7 @@ AC_DEFUN([LC_PROG_LINUX],
 	LC_REGISTER_SHRINKER
 	LC_SHRINK_CONTROL
 	LC_SHRINKER_WANT_SHRINK_PTR
+	LC_ADD_WAIT_QUEUE_EXCLUSIVE
 ])
 
 #

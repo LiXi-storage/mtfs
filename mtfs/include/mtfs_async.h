@@ -92,6 +92,8 @@ struct msubject_async_info {
 	struct proc_dir_entry      *msai_proc_entry;                /* Proc entrys for async debug */
 	struct maync_heal_bulk      msai_bulks[MASYNC_BULK_NUMBER]; /* Bulks for heal */
 	struct semaphore            msai_sem;
+	struct mtfs_service        *msai_service;                   /* Service that heal the async files */ 
+	atomic_t                    msai_nr;                        /* Extent objects totally */ 
 };
 
 extern struct mtfs_subject_operations masync_subject_ops;

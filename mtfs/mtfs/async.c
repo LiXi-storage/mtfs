@@ -14,6 +14,7 @@
 #include <mtfs_subject.h>
 #include <mtfs_device.h>
 #include <thread.h>
+#include <mtfs_service.h>
 #include "file_internal.h"
 #include "io_internal.h"
 #include "main_internal.h"
@@ -71,7 +72,7 @@ static inline void masync_info_write_unlock(struct msubject_async_info *info)
 static void masync_bucket_remove_from_lru_nonlock(struct masync_bucket *bucket)
 {
 	struct msubject_async_info *info = NULL;
-        MENTRY();
+	MENTRY();
 
 	info = bucket->mab_info;
 	MASSERT(info);
@@ -86,7 +87,7 @@ static void masync_bucket_remove_from_lru_nonlock(struct masync_bucket *bucket)
 static void masync_bucket_remove_from_lru(struct masync_bucket *bucket)
 {
 	struct msubject_async_info *info = NULL;
-        MENTRY();
+	MENTRY();
 
 	info = bucket->mab_info;
 	MASSERT(info);
@@ -103,7 +104,7 @@ static void masync_bucket_remove_from_lru(struct masync_bucket *bucket)
 static void masync_bucket_add_to_lru_nonlock(struct masync_bucket *bucket)
 {
 	struct msubject_async_info *info = NULL;
-        MENTRY();
+	MENTRY();
 
 	info = bucket->mab_info;
 	MASSERT(info);
@@ -118,7 +119,7 @@ static void masync_bucket_add_to_lru_nonlock(struct masync_bucket *bucket)
 static void masync_bucket_add_to_lru(struct masync_bucket *bucket)
 {
 	struct msubject_async_info *info = NULL;
-        MENTRY();
+	MENTRY();
 
 	info = bucket->mab_info;
 	MASSERT(info);
@@ -135,7 +136,7 @@ static void masync_bucket_add_to_lru(struct masync_bucket *bucket)
 static void masync_bucket_degrade_in_lru_nonlock(struct masync_bucket *bucket)
 {
 	struct msubject_async_info *info = NULL;
-        MENTRY();
+	MENTRY();
 
 	info = bucket->mab_info;
 	MASSERT(info);
@@ -148,7 +149,7 @@ static void masync_bucket_degrade_in_lru_nonlock(struct masync_bucket *bucket)
 static void masync_bucket_touch_in_lru_nonlock(struct masync_bucket *bucket)
 {
 	struct msubject_async_info *info = NULL;
-        MENTRY();
+	MENTRY();
 
 	info = bucket->mab_info;
 	MASSERT(info);
@@ -161,7 +162,7 @@ static void masync_bucket_touch_in_lru_nonlock(struct masync_bucket *bucket)
 static void masync_bucket_touch_in_lru(struct masync_bucket *bucket)
 {
 	struct msubject_async_info *info = NULL;
-        MENTRY();
+	MENTRY();
 
 	info = bucket->mab_info;
 	MASSERT(info);
@@ -239,6 +240,14 @@ static int masycn_bucket_fput(struct masync_bucket *bucket)
 	MRETURN(ret);
 }
 
+void masync_service_wakeup(struct msubject_async_info *info)
+{
+	MENTRY();
+
+	wake_up(&info->msai_service->srv_waitq);
+	_MRETURN();
+}
+
 static int masync_bucket_add(struct file *file,
                              struct mtfs_interval_node_extent *extent)
 {
@@ -282,10 +291,12 @@ static int masync_bucket_add(struct file *file,
 		mtfs_interval_erase(&tmp_extent->mi_node, &bucket->mab_root);
 		MTFS_SLAB_FREE_PTR(tmp_extent, mtfs_interval_cache);
 		atomic_dec(&bucket->mab_nr);
+		atomic_dec(&bucket->mab_info->msai_nr);
 	}
 	mtfs_interval_set(&node->mi_node, min_start, max_end);
 	mtfs_interval_insert(&node->mi_node, &bucket->mab_root);
 	atomic_inc(&bucket->mab_nr);
+	atomic_inc(&bucket->mab_info->msai_nr);
 	MDEBUG("added [%lu, %lu]\n", min_start, max_end);
 	if (mtfs_list_empty(&bucket->mab_linkage)) {
 		masycn_bucket_fget(bucket, file);
@@ -296,6 +307,7 @@ static int masync_bucket_add(struct file *file,
 	}
 	masync_bucket_unlock(bucket);
 
+	masync_service_wakeup(bucket->mab_info);
 out:
 	MRETURN(ret);
 }
@@ -409,6 +421,7 @@ int masync_bucket_cleanup(struct masync_bucket *bucket)
 		mtfs_interval_erase(bucket->mab_root, &bucket->mab_root);
 		MTFS_SLAB_FREE_PTR(node, mtfs_interval_cache);
 		atomic_dec(&bucket->mab_nr);
+		atomic_dec(&bucket->mab_info->msai_nr);
 	}
 
 	if (!mtfs_list_empty(&bucket->mab_linkage)) {
@@ -420,7 +433,7 @@ int masync_bucket_cleanup(struct masync_bucket *bucket)
 	MRETURN(nr);
 }
 
-static int masync_calculate_all(struct msubject_async_info *info)
+int masync_calculate_all_slow(struct msubject_async_info *info)
 {
 	int ret = 0;
 	struct masync_bucket *bucket = NULL;
@@ -431,6 +444,17 @@ static int masync_calculate_all(struct msubject_async_info *info)
 		ret += atomic_read(&bucket->mab_nr);
 	}
 	masync_info_read_unlock(info);
+	MASSERT(ret >= 0);
+
+	MRETURN(ret);
+}
+
+int masync_calculate_all(struct msubject_async_info *info)
+{
+	int ret = 0;
+	MENTRY();
+
+	ret = atomic_read(&info->msai_nr);
 	MASSERT(ret >= 0);
 
 	MRETURN(ret);
@@ -450,6 +474,7 @@ static int masync_bucket_cancel(struct masync_bucket *bucket, int nr_to_cacel)
 		mtfs_interval_erase(bucket->mab_root, &bucket->mab_root);
 		MTFS_SLAB_FREE_PTR(node, mtfs_interval_cache);
 		atomic_dec(&bucket->mab_nr);
+		atomic_dec(&bucket->mab_info->msai_nr);
 		nr++;
 	}
 	if (bucket->mab_root == NULL) {
@@ -463,7 +488,7 @@ static int masync_bucket_cancel(struct masync_bucket *bucket, int nr_to_cacel)
 }
 
 /* Return nr that canceled */
-static int masync_cancel(struct msubject_async_info *info, int nr_to_cacel)
+int masync_cancel(struct msubject_async_info *info, int nr_to_cacel)
 {
 	int ret = 0;
 	struct masync_bucket *bucket = NULL;
@@ -507,7 +532,6 @@ static int masync_cancel(struct msubject_async_info *info, int nr_to_cacel)
 
 	MRETURN(ret);
 }
-
 static int masync_bucket_fvalid(struct file *file)
 {
 	int ret = 1;
@@ -926,41 +950,6 @@ const struct mtfs_io_operations masync_io_ops[] = {
 };
 EXPORT_SYMBOL(masync_io_ops);
 
-/* Could not put it into struct msubject_async_info */
-static struct shrinker *masync_shrinker;
-static struct msubject_async_info *masync_info;
-
-static int _masync_shrink(int nr_to_scan, unsigned int gfp_mask)
-{
-	int ret = 0;
-	int canceled = 0;
-	MENTRY();
-
-	if (nr_to_scan == 0) {
-		goto out_calc;
-	} else if (!(gfp_mask & __GFP_FS)) {
-		ret = -1;
-		goto out;
-	}
-
-	canceled = masync_cancel(masync_info, nr_to_scan);
-	if (canceled != nr_to_scan) {
-		MERROR("trying to shrink %d, canceled %d\n",
-		       nr_to_scan, canceled);
-	}
-
-out_calc:
-	ret = (masync_calculate_all(masync_info) / 100) * sysctl_vfs_cache_pressure;
-out:
-	MRETURN(ret);
-}
-
-static int masync_shrink(SHRINKER_ARGS(sc, nr_to_scan, gfp_mask))
-{
-	return _masync_shrink(shrink_param(sc, nr_to_scan),
-                              shrink_param(sc, gfp_mask));
-}
-
 static int masync_proc_read_dirty(char *page, char **start, off_t off, int count,
                                   int *eof, void *data)
 {
@@ -1023,21 +1012,50 @@ static int masync_info_proc_fini(struct msubject_async_info *info,
 	MRETURN(ret);
 }
 
-int masync_info_bulk_init(struct msubject_async_info *info)
+static int masync_service_busy(struct mtfs_service *service, struct mservice_thread *thread)
 {
 	int ret = 0;
-	int i = 0;
+	struct msubject_async_info *info = (struct msubject_async_info *)service->srv_data;
 	MENTRY();
 
-	sema_init(&info->msai_sem, MASYNC_BULK_NUMBER);
-	for (i = 0; i < MASYNC_BULK_NUMBER; i++) {
-		info->msai_bulks[i].used = 0;
-		mtfs_spin_lock_init(&info->msai_bulks[i].lock);
+	ret = masync_calculate_all(info);
+	MRETURN(ret);
+}
+
+static int masync_service_main(struct mtfs_service *service, struct mservice_thread *thread)
+{
+	struct msubject_async_info *info = (struct msubject_async_info *)service->srv_data;
+	int ret = 0;
+	int flushing = 0;
+	int flushed = 0;
+	MENTRY();
+
+	MASSERT(info);
+	while (1) {
+		if (mservice_wait_event(service, thread)) {
+			break;
+		}
+
+		flushing = masync_calculate_all(info);
+		if (flushing) {
+			flushing = 1;
+		}
+
+		/* TODO: when exit, try to cancel all? */
+		/* TODO: Detect memory pressure? */
+		if (flushing) {
+			flushed = masync_cancel(info, flushing);
+			if (flushed != flushing) {
+				MERROR("try to flush %d, only flushed\n",
+				       flushing, flushed);
+			}
+		}
 	}
 
 	MRETURN(ret);
 }
 
+#define MSLEFHEAL_SERVICE_NAME "mtfs_selfheal"
 int masync_super_init(struct super_block *sb)
 {
 	int ret = 0;
@@ -1053,17 +1071,35 @@ int masync_super_init(struct super_block *sb)
 
 	MTFS_INIT_LIST_HEAD(&info->msai_dirty_buckets);
 	masync_info_lock_init(info);
-	masync_info_bulk_init(info);
+	atomic_set(&info->msai_nr, 0);
 
 	ret = masync_info_proc_init(info, sb);
 	if (ret) {
 		goto out_free_info;
 	}
 
-	masync_info = info;
-        masync_shrinker = mtfs_set_shrinker(DEFAULT_SEEKS, masync_shrink);
 	mtfs_s2subinfo(sb) = (void *)info;
+	info->msai_service = mservice_init(MSLEFHEAL_SERVICE_NAME,
+	                                   MSLEFHEAL_SERVICE_NAME,
+	                                   1, 1,
+	                                   0, masync_service_main,
+	                                   masync_service_busy,
+	                                   info);
+	if (info->msai_service == NULL) {
+		ret = -ENOMEM;
+		MERROR("failed to init service\n");
+		goto out_free_info;
+	}
+
+	ret = mservice_start_threads(info->msai_service);
+        if (ret) {
+        	MERROR("failed to start theads\n");
+        	goto out_free_service;
+        }
+
 	goto out;
+out_free_service:
+	mservice_fini(info->msai_service);
 out_free_info:
 	MTFS_FREE_PTR(info);
 out:
@@ -1079,7 +1115,7 @@ int masync_super_fini(struct super_block *sb)
 	info = (struct msubject_async_info *)mtfs_s2subinfo(sb);
 	MASSERT(mtfs_list_empty(&info->msai_dirty_buckets));
 
-	mtfs_remove_shrinker(masync_shrinker);
+	mservice_fini(info->msai_service);
 	masync_info_proc_fini(info, sb);
 
 	MTFS_FREE_PTR(info);
