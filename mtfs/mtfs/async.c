@@ -1092,7 +1092,7 @@ static int masync_service_main(struct mtfs_service *service, struct mservice_thr
 		if (flushing) {
 			flushed = masync_cancel(info, buf, buf_size, flushing);
 			if (flushed != flushing) {
-				MERROR("try to flush %d, only flushed\n",
+				MERROR("try to flush %d, only flushed %d\n",
 				       flushing, flushed);
 			}
 		}
