@@ -1,6 +1,11 @@
+/*
+ * Copyright (C) 2011 Li Xi <pkuelelixi@gmail.com>
+ */
+
 #include <linux/module.h>
 #include <linux/dcache.h>
 #include <linux/mutex.h>
+#include <linux/mount.h>
 #include <memory.h>
 #include <debug.h>
 #include <spinlock.h>
@@ -204,16 +209,34 @@ static int masycn_bucket_fget(struct masync_bucket *bucket, struct file *file)
 {
 	int ret = 0;
 	mtfs_bindex_t bindex = 0;
-	mtfs_bindex_t bnum = mtfs_f2bnum(file);
+	struct dentry *dentry = file->f_dentry;
+	struct inode *inode = dentry->d_inode;
+	struct vfsmount *hidden_mnt = NULL;
+	struct dentry *hidden_dentry = NULL;
 	struct file *hidden_file = NULL;
+	mtfs_bindex_t bnum = mtfs_f2bnum(file);
+	int hidden_flags = O_RDWR;
 	MENTRY();
 
 	MASSERT(!bucket->mab_fvalid);
 	for (bindex = 0; bindex < bnum; bindex++) {
-		hidden_file = mtfs_f2branch(file, bindex);
-		MASSERT(hidden_file);
-		get_file(hidden_file);
-		bucket->mab_finfo.barray[bindex].bfile = hidden_file;
+		hidden_dentry = mtfs_d2branch(dentry, bindex);
+		hidden_mnt = mtfs_s2mntbranch(inode->i_sb, bindex);
+		dget(hidden_dentry);
+		mntget(hidden_mnt);
+		hidden_file = mtfs_dentry_open(hidden_dentry,
+		                               hidden_mnt,
+		                               hidden_flags,
+		                               current_cred());
+		if (IS_ERR(hidden_file)) {
+			MDEBUG("open branch[%d] of file [%.*s], flags = 0x%x, ret = %ld\n", 
+			       bindex, hidden_dentry->d_name.len, hidden_dentry->d_name.name,
+			       hidden_flags, PTR_ERR(hidden_file));
+			ret = PTR_ERR(hidden_file);
+			MBUG();
+		} else {
+			bucket->mab_finfo.barray[bindex].bfile = hidden_file;
+		}
 	}
 	bucket->mab_finfo.bnum = bnum;
 	bucket->mab_fvalid = 1;
@@ -532,14 +555,15 @@ int masync_cancel(struct msubject_async_info *info,
 static int masync_bucket_fvalid(struct file *file)
 {
 	int ret = 1;
+	struct dentry *dentry = file->f_dentry;
 	mtfs_bindex_t bindex = 0;
 	mtfs_bindex_t bnum = mtfs_f2bnum(file);
-	struct file *hidden_file = NULL;
+	struct dentry *hidden_dentry = NULL;
 	MENTRY();
 
 	for (bindex = 0; bindex < bnum; bindex++) {
-		hidden_file = mtfs_f2branch(file, bindex);
-		if (hidden_file == NULL) {
+		hidden_dentry = mtfs_d2branch(dentry, bindex);
+		if (hidden_dentry == NULL) {
 			ret = 0;
 			break;
 		}
@@ -555,15 +579,31 @@ static void masync_io_iter_start_rw(struct mtfs_io *io)
 	struct file *file = io_rw->file;
 	struct dentry *dentry = file->f_dentry;
 	struct inode *inode = dentry->d_inode;
-	mtfs_bindex_t bindex = io->mi_bindex;
+	mtfs_bindex_t bindex = 0;
 	int ret = 0;
 	MENTRY();
 
 	if (io->mi_bindex == 0) {
-		if (io->mi_type == MIOT_WRITEV) {
-			extent.start = *(io_rw->ppos);
-			extent.end = extent.start + io_rw->rw_size - 1;
+		/*
+		 * TODO: sign the file async,
+		 * since I may crash immediately after write a branch. 
+		 */
+		mtfs_io_iter_start_rw(io);
 
+		if (io->mi_type == MIOT_WRITEV) {
+			if (!io->mi_successful) {
+				/* Only neccessary when succeeded */
+				goto out;
+			}
+
+			/* Get range from nothing but result because of O_APPEND */
+			extent.start = io_rw->pos_tmp - io->mi_result.ssize;
+			extent.end = io_rw->pos_tmp - 1;
+			MASSERT(extent.start >= 0);
+			MASSERT(extent.start <= extent.end);
+
+			/* Set master */
+			bindex = 0;
 			MASSERT(mtfs_i2branch(inode, bindex));
 			ret = mlowerfs_bucket_add(mtfs_i2bbucket(inode, bindex),
 			                          &extent);
@@ -575,34 +615,12 @@ static void masync_io_iter_start_rw(struct mtfs_io *io)
 				       ret);
 				io->mi_result.ssize = ret;
 				io->mi_successful = 0;
+				MBUG();
 				goto out;
 			}
 
-			if (masync_bucket_fvalid(file)) {
-				masync_bucket_add(file, &extent);
-				if (ret) {
-					MASSERT(ret < 0);
-					MERROR("failed to add extent to bucket of [%.*s], ret = %d\n",
-					       dentry->d_name.len, dentry->d_name.name,
-					       ret);
-					/* TODO: invalidate and reconstruct the bucket */
-					MBUG();
-					io->mi_result.ssize = ret;
-					io->mi_successful = 0;
-					goto out;
-				}
-			} else {
-				/* TODO: reconstruct the bucket */
-			}
-		}
-		mtfs_io_iter_start_rw(io);
-	} else {
-		MASSERT(io->mi_successful);
-
-		if (io->mi_type == MIOT_WRITEV) {
-			extent.start = *(io_rw->ppos);
-			extent.end = extent.start + io_rw->rw_size - 1;
-	
+			/* Set slave */
+			bindex = 1;
 			if (mtfs_i2branch(inode, bindex) == NULL) {
 				MERROR("branch[%d] of [%.*s] is NULL\n",
 				       bindex,
@@ -621,7 +639,27 @@ static void masync_io_iter_start_rw(struct mtfs_io *io)
 				/* TODO: Any other way to sign it? */
 				MBUG();
 			}
+
+			if (!masync_bucket_fvalid(file)) {
+				/* TODO: reconstruct the bucket */
+				goto out;
+			}
+
+			masync_bucket_add(file, &extent);
+			if (ret) {
+				MASSERT(ret < 0);
+				MERROR("failed to add extent to bucket of [%.*s], ret = %d\n",
+				       dentry->d_name.len, dentry->d_name.name,
+				       ret);
+				/* TODO: invalidate and reconstruct the bucket */
+				MBUG();
+				io->mi_result.ssize = ret;
+				io->mi_successful = 0;
+				goto out;
+			}
 		}
+	} else {
+
 	}
 
 out:
