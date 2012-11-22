@@ -212,7 +212,7 @@ static int masycn_bucket_fget(struct masync_bucket *bucket, struct file *file)
 	struct dentry *hidden_dentry = NULL;
 	struct file *hidden_file = NULL;
 	mtfs_bindex_t bnum = mtfs_f2bnum(file);
-	int hidden_flags = O_RDWR;
+	int hidden_flags = O_RDWR | O_LARGEFILE;
 	MENTRY();
 
 	MASSERT(!bucket->mab_fvalid);
@@ -226,7 +226,7 @@ static int masycn_bucket_fget(struct masync_bucket *bucket, struct file *file)
 		                               hidden_flags,
 		                               current_cred());
 		if (IS_ERR(hidden_file)) {
-			MDEBUG("open branch[%d] of file [%.*s], flags = 0x%x, ret = %ld\n", 
+			MERROR("open branch[%d] of file [%.*s], flags = 0x%x, ret = %ld\n", 
 			       bindex, hidden_dentry->d_name.len, hidden_dentry->d_name.name,
 			       hidden_flags, PTR_ERR(hidden_file));
 			ret = PTR_ERR(hidden_file);
