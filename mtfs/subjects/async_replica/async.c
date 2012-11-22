@@ -9,6 +9,7 @@
 #include <memory.h>
 #include <debug.h>
 #include <spinlock.h>
+#include <thread.h>
 #include <mtfs_interval_tree.h>
 #include <mtfs_async.h>
 #include <mtfs_list.h>
@@ -18,12 +19,8 @@
 #include <mtfs_super.h>
 #include <mtfs_subject.h>
 #include <mtfs_device.h>
-#include <thread.h>
 #include <mtfs_service.h>
-#include "file_internal.h"
-#include "io_internal.h"
-#include "main_internal.h"
-#include "lowerfs_internal.h"
+#include <mtfs_dentry.h>
 
 static inline void masync_bucket_lock_init(struct masync_bucket *bucket)
 {

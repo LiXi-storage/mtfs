@@ -601,6 +601,7 @@ ssize_t _do_read_write(int is_write, struct file *file, void *buf, ssize_t count
 
 	MRETURN(ret);
 }
+EXPORT_SYMBOL(_do_read_write);
 
 ssize_t mtfs_file_rw_branch(int is_write, struct file *file, const struct iovec *iov,
                             unsigned long nr_segs, loff_t *ppos, mtfs_bindex_t bindex)

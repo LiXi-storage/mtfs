@@ -82,6 +82,17 @@ struct mtfs_file_info {
 #define mtfs_f2branch(file, bindex) (mtfs_f2barray(file)[bindex].bfile)
 #define mtfs_f2bvalid(file, bindex) (mtfs_f2barray(file)[bindex].is_valid)
 
+#ifdef HAVE_DENTRY_OPEN_4ARGS
+#include <linux/cred.h>
+#define mtfs_dentry_open(dentry, mnt, flags, cred) dentry_open(dentry, mnt, flags, cred)
+#else /* !HAVE_DENTRY_OPEN_4ARGS */
+#define mtfs_dentry_open(dentry, mnt, flags, cred) dentry_open(dentry, mnt, flags)
+#endif /* !HAVE_DENTRY_OPEN_4ARGS */
+
+#define READ 0
+#define WRITE 1
+ssize_t _do_read_write(int is_write, struct file *file, void *buf, ssize_t count, loff_t *ppos);
+
 #else /* !defined (__linux__) && defined(__KERNEL__) */
 #error This head is only for kernel space use
 #endif /* !defined (__linux__) && defined(__KERNEL__) */

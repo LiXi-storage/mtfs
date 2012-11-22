@@ -45,6 +45,7 @@ int mtfs_io_init_oplist(struct mtfs_io *io, struct mtfs_oplist_object *oplist_ob
 
 	MRETURN(ret);
 }
+EXPORT_SYMBOL(mtfs_io_init_oplist);
 
 int mtfs_io_init_oplist_flag(struct mtfs_io *io)
 {
@@ -62,6 +63,7 @@ void mtfs_io_iter_end_oplist(struct mtfs_io *io)
 
 	_MRETURN();
 }
+EXPORT_SYMBOL(mtfs_io_iter_end_oplist);
 
 void mtfs_io_fini_oplist_noupdate(struct mtfs_io *io)
 {
@@ -114,6 +116,7 @@ void mtfs_io_fini_oplist(struct mtfs_io *io)
 
 	_MRETURN();
 }
+EXPORT_SYMBOL(mtfs_io_fini_oplist);
 
 void mtfs_io_fini_oplist_rename(struct mtfs_io *io)
 {
@@ -190,6 +193,7 @@ int mtfs_io_iter_init_rw(struct mtfs_io *io)
 
 	MRETURN(ret);
 }
+EXPORT_SYMBOL(mtfs_io_iter_init_rw);
 
 void mtfs_io_iter_start_rw_nonoplist(struct mtfs_io *io)
 {
@@ -213,6 +217,7 @@ void mtfs_io_iter_start_rw_nonoplist(struct mtfs_io *io)
 
 	_MRETURN();
 }
+EXPORT_SYMBOL(mtfs_io_iter_start_rw_nonoplist);
 
 static inline mtfs_bindex_t mtfs_io_bindex(struct mtfs_io *io)
 {
@@ -220,30 +225,6 @@ static inline mtfs_bindex_t mtfs_io_bindex(struct mtfs_io *io)
 		return io->mi_oplist.op_binfo[io->mi_bindex].bindex;
 	}
 	return io->mi_bindex;
-}
-
-void mtfs_io_iter_start_rw(struct mtfs_io *io)
-{
-	struct mtfs_io_rw *io_rw = &io->u.mi_rw;
-	mtfs_bindex_t global_bindex = mtfs_io_bindex(io);
-	int is_write = 0;
-	MENTRY();
-
-	is_write = (io->mi_type == MIOT_WRITEV) ? 1 : 0;
-	io->mi_result.ssize = mtfs_file_rw_branch(is_write,
-	                                         io_rw->file,
-	                                         io_rw->iov_tmp,
-	                                         io_rw->nr_segs,
-	                                         &io_rw->pos_tmp,
-	                                         global_bindex);
-	if (io->mi_result.ssize >= 0) {
-		/* TODO: this check is weak */
-		io->mi_successful = 1;
-	} else {
-		io->mi_successful = 0;
-	}
-
-	_MRETURN();
 }
 
 void mtfs_io_iter_fini_read_ops(struct mtfs_io *io, int init_ret)
@@ -327,6 +308,31 @@ out:
 	_MRETURN();
 }
 
+void mtfs_io_iter_start_rw(struct mtfs_io *io)
+{
+	struct mtfs_io_rw *io_rw = &io->u.mi_rw;
+	mtfs_bindex_t global_bindex = mtfs_io_bindex(io);
+	int is_write = 0;
+	MENTRY();
+
+	is_write = (io->mi_type == MIOT_WRITEV) ? 1 : 0;
+	io->mi_result.ssize = mtfs_file_rw_branch(is_write,
+	                                         io_rw->file,
+	                                         io_rw->iov_tmp,
+	                                         io_rw->nr_segs,
+	                                         &io_rw->pos_tmp,
+	                                         global_bindex);
+	if (io->mi_result.ssize >= 0) {
+		/* TODO: this check is weak */
+		io->mi_successful = 1;
+	} else {
+		io->mi_successful = 0;
+	}
+
+	_MRETURN();
+}
+EXPORT_SYMBOL(mtfs_io_iter_start_rw);
+
 void mtfs_io_iter_start_create(struct mtfs_io *io)
 {
 	struct mtfs_io_create *io_create = &io->u.mi_create;
@@ -347,6 +353,7 @@ void mtfs_io_iter_start_create(struct mtfs_io *io)
 
 	_MRETURN();
 }
+EXPORT_SYMBOL(mtfs_io_iter_start_create);
 
 void mtfs_io_iter_start_link(struct mtfs_io *io)
 {
@@ -367,6 +374,7 @@ void mtfs_io_iter_start_link(struct mtfs_io *io)
 
 	_MRETURN();
 }
+EXPORT_SYMBOL(mtfs_io_iter_start_link);
 
 void mtfs_io_iter_start_unlink(struct mtfs_io *io)
 {
@@ -386,6 +394,7 @@ void mtfs_io_iter_start_unlink(struct mtfs_io *io)
 
 	_MRETURN();
 }
+EXPORT_SYMBOL(mtfs_io_iter_start_unlink);
 
 void mtfs_io_iter_start_mkdir(struct mtfs_io *io)
 {
@@ -406,6 +415,7 @@ void mtfs_io_iter_start_mkdir(struct mtfs_io *io)
 
 	_MRETURN();
 }
+EXPORT_SYMBOL(mtfs_io_iter_start_mkdir);
 
 void mtfs_io_iter_start_rmdir(struct mtfs_io *io)
 {
@@ -425,6 +435,7 @@ void mtfs_io_iter_start_rmdir(struct mtfs_io *io)
 
 	_MRETURN();
 }
+EXPORT_SYMBOL(mtfs_io_iter_start_rmdir);
 
 void mtfs_io_iter_start_mknod(struct mtfs_io *io)
 {
@@ -446,6 +457,7 @@ void mtfs_io_iter_start_mknod(struct mtfs_io *io)
 
 	_MRETURN();
 }
+EXPORT_SYMBOL(mtfs_io_iter_start_mknod);
 
 void mtfs_io_iter_start_rename(struct mtfs_io *io)
 {
@@ -467,6 +479,7 @@ void mtfs_io_iter_start_rename(struct mtfs_io *io)
 
 	_MRETURN();
 }
+EXPORT_SYMBOL(mtfs_io_iter_start_rename);
 
 void mtfs_io_iter_start_symlink(struct mtfs_io *io)
 {
@@ -487,6 +500,7 @@ void mtfs_io_iter_start_symlink(struct mtfs_io *io)
 
 	_MRETURN();
 }
+EXPORT_SYMBOL(mtfs_io_iter_start_symlink);
 
 void mtfs_io_iter_start_readlink(struct mtfs_io *io)
 {
@@ -507,6 +521,7 @@ void mtfs_io_iter_start_readlink(struct mtfs_io *io)
 
 	_MRETURN();
 }
+EXPORT_SYMBOL(mtfs_io_iter_start_readlink);
 
 void mtfs_io_iter_start_permission(struct mtfs_io *io)
 {
@@ -528,6 +543,7 @@ void mtfs_io_iter_start_permission(struct mtfs_io *io)
 	io->mi_successful = 1;
 	_MRETURN();
 }
+EXPORT_SYMBOL(mtfs_io_iter_start_permission);
 
 void mtfs_io_iter_start_getattr(struct mtfs_io *io)
 {
@@ -547,6 +563,7 @@ void mtfs_io_iter_start_getattr(struct mtfs_io *io)
 
 	_MRETURN();
 }
+EXPORT_SYMBOL(mtfs_io_iter_start_getattr);
 
 void mtfs_io_iter_start_setattr(struct mtfs_io *io)
 {
@@ -565,6 +582,7 @@ void mtfs_io_iter_start_setattr(struct mtfs_io *io)
 
 	_MRETURN();
 }
+EXPORT_SYMBOL(mtfs_io_iter_start_setattr);
 
 void mtfs_io_iter_start_getxattr(struct mtfs_io *io)
 {
@@ -588,6 +606,7 @@ void mtfs_io_iter_start_getxattr(struct mtfs_io *io)
 
 	_MRETURN();
 }
+EXPORT_SYMBOL(mtfs_io_iter_start_getxattr);
 
 void mtfs_io_iter_start_setxattr(struct mtfs_io *io)
 {
@@ -609,6 +628,7 @@ void mtfs_io_iter_start_setxattr(struct mtfs_io *io)
 
 	_MRETURN();
 }
+EXPORT_SYMBOL(mtfs_io_iter_start_setxattr);
 
 void mtfs_io_iter_start_removexattr(struct mtfs_io *io)
 {
@@ -627,6 +647,7 @@ void mtfs_io_iter_start_removexattr(struct mtfs_io *io)
 
 	_MRETURN();
 }
+EXPORT_SYMBOL(mtfs_io_iter_start_removexattr);
 
 void mtfs_io_iter_start_listxattr(struct mtfs_io *io)
 {
@@ -649,6 +670,7 @@ void mtfs_io_iter_start_listxattr(struct mtfs_io *io)
 
 	_MRETURN();
 }
+EXPORT_SYMBOL(mtfs_io_iter_start_listxattr);
 
 void mtfs_io_iter_start_readdir(struct mtfs_io *io)
 {
@@ -668,6 +690,7 @@ void mtfs_io_iter_start_readdir(struct mtfs_io *io)
 
 	_MRETURN();
 }
+EXPORT_SYMBOL(mtfs_io_iter_start_readdir);
 
 void mtfs_io_iter_start_open(struct mtfs_io *io)
 {
@@ -686,6 +709,7 @@ void mtfs_io_iter_start_open(struct mtfs_io *io)
 
 	_MRETURN();
 }
+EXPORT_SYMBOL(mtfs_io_iter_start_open);
 
 void mtfs_io_iter_start_ioctl(struct mtfs_io *io)
 {
@@ -707,6 +731,7 @@ void mtfs_io_iter_start_ioctl(struct mtfs_io *io)
 
 	_MRETURN();
 }
+EXPORT_SYMBOL(mtfs_io_iter_start_ioctl);
 
 void mtfs_io_iter_start_writepage(struct mtfs_io *io)
 {
@@ -725,6 +750,7 @@ void mtfs_io_iter_start_writepage(struct mtfs_io *io)
 
 	_MRETURN();
 }
+EXPORT_SYMBOL(mtfs_io_iter_start_writepage);
 
 void mtfs_io_iter_start_readpage(struct mtfs_io *io)
 {
@@ -743,6 +769,7 @@ void mtfs_io_iter_start_readpage(struct mtfs_io *io)
 
 	_MRETURN();
 }
+EXPORT_SYMBOL(mtfs_io_iter_start_readpage);
 
 const struct mtfs_io_operations mtfs_io_ops[] = {
 	[MIOT_CREATE] = {

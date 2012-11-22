@@ -755,6 +755,19 @@ AC_ARG_ENABLE([trace-ext2],
 AC_MSG_RESULT([$enable_trace_ext2])])
 
 #
+# LC_CONFIG_SUBJECT_ASYNC_REPLICA
+#
+# whether to build async_replica subject
+#
+AC_DEFUN([LC_CONFIG_SUBJECT_ASYNC_REPLICA],
+[AC_MSG_CHECKING([whether to build async_replica subject])
+AC_ARG_ENABLE([subject-async-replica],
+        AC_HELP_STRING([--disable-subject-async-replica],
+                        [disable async_replica subject]),
+        [],[enable_subject_async_replica='yes'])
+AC_MSG_RESULT([$enable_subject_async_replica])])
+
+#
 # LC_CONFIG_MANAGE
 #
 # whether to build manage support
@@ -943,6 +956,7 @@ AM_CONDITIONAL(NTFS3G_SUPPORT, test x$enable_ntfs3g_support = xyes)
 AM_CONDITIONAL(TRACE_EXT2, test x$enable_trace_ext2 = xyes)
 AM_CONDITIONAL(MANAGE, test x$enable_manage = xyes)
 AM_CONDITIONAL(MANAGE_TESTS, test x$enable_manage_tests = xyes)
+AM_CONDITIONAL(SUBJECT_ASYNC_REPLICA, test x$enable_subject_async_replica = xyes)
 ])
 
 #
@@ -985,6 +999,10 @@ mtfs/trace_ext2/Makefile
 mtfs/trace_ext2/autoMakefile
 mtfs/selfheal/Makefile
 mtfs/selfheal/autoMakefile
+mtfs/subjects/Makefile
+mtfs/subjects/autoMakefile
+mtfs/subjects/async_replica/Makefile
+mtfs/subjects/async_replica/autoMakefile
 mtfs/tmpfs_support/Makefile
 mtfs/tmpfs_support/autoMakefile
 ])

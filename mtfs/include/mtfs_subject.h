@@ -15,6 +15,14 @@ struct mtfs_subject_operations {
 	int (*mso_inode_fini)(struct inode *inode);
 };
 
+struct mtfs_subject {
+	struct list_head        ms_linkage;
+	struct module          *ms_owner;
+	const char             *ms_name;
+};
+
+extern int msubject_register(struct mtfs_subject *subject);
+extern void msubject_unregister(struct mtfs_subject *subject);
 #else /* !defined (__linux__) && defined(__KERNEL__) */
 #error This head is only for kernel space use
 #endif /* !defined (__linux__) && defined(__KERNEL__) */

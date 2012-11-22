@@ -20,7 +20,6 @@
 #include "super_internal.h"
 #include "mmap_internal.h"
 #include "dentry_internal.h"
-#include "async_internal.h"
 #include "subject_internal.h"
 
 int mtfs_inode_dump(struct inode *inode)

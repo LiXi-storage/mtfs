@@ -1,0 +1,3 @@
+@SUBJECT_ASYNC_REPLICA_TRUE@subdir-m += async_replica
+
+@INCLUDE_RULES@

@@ -731,15 +731,26 @@ struct mtfs_cache_info {
 };
 
 struct kmem_cache *mtfs_file_info_cache;
+EXPORT_SYMBOL(mtfs_file_info_cache);
 struct kmem_cache *mtfs_dentry_info_cache;
+EXPORT_SYMBOL(mtfs_dentry_info_cache);
 struct kmem_cache *mtfs_inode_info_cache;
+EXPORT_SYMBOL(mtfs_inode_info_cache);
 struct kmem_cache *mtfs_sb_info_cache;
+EXPORT_SYMBOL(mtfs_sb_info_cache);
 struct kmem_cache *mtfs_device_cache;
+EXPORT_SYMBOL(mtfs_device_cache);
 struct kmem_cache *mtfs_oplist_cache;
+EXPORT_SYMBOL(mtfs_oplist_cache);
 struct kmem_cache *mtfs_lock_cache;
+EXPORT_SYMBOL(mtfs_lock_cache);
 struct kmem_cache *mtfs_interval_cache;
+EXPORT_SYMBOL(mtfs_interval_cache);
 struct kmem_cache *mtfs_io_cache;
+EXPORT_SYMBOL(mtfs_io_cache);
 struct kmem_cache *mtfs_config_cache;
+EXPORT_SYMBOL(mtfs_config_cache);
+
 
 static struct mtfs_cache_info mtfs_cache_infos[] = {
 	{

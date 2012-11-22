@@ -59,7 +59,9 @@ extern struct mlowerfs_bucket_type_object mlowerfs_bucket_xattr;
 
 #define MLOWERFS_BUCKET_TYPE_DEFAULT (&mlowerfs_bucket_xattr)
 
-
+extern int mlowerfs_bucket_init(struct mlowerfs_bucket *bucket);
+extern int mlowerfs_bucket_add(struct mlowerfs_bucket *bucket,
+                               struct mtfs_interval_node_extent *extent);
 extern int mlowerfs_register(struct mtfs_lowerfs *fs_ops);
 extern void mlowerfs_unregister(struct mtfs_lowerfs *fs_ops);
 extern int mlowerfs_getflag_xattr(struct inode *inode, __u32 *mtfs_flag, const char *xattr_name);

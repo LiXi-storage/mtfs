@@ -111,6 +111,17 @@ do {                                                                          \
     MTFS_FREE(str, strlen(str) + 1);                                          \
 } while (0)
 
+extern struct kmem_cache *mtfs_file_info_cache;
+extern struct kmem_cache *mtfs_dentry_info_cache;
+extern struct kmem_cache *mtfs_inode_info_cache;
+extern struct kmem_cache *mtfs_sb_info_cache;
+extern struct kmem_cache *mtfs_device_cache;
+extern struct kmem_cache *mtfs_oplist_cache;
+extern struct kmem_cache *mtfs_lock_cache;
+extern struct kmem_cache *mtfs_interval_cache;
+extern struct kmem_cache *mtfs_io_cache;
+extern struct kmem_cache *mtfs_config_cache;
+
 #else /* !((__linux__) && defined(__KERNEL__)) */
 
 #include <stdlib.h>

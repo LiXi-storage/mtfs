@@ -422,8 +422,8 @@ out:
 #include <linux/module.h>
 #include "lowerfs_internal.h"
 
-spinlock_t mtfs_lowerfs_lock = SPIN_LOCK_UNLOCKED;
-LIST_HEAD(ml_types);
+static spinlock_t mtfs_lowerfs_lock = SPIN_LOCK_UNLOCKED;
+static LIST_HEAD(mtfs_lowerfs_types);
 
 static struct mtfs_lowerfs *_mlowerfs_search(const char *type)
 {
@@ -431,7 +431,7 @@ static struct mtfs_lowerfs *_mlowerfs_search(const char *type)
 	struct list_head *p = NULL;
 	MENTRY();
 
-	list_for_each(p, &ml_types) {
+	list_for_each(p, &mtfs_lowerfs_types) {
 		found = list_entry(p, struct mtfs_lowerfs, ml_linkage);
 		if (strcmp(found->ml_type, type) == 0) {
 			MRETURN(found);
@@ -481,7 +481,7 @@ static int _mlowerfs_register(struct mtfs_lowerfs *fs_ops)
 		ret = -EALREADY;
 	} else {
 		//PORTAL_MODULE_USE;
-		list_add(&fs_ops->ml_linkage, &ml_types);
+		list_add(&fs_ops->ml_linkage, &mtfs_lowerfs_types);
 	}
 
 out:
@@ -506,7 +506,7 @@ static void _mlowerfs_unregister(struct mtfs_lowerfs *fs_ops)
 	struct list_head *p = NULL;
 	MENTRY();
 
-	list_for_each(p, &ml_types) {
+	list_for_each(p, &mtfs_lowerfs_types) {
 		struct mtfs_lowerfs *found;
 
 		found = list_entry(p, typeof(*found), ml_linkage);
@@ -804,6 +804,7 @@ int mlowerfs_bucket_init(struct mlowerfs_bucket *bucket)
 
 	MRETURN(ret);
 }
+EXPORT_SYMBOL(mlowerfs_bucket_init);
 
 int mlowerfs_bucket_read_nonlock(struct mlowerfs_bucket *bucket)
 {
@@ -876,6 +877,7 @@ out_unlock:
 
 	MRETURN(ret);
 }
+EXPORT_SYMBOL(mlowerfs_bucket_add);
 
 int mlowerfs_bucket_flush_xattr(struct mlowerfs_bucket *bucket)
 {

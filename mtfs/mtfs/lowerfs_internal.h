@@ -9,9 +9,6 @@
 #include <mtfs_lowerfs.h>
 #include <mtfs_flag.h>
 
-int mlowerfs_bucket_init(struct mlowerfs_bucket *bucket);
-int mlowerfs_bucket_add(struct mlowerfs_bucket *bucket,
-                        struct mtfs_interval_node_extent *extent);
 struct mtfs_lowerfs *mlowerfs_get(const char *type);
 void mlowerfs_put(struct mtfs_lowerfs *fs_ops);
 

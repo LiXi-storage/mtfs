@@ -1,5 +1,5 @@
 MODULES := mtfs
-mtfs-objs   := dentry.o \
+mtfs-objs := dentry.o \
 	file.o \
 	mmap.o \
 	inode.o \
@@ -23,13 +23,12 @@ mtfs-objs   := dentry.o \
 	io.o \
 	trace.o \
 	record.o \
-	subject.o \
-	async.o
+	subject.o
 
 EXTRA_DIST := $(mtfs-objs:.o=.c)
 EXTRA_DIST += dentry_internal.h device_internal.h file_internal.h hide_internal.h
 EXTRA_DIST += inode_internal.h junction_internal.h main_internal.h mmap_internal.h
 EXTRA_DIST += super_internal.h lowerfs_internal.h ioctl_internal.h
-EXTRA_DIST += heal_internal.h io_internal.h subject_internal.h async_internal.h
+EXTRA_DIST += heal_internal.h io_internal.h subject_internal.h
 
 @INCLUDE_RULES@

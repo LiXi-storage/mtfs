@@ -19,7 +19,6 @@
 #include "lowerfs_internal.h"
 #include "main_internal.h"
 #include "subject_internal.h"
-#include "async_internal.h"
 
 struct inode *mtfs_alloc_inode(struct super_block *sb)
 {

@@ -421,6 +421,7 @@ setup_all()
 
 	insert_module $SELFHEAL_MODULE $SELFHEAL_MODULE_PATH
 	insert_module $MTFS_MODULE $MTFS_MODULE_PATH
+	insert_module $SUBJECT_MODULE $SUBJECT_MODULE_PATH
 	insert_module $SUPPORT_MODULE $SUPPORT_MODULE_PATH
 	insert_module $JUNCTION_MODULE $JUNCTION_MODULE_PATH
 
@@ -448,6 +449,7 @@ cleanup_all()
 
 	remove_module $JUNCTION_MODULE
 	remove_module $SUPPORT_MODULE
+	remove_module $SUBJECT_MODULE
 	remove_module $MTFS_MODULE
 	remove_module $SELFHEAL_MODULE
 
