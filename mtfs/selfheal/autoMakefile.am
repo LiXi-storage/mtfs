@@ -1,5 +1,0 @@
-if MODULES
-modulefs_DATA = mtfs_selfheal$(KMODEXT)
-endif
-
-MOSTLYCLEANFILES := @MOSTLYCLEANFILES@

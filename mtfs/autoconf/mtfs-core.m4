@@ -1011,8 +1011,6 @@ mtfs/lustre_support/Makefile
 mtfs/lustre_support/autoMakefile
 mtfs/trace_ext2/Makefile
 mtfs/trace_ext2/autoMakefile
-mtfs/selfheal/Makefile
-mtfs/selfheal/autoMakefile
 mtfs/subjects/Makefile
 mtfs/subjects/autoMakefile
 mtfs/subjects/async_replica/Makefile

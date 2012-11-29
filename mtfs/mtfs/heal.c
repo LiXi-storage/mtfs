@@ -7,7 +7,6 @@
 #include <mtfs_inode.h>
 #include <mtfs_dentry.h>
 #include <memory.h>
-#include <mtfs_selfheal.h>
 #include "inode_internal.h"
 #include "heal_internal.h"
 #include "lowerfs_internal.h"
@@ -529,24 +528,6 @@ out:
 	MRETURN(ret);
 }
 EXPORT_SYMBOL(heal_discard_dentry_sync);
-
-int heal_discard_dentry_async(struct inode *dir, struct dentry *dentry, struct mtfs_operation_list *list)
-{
-	int ret = 0;
-	struct mtfs_request *request = NULL;
-	MENTRY();
-
-	request = selfheal_request_pack();
-	if (IS_ERR(request)) {
-		MERROR("failed to alloc request\n");
-		goto out;
-	}
-	selfheal_add_req(request, MDL_POLICY_ROUND, -1);
-
-out:
-	MRETURN(ret);
-}
-EXPORT_SYMBOL(heal_discard_dentry_async);
 
 int heal_discard_dentry(struct inode *dir, struct dentry *dentry, struct mtfs_operation_list *list)
 {

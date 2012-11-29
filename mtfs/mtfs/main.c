@@ -8,7 +8,6 @@
 #include <parse_option.h>
 #include <compat.h>
 #include <mtfs_proc.h>
-#include <mtfs_selfheal.h>
 #include <mtfs_device.h>
 #include <mtfs_file.h>
 #include "hide_internal.h"

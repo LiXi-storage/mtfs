@@ -130,7 +130,7 @@ struct file_operations trace_ext2_main_fops =
 
 struct heal_operations trace_ext2_hops =
 {
-	ho_discard_dentry: heal_discard_dentry_async,
+	ho_discard_dentry: heal_discard_dentry_sync,
 };
 
 static int trace_ext2_setflags(struct inode *inode, struct file *file, unsigned long arg)

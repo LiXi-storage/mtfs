@@ -127,7 +127,7 @@ struct file_operations mtfs_ext_main_fops =
 
 struct heal_operations mtfs_ext_hops =
 {
-	ho_discard_dentry: heal_discard_dentry_async,
+	ho_discard_dentry: heal_discard_dentry_sync,
 };
 
 static int mtfs_ext2_setflags(struct inode *inode, struct file *file, unsigned long arg)

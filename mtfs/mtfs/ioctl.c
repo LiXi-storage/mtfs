@@ -3,7 +3,6 @@
  */
 
 #include <linux/module.h>
-#include <mtfs_selfheal.h>
 #include <debug.h>
 #include <memory.h>
 #include "heal_internal.h"

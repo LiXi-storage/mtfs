@@ -1,7 +1,7 @@
 AUTOMAKE_OPTIONS = foreign
 
 # Also update mtfs/autoconf/mtfs-core.m4 AC_CONFIG_FILES
-ALWAYS_SUBDIRS := autoconf mtfs selfheal debug subjects include libuser scripts tests utils doc
+ALWAYS_SUBDIRS := autoconf mtfs debug subjects include libuser scripts tests utils doc
 
 LUSTRE_SUPPORT_SUBDIRS := lustre_support
 SYNC_REPLICA_EXT_SUBDIRS := sync_replica_ext
