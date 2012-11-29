@@ -5,7 +5,6 @@
 #ifndef __MTFS_OPLIST_H__
 #define __MTFS_OPLIST_H__
 
-
 typedef union mtfs_operation_result {
 	int ret;
 	void *ptr;

@@ -198,7 +198,7 @@ struct mtfs_operations mtfs_ext2_operations = {
 	aops:                    &mtfs_aops,
 	vm_ops:                  &mtfs_file_vm_ops,
 	ioctl:                   &mtfs_ext2_ioctl,
-	iupdate_ops:              &mtfs_iupdate_choose,
+	iupdate_ops:             &mtfs_iupdate_choose,
 	io_ops:                  &mtfs_io_ops,
 };
 
@@ -213,7 +213,7 @@ struct mtfs_operations mtfs_ext3_operations = {
 	aops:                    &mtfs_aops,
 	vm_ops:                  &mtfs_file_vm_ops,
 	ioctl:                    NULL,
-	iupdate_ops:              &mtfs_iupdate_choose,
+	iupdate_ops:             &mtfs_iupdate_choose,
 	io_ops:                  &mtfs_io_ops,
 };
 
@@ -228,7 +228,7 @@ struct mtfs_operations mtfs_ext4_operations = {
 	aops:                    &mtfs_aops,
 	vm_ops:                  &mtfs_file_vm_ops,
 	ioctl:                    NULL,
-	iupdate_ops:              &mtfs_iupdate_choose,
+	iupdate_ops:             &mtfs_iupdate_choose,
 	io_ops:                  &mtfs_io_ops,
 };
 
@@ -250,7 +250,7 @@ const char *ext4_supported_secondary_types[] = {
 struct mtfs_junction mtfs_ext2_junction = {
 	mj_owner:                THIS_MODULE,
 	mj_name:                 "ext2",
-	mj_subject:              "REPLICA",
+	mj_subject:              "SYNC_REPLICA",
 	mj_primary_type:         "ext2",
 	mj_secondary_types:      ext2_supported_secondary_types,
 	mj_fs_ops:              &mtfs_ext2_operations,
@@ -259,7 +259,7 @@ struct mtfs_junction mtfs_ext2_junction = {
 struct mtfs_junction mtfs_ext3_junction = {
 	mj_owner:                THIS_MODULE,
 	mj_name:                 "ext3",
-	mj_subject:              "REPLICA",
+	mj_subject:              "SYNC_REPLICA",
 	mj_primary_type:         "ext3",
 	mj_secondary_types:      ext3_supported_secondary_types,
 	mj_fs_ops:              &mtfs_ext3_operations,
@@ -268,7 +268,7 @@ struct mtfs_junction mtfs_ext3_junction = {
 struct mtfs_junction mtfs_ext4_junction = {
 	mj_owner:                THIS_MODULE,
 	mj_name:                 "ext4",
-	mj_subject:              "REPLICA",
+	mj_subject:              "SYNC_REPLICA",
 	mj_primary_type:         "ext4",
 	mj_secondary_types:      ext4_supported_secondary_types,
 	mj_fs_ops:              &mtfs_ext4_operations,

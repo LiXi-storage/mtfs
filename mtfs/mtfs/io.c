@@ -51,6 +51,7 @@ int mtfs_io_init_oplist_flag(struct mtfs_io *io)
 {
 	return mtfs_io_init_oplist(io, &mtfs_oplist_flag);
 }
+EXPORT_SYMBOL(mtfs_io_init_oplist_flag);
 
 void mtfs_io_iter_end_oplist(struct mtfs_io *io)
 {
@@ -78,6 +79,7 @@ void mtfs_io_fini_oplist_noupdate(struct mtfs_io *io)
 
 	_MRETURN();
 }
+EXPORT_SYMBOL(mtfs_io_fini_oplist_noupdate);
 
 void mtfs_io_fini_oplist(struct mtfs_io *io)
 {
@@ -155,8 +157,9 @@ void mtfs_io_fini_oplist_rename(struct mtfs_io *io)
 
 	_MRETURN();
 }
+EXPORT_SYMBOL(mtfs_io_fini_oplist_rename);
 
-static int mtfs_io_lock_mlock(struct mtfs_io *io)
+int mtfs_io_lock_mlock(struct mtfs_io *io)
 {
 	int ret = 0;
 	MENTRY();
@@ -169,8 +172,9 @@ static int mtfs_io_lock_mlock(struct mtfs_io *io)
 
 	MRETURN(ret);
 }
+EXPORT_SYMBOL(mtfs_io_lock_mlock);
 
-static void mtfs_io_unlock_mlock(struct mtfs_io *io)
+void mtfs_io_unlock_mlock(struct mtfs_io *io)
 {
 	MENTRY();
 
@@ -179,6 +183,7 @@ static void mtfs_io_unlock_mlock(struct mtfs_io *io)
 
 	_MRETURN();
 }
+EXPORT_SYMBOL(mtfs_io_unlock_mlock);
 
 int mtfs_io_iter_init_rw(struct mtfs_io *io)
 {
@@ -265,6 +270,7 @@ void mtfs_io_iter_fini_read_ops(struct mtfs_io *io, int init_ret)
 out:
 	_MRETURN();
 }
+EXPORT_SYMBOL(mtfs_io_iter_fini_read_ops);
 
 void mtfs_io_iter_fini_write_ops(struct mtfs_io *io, int init_ret)
 {
@@ -307,6 +313,7 @@ void mtfs_io_iter_fini_write_ops(struct mtfs_io *io, int init_ret)
 out:
 	_MRETURN();
 }
+EXPORT_SYMBOL(mtfs_io_iter_fini_write_ops);
 
 void mtfs_io_iter_start_rw(struct mtfs_io *io)
 {
@@ -770,260 +777,6 @@ void mtfs_io_iter_start_readpage(struct mtfs_io *io)
 	_MRETURN();
 }
 EXPORT_SYMBOL(mtfs_io_iter_start_readpage);
-
-const struct mtfs_io_operations mtfs_io_ops[] = {
-	[MIOT_CREATE] = {
-		.mio_init       = mtfs_io_init_oplist_flag,
-		.mio_fini       = mtfs_io_fini_oplist,
-		.mio_lock       = NULL,
-		.mio_unlock     = NULL,
-		.mio_iter_init  = NULL,
-		.mio_iter_start = mtfs_io_iter_start_create,
-		.mio_iter_end   = mtfs_io_iter_end_oplist,
-		.mio_iter_fini  = mtfs_io_iter_fini_write_ops,
-	},
-	[MIOT_LINK] = {
-		.mio_init       = mtfs_io_init_oplist_flag,
-		.mio_fini       = mtfs_io_fini_oplist,
-		.mio_lock       = NULL,
-		.mio_unlock     = NULL,
-		.mio_iter_init  = NULL,
-		.mio_iter_start = mtfs_io_iter_start_link,
-		.mio_iter_end   = mtfs_io_iter_end_oplist,
-		.mio_iter_fini  = mtfs_io_iter_fini_write_ops,
-	},
-	[MIOT_UNLINK] = {
-		.mio_init       = mtfs_io_init_oplist_flag,
-		.mio_fini       = mtfs_io_fini_oplist,
-		.mio_lock       = NULL,
-		.mio_unlock     = NULL,
-		.mio_iter_init  = NULL,
-		.mio_iter_start = mtfs_io_iter_start_unlink,
-		.mio_iter_end   = mtfs_io_iter_end_oplist,
-		.mio_iter_fini  = mtfs_io_iter_fini_write_ops,
-	},
-	[MIOT_MKDIR] = {
-		.mio_init       = mtfs_io_init_oplist_flag,
-		.mio_fini       = mtfs_io_fini_oplist,
-		.mio_lock       = NULL,
-		.mio_unlock     = NULL,
-		.mio_iter_init  = NULL,
-		.mio_iter_start = mtfs_io_iter_start_mkdir,
-		.mio_iter_end   = mtfs_io_iter_end_oplist,
-		.mio_iter_fini  = mtfs_io_iter_fini_write_ops,
-	},
-	[MIOT_RMDIR] = {
-		.mio_init       = mtfs_io_init_oplist_flag,
-		.mio_fini       = mtfs_io_fini_oplist,
-		.mio_lock       = NULL,
-		.mio_unlock     = NULL,
-		.mio_iter_init  = NULL,
-		.mio_iter_start = mtfs_io_iter_start_rmdir,
-		.mio_iter_end   = mtfs_io_iter_end_oplist,
-		.mio_iter_fini  = mtfs_io_iter_fini_write_ops,
-	},
-	[MIOT_MKNOD] = {
-		.mio_init       = mtfs_io_init_oplist_flag,
-		.mio_fini       = mtfs_io_fini_oplist,
-		.mio_lock       = NULL,
-		.mio_unlock     = NULL,
-		.mio_iter_init  = NULL,
-		.mio_iter_start = mtfs_io_iter_start_mknod,
-		.mio_iter_end   = mtfs_io_iter_end_oplist,
-		.mio_iter_fini  = mtfs_io_iter_fini_write_ops,
-	},
-	[MIOT_RENAME] = {
-		.mio_init       = mtfs_io_init_oplist_flag,
-		.mio_fini       = mtfs_io_fini_oplist_rename,
-		.mio_lock       = NULL,
-		.mio_unlock     = NULL,
-		.mio_iter_init  = NULL,
-		.mio_iter_start = mtfs_io_iter_start_rename,
-		.mio_iter_end   = mtfs_io_iter_end_oplist,
-		.mio_iter_fini  = mtfs_io_iter_fini_write_ops,
-	},
-	[MIOT_SYMLINK] = {
-		.mio_init       = mtfs_io_init_oplist_flag,
-		.mio_fini       = mtfs_io_fini_oplist,
-		.mio_lock       = NULL,
-		.mio_unlock     = NULL,
-		.mio_iter_init  = NULL,
-		.mio_iter_start = mtfs_io_iter_start_symlink,
-		.mio_iter_end   = mtfs_io_iter_end_oplist,
-		.mio_iter_fini  = mtfs_io_iter_fini_write_ops,
-	},
-	[MIOT_READLINK] = {
-		.mio_init       = mtfs_io_init_oplist_flag,
-		.mio_fini       = NULL,
-		.mio_lock       = NULL,
-		.mio_unlock     = NULL,
-		.mio_iter_init  = NULL,
-		.mio_iter_start = mtfs_io_iter_start_readlink,
-		.mio_iter_end   = NULL,
-		.mio_iter_fini  = mtfs_io_iter_fini_read_ops,
-	},
-	[MIOT_PERMISSION] = {
-		.mio_init       = mtfs_io_init_oplist_flag,
-		.mio_fini       = NULL,
-		.mio_lock       = NULL,
-		.mio_unlock     = NULL,
-		.mio_iter_init  = NULL,
-		.mio_iter_start = mtfs_io_iter_start_permission,
-		.mio_iter_end   = NULL,
-		.mio_iter_fini  = mtfs_io_iter_fini_read_ops,
-	},
-	[MIOT_READV] = {
-		.mio_init       = mtfs_io_init_oplist_flag,
-		.mio_fini       = NULL,
-		.mio_lock       = mtfs_io_lock_mlock,
-		.mio_unlock     = mtfs_io_unlock_mlock,
-		.mio_iter_init  = mtfs_io_iter_init_rw,
-		.mio_iter_start = mtfs_io_iter_start_rw,
-		.mio_iter_end   = NULL,
-		.mio_iter_fini  = mtfs_io_iter_fini_read_ops,
-	},
-	[MIOT_WRITEV] = {
-		.mio_init       = mtfs_io_init_oplist_flag,
-		.mio_fini       = mtfs_io_fini_oplist,
-		.mio_lock       = mtfs_io_lock_mlock,
-		.mio_unlock     = mtfs_io_unlock_mlock,
-		.mio_iter_init  = mtfs_io_iter_init_rw,
-		.mio_iter_start = mtfs_io_iter_start_rw,
-		.mio_iter_end   = mtfs_io_iter_end_oplist,
-		.mio_iter_fini  = mtfs_io_iter_fini_write_ops,
-	},
-	[MIOT_GETATTR] = {
-		.mio_init       = mtfs_io_init_oplist_flag,
-		.mio_fini       = NULL,
-		.mio_lock       = NULL,
-		.mio_unlock     = NULL,
-		.mio_iter_init  = NULL,
-		.mio_iter_start = mtfs_io_iter_start_getattr,
-		.mio_iter_end   = NULL,
-		.mio_iter_fini  = mtfs_io_iter_fini_read_ops,
-	},
-	[MIOT_SETATTR] = {
-		.mio_init       = mtfs_io_init_oplist_flag,
-		.mio_fini       = mtfs_io_fini_oplist,
-		.mio_lock       = NULL,
-		.mio_unlock     = NULL,
-		.mio_iter_init  = NULL,
-		.mio_iter_start = mtfs_io_iter_start_setattr,
-		.mio_iter_end   = mtfs_io_iter_end_oplist,
-		.mio_iter_fini  = mtfs_io_iter_fini_write_ops,
-	},
-	[MIOT_GETXATTR] = {
-		.mio_init       = mtfs_io_init_oplist_flag,
-		.mio_fini       = NULL,
-		.mio_lock       = NULL,
-		.mio_unlock     = NULL,
-		.mio_iter_init  = NULL,
-		.mio_iter_start = mtfs_io_iter_start_getxattr,
-		.mio_iter_end   = NULL,
-		.mio_iter_fini  = mtfs_io_iter_fini_read_ops,
-	},
-	[MIOT_SETXATTR] = {
-		.mio_init       = mtfs_io_init_oplist_flag,
-		.mio_fini       = mtfs_io_fini_oplist,
-		.mio_lock       = NULL,
-		.mio_unlock     = NULL,
-		.mio_iter_init  = NULL,
-		.mio_iter_start = mtfs_io_iter_start_setxattr,
-		.mio_iter_end   = mtfs_io_iter_end_oplist,
-		.mio_iter_fini  = mtfs_io_iter_fini_write_ops,
-	},
-	[MIOT_REMOVEXATTR] = {
-		.mio_init       = mtfs_io_init_oplist_flag,
-		.mio_fini       = mtfs_io_fini_oplist,
-		.mio_lock       = NULL,
-		.mio_unlock     = NULL,
-		.mio_iter_init  = NULL,
-		.mio_iter_start = mtfs_io_iter_start_removexattr,
-		.mio_iter_end   = mtfs_io_iter_end_oplist,
-		.mio_iter_fini  = mtfs_io_iter_fini_write_ops,
-	},
-	[MIOT_LISTXATTR] = {
-		.mio_init       = mtfs_io_init_oplist_flag,
-		.mio_fini       = NULL,
-		.mio_lock       = NULL,
-		.mio_unlock     = NULL,
-		.mio_iter_init  = NULL,
-		.mio_iter_start = mtfs_io_iter_start_listxattr,
-		.mio_iter_end   = NULL,
-		.mio_iter_fini  = mtfs_io_iter_fini_read_ops,
-	},
-	[MIOT_READDIR] = {
-		.mio_init       = mtfs_io_init_oplist_flag,
-		.mio_fini       = NULL,
-		.mio_lock       = NULL,
-		.mio_unlock     = NULL,
-		.mio_iter_init  = NULL,
-		.mio_iter_start = mtfs_io_iter_start_readdir,
-		.mio_iter_end   = NULL,
-		.mio_iter_fini  = mtfs_io_iter_fini_read_ops,
-	},
-	[MIOT_SETATTR] = {
-		.mio_init       = mtfs_io_init_oplist_flag,
-		.mio_fini       = mtfs_io_fini_oplist,
-		.mio_lock       = NULL,
-		.mio_unlock     = NULL,
-		.mio_iter_init  = NULL,
-		.mio_iter_start = mtfs_io_iter_start_setattr,
-		.mio_iter_end   = mtfs_io_iter_end_oplist,
-		.mio_iter_fini  = mtfs_io_iter_fini_write_ops,
-	},
-	[MIOT_OPEN] = {
-		.mio_init       = mtfs_io_init_oplist_flag,
-		.mio_fini       = mtfs_io_fini_oplist_noupdate,
-		.mio_lock       = NULL,
-		.mio_unlock     = NULL,
-		.mio_iter_init  = NULL,
-		.mio_iter_start = mtfs_io_iter_start_open,
-		.mio_iter_end   = mtfs_io_iter_end_oplist,
-		.mio_iter_fini  = mtfs_io_iter_fini_write_ops,
-	},
-	[MIOT_IOCTL_WRITE] = {
-		.mio_init       = mtfs_io_init_oplist_flag,
-		.mio_fini       = mtfs_io_fini_oplist,
-		.mio_lock       = NULL,
-		.mio_unlock     = NULL,
-		.mio_iter_init  = NULL,
-		.mio_iter_start = mtfs_io_iter_start_ioctl,
-		.mio_iter_end   = mtfs_io_iter_end_oplist,
-		.mio_iter_fini  = mtfs_io_iter_fini_write_ops,
-	},
-	[MIOT_IOCTL_READ] = {
-		.mio_init       = mtfs_io_init_oplist_flag,
-		.mio_fini       = NULL,
-		.mio_lock       = NULL,
-		.mio_unlock     = NULL,
-		.mio_iter_init  = NULL,
-		.mio_iter_start = mtfs_io_iter_start_ioctl,
-		.mio_iter_end   = NULL,
-		.mio_iter_fini  = mtfs_io_iter_fini_read_ops,
-	},
-	[MIOT_WRITEPAGE] = {
-		.mio_init       = mtfs_io_init_oplist_flag,
-		.mio_fini       = mtfs_io_fini_oplist,
-		.mio_lock       = NULL,
-		.mio_unlock     = NULL,
-		.mio_iter_init  = NULL,
-		.mio_iter_start = mtfs_io_iter_start_writepage,
-		.mio_iter_end   = mtfs_io_iter_end_oplist,
-		.mio_iter_fini  = mtfs_io_iter_fini_write_ops,
-	},
-	[MIOT_READPAGE] = {
-		.mio_init       = mtfs_io_init_oplist_flag,
-		.mio_fini       = NULL,
-		.mio_lock       = NULL,
-		.mio_unlock     = NULL,
-		.mio_iter_init  = NULL,
-		.mio_iter_start = mtfs_io_iter_start_readpage,
-		.mio_iter_end   = NULL,
-		.mio_iter_fini  = mtfs_io_iter_fini_read_ops,
-	},
-};
-EXPORT_SYMBOL(mtfs_io_ops);
 
 static int mtfs_io_init(struct mtfs_io *io)
 {

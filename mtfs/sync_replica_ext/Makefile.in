@@ -1,0 +1,6 @@
+MODULES := mtfs_sync_replica_ext
+mtfs_sync_replica_ext-objs := replica_ext.o
+
+EXTRA_DIST := $(mtfs_sync_replica_ext-objs:.o=.c)
+EXTRA_DIST += replica_ext.h
+@INCLUDE_RULES@

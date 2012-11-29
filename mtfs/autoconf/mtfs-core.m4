@@ -664,17 +664,17 @@ AC_ARG_ENABLE([lustre-support],
 AC_MSG_RESULT([$enable_lustre_support])])
 
 #
-# LC_CONFIG_REPLICA_EXT
+# LC_CONFIG_SYNC_REPLICA_EXT
 #
 # whether to build replica ext support
 #
-AC_DEFUN([LC_CONFIG_REPLICA_EXT],
-[AC_MSG_CHECKING([whether to build replica ext support])
-AC_ARG_ENABLE([replica-ext],
-        AC_HELP_STRING([--disable-replica-ext],
-                        [disable replica ext support]),
-        [],[enable_replica_ext='yes'])
-AC_MSG_RESULT([$enable_replica_ext])])
+AC_DEFUN([LC_CONFIG_SYNC_REPLICA_EXT],
+[AC_MSG_CHECKING([whether to build sync replica ext support])
+AC_ARG_ENABLE([sync-replica-ext],
+        AC_HELP_STRING([--disable-sync-replica-ext],
+                        [disable sync replica ext support]),
+        [],[enable_sync_replica_ext='yes'])
+AC_MSG_RESULT([$enable_sync_replica_ext])])
 
 #
 # LC_CONFIG_ASYNC_REPLICA_EXT2
@@ -753,6 +753,19 @@ AC_ARG_ENABLE([trace-ext2],
                         [disable trace ext2 support]),
         [],[enable_trace_ext2='yes'])
 AC_MSG_RESULT([$enable_trace_ext2])])
+
+#
+# LC_CONFIG_SUBJECT_SYNC_REPLICA
+#
+# whether to build sync_replica subject
+#
+AC_DEFUN([LC_CONFIG_SUBJECT_SYNC_REPLICA],
+[AC_MSG_CHECKING([whether to build sync_replica subject])
+AC_ARG_ENABLE([subject-sync-replica],
+        AC_HELP_STRING([--disable-subject-sync-replica],
+                        [disable sync_replica subject]),
+        [],[enable_subject_sync_replica='yes'])
+AC_MSG_RESULT([$enable_subject_sync_replica])])
 
 #
 # LC_CONFIG_SUBJECT_ASYNC_REPLICA
@@ -947,7 +960,7 @@ AC_DEFUN([LC_CONDITIONALS],
 AM_CONDITIONAL(LIBMTFS, test x$enable_libmtfs = xyes)
 AM_CONDITIONAL(LIBMTFS_TESTS, test x$enable_libmtfs_tests = xyes)
 AM_CONDITIONAL(LUSTRE_SUPPORT, test x$enable_lustre_support = xyes)
-AM_CONDITIONAL(REPLICA_EXT, test x$enable_replica_ext = xyes)
+AM_CONDITIONAL(SYNC_REPLICA_EXT, test x$enable_sync_replica_ext = xyes)
 AM_CONDITIONAL(ASYNC_REPLICA_EXT2, test x$enable_async_replica_ext2 = xyes)
 AM_CONDITIONAL(EXT_SUPPORT, test x$enable_ext_support = xyes)
 AM_CONDITIONAL(NFS_SUPPORT, test x$enable_nfs_support = xyes)
@@ -957,6 +970,7 @@ AM_CONDITIONAL(TRACE_EXT2, test x$enable_trace_ext2 = xyes)
 AM_CONDITIONAL(MANAGE, test x$enable_manage = xyes)
 AM_CONDITIONAL(MANAGE_TESTS, test x$enable_manage_tests = xyes)
 AM_CONDITIONAL(SUBJECT_ASYNC_REPLICA, test x$enable_subject_async_replica = xyes)
+AM_CONDITIONAL(SUBJECT_SYNC_REPLICA, test x$enable_subject_sync_replica = xyes)
 ])
 
 #
@@ -983,8 +997,8 @@ mtfs/tests/Makefile
 mtfs/tests/pjd_fstest/Makefile
 mtfs/tests/src/Makefile
 mtfs/utils/Makefile
-mtfs/replica_ext/Makefile
-mtfs/replica_ext/autoMakefile
+mtfs/sync_replica_ext/Makefile
+mtfs/sync_replica_ext/autoMakefile
 mtfs/async_replica_ext2/Makefile
 mtfs/async_replica_ext2/autoMakefile
 mtfs/ext_support/Makefile
@@ -1003,6 +1017,8 @@ mtfs/subjects/Makefile
 mtfs/subjects/autoMakefile
 mtfs/subjects/async_replica/Makefile
 mtfs/subjects/async_replica/autoMakefile
+mtfs/subjects/sync_replica/Makefile
+mtfs/subjects/sync_replica/autoMakefile
 mtfs/tmpfs_support/Makefile
 mtfs/tmpfs_support/autoMakefile
 ])

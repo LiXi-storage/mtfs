@@ -288,10 +288,15 @@ struct mtfs_io_operations {
 
 extern int mtfs_io_loop(struct mtfs_io *io);
 extern int mtfs_io_init_oplist(struct mtfs_io *io, struct mtfs_oplist_object *oplist_obj);
+extern int mtfs_io_init_oplist_flag(struct mtfs_io *io);
 extern void mtfs_io_iter_end_oplist(struct mtfs_io *io);
 extern void mtfs_io_fini_oplist_noupdate(struct mtfs_io *io);
 extern void mtfs_io_fini_oplist(struct mtfs_io *io);
 extern void mtfs_io_fini_oplist_rename(struct mtfs_io *io);
+
+
+extern void mtfs_io_unlock_mlock(struct mtfs_io *io);
+extern int mtfs_io_lock_mlock(struct mtfs_io *io);
 
 extern void mtfs_io_iter_start_rw_nonoplist(struct mtfs_io *io);
 extern int mtfs_io_iter_init_rw(struct mtfs_io *io);

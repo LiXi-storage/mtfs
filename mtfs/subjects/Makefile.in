@@ -1,3 +1,4 @@
 @SUBJECT_ASYNC_REPLICA_TRUE@subdir-m += async_replica
+@SUBJECT_SYNC_REPLICA_TRUE@subdir-m += sync_replica
 
 @INCLUDE_RULES@

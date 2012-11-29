@@ -1,0 +1,5 @@
+if MODULES
+modulefs_DATA = mtfs_subject_sync_replica$(KMODEXT)
+endif
+
+MOSTLYCLEANFILES = @MOSTLYCLEANFILES@
