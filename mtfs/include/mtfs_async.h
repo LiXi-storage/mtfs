@@ -83,7 +83,6 @@ struct msubject_async_info {
 	mtfs_list_t                 msai_dirty_buckets;             /* Dirty buckets LRU list */
 	struct rw_semaphore         msai_lock;                      /* Protect msai_dirty_buckets */
 	struct proc_dir_entry      *msai_proc_entry;                /* Proc entrys for async debug */
-	struct mtfs_service        *msai_service;                   /* Service that heal the async files */ 
 	atomic_t                    msai_nr;                        /* Extent objects totally */ 
 };
 

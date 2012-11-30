@@ -5,6 +5,11 @@
 #ifndef __MTFS_OPLIST_H__
 #define __MTFS_OPLIST_H__
 
+#if defined (__linux__) && defined(__KERNEL__)
+#include <linux/types.h>
+#else /* !defined (__linux__) && defined(__KERNEL__) */
+#endif /* !defined (__linux__) && defined(__KERNEL__) */
+
 typedef union mtfs_operation_result {
 	int ret;
 	void *ptr;
