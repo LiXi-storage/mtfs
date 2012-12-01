@@ -121,6 +121,7 @@ extern struct kmem_cache *mtfs_lock_cache;
 extern struct kmem_cache *mtfs_interval_cache;
 extern struct kmem_cache *mtfs_io_cache;
 extern struct kmem_cache *mtfs_config_cache;
+extern struct kmem_cache *mtfs_async_extent_cache;
 
 #else /* !((__linux__) && defined(__KERNEL__)) */
 

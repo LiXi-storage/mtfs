@@ -1,9 +1,12 @@
 MODULES := mtfs_subject_async_replica
 mtfs_subject_async_replica-objs := async.o \
                                    async_io.o \
-                                   async_bucket.o
+                                   async_bucket.o \
+                                   async_info.o \
+                                   async_extent.o \
 
 EXTRA_DIST := $(mtfs_subject_async_replica-objs:.o=.c)
-EXTRA_DIST += async_internal.h
+EXTRA_DIST += async_internal.h async_bucket_internal.h async_info_internal.h 
+EXTRA_DIST += async_extent_internal.h 
 
 @INCLUDE_RULES@

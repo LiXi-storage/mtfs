@@ -29,6 +29,32 @@ typedef struct list_head mtfs_list_t;
 #define __mtfs_list_splice(list, head)        __list_splice(list, head)
 #define mtfs_list_splice(list, head)          list_splice(list, head)
 
+#if 0 /* TODO: HAVE_LIST_SPICE_TAIL */
+#define mtfs_list_splice_tail(list, head)     list_splice_tail(list, head)
+#else
+/* __list_splice as re-implemented on 2.6.27, we backport it */
+static inline void __list_splice_new_27(const struct list_head *list,
+                                           struct list_head *prev,
+                                           struct list_head *next)
+{
+	struct list_head *first = list->next;
+	struct list_head *last = list->prev;
+
+	first->prev = prev;
+	prev->next = first;
+
+	last->next = next;
+	next->prev = last;
+}
+
+static inline void mtfs_list_splice_tail(struct list_head *list,
+				         struct list_head *head)
+{
+	if (!mtfs_list_empty(list))
+		__list_splice_new_27(list, head->prev, head);
+}
+#endif
+
 #define mtfs_list_splice_init(list, head)     list_splice_init(list, head)
 
 #define mtfs_list_entry(ptr, type, member)    list_entry(ptr, type, member)

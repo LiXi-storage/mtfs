@@ -9,11 +9,13 @@
 #include <mtfs_super.h>
 #include <linux/mount.h>
 #include "async_bucket_internal.h"
+#include "async_extent_internal.h"
 
-static int masync_sync_file(struct masync_bucket *bucket,
-                            struct mtfs_interval_node_extent *extent,
-                            char *buf,
-                            int buf_size)
+/* Called holding mab_lock */
+int masync_sync_file(struct masync_bucket *bucket,
+                     struct mtfs_interval_node_extent *extent,
+                     char *buf,
+                     int buf_size)
 {
 	int ret = 0;
 	struct file *src_file = NULL;
@@ -83,11 +85,13 @@ void masync_bucket_init(struct msubject_async_info *info,
 {
 	MENTRY();
 
-	masync_bucket_lock_init(bucket);
-	bucket->mab_root = NULL;
 	bucket->mab_info = info;
-	atomic_set(&bucket->mab_nr, 0);
+	bucket->mab_root = NULL;
+	bucket->mab_number = 0;
+	bucket->mab_fvalid = 0;
+	init_MUTEX(&bucket->mab_lock);
 	MTFS_INIT_LIST_HEAD(&bucket->mab_linkage);
+	masync_bucket_add_to_list(bucket);
 
 	_MRETURN();
 }
@@ -105,6 +109,7 @@ static enum mtfs_interval_iter masync_overlap_cb(struct mtfs_interval_node *node
 	return MTFS_INTERVAL_ITER_CONT;
 }
 
+/* Called when holding mab_lock */
 static int masycn_bucket_fget(struct masync_bucket *bucket, struct file *file)
 {
 	int ret = 0;
@@ -119,6 +124,7 @@ static int masycn_bucket_fget(struct masync_bucket *bucket, struct file *file)
 	MENTRY();
 
 	MASSERT(!bucket->mab_fvalid);
+
 	for (bindex = 0; bindex < bnum; bindex++) {
 		hidden_dentry = mtfs_d2branch(dentry, bindex);
 		hidden_mnt = mtfs_s2mntbranch(inode->i_sb, bindex);
@@ -144,6 +150,7 @@ static int masycn_bucket_fget(struct masync_bucket *bucket, struct file *file)
 	MRETURN(ret);
 }
 
+/* Called when holding mab_lock */
 static int masycn_bucket_fput(struct masync_bucket *bucket)
 {
 	int ret = 0;
@@ -170,6 +177,8 @@ int masync_bucket_add(struct file *file,
 	struct mtfs_interval *tmp_extent = NULL;
 	struct mtfs_interval *node = NULL;
 	struct mtfs_interval *head = NULL;
+	struct masync_extent *async_extent = NULL;
+	struct masync_extent *tmp_async_extent = NULL;
 	int ret = 0;
 	__u64 min_start = extent->start;
 	__u64 max_end = extent->end;
@@ -177,132 +186,112 @@ int masync_bucket_add(struct file *file,
 	struct masync_bucket *bucket = mtfs_i2bucket(inode);
 	MENTRY();
 
-	MTFS_SLAB_ALLOC_PTR(node, mtfs_interval_cache);
-	if (node == NULL) {
+	MDEBUG("adding [%lu, %lu]\n", extent->start, extent->end);
+
+	async_extent = masync_extent_init(bucket);
+	if (async_extent == NULL) {
 		MERROR("failed to create interval, not enough memory\n");
 		ret = -ENOMEM;
 		goto out;
 	}
+	/* Extent tree increase reference */
+	masync_extent_get(async_extent);
 
-	MDEBUG("adding [%lu, %lu]\n", extent->start, extent->end);
+	node = &async_extent->mae_interval;
 
-	masync_bucket_lock(bucket);
+	down(&bucket->mab_lock);
 	mtfs_interval_search(bucket->mab_root,
 	                     extent,
 	                     masync_overlap_cb,
 	                     &extent_list);
 
-	mtfs_list_for_each_entry_safe(tmp_extent, head, &extent_list, mi_linkage) {
-		MDEBUG("[%lu, %lu] overlaped with [%lu, %lu]\n",
-		       tmp_extent->mi_node.in_extent.start,
-		       tmp_extent->mi_node.in_extent.end,
-		       extent->start, extent->end);
+	mtfs_list_for_each_entry(tmp_extent, &extent_list, mi_linkage) {
 		if (tmp_extent->mi_node.in_extent.start < min_start) {
 			min_start = tmp_extent->mi_node.in_extent.start;
 		}
 		if (tmp_extent->mi_node.in_extent.end > max_end) {
 			max_end = tmp_extent->mi_node.in_extent.end;
 		}
+
+		bucket->mab_number--;
 		mtfs_interval_erase(&tmp_extent->mi_node, &bucket->mab_root);
-		MTFS_SLAB_FREE_PTR(tmp_extent, mtfs_interval_cache);
-		atomic_dec(&bucket->mab_nr);
-		atomic_dec(&bucket->mab_info->msai_nr);
-		atomic_dec(&masync_nr);
 	}
+	bucket->mab_number++;
 	mtfs_interval_set(&node->mi_node, min_start, max_end);
 	mtfs_interval_insert(&node->mi_node, &bucket->mab_root);
-	atomic_inc(&bucket->mab_nr);
-	atomic_inc(&bucket->mab_info->msai_nr);
-	atomic_inc(&masync_nr);
-	MDEBUG("added [%lu, %lu]\n", min_start, max_end);
-	if (mtfs_list_empty(&bucket->mab_linkage)) {
+
+	if (!bucket->mab_fvalid) {
 		masycn_bucket_fget(bucket, file);
-		masync_bucket_add_to_lru(bucket);
-	} else {
-		MASSERT(bucket->mab_fvalid);
-		masync_bucket_touch_in_lru(bucket);
 	}
-	masync_bucket_unlock(bucket);
-	//TODO: remove
-	//masync_service_wakeup();
+	up(&bucket->mab_lock);
+
+	masync_extent_add_to_lru(async_extent);
+
+	/* Can be moved to background */
+	mtfs_list_for_each_entry_safe(tmp_extent, head, &extent_list, mi_linkage) {
+		tmp_async_extent = masync_interval2extent(tmp_extent);
+
+		masync_extent_remove_from_lru(tmp_async_extent);
+
+		/* Extent tree release reference */
+		masync_extent_put(tmp_async_extent);
+	}
 out:
 	MRETURN(ret);
 }
 
-/* Return nr that canceled */
+/* Return extent_number canceled */
 int masync_bucket_cleanup(struct masync_bucket *bucket)
 {
 	struct mtfs_interval *node = NULL;
 	int ret = 0;
-	int nr = 0;
+	int extent_number = 0;
 	int buf_size = MASYNC_BULK_SIZE;
 	char *buf = NULL;
+	struct masync_extent *async_extent = NULL;
 	MENTRY();
 
-	MERROR("cleanup %p\n", bucket);
 	MTFS_ALLOC(buf, buf_size);
 	if (buf == NULL) {
 		MERROR("not enough memory\n");
 	}
 
-	masync_bucket_lock(bucket);
-	nr = atomic_read(&bucket->mab_nr);
+	down(&bucket->mab_lock);
+	extent_number = bucket->mab_number;
 	while (bucket->mab_root) {
 		node = mtfs_node2interval(bucket->mab_root);
 		if (buf != NULL) {
-			ret = masync_sync_file(bucket,
-			                       &node->mi_node.in_extent,
-			                       buf, buf_size);
-			//MASSERT(!ret);
+			if (bucket->mab_fvalid) {
+				ret = masync_sync_file(bucket,
+				                       &node->mi_node.in_extent,
+				                       buf, buf_size);
+				//MASSERT(!ret);
+			}
 		}
+		bucket->mab_number--;
 		mtfs_interval_erase(bucket->mab_root, &bucket->mab_root);
-		MTFS_SLAB_FREE_PTR(node, mtfs_interval_cache);
-		atomic_dec(&bucket->mab_nr);
-		atomic_dec(&bucket->mab_info->msai_nr);
-		atomic_dec(&masync_nr);
-	}
 
-	if (!mtfs_list_empty(&bucket->mab_linkage)) {
-		masycn_bucket_fput(bucket);
-		masync_bucket_remove_from_lru(bucket);
+		/*
+		 * If in LRU list, release it.
+		 * If in cancel list, leave it to cancel thread.
+		 * TODO: move it out of lock
+		 */
+		async_extent = masync_interval2extent(node);
+		masync_extent_remove_from_lru(async_extent);
+
+		/* Extent tree release reference */
+		masync_extent_put(async_extent);
 	}
-	masync_bucket_unlock(bucket);
+	if (bucket->mab_fvalid) {
+		masycn_bucket_fput(bucket);
+	}
+	up(&bucket->mab_lock);
+
+	masync_bucket_remove_from_list(bucket);
 
 	if (buf) {
 		MTFS_FREE(buf, buf_size);
 	}
 
-	MRETURN(nr);
-}
-
-int masync_bucket_cancel(struct masync_bucket *bucket,
-                         char *buf, int buf_len,
-                         int nr_to_cacel)
-{
-	struct mtfs_interval *node = NULL;
-	int nr = 0;
-	int ret = 0;
-	MENTRY();
-
-	while (bucket->mab_root && nr < nr_to_cacel) {
-		node = mtfs_node2interval(bucket->mab_root);
-		ret = masync_sync_file(bucket,
-		                       &node->mi_node.in_extent,
-		                       buf, buf_len);
-		//MASSERT(!ret);
-		mtfs_interval_erase(bucket->mab_root, &bucket->mab_root);
-		MTFS_SLAB_FREE_PTR(node, mtfs_interval_cache);
-		atomic_dec(&bucket->mab_nr);
-		atomic_dec(&bucket->mab_info->msai_nr);
-		atomic_dec(&masync_nr);
-		nr++;
-	}
-	if (bucket->mab_root == NULL) {
-		if (!list_empty(&bucket->mab_linkage)) {
-			masycn_bucket_fput(bucket);
-			masync_bucket_remove_from_lru_nonlock(bucket);
-		}
-	}
-
-	MRETURN(nr);
+	MRETURN(extent_number);
 }

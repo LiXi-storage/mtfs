@@ -8,159 +8,22 @@
 #include <mtfs_device.h>
 #include <mtfs_service.h>
 #include "async_bucket_internal.h"
-static struct msubject_async_info *masync_info; /* TODO: remove */
+#include "async_info_internal.h"
+#include "async_extent_internal.h"
 
-int masync_calculate_all(struct msubject_async_info *info)
-{
-	int ret = 0;
-	MENTRY();
-
-	ret = atomic_read(&info->msai_nr);
-	MASSERT(ret >= 0);
-
-	MRETURN(ret);
-}
-
-/* Return nr that canceled */
-int masync_cancel(struct msubject_async_info *info,
-                  char *buf, int buf_len,
-                  int nr_to_cacel)
-{
-	int ret = 0;
-	struct masync_bucket *bucket = NULL;
-	struct masync_bucket *n = NULL;
-	int canceled = 0;
-	int degraded = 0;
-	MENTRY();
-
-	MASSERT(nr_to_cacel > 0);
-	while (ret < nr_to_cacel) {
-		degraded = 0;
-
-		masync_info_write_lock(info);
-		mtfs_list_for_each_entry_safe(bucket, n, &info->msai_dirty_buckets, mab_linkage) {
-			if (masync_bucket_trylock(bucket) != 0) {
-				/*
-				 * Do not wait, degrade instead to free it next time.
-				 * Not precisely fair, but that is OK.
-				 */
-				masync_bucket_degrade_in_lru_nonlock(bucket);
-				degraded++;
-				MDEBUG("a bucket is too busy to be freed\n");
-				continue;
-			}
-
-			canceled = masync_bucket_cancel(bucket, buf, buf_len, nr_to_cacel - ret);
-			masync_bucket_unlock(bucket);
-			ret += canceled;
-			if (ret >= nr_to_cacel) {
-				break;
-			}
-		}
-		masync_info_write_unlock(info);
-
-		if (ret < nr_to_cacel && degraded == 0) {
-			MERROR("only canceled %d/%d, but none is available\n",
-			       ret, nr_to_cacel);
-			break;
-		}
-	}
-
-	MRETURN(ret);
-}
-
-static int masync_proc_read_dirty(char *page, char **start, off_t off, int count,
-                                  int *eof, void *data)
-{
-	int ret = 0;
-	struct msubject_async_info *async_info = NULL;
-	struct masync_bucket *bucket = NULL;
-	MENTRY();
-
-	*eof = 1;
-
-	async_info = (struct msubject_async_info *)data;
-
-	masync_info_read_lock(async_info);
-	mtfs_list_for_each_entry(bucket, &async_info->msai_dirty_buckets, mab_linkage) {
-		if (ret >= count - 1) {
-			MERROR("not enough memory for proc read\n");
-			break;
-		}
-		ret += snprintf(page + ret, count - ret, "Inode: %p, NR: %d\n",
-		                mtfs_bucket2inode(bucket), atomic_read(&bucket->mab_nr));
-	}
-	masync_info_read_unlock(async_info);
-
-	MRETURN(ret);
-}
-
-static struct mtfs_proc_vars masync_proc_vars[] = {
-	{ "dirty", masync_proc_read_dirty, NULL, NULL },
-	{ 0 }
-};
-
-#define MASYNC_PROC_NAME "async_replica"
-static int masync_info_proc_init(struct msubject_async_info *async_info,
-                          struct super_block *sb)
-{
-	int ret = 0;
-	struct mtfs_device *device = mtfs_s2dev(sb);
-	MENTRY();
-
-	async_info->msai_proc_entry = mtfs_proc_register(MASYNC_PROC_NAME,
-	                                           mtfs_dev2proc(device),
-	                                           masync_proc_vars,
-	                                           async_info);
-	if (unlikely(async_info->msai_proc_entry == NULL)) {
-		MERROR("failed to register proc for async replica\n");
-		ret = -ENOMEM;
-	}
-
-	MRETURN(ret);
-}
-
-static int masync_info_proc_fini(struct msubject_async_info *info,
-                          struct super_block *sb)
-{
-	int ret = 0;
-	MENTRY();
-
-	mtfs_proc_remove(&info->msai_proc_entry);
-
-	MRETURN(ret);
-}
-
-#define MSLEFHEAL_SERVICE_NAME "mtfs_selfheal"
 int masync_super_init(struct super_block *sb)
 {
 	int ret = 0;
 	struct msubject_async_info *info = NULL;
 	MENTRY();
 
-	MTFS_ALLOC_PTR(info);
+	info = masync_info_init(sb);
 	if (info == NULL) {
-		ret = -ENOMEM;
-		MERROR("not enough memory\n");
+		MERROR("failed to init info\n");
 		goto out;
 	}
 
-	MTFS_INIT_LIST_HEAD(&info->msai_dirty_buckets);
-	masync_info_lock_init(info);
-	atomic_set(&info->msai_nr, 0);
-
-	ret = masync_info_proc_init(info, sb);
-	if (ret) {
-		goto out_free_info;
-	}
-
 	mtfs_s2subinfo(sb) = (void *)info;
-
-	/* TODO: remove */
-	masync_info = info;
-	goto out;
-out_free_info:
-	MTFS_FREE_PTR(info);
 out:
 	MRETURN(ret);
 }
@@ -172,11 +35,7 @@ int masync_super_fini(struct super_block *sb)
 	MENTRY();
 
 	info = (struct msubject_async_info *)mtfs_s2subinfo(sb);
-	MASSERT(mtfs_list_empty(&info->msai_dirty_buckets));
-
-	masync_info_proc_fini(info, sb);
-
-	MTFS_FREE_PTR(info);
+	masync_info_fini(info, sb, 0);
 
 	MRETURN(ret);
 }
@@ -216,66 +75,35 @@ struct mtfs_subject_operations masync_subject_ops = {
 };
 EXPORT_SYMBOL(masync_subject_ops);
 
-static mtfs_spinlock_t masync_shrinking_lock; /* Protect masync_shrinking */
-static int masync_shrinking;
-static struct shrinker *masync_shrinker;
-atomic_t masync_nr;
-struct mtfs_service *masync_service;           /* Service that heal the async files */ 
+struct msubject_async the_async;
 
 void masync_service_wakeup(void)
 {
 	MENTRY();
 
-	wake_up(&masync_service->srv_waitq);
+	wake_up(&the_async.msa_service->srv_waitq);
 	_MRETURN();
 }
 
-static int _masync_shrink(int nr_to_scan, unsigned int gfp_mask)
+int masync_service_busy(struct mtfs_service *service, struct mservice_thread *thread)
 {
 	int ret = 0;
+	struct msubject_async *async = (struct msubject_async *)service->srv_data;
 	MENTRY();
 
-	if (nr_to_scan == 0) {
-		goto out_calc;
-	} else if (!(gfp_mask & __GFP_FS)) {
-		ret = -1;
-		goto out;
-	}
-
-	mtfs_spin_lock(&masync_shrinking_lock);
-	masync_shrinking += nr_to_scan;
-	mtfs_spin_unlock(&masync_shrinking_lock);
-	masync_service_wakeup();
-out_calc:
-	ret = (atomic_read(&masync_nr) / 100) * sysctl_vfs_cache_pressure;
-out:
+	mtfs_spin_lock(&async->msa_cancel_lock);
+	ret = !mtfs_list_empty(&async->msa_cancel_extents);
+	mtfs_spin_unlock(&async->msa_cancel_lock);
 	MRETURN(ret);
 }
 
-static int masync_shrink(SHRINKER_ARGS(sc, nr_to_scan, gfp_mask))
+int masync_service_main(struct mtfs_service *service, struct mservice_thread *thread)
 {
-	return _masync_shrink(shrink_param(sc, nr_to_scan),
-                              shrink_param(sc, gfp_mask));
-}
-
-static int masync_service_busy(struct mtfs_service *service, struct mservice_thread *thread)
-{
+	struct msubject_async *async = (struct msubject_async *)service->srv_data;
 	int ret = 0;
-	struct msubject_async_info *info = (struct msubject_async_info *)service->srv_data;
-	MENTRY();
-
-	ret = masync_calculate_all(info);
-	MRETURN(ret);
-}
-
-static int masync_service_main(struct mtfs_service *service, struct mservice_thread *thread)
-{
-	struct msubject_async_info **info = (struct msubject_async_info **)service->srv_data;
-	int ret = 0;
-	int flushing = 0;
-	int flushed = 0;
 	char *buf = NULL;
 	int buf_size = MASYNC_BULK_SIZE;
+	struct masync_extent *async_extent = NULL;
 	MENTRY();
 
 	MTFS_ALLOC(buf, buf_size);
@@ -291,22 +119,20 @@ static int masync_service_main(struct mtfs_service *service, struct mservice_thr
 			break;
 		}
 
-		MASSERT(*info);
-		mtfs_spin_lock(&masync_shrinking_lock);
-		flushing = masync_shrinking;
-		masync_shrinking = 0;
-		mtfs_spin_unlock(&masync_shrinking_lock);
-
-		if (flushing == 0) {
-			/* TODO: try to flush some */
+		mtfs_spin_lock(&async->msa_cancel_lock);
+		if (mtfs_list_empty(&async->msa_cancel_extents)) {
+			mtfs_spin_unlock(&async->msa_cancel_lock);
 			continue;
 		}
+		async_extent = mtfs_list_entry(async->msa_cancel_extents.next,
+	                                       struct masync_extent,
+	                                       mae_cancel_linkage);
+		mtfs_list_del_init(&async_extent->mae_cancel_linkage);
+		mtfs_spin_unlock(&async->msa_cancel_lock);
 
-		flushed = masync_cancel(*info, buf, buf_size, flushing);
-		if (flushed != flushing) {
-			MERROR("try to flush %d, only flushed %d\n",
-			       flushing, flushed);
-		}
+		/* If not in tree, masync_extent_flush() will shikp it */
+		masync_extent_flush(async_extent, buf, buf_size);
+		masync_extent_put(async_extent);
 	}
 
 	MTFS_FREE(buf, buf_size);
@@ -314,27 +140,108 @@ out:
 	MRETURN(ret);
 }
 
+/* Unable to put this to struct msubject_async in some Linux version */
+static struct shrinker *masync_shrinker;
+
+static int _masync_shrink(int nr_to_scan, unsigned int gfp_mask)
+{
+	int ret = 0;
+	int i = 0;
+	struct msubject_async *subject = &the_async;
+	struct msubject_async_info *info = NULL;
+	int total = 0;
+	int cancel = 0;
+	int mine = 0;
+	int total_again = 0;
+	MENTRY();
+
+	if (!(gfp_mask & __GFP_FS)) {
+		ret = -1;
+		goto out;
+	}
+
+	/* Not accurate because of race, but that's ok */
+	for (i = atomic_read(&the_async.msa_info_number);
+	     i > 0; i--) {
+		mtfs_spin_lock(&subject->msa_info_lock);
+		if (mtfs_list_empty(&subject->msa_infos)) {
+			ret = 0;
+			mtfs_spin_unlock(&subject->msa_info_lock);
+			goto out;
+		}
+		info = mtfs_list_entry(subject->msa_infos.next,
+		                       struct msubject_async_info,
+		                       msai_linkage);
+		masync_info_get(info);
+		masync_info_touch_list_nonlock(info);
+		mtfs_spin_unlock(&subject->msa_info_lock);
+
+		total += atomic_read(&info->msai_lru_number);
+		masync_info_put(info);
+	}
+
+	if (nr_to_scan == 0 || total == 0) {
+		ret = total;
+		goto out;
+	}
+
+	/* Not accurate because of race, but that's ok */
+	for (i = atomic_read(&the_async.msa_info_number);
+	     i > 0; i--) {
+		mtfs_spin_lock(&subject->msa_info_lock);
+		if (mtfs_list_empty(&subject->msa_infos)) {
+			ret = 0;
+			mtfs_spin_unlock(&subject->msa_info_lock);
+			goto out;
+		}
+		info = mtfs_list_entry(subject->msa_infos.next,
+		                       struct msubject_async_info,
+		                       msai_linkage);
+		masync_info_get(info);
+		masync_info_touch_list_nonlock(info);
+		mtfs_spin_unlock(&subject->msa_info_lock);
+
+		mine = atomic_read(&info->msai_lru_number);
+		cancel = 1 + nr_to_scan * mine / total;
+		masync_info_shrink(info, cancel);
+		total_again += atomic_read(&info->msai_lru_number);
+		masync_info_put(info);
+	}
+out:
+	MRETURN(ret);
+}
+
+int masync_shrink(SHRINKER_ARGS(sc, nr_to_scan, gfp_mask))
+{
+	return _masync_shrink(shrink_param(sc, nr_to_scan),
+                              shrink_param(sc, gfp_mask));
+}
+
+#define MSLEFHEAL_SERVICE_NAME "mtfs_selfheal"
 static int __init masync_init(void)
 {
 	int ret = 0;
 	MENTRY();
 
-	atomic_set(&masync_nr, 0);
-	mtfs_spin_lock_init(&masync_shrinking_lock);
+	MTFS_INIT_LIST_HEAD(&the_async.msa_cancel_extents);
+	mtfs_spin_lock_init(&the_async.msa_cancel_lock);
+	MTFS_INIT_LIST_HEAD(&the_async.msa_infos);
+	mtfs_spin_lock_init(&the_async.msa_info_lock);
+	atomic_set(&the_async.msa_info_number, 0);
+	the_async.msa_service = mservice_init(MSLEFHEAL_SERVICE_NAME,
+	                                      MSLEFHEAL_SERVICE_NAME,
+	                                      1, 1,
+	                                      0, masync_service_main,
+	                                      masync_service_busy,
+	                                      &the_async);
 
-	masync_service = mservice_init(MSLEFHEAL_SERVICE_NAME,
-	                               MSLEFHEAL_SERVICE_NAME,
-	                               1, 1,
-	                               0, masync_service_main,
-	                               masync_service_busy,
-	                               &masync_info);
-	if (masync_service == NULL) {
+	if (the_async.msa_service == NULL) {
 		ret = -ENOMEM;
 		MERROR("failed to init service\n");
 		goto out;
 	}
 
-	ret = mservice_start_threads(masync_service);
+	ret = mservice_start_threads(the_async.msa_service);
         if (ret) {
         	MERROR("failed to start theads\n");
         	goto out_free_service;
@@ -343,7 +250,7 @@ static int __init masync_init(void)
 	masync_shrinker = mtfs_set_shrinker(DEFAULT_SEEKS, masync_shrink);
 	goto out;
 out_free_service:
-	mservice_fini(masync_service);
+	mservice_fini(the_async.msa_service);
 out:
 	MRETURN(ret);
 }
@@ -352,9 +259,11 @@ static void __exit masync_exit(void)
 {
 	MENTRY();
 
-	MASSERT(atomic_read(&masync_nr) == 0);
+	MASSERT(mtfs_list_empty(&the_async.msa_cancel_extents));
+	MASSERT(mtfs_list_empty(&the_async.msa_infos));
+	MASSERT(atomic_read(&the_async.msa_info_number) == 0);
 
-	mservice_fini(masync_service);
+	mservice_fini(the_async.msa_service);
 	mtfs_remove_shrinker(masync_shrinker);
 	_MRETURN();
 }
