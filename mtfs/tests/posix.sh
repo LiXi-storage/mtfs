@@ -7,7 +7,7 @@ BUG_242="32 32a 32b 32s 37"
 BUG_304="212 54c"
 LOWERFS_BUG_305="34b 34c"
 BUG_318="39k"
-EXCEPT_SLOW="24v 51a 51b 51c 501"
+EXCEPT_SLOW="24v 51a 51b 51c 501 502"
 
 export CONFIGS=${CONFIGS:-local}
 . $TESTS_DIR/cfg/$CONFIGS.sh
@@ -2447,7 +2447,7 @@ test_502() {
 	$SKIPWRITE_MANY $DIR/$tfile
 }
 leak_detect_state_push "no"
-run_test 502 "append many ================================================"
+run_test 502 "skipwrite many ================================================"
 leak_detect_state_pop
 
 cleanup_all
