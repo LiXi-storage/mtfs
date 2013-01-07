@@ -41,13 +41,13 @@ void usage(FILE *out)
 	        "\t<mountpt>: filesystem mountpoint (e.g. /mnt/mtfs)\n"
 	        "\t-f|--fake: fake mount (updates /etc/mtab)\n"
 	        "\t-o force|--force: force mount even if already in /etc/mtab\n"
-	        "\t-o checksum: check branch consistency when read\n"
-	        "\t-o noabort: do not abort when no latest branch success\n"
 	        "\t-h|--help: print this usage message\n"
 	        "\t-n|--nomtab: do not update /etc/mtab after mount\n"
 	        "\t-v|--verbose: print verbose config settings\n"
 	        "\t<mntopt>: one or more comma separated of:\n"
 	        "\t\tsubject=<name>: subject name\n"
+	        "\t\tchecksum: check branch consistency when read\n"
+	        "\t\tnoabort: do not abort when no latest branch success\n"
 	);
 }
 
