@@ -7,5 +7,5 @@
 /autoMakefile.in
 /Makefile
 /modules.order
-/mtfs_subject_sync_replica.ko.unsigned
+/mtfs_subject_trace.ko.unsigned
 

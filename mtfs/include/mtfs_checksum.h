@@ -104,7 +104,7 @@ static inline __u32 crc32c_hw(__u32 crc, unsigned char const *p, size_t len)
  * support this instruction in the SSE4.2 feature set. b=23549  */
 static inline __u32 crc32c_hw(__u32 crc, unsigned char const *p,size_t len)
 {
-        LBUG();
+        MBUG();
 }
 #endif /* !X86_FEATURE_XMM4_2 */
 

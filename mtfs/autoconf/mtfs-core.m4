@@ -666,6 +666,7 @@ AC_DEFUN([LC_FUNC_DUMP_TRACE],
 		struct task_struct;
 		struct pt_regs;
 		#include <asm/stacktrace.h>
+		#include <linux/stddef.h>
 	],[
 		dump_trace(NULL, NULL, NULL, 0, NULL, NULL);
 	],[
@@ -695,6 +696,34 @@ AC_DEFINE(HAVE_SHOW_TASK, 1, [show_task is exported])
 	[kernel/ksyms.c kernel/sched.c],[
 	AC_DEFINE(HAVE_SCHED_SHOW_TASK, 1, [sched_show_task is exported])
 	],[])
+])
+])
+
+#
+# LC_STACKTRACE_OPS_HAVE_WALK_STACK
+#
+# 2.6.32-30.el6 adds a new 'walk_stack' field in 'struct stacktrace_ops'
+#
+AC_DEFUN([LC_STACKTRACE_OPS_HAVE_WALK_STACK],
+[AC_MSG_CHECKING([if 'struct stacktrace_ops' has 'walk_stack' field])
+LB_LINUX_TRY_COMPILE([
+	#include <asm/stacktrace.h>
+	unsigned long walkstack(struct thread_info *tinfo,
+	                        unsigned long *stack,
+	                        unsigned long bp,
+	                        const struct stacktrace_ops *ops,
+	                        void *data,
+	                        unsigned long *end,
+	                        int *graph);
+],[
+	struct stacktrace_ops ops;
+
+	ops.walk_stack = walkstack;
+],[
+	AC_MSG_RESULT([yes])
+	AC_DEFINE(STACKTRACE_OPS_HAVE_WALK_STACK, 1, ['struct stacktrace_ops' has 'walk_stack' field])
+],[
+	AC_MSG_RESULT([no])
 ])
 ])
 
@@ -738,6 +767,7 @@ AC_DEFUN([LC_PROG_LINUX],
 	LC_ADD_WAIT_QUEUE_EXCLUSIVE
 	LC_FUNC_DUMP_TRACE
 	LC_FUNC_SHOW_TASK
+	LC_STACKTRACE_OPS_HAVE_WALK_STACK
 ])
 
 #

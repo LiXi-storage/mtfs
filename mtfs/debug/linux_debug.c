@@ -7,6 +7,58 @@
 #include <linux/hardirq.h>
 #include "debug.h"
 
+#ifdef HAVE_DUMP_TRACE
+#include <linux/nmi.h>
+#include <asm/stacktrace.h>
+#include <linux/kallsyms.h>
+
+static void
+print_trace_warning_symbol(void *data, char *msg, unsigned long symbol)
+{
+	printk("%s", (char *)data);
+	print_symbol(msg, symbol);
+	printk("\n");
+}
+
+static void print_trace_warning(void *data, char *msg)
+{
+	printk("%s%s\n", (char *)data, msg);
+}
+
+static int print_trace_stack(void *data, char *name)
+{
+	printk(" <%s> ", name);
+	return 0;
+}
+
+#ifdef HAVE_TRACE_ADDRESS_RELIABLE
+# define RELIABLE reliable
+# define DUMP_TRACE_CONST const
+static void print_trace_address(void *data, unsigned long addr, int reliable)
+#else /* !HAVE_TRACE_ADDRESS_RELIABLE */
+/* before 2.6.24 there was no reliable arg */
+# define RELIABLE 1
+# define DUMP_TRACE_CONST
+static void print_trace_address(void *data, unsigned long addr)
+#endif /* !HAVE_TRACE_ADDRESS_RELIABLE */
+{
+        char fmt[32];
+	touch_nmi_watchdog();
+        sprintf(fmt, " [<%016lx>] %s%%s\n", addr, RELIABLE ? "": "? ");
+	__print_symbol(fmt, addr);
+}
+
+static DUMP_TRACE_CONST struct stacktrace_ops print_trace_ops = {
+	.warning = print_trace_warning,
+	.warning_symbol = print_trace_warning_symbol,
+	.stack = print_trace_stack,
+	.address = print_trace_address,
+#ifdef STACKTRACE_OPS_HAVE_WALK_STACK
+	.walk_stack = print_context_stack,
+#endif /* STACKTRACE_OPS_HAVE_WALK_STACK */
+};
+#endif /* HAVE_DUMP_TRACE */
+
 static void mtfs_debug_dumpstack(struct task_struct *tsk)
 {
 #ifdef HAVE_DUMP_TRACE
@@ -24,7 +76,7 @@ static void mtfs_debug_dumpstack(struct task_struct *tsk)
 #endif /* HAVE_DUMP_TRACE_ADDRESS */
 	           &print_trace_ops, NULL);
 	printk("\n");
-#elif defined(HAVE_SHOW_TASK)
+#elif defined(HAVE_SHOW_TASK) /* !HAVE_DUMP_TRACE */
 	/* this is exported by kernel */
         extern void show_task(struct task_struct *);
 
@@ -33,13 +85,13 @@ static void mtfs_debug_dumpstack(struct task_struct *tsk)
 	}
         MWARN("showing stack for process %d\n", tsk->pid);
         show_task(tsk);
-#else
+#else /* !HAVE_SHOW_TASK && !HAVE_DUMP_TRACE */
         if ((tsk == NULL) || (tsk == current)) {
                 dump_stack();
 	} else {
                 MWARN("can't show stack: kernel doesn't export show_task\n");
 	}
-#endif
+#endif /* !HAVE_SHOW_TASK && !HAVE_DUMP_TRACE */
 }
 
 void mbug(void)

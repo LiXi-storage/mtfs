@@ -6,4 +6,4 @@
 /autoMakefile.in
 /Makefile
 /modules.order
-/mtfs_trace_ext2.ko.unsigned
+/mtfs_junction_trace_ext2.ko.unsigned

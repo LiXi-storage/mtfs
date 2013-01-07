@@ -6,4 +6,4 @@
 /autoMakefile.in
 /Makefile
 /modules.order
-/mtfs_sync_replica_tmpfs.ko.unsigned
+/mtfs_junction_sync_replica_tmpfs.ko.unsigned
