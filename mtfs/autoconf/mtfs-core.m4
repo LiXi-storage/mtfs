@@ -487,6 +487,15 @@ LB_LINUX_TRY_COMPILE([
 ])
 ])
 
+# 2.6.30 x86 node_to_cpumask has been removed. must use cpumask_of_node
+AC_DEFUN([LC_EXPORT_CPUMASK_OF_NODE],
+	[LB_CHECK_SYMBOL_EXPORT([node_to_cpumask_map],
+		[arch/$LINUX_ARCH/mm/numa.c],
+		[AC_DEFINE(HAVE_CPUMASK_OF_NODE, 1,
+			[node_to_cpumask_map is exported by
+			 the kernel])]) # x86_64
+])
+
 # The actual symbol exported varies among architectures, so we need
 # to check many symbols (but only in the current architecture.)  No
 # matter what symbol is exported, the kernel #defines node_to_cpumask
@@ -496,17 +505,17 @@ AC_DEFUN([LC_EXPORT_NODE_TO_CPUMASK],
 	[arch/$LINUX_ARCH/mm/numa.c],
 	[AC_DEFINE(HAVE_NODE_TO_CPUMASK, 1,
 		[node_to_cpumask is exported by
-		the kernel])]) # x86_64
+		 the kernel])]) # x86_64
 LB_CHECK_SYMBOL_EXPORT([node_to_cpu_mask],
 	[arch/$LINUX_ARCH/kernel/smpboot.c],
 	[AC_DEFINE(HAVE_NODE_TO_CPUMASK, 1,
 		[node_to_cpumask is exported by
-			the kernel])]) # ia64
+		 the kernel])]) # ia64
 LB_CHECK_SYMBOL_EXPORT([node_2_cpu_mask],
 	[arch/$LINUX_ARCH/kernel/smpboot.c],
 	[AC_DEFINE(HAVE_NODE_TO_CPUMASK, 1,
 		[node_to_cpumask is exported by
-			the kernel])]) # i386
+		 the kernel])]) # i386
 ])
 
 #
@@ -642,6 +651,7 @@ AC_DEFUN([LC_PROG_LINUX],
 	LC_HAVE_OOM_H
 	LC_OOMADJ_IN_SIG
 	LC_SET_CPUS_ALLOWED
+	LC_EXPORT_CPUMASK_OF_NODE
 	LC_EXPORT_NODE_TO_CPUMASK
 	LC_FUNC_UNSHARE_FS_STRUCT
 	LC_REGISTER_SHRINKER

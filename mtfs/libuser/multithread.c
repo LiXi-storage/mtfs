@@ -4,7 +4,6 @@
 
 #include <debug.h>
 #include <multithread.h>
-#include <cfg.h>
 #include <pthread.h>
 #include <stdlib.h>
 #include <string.h>

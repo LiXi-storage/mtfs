@@ -9,10 +9,10 @@
 #include "tracefile.h"
 #include "proc_internal.h"
 
-atomic64_t mtfs_kmemory_used = {0};
+atomic_t mtfs_kmemory_used = {0};
 EXPORT_SYMBOL(mtfs_kmemory_used);
 
-atomic64_t mtfs_kmemory_used_max = {0};
+atomic_t mtfs_kmemory_used_max = {0};
 EXPORT_SYMBOL(mtfs_kmemory_used_max);
 
 int

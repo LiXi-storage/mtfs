@@ -19,8 +19,6 @@ if [ ! -x "$command" ]; then
 	exit
 fi
 
-echo "command = $command"
-
 VALGRIND_DIR=${VALGRIND_DIR:-/tmp}
 if [ ! -d "${VALGRIND_DIR}" ]; then
 	mkdir -p "${VALGRIND_DIR}"

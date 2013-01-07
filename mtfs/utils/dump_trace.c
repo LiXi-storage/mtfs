@@ -41,7 +41,7 @@ void mtrace_dump(struct mtfs_io_trace *trace)
 	MPRINT("len = %d\n", trace->head.mrh_len);
 	MPRINT("sequence = %llu\n", trace->head.mrh_sequence);
 	MPRINT("type = %d\n", trace->type);
-	MPRINT("result = %d:%p:%ld\n", trace->result.ret,
+	MPRINT("result = %d:%p:%zd\n", trace->result.ret,
 	       trace->result.ptr,
 	       trace->result.ssize);
 	MPRINT("start = %lu.%06lu\n",
@@ -101,7 +101,7 @@ int dump_trace(char *source)
 
 	if (size != 0) {
 		ret = -1;
-		MERROR("failed to read file %s, ret = %ld\n", trace_file_path, size);
+		MERROR("failed to read file %s, ret = %zd\n", trace_file_path, size);
 	}
 	
 //out_close_file:

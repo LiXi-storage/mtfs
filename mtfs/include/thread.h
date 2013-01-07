@@ -194,10 +194,10 @@ static inline void mtfs_pause(signed long timeout)
 #define mtfs_set_cpus_allowed(task, mask)  set_cpus_allowed_ptr(task, &(mask))
 #endif
 
-#ifndef HAVE_NODE_TO_CPUMASK
+#if !defined(HAVE_NODE_TO_CPUMASK) && defined(HAVE_CPUMASK_OF_NODE)
 #define node_to_cpumask(i)         (*(cpumask_of_node(i)))
+#define HAVE_NODE_TO_CPUMASK
 #endif
-
 
 static inline long mtfs_time_seconds(int seconds)
 {

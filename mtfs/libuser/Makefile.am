@@ -30,7 +30,7 @@ install-exec-hook:
 endif #!LIBMTFS
 
 libuser_a_SOURCES = 
-libuser_local_a_SOURCES = parser.c cmd_parser.c log.c multithread.c cfg.c
+libuser_local_a_SOURCES = parser.c cmd_parser.c log.c multithread.c
 
 libuser.a : $(USER_LIBS)
 	sh $(srcdir)/genlib.sh

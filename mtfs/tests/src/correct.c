@@ -95,7 +95,7 @@ int dump_block(block_t *block)
 {
 	int i = 0;
 	
-	MPRINT("block_size: %lu\n", block->block_size);
+	MPRINT("block_size: %zd\n", block->block_size);
 	for(i = 0; i < block->block_size; i++) {
 		MPRINT("%02X", (uint8_t)(block->data[i]));
 	}
@@ -176,7 +176,7 @@ int rw_test_run(block_t *orgin_block, block_t *dest_block, rw_test_info_t *rw_in
 
 	size = write(rw_info->fd, orgin_block->data, block_size);
 	if (size != block_size) {
-		MERROR("Failed to write file %s: writed %ld expect %ld\n", rw_info->file_path, size, block_size);
+		MERROR("Failed to write file %s: writed %zd expect %zd\n", rw_info->file_path, size, block_size);
 		ret = -1;
 		goto out;
 	}
@@ -190,7 +190,7 @@ int rw_test_run(block_t *orgin_block, block_t *dest_block, rw_test_info_t *rw_in
 
 	size = read(rw_info->fd, dest_block->data, block_size);
 	if (size != block_size) {
-		MERROR("Failed to read file %s: read %ld expect %ld\n", rw_info->file_path, size, block_size);
+		MERROR("Failed to read file %s: read %zd expect %zd\n", rw_info->file_path, size, block_size);
 		ret = -1;
 		goto out;
 	}

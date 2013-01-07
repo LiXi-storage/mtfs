@@ -68,6 +68,9 @@ EXPORT_SYMBOL(mtfs_debug_file_path);
 unsigned int mtfs_debug_binary = 1;
 EXPORT_SYMBOL(mtfs_debug_binary);
 
+unsigned int mtfs_stack = 3 * THREAD_SIZE / 4;
+EXPORT_SYMBOL(mtfs_stack);
+
 int mtfs_panic_in_progress;
 
 unsigned int mtfs_catastrophe;
@@ -424,8 +427,8 @@ static int __init mtfs_debug_module_init(void)
 {
 	int ret = 0;
 
-	atomic64_set(&mtfs_kmemory_used, 0);
-	atomic64_set(&mtfs_kmemory_used_max, 0);
+	atomic_set(&mtfs_kmemory_used, 0);
+	atomic_set(&mtfs_kmemory_used_max, 0);
 
 	ret = mtfs_debug_init(5 * 1024 * 1024);
 	if (ret) {
@@ -457,7 +460,7 @@ static void __exit mtfs_debug_module_exit(void)
 	mtfs_table_header = NULL;
 #endif
 	mtfs_debug_cleanup();
-	MASSERT(atomic64_read(&mtfs_kmemory_used) == 0);
+	MASSERT(atomic_read(&mtfs_kmemory_used) == 0);
 }
 
 MODULE_AUTHOR("MulTi File System Development Workgroup");

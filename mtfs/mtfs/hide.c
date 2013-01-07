@@ -7,7 +7,7 @@
 #include <debug.h>
 #include <mtfs_common.h>
 
-#define MTFS_HIDDEN_SUPER_MAGIC 0xbadc0ffee
+#define MTFS_HIDDEN_SUPER_MAGIC 0x00c0ffee
 
 static void mtfs_hideen_put_super(struct super_block *sb)
 {

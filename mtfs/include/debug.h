@@ -8,6 +8,7 @@
 #if defined (__linux__) && defined(__KERNEL__)
 #include <linux/types.h>
 #include <linux/limits.h>
+#include <linux/sched.h> /* THREAD_SIZE */
 
 extern int mtfs_debug_init(unsigned long bufsize);
 extern int mtfs_debug_cleanup(void);

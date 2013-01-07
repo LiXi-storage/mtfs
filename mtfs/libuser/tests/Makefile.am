@@ -12,7 +12,7 @@ if LIBMTFS_TESTS
 noinst_PROGRAMS = err2str
 
 noinst_PROGRAMS += test_rule_tree test_branch_bitmap
-noinst_PROGRAMS += test_parse_option test_cfg
+noinst_PROGRAMS += test_parse_option
 noinst_PROGRAMS += test_interval_tree test_mlock
 noinst_PROGRAMS += test_mlowerfs_bucket
 noinst_PROGRAMS += test_mlowerfs_bucket_random
@@ -32,11 +32,6 @@ test_parse_option_SOURCES = test_parse_option.c
 test_parse_option_CFLAGS = $(LL_CFLAGS)
 test_parse_option_LDADD := $(LIBMTFS_LIBS)
 test_parse_option_DEPENDENCIES := $(LIBMTFS_LIBS)
-
-test_cfg_SOURCES = test_cfg.c
-test_cfg_CFLAGS = $(LL_CFLAGS)
-test_cfg_LDADD := $(LIBMTFS_LIBS)
-test_cfg_DEPENDENCIES := $(LIBMTFS_LIBS)
 
 test_interval_tree_SOURCES = test_interval_tree.c
 test_interval_tree_CFLAGS = $(LL_CFLAGS)

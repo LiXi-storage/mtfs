@@ -28,7 +28,7 @@ int branch_fd[MAX_BNUM];
 char *path;
 int fd;
 
-static inline block_t *alloc_block(int block_size)
+static inline block_t *alloc_block(size_t block_size)
 {
 	block_t *block = NULL;
 	
@@ -108,7 +108,7 @@ int dump_block(block_t *block)
 {
 	int i = 0;
 
-	MPRINT("block_size: %lu\n", block->block_size);
+	MPRINT("block_size: %zd\n", block->block_size);
 	for(i = 0; i < block->block_size; i++) {
 		MPRINT("%02X", (uint8_t)(block->data[i]));
 	}
@@ -143,7 +143,7 @@ void *write_little_proc(thread_info_t *thread_info)
 	size_t count = 0;
 	block_t *block = NULL;
 	off_t offset = 0;
-	off_t writed = 0;
+	ssize_t writed = 0;
 	int ret = 0;
 
 	ret = prctl(PR_SET_NAME, thread_info->identifier, 0, 0, 0);
@@ -154,7 +154,7 @@ void *write_little_proc(thread_info_t *thread_info)
 
 	block = alloc_block(block_size);
 	if (block == NULL) {
-		MERROR("Not enough memory\n");
+		MERROR("not enough memory\n");
 		goto out;
 	}
 
@@ -164,15 +164,15 @@ void *write_little_proc(thread_info_t *thread_info)
 		{
 			count = block_size;
 			offset = random_get_offset();
-			MPRINT("writing %ld at %ld\n", count, offset);
+			MPRINT("writing %zd at %lu\n", count, offset);
 			writed = pwrite(fd, block->data, count, offset);
 			if (writed != count) {
 				MERROR("failed to write, "
-				       "expected %ld, got %ld\n", 
+				       "expected %zd, got %zd\n", 
 				       count, writed);
 				exit(0);
 			}
-			MPRINT("writed %ld at %ld\n", writed, offset);
+			MPRINT("writed %zd at %lu\n", writed, offset);
 		}
 		pthread_rwlock_unlock(&rwlock);
 		sleep_random();
@@ -200,7 +200,7 @@ void *write_proc(thread_info_t *thread_info)
 
 	block = alloc_block(block_size);
 	if (block == NULL) {
-		MERROR("Not enough memory\n");
+		MERROR("not enough memory\n");
 		goto out;
 	}
 
@@ -210,15 +210,15 @@ void *write_proc(thread_info_t *thread_info)
 		{
 			count = block_size;
 			offset = 0;
-			MPRINT("writing %ld at %ld\n", count, offset);
+			MPRINT("writing %zd at %lu\n", count, offset);
 			writed = pwrite(fd, block->data, count, offset);
 			if (writed != count) {
 				MERROR("failed to write, "
-				       "expected %ld, got %ld\n", 
+				       "expected %zd, got %lu\n", 
 				       count, writed);
 				exit(0);
 			}
-			MPRINT("writed %ld at %ld\n", writed, offset);
+			MPRINT("writed %lu at %lu\n", writed, offset);
 			begin = 0;
 		}
 		pthread_rwlock_unlock(&rwlock);

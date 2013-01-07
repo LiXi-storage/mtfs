@@ -13,8 +13,8 @@
 #ifdef MEMORY_DEBUG
 #include <asm/atomic.h>
 
-extern atomic64_t mtfs_kmemory_used;
-extern atomic64_t mtfs_kmemory_used_max;
+extern atomic_t mtfs_kmemory_used;
+extern atomic_t mtfs_kmemory_used_max;
 
 /*
  * mtfs_kmemory_used_max may be not accurate 
@@ -22,17 +22,17 @@ extern atomic64_t mtfs_kmemory_used_max;
  */
 #define mtfs_kmem_inc(ptr, size)                                              \
 do {                                                                          \
-    __u64 used = atomic64_read(&mtfs_kmemory_used);                           \
-    atomic64_add(size, &mtfs_kmemory_used);                                   \
+    int used = atomic_read(&mtfs_kmemory_used);                               \
+    atomic_add(size, &mtfs_kmemory_used);                                     \
     used += size;                                                             \
-    if (used > atomic64_read(&mtfs_kmemory_used_max)) {                       \
-        atomic64_set(&mtfs_kmemory_used_max, used);                           \
+    if (used > atomic_read(&mtfs_kmemory_used_max)) {                         \
+        atomic_set(&mtfs_kmemory_used_max, used);                             \
     }                                                                         \
 } while (0)
 
 #define mtfs_kmem_dec(ptr, size)                                              \
 do {                                                                          \
-    atomic64_sub(size, &mtfs_kmemory_used);                                   \
+    atomic_sub(size, &mtfs_kmemory_used);                                     \
 } while (0)
 #else /* !MEMORY_DEBUG */
 #define mtfs_kmem_inc(ptr, size) do {} while (0)

@@ -69,7 +69,7 @@ int main(int argc, char *argv[])
         int rc;
         char *buf;
         char cmd[1024];
-        loff_t pos;
+        off_t pos;
 
         if (argc < 3) {
                 fprintf(stderr, "%s <source file> <dest file>\n", argv[0]);
