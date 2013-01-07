@@ -6,6 +6,7 @@
 #include <mtfs_common.h>
 #include <mtfs_device.h>
 #include <mtfs_oplist.h>
+#include <mtfs_checksum.h>
 #include "file_internal.h"
 #include "io_internal.h"
 #include "inode_internal.h"
@@ -224,18 +225,14 @@ void mio_iter_start_rw_nonoplist(struct mtfs_io *io)
 }
 EXPORT_SYMBOL(mio_iter_start_rw_nonoplist);
 
-static inline mtfs_bindex_t mio_bindex(struct mtfs_io *io)
-{
-	if (io->mi_oplist.inited) {
-		return io->mi_oplist.op_binfo[io->mi_bindex].bindex;
-	}
-	return io->mi_bindex;
-}
-
 void mio_iter_fini_read_ops(struct mtfs_io *io, int init_ret)
 {
 	struct inode *inode = NULL;
 	MENTRY();
+
+	inode = io->mi_oplist_dentry != NULL ?
+	        io->mi_oplist_dentry->d_inode :
+	        io->mi_oplist_inode;
 
 	if (unlikely(init_ret)) {
 		if (io->mi_bindex == io->mi_oplist.latest_bnum - 1) {
@@ -247,17 +244,15 @@ void mio_iter_fini_read_ops(struct mtfs_io *io, int init_ret)
 		goto out;
 	}
 
-	if (io->mi_successful) {
+	if (io->mi_successful && !mtfs_dev2checksum(mtfs_i2dev(inode))) {
 		io->mi_break = 1;
 		goto out;
 	}
 
 	if (io->mi_bindex == io->mi_oplist.latest_bnum - 1) {
-		inode = io->mi_oplist_dentry != NULL ?
-		        io->mi_oplist_dentry->d_inode :
-		        io->mi_oplist_inode;
 		if (!mtfs_dev2noabort(mtfs_i2dev(inode))) {
 			io->mi_break = 1;
+			goto out;
 		}
 	}
 
@@ -777,6 +772,91 @@ void mio_iter_start_readpage(struct mtfs_io *io)
 	_MRETURN();
 }
 EXPORT_SYMBOL(mio_iter_start_readpage);
+
+__u32 mio_iov_chechsum(const struct iovec *iov,
+                     unsigned long nr_segs,
+                     size_t size,
+                     mchecksum_type_t type)
+{
+	__u32 tmp_checksum = 0;
+	unsigned long tmp_seg = 0;
+	size_t tmp_total = 0;
+	size_t tmp_len = 0;
+	const struct iovec *tmp_iov = NULL;
+	MENTRY();
+
+	tmp_checksum = mchecksum_init(type);
+	for (tmp_seg = 0; tmp_seg < nr_segs; tmp_seg++) {
+		tmp_iov = &iov[tmp_seg];
+		MASSERT(tmp_iov->iov_len >= 0);
+		if (tmp_total + tmp_iov->iov_len > size) {
+			tmp_len = size - tmp_total;
+		} else {
+			tmp_len = tmp_iov->iov_len;
+		}
+
+		if (tmp_len > 0) {
+			tmp_checksum = mchecksum_compute(tmp_checksum,
+			                                 tmp_iov->iov_base,
+			                                 tmp_len,
+			                                 type);
+		}
+ 		tmp_total += tmp_iov->iov_len;
+ 		if (tmp_total >= size) {
+ 			break;
+ 		}
+	}
+
+	MRETURN(tmp_checksum);
+}
+
+void mio_iter_check_readv(struct mtfs_io *io)
+{
+	struct mtfs_io_rw *io_rw = &io->u.mi_rw;
+	struct file *file = io_rw->file;
+	mtfs_bindex_t global_bindex = mio_bindex(io);
+	struct mtfs_io_checksum *checksum = &io->subject.mi_checksum;
+	__u32 tmp_checksum = 0;
+	MENTRY();
+
+	if (io->mi_successful && mtfs_dev2checksum(mtfs_f2dev(file))) {
+		if (checksum->gather.valid) {
+			if (checksum->gather.ssize != io->mi_result.ssize) {
+				MERROR("read size of branch[%d] is different, "
+				       "expected %lld, got %lld\n",
+				       global_bindex,
+				       checksum->gather.ssize,
+				       io->mi_result.ssize);
+				MBUG();
+			}
+		}
+
+		tmp_checksum = mio_iov_chechsum(io_rw->iov,
+		                                io_rw->nr_segs,
+		                                io->mi_result.ssize,
+		                                checksum->type);
+		if (checksum->gather.valid) {
+			if (checksum->gather.checksum != tmp_checksum) {
+				MERROR("content of branch[%d] is different, "
+				       "expected 0x%x, got 0x%x\n",
+				       global_bindex,
+				       checksum->gather.checksum,
+				       tmp_checksum);
+				MBUG();
+			}
+		} else {
+			checksum->gather.valid = 1;
+			checksum->gather.ssize = io->mi_result.ssize;
+			checksum->gather.checksum = tmp_checksum;
+		}
+		checksum->branch[global_bindex].valid = 1;
+		checksum->branch[global_bindex].ssize = io->mi_result.ssize;
+		checksum->branch[global_bindex].checksum = tmp_checksum;
+	}
+
+	_MRETURN();
+}
+EXPORT_SYMBOL(mio_iter_check_readv);
 
 static int mtfs_io_init(struct mtfs_io *io)
 {

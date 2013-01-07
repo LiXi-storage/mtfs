@@ -2,10 +2,15 @@
  * Copyright (C) 2011 Li Xi <pkuelelixi@gmail.com>
  */
 
-#include <cmd_parser.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <errno.h>
 #include <stdio.h>
-#include "libmtfsapi.h"
 #include <getopt.h>
+#include <cmd_parser.h>
+#include "libmtfsapi.h"
+#include "mtfs_debug.h"
 
 int mtfsctl_get_version(int argc, char **argv)
 {
@@ -31,6 +36,7 @@ static int mtfsctl_ignore_errors(int argc, char **argv)
 }
 
 static int mtfsctl_debug_kernel(int argc, char **argv);
+static int mtfsctl_debug_file(int argc, char **argv);
 
 command_t mtfsctl_cmdlist[] = {
 	/* Metacommands */
@@ -52,8 +58,51 @@ command_t mtfsctl_cmdlist[] = {
 	{"debug_kernel", mtfsctl_debug_kernel, 0,
 	"get debug buffer and dump to a file\n"
 	"usage: debug_kernel [file]"},
+        {"debug_file", mtfsctl_debug_file, 0,
+         "convert a binary debug file dumped by the kernel to ASCII text\n"
+         "usage: debug_file <input> [output]"},
 	{ 0, 0, 0, NULL }
 };
+
+int mtfsctl_debug_file(int argc, char **argv)
+{
+	int    fdin;
+	int    fdout;
+	int    rc;
+
+	if (argc > 3 || argc < 2) {
+		fprintf(stderr, "usage: %s <input> [output]\n", argv[0]);
+		return 0;
+	}
+
+	fdin = open(argv[1], O_RDONLY | O_LARGEFILE);
+	if (fdin < 0) {
+		fprintf(stderr, "open(%s) failed: %s\n", argv[1],
+			strerror(errno));
+		return 1;
+	}
+	if (argc > 2) {
+		fdout = open(argv[2],
+		             O_CREAT | O_TRUNC | O_WRONLY | O_LARGEFILE,
+		             0600);
+		if (fdout < 0) {
+			fprintf(stderr, "open(%s) failed: %s\n", argv[2],
+			        strerror(errno));
+			close(fdin);
+			return 1;
+		}
+	} else {
+		fdout = fileno(stdout);
+	}
+
+	rc = parse_buffer(fdin, fdout);
+
+	close(fdin);
+	if (fdout != fileno(stdout))
+		close(fdout);
+
+	return rc;
+}
 
 int mtfsctl_debug_kernel(int argc, char **argv)
 {

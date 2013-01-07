@@ -63,6 +63,6 @@ endif #LIBMTFS_TESTS
 noinst_DATA = 
 noinst_SCRIPTS =
 EXTRA_DIST = run.sh misc.sh
-EXTRA_DIST += branch_bitmap cfg interval_tree manage
+EXTRA_DIST += branch_bitmap interval_tree manage
 EXTRA_DIST += mchecksum mlowerfs_bucket mlowerfs_bucket_random
 EXTRA_DIST += parse_option rule_tree

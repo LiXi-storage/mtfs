@@ -27,6 +27,7 @@ static struct mtfs_device *mtfs_device_alloc(struct mount_option *mount_option)
 	}
 
 	mtfs_dev2bnum(device) = bnum;
+	mtfs_dev2flags(device) = mount_option->mo_flags;
 
 	for(bindex = 0; bindex < bnum; bindex++) {
 		int length = mount_option->branch[bindex].length;
@@ -162,7 +163,7 @@ static int _mtfs_register_device(struct mtfs_device *device)
 }
 
 int mtfs_device_proc_read_name(char *page, char **start, off_t off, int count,
-                              int *eof, void *data)
+                               int *eof, void *data)
 {
 	int ret = 0;
 	struct mtfs_device *device = (struct mtfs_device *)data;
@@ -173,7 +174,7 @@ int mtfs_device_proc_read_name(char *page, char **start, off_t off, int count,
 }
 
 int mtfs_device_proc_read_bnum(char *page, char **start, off_t off, int count,
-                              int *eof, void *data)
+                               int *eof, void *data)
 {
 	int ret = 0;
 	struct mtfs_device *device = (struct mtfs_device *)data;
@@ -183,21 +184,33 @@ int mtfs_device_proc_read_bnum(char *page, char **start, off_t off, int count,
 	return ret;
 }
 
-int mtfs_device_proc_read_noabort(char *page, char **start, off_t off, int count,
-                              int *eof, void *data)
+int mtfs_device_proc_read_checksum(char *page, char **start, off_t off, int count,
+                                   int *eof, void *data)
 {
 	int ret = 0;
 	struct mtfs_device *device = (struct mtfs_device *)data;
 
 	*eof = 1;
-	ret = snprintf(page, count, "%d\n", mtfs_dev2noabort(device));
+	ret = snprintf(page, count, "%d\n", mtfs_dev2checksum(device) ? 1 : 0);
+	return ret;
+}
+
+int mtfs_device_proc_read_noabort(char *page, char **start, off_t off, int count,
+                                  int *eof, void *data)
+{
+	int ret = 0;
+	struct mtfs_device *device = (struct mtfs_device *)data;
+
+	*eof = 1;
+	ret = snprintf(page, count, "%d\n", mtfs_dev2noabort(device) ? 1 : 0);
 	return ret;
 }
 
 struct mtfs_proc_vars mtfs_proc_vars_device[] = {
 	{ "device_name", mtfs_device_proc_read_name, NULL, NULL },
 	{ "bnum", mtfs_device_proc_read_bnum, NULL, NULL },
-	{ "no_abort", mtfs_device_proc_read_noabort, NULL, NULL },
+	{ "checksum", mtfs_device_proc_read_checksum, NULL, NULL },
+	{ "noabort", mtfs_device_proc_read_noabort, NULL, NULL },
 	{ 0 }
 };
 

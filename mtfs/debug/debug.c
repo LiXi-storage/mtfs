@@ -5,6 +5,7 @@
 #include <linux/module.h>
 #include <linux/ctype.h>
 #include <linux/sysctl.h>
+#include <thread.h>
 #include <debug.h>
 #include <compat.h>
 #include <memory.h>
@@ -12,6 +13,8 @@
 #include "linux_debug.h"
 #include "linux_tracefile.h"
 #include "tracefile.h"
+
+static char debug_file_name[1024];
 
 unsigned int mtfs_subsystem_debug = ~0;
 module_param(mtfs_subsystem_debug, int, 0644);
@@ -71,10 +74,14 @@ EXPORT_SYMBOL(mtfs_debug_binary);
 unsigned int mtfs_stack = 3 * THREAD_SIZE / 4;
 EXPORT_SYMBOL(mtfs_stack);
 
-int mtfs_panic_in_progress;
-
 unsigned int mtfs_catastrophe;
 EXPORT_SYMBOL(mtfs_catastrophe);
+
+unsigned int mtfs_panic_on_mbug = 0;
+module_param(mtfs_panic_on_mbug, uint, 0644);
+MODULE_PARM_DESC(mtfs_debug_file_path, "MTFS panic on MBUG");
+
+int mtfs_panic_in_progress;
 
 wait_queue_head_t debug_ctlwq;
 
@@ -420,6 +427,65 @@ mtfs_debug_str2mask(int *mask, const char *str, int is_subsys)
         return mtfs_str2mask(str, fn, mask, is_subsys ? 0 : D_CANTMASK,
                             0xffffffff);
 }
+
+
+/**
+ * Dump MTFS log to ::debug_file_path by calling tracefile_dump_all_pages()
+ */
+static void mtfs_debug_dumplog_internal(void *arg)
+{
+	void *journal_info = NULL;
+
+	journal_info = current->journal_info;
+	current->journal_info = NULL;
+
+	if (strncmp(mtfs_debug_file_path_arr, "NONE", 4) != 0) {
+		snprintf(debug_file_name, sizeof(debug_file_name) - 1,
+		         "%s.%ld.%ld", mtfs_debug_file_path_arr,
+		         get_seconds(), (long)arg);
+		printk(KERN_ALERT "MTFS Error: dumping log to %s\n",
+		       debug_file_name);
+		mtfs_tracefile_dump_all_pages(debug_file_name);
+		//mtfs_run_debug_log_upcall(debug_file_name);
+        }
+	current->journal_info = journal_info;
+}
+
+static int mtfs_debug_dumplog_thread(void *arg)
+{
+        mtfs_debug_dumplog_internal(arg);
+        wake_up(&debug_ctlwq);
+        return 0;
+}
+
+void mtfs_debug_dumplog(void)
+{
+        wait_queue_t wait;
+        struct task_struct *dumper = NULL;
+        MENTRY();
+
+        /* we're being careful to ensure that the kernel thread is
+         * able to set our state to running as it exits before we
+         * get to schedule() */
+	init_waitqueue_entry(&wait, current);
+	set_current_state(TASK_INTERRUPTIBLE);
+        add_wait_queue(&debug_ctlwq, &wait);
+
+        dumper = mtfs_kthread_run(mtfs_debug_dumplog_thread,
+                                 (void*)(long)current->pid,
+                                 "mtfs_debug_dumper");
+        if (IS_ERR(dumper)) {
+                printk(KERN_ERR "MTFS Error: cannot start log dump thread:"
+                       " %ld\n", PTR_ERR(dumper));
+        } else {
+                schedule();
+	}
+
+        /* be sure to teardown if cfs_create_thread() failed */
+        remove_wait_queue(&debug_ctlwq, &wait);
+        set_current_state(TASK_RUNNING);
+}
+EXPORT_SYMBOL(mtfs_debug_dumplog);
 
 static struct ctl_table_header *mtfs_table_header = NULL;
 

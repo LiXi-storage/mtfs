@@ -12,10 +12,14 @@ struct mount_barnch {
 	char *path;
 };
 
+#define MTFS_SBI_NOABORT  0x01
+#define MTFS_SBI_CHECKSUM 0x02
+
 struct mount_option {
-	int bnum;
+	int    bnum;
 	struct mount_barnch *branch;
-	char *mo_subject;
+	char  *mo_subject;
+	__u32  mo_flags;   /* Flags set when mounting */
 };
 
 static inline int mount_option_init(struct mount_option *mount_option, int bnum)

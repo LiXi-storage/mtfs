@@ -101,7 +101,7 @@ static struct ctl_table mtfs_table[] = {
 		/* Memory that mtfs alloced */
 		.ctl_name = MTFS_PROC_MEMUSED,
 		.procname = "memused",
-		.data     = (__u64 *)&mtfs_kmemory_used.counter,
+		.data     = (__u32 *)&mtfs_kmemory_used.counter,
 		.maxlen   = sizeof(int),
 		.mode     = 0444,
 		.proc_handler = &proc_dointvec,
@@ -111,7 +111,7 @@ static struct ctl_table mtfs_table[] = {
 		/* Historical record of memory that mtfs alloced */
 		.ctl_name = MTFS_PROC_MEMUSED_MAX,
 		.procname = "memused_max",
-		.data     = (__u64 *)&mtfs_kmemory_used_max.counter,
+		.data     = (__u32 *)&mtfs_kmemory_used_max.counter,
 		.maxlen   = sizeof(int),
 		.mode     = 0444,
 		.proc_handler = &proc_dointvec,
@@ -133,6 +133,22 @@ static struct ctl_table mtfs_table[] = {
 		.maxlen   = sizeof(int),
 		.mode     = 0644,
 		.proc_handler = &mtfs_proc_dobitmasks,
+	},
+        {
+		.ctl_name = MTFS_PROC_CATASTROPHE,
+		.procname = "catastrophe",
+		.data     = &mtfs_catastrophe,
+		.maxlen   = sizeof(int),
+		.mode     = 0444,
+		.proc_handler = &proc_dointvec,
+	},
+        {
+		.ctl_name = MTFS_PROC_PANIC_ON_MBUG,
+		.procname = "panic_on_mbug",
+		.data     = &mtfs_panic_on_mbug,
+		.maxlen   = sizeof(int),
+		.mode     = 0644,
+		.proc_handler = &proc_dointvec,
 	},
 	{0}
 };

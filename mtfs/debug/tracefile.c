@@ -472,9 +472,8 @@ mtfs_trace_assertion_failed(const char *str,
         struct mtfs_ptldebug_header hdr;
 
         mtfs_panic_in_progress = 1;
-        mtfs_catastrophe = 1;
-        mb();
-
+	mtfs_catastrophe = 1;
+	mb();
 
         mtfs_set_ptldebug_header(&hdr, msgdata, MDEBUG_STACK());
 
@@ -633,25 +632,25 @@ mtfs_trace_put_console_buffer(char *buffer)
 #define __current_nesting_level() (0)
 
 int mtfs_debug_vmsg2(struct mtfs_debug_msg_data *msgdata,
-                       const char *format1, va_list args,
-                       const char *format2, ...)
+                     const char *format1, va_list args,
+                     const char *format2, ...)
 {
-        struct mtfs_trace_cpu_data *tcd = NULL;
-        struct mtfs_ptldebug_header header = {0};
-        struct mtfs_trace_page     *tage;
-        /* string_buf is used only if tcd != NULL, and is always set then */
-        char                      *string_buf = NULL;
-        char                      *debug_buf;
-        int                        known_size;
-        int                        needed = 85; /* average message length */
-        int                        max_nob;
-        va_list                    ap;
-        int                        depth;
-        int                        i;
-        int                        remain;
-        int                        mask = msgdata->msg_mask;
-        char                      *file = (char *)msgdata->msg_file;
-        mtfs_debug_limit_state_t   *cdls = msgdata->msg_cdls;
+	struct mtfs_trace_cpu_data *tcd = NULL;
+	struct mtfs_ptldebug_header header = {0};
+	struct mtfs_trace_page     *tage;
+	/* string_buf is used only if tcd != NULL, and is always set then */
+	char                      *string_buf = NULL;
+	char                      *debug_buf;
+	int                        known_size;
+	int                        needed = 85; /* average message length */
+	int                        max_nob;
+	va_list                    ap;
+	int                        depth;
+	int                        i;
+	int                        remain;
+	int                        mask = msgdata->msg_mask;
+	char                      *file = (char *)msgdata->msg_file;
+	mtfs_debug_limit_state_t   *cdls = msgdata->msg_cdls;
 
 	file = (char *)msgdata->msg_file;
 	if (strchr(file, '/')) {

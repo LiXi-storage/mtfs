@@ -621,6 +621,84 @@ LB_LINUX_TRY_COMPILE([
 ])
 
 #
+# LC_FUNC_DUMP_TRACE
+#
+# 2.6.23 exports dump_trace() so we can dump_stack() on any task
+# 2.6.24 has stacktrace_ops.address with "reliable" parameter
+#
+AC_DEFUN([LC_FUNC_DUMP_TRACE],
+[LB_CHECK_SYMBOL_EXPORT([dump_trace],
+[kernel/ksyms.c arch/${LINUX_ARCH%_64}/kernel/traps_64.c arch/x86/kernel/dumpstack_32.c arch/x86/kernel/dumpstack_64.c],[
+	tmp_flags="$EXTRA_KCFLAGS"
+	EXTRA_KCFLAGS="-Werror"
+	AC_MSG_CHECKING([whether we can really use dump_trace])
+	LB_LINUX_TRY_COMPILE([
+		struct task_struct;
+		struct pt_regs;
+		#include <asm/stacktrace.h>
+	],[
+	],[
+		AC_MSG_RESULT(yes)
+		AC_DEFINE(HAVE_DUMP_TRACE, 1, [dump_trace is exported])
+	],[
+		AC_MSG_RESULT(no)
+	],[
+	])
+	AC_MSG_CHECKING([whether print_trace_address has reliable argument])
+	LB_LINUX_TRY_COMPILE([
+		struct task_struct;
+		struct pt_regs;
+		void print_addr(void *data, unsigned long addr, int reliable);
+		#include <asm/stacktrace.h>
+	],[
+		struct stacktrace_ops ops;
+		ops.address = print_addr;
+	],[
+		AC_MSG_RESULT(yes)
+		AC_DEFINE(HAVE_TRACE_ADDRESS_RELIABLE, 1,
+			  [print_trace_address has reliable argument])
+	],[
+		AC_MSG_RESULT(no)
+	],[
+	])
+	AC_MSG_CHECKING([dump_trace want address])
+	LB_LINUX_TRY_COMPILE([
+		struct task_struct;
+		struct pt_regs;
+		#include <asm/stacktrace.h>
+	],[
+		dump_trace(NULL, NULL, NULL, 0, NULL, NULL);
+	],[
+		AC_MSG_RESULT(yes)
+		AC_DEFINE(HAVE_DUMP_TRACE_ADDRESS, 1,
+			  [dump_trace want address argument])
+	],[
+		AC_MSG_RESULT(no)
+	],[
+	])
+
+EXTRA_KCFLAGS="$tmp_flags"
+])
+])
+
+#
+# LC_FUNC_SHOW_TASK
+#
+# we export show_task(), but not all kernels have it (yet)
+#
+AC_DEFUN([LC_FUNC_SHOW_TASK],
+[LB_CHECK_SYMBOL_EXPORT([show_task],
+[kernel/ksyms.c kernel/sched.c],[
+AC_DEFINE(HAVE_SHOW_TASK, 1, [show_task is exported])
+],[
+	LB_CHECK_SYMBOL_EXPORT([sched_show_task],
+	[kernel/ksyms.c kernel/sched.c],[
+	AC_DEFINE(HAVE_SCHED_SHOW_TASK, 1, [sched_show_task is exported])
+	],[])
+])
+])
+
+#
 # LC_PROG_LINUX
 #
 # MTFS linux kernel checks
@@ -658,6 +736,8 @@ AC_DEFUN([LC_PROG_LINUX],
 	LC_SHRINK_CONTROL
 	LC_SHRINKER_WANT_SHRINK_PTR
 	LC_ADD_WAIT_QUEUE_EXCLUSIVE
+	LC_FUNC_DUMP_TRACE
+	LC_FUNC_SHOW_TASK
 ])
 
 #

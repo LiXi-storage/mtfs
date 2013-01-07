@@ -93,8 +93,9 @@ static inline __u32 crc32c_hw(__u32 crc, unsigned char const *p, size_t len)
                 ptmp++;
         }
 
-        if (bytes)
-                crc = crc32c_hw_byte(crc, (unsigned char *)ptmp, bytes);
+        if (bytes) {
+		crc = crc32c_hw_byte(crc, (unsigned char *)ptmp, bytes);
+	}
 
         return crc;
 }

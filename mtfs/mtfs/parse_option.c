@@ -11,14 +11,18 @@
 #include <mtfs_common.h>
 
 enum {
-	opt_subject, /* Set subject */
-	opt_dirs, /* Set dirs */
-	opt_err /* Error */
+	opt_subject,  /* Set subject */
+	opt_dirs,     /* Set dirs */
+	opt_noabort,  /* Set noabort */
+	opt_checksum, /* Set checksum */
+	opt_err       /* Error */
 };
 
 static match_table_t tokens = {
-	{ opt_subject, "subject=%s" },
-	{ opt_dirs, "device=%s" },
+	{ opt_subject,  "subject=%s" },
+	{ opt_dirs,     "device=%s" },
+	{ opt_checksum, "checksum" },
+	{ opt_noabort,  "noabort" },
 	{ opt_err, NULL }
 };
 
@@ -166,6 +170,12 @@ int mtfs_parse_options(char *input, struct mount_option *mount_option)
 			}
 
 			dirs_is_set = 1;
+			break;
+		case opt_checksum:
+			mount_option->mo_flags |= MTFS_SBI_CHECKSUM;
+			break;
+		case opt_noabort:
+			mount_option->mo_flags |= MTFS_SBI_NOABORT;
 			break;
 		default:
 			MERROR("unexpected option\n");

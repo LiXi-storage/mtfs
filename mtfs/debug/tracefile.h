@@ -203,5 +203,6 @@ do {                                                                    \
 void
 mtfs_trace_assertion_failed(const char *str,
                             struct mtfs_debug_msg_data *msgdata);
+int mtfs_tracefile_dump_all_pages(char *filename);
 #endif /* defined (__linux__) && defined(__KERNEL__) */
 #endif /* __MTFS_TRACEFILE_H__ */

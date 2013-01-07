@@ -12,6 +12,7 @@
 
 extern int mtfs_debug_init(unsigned long bufsize);
 extern int mtfs_debug_cleanup(void);
+extern void mtfs_debug_dumplog(void);
 
 #if !defined(__x86_64__)
 #ifdef  __ia64__
@@ -142,8 +143,9 @@ do {                                                   \
         __MDEBUG(&cdls, mask, format, ## __VA_ARGS__); \
 } while (0)
 
-/* Has there been an BUG? */
+/* Has there been an MBUG? */
 extern unsigned int mtfs_catastrophe;
+extern unsigned int mtfs_panic_on_mbug;
 
 #define MDEBUG_MEM(format, args...) MDEBUG_LIMIT(D_MALLOC, format, ##args)
 #define MTRACE(format, args...)     MDEBUG_LIMIT(D_TRACE, format, ##args)
@@ -152,16 +154,19 @@ extern unsigned int mtfs_catastrophe;
 #define MDEBUG(format, args...)     MDEBUG_LIMIT(D_INFO, format, ##args)
 #define MERROR(format, args...)     MDEBUG_LIMIT(D_ERROR, format, ##args)
 #define MPRINT(format, args...)     MDEBUG_LIMIT(D_INFO, format, ##args)
+#define MEMERG(format, args...)     MDEBUG_LIMIT(D_EMERG, format, ##args)
 
 #include <linux/err.h>
 #include <linux/string.h>
 #include <linux/kernel.h>
 
+void mbug(void) __attribute__((noreturn));
+
 #define MBUG()                                       \
 do {                                                 \
-    MERROR("a bug found!\n");                        \
-    panic("MTFS BUG");                               \
-} while(0)
+    MEMERG("a bug found!\n");                        \
+    mbug();                                          \
+} while (0)
 
 #define MASSERT(cond) MASSERTF(cond, "\n")
 

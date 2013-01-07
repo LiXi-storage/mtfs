@@ -154,7 +154,7 @@ void *write_little_proc(thread_info_t *thread_info)
 
 	block = alloc_block(block_size);
 	if (block == NULL) {
-		MERROR("not enough memory\n");
+		MERROR("Not enough memory\n");
 		goto out;
 	}
 
@@ -200,7 +200,7 @@ void *write_proc(thread_info_t *thread_info)
 
 	block = alloc_block(block_size);
 	if (block == NULL) {
-		MERROR("not enough memory\n");
+		MERROR("Not enough memory\n");
 		goto out;
 	}
 

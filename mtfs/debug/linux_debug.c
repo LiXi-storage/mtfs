@@ -1,8 +1,73 @@
 /*
  * Copied from Lustre-2.2.0
  */
+
 #include <linux/notifier.h>
+#include <linux/module.h>
+#include <linux/hardirq.h>
 #include "debug.h"
+
+static void mtfs_debug_dumpstack(struct task_struct *tsk)
+{
+#ifdef HAVE_DUMP_TRACE
+	/* dump_stack() */
+	/* show_trace() */
+	if (tsk == NULL) {
+                tsk = current;
+	}
+	printk("Pid: %d, comm: %.20s\n", tsk->pid, tsk->comm);
+	/* show_trace_log_lvl() */
+	printk("\nCall Trace:\n");
+	dump_trace(tsk, NULL, NULL,
+#ifdef HAVE_DUMP_TRACE_ADDRESS
+	           0,
+#endif /* HAVE_DUMP_TRACE_ADDRESS */
+	           &print_trace_ops, NULL);
+	printk("\n");
+#elif defined(HAVE_SHOW_TASK)
+	/* this is exported by kernel */
+        extern void show_task(struct task_struct *);
+
+        if (tsk == NULL) {
+                tsk = current;
+	}
+        MWARN("showing stack for process %d\n", tsk->pid);
+        show_task(tsk);
+#else
+        if ((tsk == NULL) || (tsk == current)) {
+                dump_stack();
+	} else {
+                MWARN("can't show stack: kernel doesn't export show_task\n");
+	}
+#endif
+}
+
+void mbug(void)
+{
+	mtfs_catastrophe = 1;
+
+        if (in_interrupt()) {
+                panic("MBUG in interrupt.\n");
+                /* not reached */
+        }
+
+	mtfs_debug_dumpstack(NULL);
+	if (!mtfs_panic_on_mbug) {
+		mtfs_debug_dumplog();
+	}
+
+	//mtfs_run_mbug_upcall(file, func, line);
+
+	if (mtfs_panic_on_mbug) {
+		panic("MBUG");
+	}
+
+	set_task_state(current, TASK_UNINTERRUPTIBLE);
+	while(1) {
+		schedule();
+	}
+}
+EXPORT_SYMBOL(mbug);
 
 static int panic_notifier(struct notifier_block *self, unsigned long unused1,
                          void *unused2)

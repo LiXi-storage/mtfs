@@ -47,11 +47,7 @@ static void masync_io_iter_start_rw(struct mtfs_io *io)
 		 * since I may crash immediately after write a branch. 
 		 */
 		mio_iter_start_rw(io);
-		if (io->mi_type == MIOT_READV) {
-		        if (io->mi_successful) {
-		              /* TODO: checksum */  
-		        }
-		} else if (io->mi_type == MIOT_WRITEV) {
+		if (io->mi_type == MIOT_WRITEV) {
 			if (!io->mi_successful) {
 				/* Only neccessary when succeeded */
 				goto out;
@@ -118,9 +114,6 @@ static void masync_io_iter_start_rw(struct mtfs_io *io)
 				io->mi_successful = 0;
 				goto out;
 			}
-		} else {
-		        MERROR("invalid io type\n");
-		        MBUG();
 		}
 	} else {
 

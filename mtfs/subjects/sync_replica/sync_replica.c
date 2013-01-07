@@ -4,6 +4,31 @@
 
 #include <linux/module.h>
 #include <mtfs_io.h>
+#include <mtfs_device.h>
+
+static int msync_io_init_readv(struct mtfs_io *io)
+{
+	struct dentry *dentry = NULL;
+	struct inode *inode = NULL;
+	int ret = 0;
+	MENTRY();
+
+	dentry = io->mi_oplist_dentry;
+	if (dentry) {
+		inode = dentry->d_inode;
+	} else {
+		MASSERT(io->mi_oplist_inode);
+		inode = io->mi_oplist_inode;
+	}
+	MASSERT(inode);
+
+	ret = mio_init_oplist_flag(io);
+	if (!ret && mtfs_dev2checksum(mtfs_i2dev(inode))) {
+		io->subject.mi_checksum.type = mchecksum_type_select();	
+	}
+
+	MRETURN(ret);
+}
 
 const struct mtfs_io_operations mtfs_io_ops[] = {
 	[MIOT_CREATE] = {
@@ -107,13 +132,13 @@ const struct mtfs_io_operations mtfs_io_ops[] = {
 		.mio_iter_fini  = mio_iter_fini_read_ops,
 	},
 	[MIOT_READV] = {
-		.mio_init       = mio_init_oplist_flag,
+		.mio_init       = msync_io_init_readv,
 		.mio_fini       = NULL,
 		.mio_lock       = mio_lock_mlock,
 		.mio_unlock     = mio_unlock_mlock,
 		.mio_iter_init  = mio_iter_init_rw,
 		.mio_iter_start = mio_iter_start_rw,
-		.mio_iter_end   = NULL,
+		.mio_iter_end   = mio_iter_check_readv,
 		.mio_iter_fini  = mio_iter_fini_read_ops,
 	},
 	[MIOT_WRITEV] = {

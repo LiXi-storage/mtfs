@@ -53,6 +53,7 @@ struct mtfs_io_trace {
 #include <linux/fs.h>
 #include <linux/uio.h>
 #include <mtfs_lock.h>
+#include <mtfs_checksum.h>
 
 struct mtfs_io_create {
 	struct inode *dir;
@@ -194,8 +195,16 @@ struct mtfs_io_readpage {
 	struct page *page;
 };
 
+struct mtfs_io_checksum_branch {
+	int valid;
+	ssize_t ssize;
+	__u32 checksum;
+};
+
 struct mtfs_io_checksum {
-	__u32 checksum[MTFS_BRANCH_MAX];  /* Global bindex */
+	struct mtfs_io_checksum_branch branch[MTFS_BRANCH_MAX];  /* Global bindex */
+	struct mtfs_io_checksum_branch gather;                     /* First valid checksum */
+	mchecksum_type_t               type;
 };
 
 struct mtfs_io {
@@ -289,6 +298,14 @@ struct mtfs_io_operations {
 	void (*mio_iter_fini) (struct mtfs_io *io, int init_ret);
 };
 
+static inline mtfs_bindex_t mio_bindex(struct mtfs_io *io)
+{
+	if (io->mi_oplist.inited) {
+		return io->mi_oplist.op_binfo[io->mi_bindex].bindex;
+	}
+	return io->mi_bindex;
+}
+
 extern int mtfs_io_loop(struct mtfs_io *io);
 extern int mio_init_oplist(struct mtfs_io *io, struct mtfs_oplist_object *oplist_obj);
 extern int mio_init_oplist_flag(struct mtfs_io *io);
@@ -325,6 +342,7 @@ extern void mio_iter_start_open(struct mtfs_io *io);
 extern void mio_iter_start_ioctl(struct mtfs_io *io);
 extern void mio_iter_start_writepage(struct mtfs_io *io);
 extern void mio_iter_start_readpage(struct mtfs_io *io);
+extern void mio_iter_check_readv(struct mtfs_io *io);
 
 
 extern const struct mtfs_io_operations mtfs_io_ops[];

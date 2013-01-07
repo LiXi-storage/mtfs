@@ -8,6 +8,7 @@
 
 #include <linux/signal.h>
 #include <linux/sched.h>
+#include <linux/kthread.h>
 extern int mtfs_create_thread(int (*fn)(void *), void *arg, unsigned long flags);
 extern int mtfs_daemonize_ctxt(char *str);
 
@@ -203,6 +204,8 @@ static inline long mtfs_time_seconds(int seconds)
 {
         return ((long)seconds) * HZ;
 }
+
+#define mtfs_kthread_run(fn, data, fmt, arg...) kthread_run(fn, data, fmt, ##arg)
 
 #else /* defined (__linux__) && defined(__KERNEL__) */
 #error This head is only for kernel space use
