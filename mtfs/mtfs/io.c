@@ -60,7 +60,7 @@ void mio_iter_end_oplist(struct mtfs_io *io)
 	MENTRY();
 
 	mtfs_oplist_setbranch(oplist, io->mi_bindex,
-	                      io->mi_successful,
+	                      io->mi_flags,
 	                      io->mi_result);
 
 	_MRETURN();
@@ -76,7 +76,7 @@ void mio_fini_oplist_noupdate(struct mtfs_io *io)
 	MASSERT(oplist->opinfo);
 	MASSERT(oplist->opinfo->valid);
 	io->mi_result = oplist->opinfo->result;
-	io->mi_successful = oplist->opinfo->is_suceessful;
+	io->mi_flags = oplist->opinfo->flags;
 
 	_MRETURN();
 }
@@ -95,7 +95,7 @@ void mio_fini_oplist(struct mtfs_io *io)
 	MASSERT(oplist->opinfo->valid);
 
 	io->mi_result = oplist->opinfo->result;
-	io->mi_successful = oplist->opinfo->is_suceessful;
+	io->mi_flags = oplist->opinfo->flags;
 
 	dentry = io->mi_oplist_dentry;
 	if (dentry) {
@@ -133,7 +133,7 @@ void mio_fini_oplist_rename(struct mtfs_io *io)
 	MASSERT(oplist->opinfo);
 	MASSERT(oplist->opinfo->valid);
 	io->mi_result = oplist->opinfo->result;
-	io->mi_successful = oplist->opinfo->is_suceessful;
+	io->mi_flags = oplist->opinfo->flags;
 
 	dentry = io->mi_oplist_dentry;
 	if (dentry) {
@@ -216,9 +216,9 @@ void mio_iter_start_rw_nonoplist(struct mtfs_io *io)
 	                                          io->mi_bindex);
 	if (io->mi_result.ssize > 0) {
 		/* TODO: this check is weak */
-		io->mi_successful = 1;
+		io->mi_flags = MTFS_OPERATION_SUCCESS | MTFS_OPERATION_PREFERABLE;
 	} else {
-		io->mi_successful = 0;
+		io->mi_flags = 0;
 	}
 
 	_MRETURN();
@@ -244,7 +244,8 @@ void mio_iter_fini_read_ops(struct mtfs_io *io, int init_ret)
 		goto out;
 	}
 
-	if (io->mi_successful && !mtfs_dev2checksum(mtfs_i2dev(inode))) {
+	if ((io->mi_flags & MTFS_OPERATION_SUCCESS)
+	    && (!mtfs_dev2checksum(mtfs_i2dev(inode)))) {
 		io->mi_break = 1;
 		goto out;
 	}
@@ -326,9 +327,9 @@ void mio_iter_start_rw(struct mtfs_io *io)
 	                                         global_bindex);
 	if (io->mi_result.ssize >= 0) {
 		/* TODO: this check is weak */
-		io->mi_successful = 1;
+		io->mi_flags = MTFS_OPERATION_SUCCESS | MTFS_OPERATION_PREFERABLE;
 	} else {
-		io->mi_successful = 0;
+		io->mi_flags = 0;
 	}
 
 	_MRETURN();
@@ -348,9 +349,9 @@ void mio_iter_start_create(struct mtfs_io *io)
 	                                       global_bindex);
 
 	if (!io->mi_result.ret) {
-		io->mi_successful = 1;
+		io->mi_flags = MTFS_OPERATION_SUCCESS | MTFS_OPERATION_PREFERABLE;
 	} else {
-		io->mi_successful = 0;
+		io->mi_flags = 0;
 	}
 
 	_MRETURN();
@@ -369,9 +370,9 @@ void mio_iter_start_link(struct mtfs_io *io)
 	                                     global_bindex);
 
 	if (!io->mi_result.ret) {
-		io->mi_successful = 1;
+		io->mi_flags = MTFS_OPERATION_SUCCESS | MTFS_OPERATION_PREFERABLE;
 	} else {
-		io->mi_successful = 0;
+		io->mi_flags = 0;
 	}
 
 	_MRETURN();
@@ -389,9 +390,11 @@ void mio_iter_start_unlink(struct mtfs_io *io)
 	                                       global_bindex);
 
 	if (!io->mi_result.ret) {
-		io->mi_successful = 1;
+		io->mi_flags = MTFS_OPERATION_SUCCESS | MTFS_OPERATION_PREFERABLE;
+	} else if (io->mi_result.ret == -ENOENT) {
+		io->mi_flags = MTFS_OPERATION_SUCCESS;
 	} else {
-		io->mi_successful = 0;
+		io->mi_flags = 0;
 	}
 
 	_MRETURN();
@@ -410,9 +413,9 @@ void mio_iter_start_mkdir(struct mtfs_io *io)
 	                                      global_bindex);
 
 	if (!io->mi_result.ret) {
-		io->mi_successful = 1;
+		io->mi_flags = MTFS_OPERATION_SUCCESS | MTFS_OPERATION_PREFERABLE;
 	} else {
-		io->mi_successful = 0;
+		io->mi_flags = 0;
 	}
 
 	_MRETURN();
@@ -430,9 +433,11 @@ void mio_iter_start_rmdir(struct mtfs_io *io)
 	                                      global_bindex);
 
 	if (!io->mi_result.ret) {
-		io->mi_successful = 1;
+		io->mi_flags = MTFS_OPERATION_SUCCESS | MTFS_OPERATION_PREFERABLE;
+	} else if (io->mi_result.ret == -ENOENT) {
+		io->mi_flags = MTFS_OPERATION_SUCCESS;
 	} else {
-		io->mi_successful = 0;
+		io->mi_flags = 0;
 	}
 
 	_MRETURN();
@@ -452,9 +457,9 @@ void mio_iter_start_mknod(struct mtfs_io *io)
 	                                      global_bindex);
 
 	if (!io->mi_result.ret) {
-		io->mi_successful = 1;
+		io->mi_flags = MTFS_OPERATION_SUCCESS | MTFS_OPERATION_PREFERABLE;
 	} else {
-		io->mi_successful = 0;
+		io->mi_flags = 0;
 	}
 
 	_MRETURN();
@@ -474,9 +479,9 @@ void mio_iter_start_rename(struct mtfs_io *io)
 	                                       global_bindex);
 
 	if (!io->mi_result.ret) {
-		io->mi_successful = 1;
+		io->mi_flags = MTFS_OPERATION_SUCCESS | MTFS_OPERATION_PREFERABLE;
 	} else {
-		io->mi_successful = 0;
+		io->mi_flags = 0;
 	}
 
 	_MRETURN();
@@ -495,9 +500,9 @@ void mio_iter_start_symlink(struct mtfs_io *io)
 	                                        global_bindex);
 
 	if (!io->mi_result.ret) {
-		io->mi_successful = 1;
+		io->mi_flags = MTFS_OPERATION_SUCCESS | MTFS_OPERATION_PREFERABLE;
 	} else {
-		io->mi_successful = 0;
+		io->mi_flags = 0;
 	}
 
 	_MRETURN();
@@ -516,9 +521,9 @@ void mio_iter_start_readlink(struct mtfs_io *io)
 	                                         global_bindex);
 
 	if (io->mi_result.ret >= 0) {
-		io->mi_successful = 1;
+		io->mi_flags = MTFS_OPERATION_SUCCESS | MTFS_OPERATION_PREFERABLE;
 	} else {
-		io->mi_successful = 0;
+		io->mi_flags = 0;
 	}
 
 	_MRETURN();
@@ -542,7 +547,7 @@ void mio_iter_start_permission(struct mtfs_io *io)
 	                                           global_bindex);
 #endif /* HAVE_INODE_PERMISION_2ARGS */
 
-	io->mi_successful = 1;
+	io->mi_flags = MTFS_OPERATION_SUCCESS | MTFS_OPERATION_PREFERABLE;
 	_MRETURN();
 }
 EXPORT_SYMBOL(mio_iter_start_permission);
@@ -558,9 +563,9 @@ void mio_iter_start_getattr(struct mtfs_io *io)
 	                                        io_getattr->stat,
 	                                        global_bindex);
 	if (!io->mi_result.ret) {
-		io->mi_successful = 1;
+		io->mi_flags = MTFS_OPERATION_SUCCESS | MTFS_OPERATION_PREFERABLE;
 	} else {
-		io->mi_successful = 0;
+		io->mi_flags = 0;
 	}
 
 	_MRETURN();
@@ -577,9 +582,9 @@ void mio_iter_start_setattr(struct mtfs_io *io)
 	                                        io_setattr->ia,
 	                                        global_bindex);
 	if (!io->mi_result.ret) {
-		io->mi_successful = 1;
+		io->mi_flags = MTFS_OPERATION_SUCCESS | MTFS_OPERATION_PREFERABLE;
 	} else {
-		io->mi_successful = 0;
+		io->mi_flags = 0;
 	}
 
 	_MRETURN();
@@ -601,9 +606,9 @@ void mio_iter_start_getxattr(struct mtfs_io *io)
 		if (io_getxattr->size > 0) {
 			MASSERT(io->mi_result.ssize <= io_getxattr->size);
 		}
-		io->mi_successful = 1;
+		io->mi_flags = MTFS_OPERATION_SUCCESS | MTFS_OPERATION_PREFERABLE;
 	} else {
-		io->mi_successful = 0;
+		io->mi_flags = 0;
 	}
 
 	_MRETURN();
@@ -623,9 +628,9 @@ void mio_iter_start_setxattr(struct mtfs_io *io)
 	                                         io_setxattr->flags,
 	                                         global_bindex);
 	if (!io->mi_result.ret) {
-		io->mi_successful = 1;
+		io->mi_flags = MTFS_OPERATION_SUCCESS | MTFS_OPERATION_PREFERABLE;
 	} else {
-		io->mi_successful = 0;
+		io->mi_flags = 0;
 	}
 
 	_MRETURN();
@@ -642,9 +647,9 @@ void mio_iter_start_removexattr(struct mtfs_io *io)
 	                                            io_removexattr->name,
 	                                            global_bindex);
 	if (!io->mi_result.ret) {
-		io->mi_successful = 1;
+		io->mi_flags = MTFS_OPERATION_SUCCESS | MTFS_OPERATION_PREFERABLE;
 	} else {
-		io->mi_successful = 0;
+		io->mi_flags = 0;
 	}
 
 	_MRETURN();
@@ -665,9 +670,9 @@ void mio_iter_start_listxattr(struct mtfs_io *io)
 		if (io_listxattr->size > 0) {
 			MASSERT(io->mi_result.ssize <= io_listxattr->size);
 		}
-		io->mi_successful = 1;
+		io->mi_flags = MTFS_OPERATION_SUCCESS | MTFS_OPERATION_PREFERABLE;
 	} else {
-		io->mi_successful = 0;
+		io->mi_flags = 0;
 	}
 
 	_MRETURN();
@@ -685,9 +690,9 @@ void mio_iter_start_readdir(struct mtfs_io *io)
 	                                        io_readdir->filldir,
 	                                        global_bindex);
 	if (!io->mi_result.ret) {
-		io->mi_successful = 1;
+		io->mi_flags = MTFS_OPERATION_SUCCESS | MTFS_OPERATION_PREFERABLE;
 	} else {
-		io->mi_successful = 0;
+		io->mi_flags = 0;
 	}
 
 	_MRETURN();
@@ -704,9 +709,9 @@ void mio_iter_start_open(struct mtfs_io *io)
 	                                     io_open->file,
 	                                     global_bindex);
 	if (!io->mi_result.ret) {
-		io->mi_successful = 1;
+		io->mi_flags = MTFS_OPERATION_SUCCESS | MTFS_OPERATION_PREFERABLE;
 	} else {
-		io->mi_successful = 0;
+		io->mi_flags = 0;
 	}
 
 	_MRETURN();
@@ -726,9 +731,9 @@ void mio_iter_start_ioctl(struct mtfs_io *io)
 	                                      global_bindex,
 	                                      io_ioctl->is_kernel_ds);
 	if (!io->mi_result.ret) {
-		io->mi_successful = 1;
+		io->mi_flags = MTFS_OPERATION_SUCCESS | MTFS_OPERATION_PREFERABLE;
 	} else {
-		io->mi_successful = 0;
+		io->mi_flags = 0;
 	}
 
 	_MRETURN();
@@ -745,9 +750,9 @@ void mio_iter_start_writepage(struct mtfs_io *io)
 	                                          io_writepage->wbc,
 	                                          global_bindex);
 	if (!io->mi_result.ret) {
-		io->mi_successful = 1;
+		io->mi_flags = MTFS_OPERATION_SUCCESS | MTFS_OPERATION_PREFERABLE;
 	} else {
-		io->mi_successful = 0;
+		io->mi_flags = 0;
 	}
 
 	_MRETURN();
@@ -764,9 +769,9 @@ void mio_iter_start_readpage(struct mtfs_io *io)
 	                                         io_readpage->page,
 	                                         global_bindex);
 	if (!io->mi_result.ret) {
-		io->mi_successful = 1;
+		io->mi_flags = MTFS_OPERATION_SUCCESS | MTFS_OPERATION_PREFERABLE;
 	} else {
-		io->mi_successful = 0;
+		io->mi_flags = 0;
 	}
 
 	_MRETURN();
@@ -819,7 +824,8 @@ void mio_iter_check_readv(struct mtfs_io *io)
 	__u32 tmp_checksum = 0;
 	MENTRY();
 
-	if (io->mi_successful && mtfs_dev2checksum(mtfs_f2dev(file))) {
+	if ((io->mi_flags & MTFS_OPERATION_SUCCESS) &&
+	    mtfs_dev2checksum(mtfs_f2dev(file))) {
 		if (checksum->gather.valid) {
 			if (checksum->gather.ssize != io->mi_result.ssize) {
 				MERROR("read size of branch[%d] is different, "

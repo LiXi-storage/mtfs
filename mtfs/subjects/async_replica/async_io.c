@@ -48,7 +48,7 @@ static void masync_io_iter_start_rw(struct mtfs_io *io)
 		 */
 		mio_iter_start_rw(io);
 		if (io->mi_type == MIOT_WRITEV) {
-			if (!io->mi_successful) {
+			if (!(io->mi_flags & MTFS_OPERATION_SUCCESS)) {
 				/* Only neccessary when succeeded */
 				goto out;
 			}
@@ -71,7 +71,7 @@ static void masync_io_iter_start_rw(struct mtfs_io *io)
 				       dentry->d_name.len, dentry->d_name.name,
 				       ret);
 				io->mi_result.ssize = ret;
-				io->mi_successful = 0;
+				io->mi_flags = 0;
 				MBUG();
 				goto out;
 			}
@@ -111,7 +111,7 @@ static void masync_io_iter_start_rw(struct mtfs_io *io)
 				/* TODO: invalidate and reconstruct the bucket */
 				MBUG();
 				io->mi_result.ssize = ret;
-				io->mi_successful = 0;
+				io->mi_flags = 0;
 				goto out;
 			}
 		}
@@ -147,7 +147,8 @@ static void masync_io_iter_fini_create_ops(struct mtfs_io *io, int init_ret)
 		goto out;
 	}
 
-	if (!io->mi_successful || io->mi_bindex == io->mi_bnum - 1) {
+	if ((!(io->mi_flags & MTFS_OPERATION_SUCCESS)) ||
+	    (io->mi_bindex == io->mi_bnum - 1)) {
 		io->mi_break = 1;
 	} else {
 		io->mi_bindex++;

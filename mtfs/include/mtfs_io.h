@@ -202,19 +202,19 @@ struct mtfs_io_checksum_branch {
 };
 
 struct mtfs_io_checksum {
-	struct mtfs_io_checksum_branch branch[MTFS_BRANCH_MAX];  /* Global bindex */
-	struct mtfs_io_checksum_branch gather;                     /* First valid checksum */
+	struct mtfs_io_checksum_branch branch[MTFS_BRANCH_MAX]; /* Global bindex */
+	struct mtfs_io_checksum_branch gather;                  /* First valid checksum */
 	mchecksum_type_t               type;
 };
 
 struct mtfs_io {
-	const struct mtfs_io_operations   *mi_ops;
-	mtfs_io_type_t                     mi_type;
-	mtfs_bindex_t                      mi_bindex;
-	mtfs_bindex_t                      mi_bnum;
-	mtfs_operation_result_t            mi_result;
-	int                                mi_successful;
-	int                                mi_break;
+	const struct mtfs_io_operations   *mi_ops;    /* Operations */
+	mtfs_io_type_t                     mi_type;   /* IO type */
+	mtfs_bindex_t                      mi_bindex; /* Branch index, not nessarily global */
+	mtfs_bindex_t                      mi_bnum;   /* Branch number */
+	mtfs_operation_result_t            mi_result; /* IO result */
+	__u32                              mi_flags;  /* Result flags */
+	int                                mi_break;  /* Continue to iter */
 
 	/*
 	 * Inited when ->mio_init

@@ -21,9 +21,12 @@ typedef union mtfs_operation_result {
 #include "mtfs_common.h"
 #include "debug.h"
 
+#define MTFS_OPERATION_SUCCESS    0x01 /* Operation succeeded */
+#define MTFS_OPERATION_PREFERABLE 0x02 /* The result is preferable to return */
+
 struct mtfs_operation_binfo {
 	mtfs_bindex_t bindex;     /* Global bindex */
-	int is_suceessful;        /* Whether this branch succeeded */
+	__u32 flags;
 	mtfs_operation_result_t result;
 	int valid;
 };
@@ -31,9 +34,9 @@ struct mtfs_operation_binfo {
 struct mtfs_operation_list;
 
 struct mtfs_oplist_object {
-	int  (* mopo_init)(struct mtfs_operation_list *oplist, struct inode *inode);  /* Init oplist */
-	int  (* mopo_flush)(struct mtfs_operation_list *oplist, struct inode *inode); /* Flush oplist */
-	int  (* mopo_gather)(struct mtfs_operation_list *oplist);                     /* Gather oplist */
+	int (* mopo_init)(struct mtfs_operation_list *oplist, struct inode *inode);  /* Init oplist */
+	int (* mopo_flush)(struct mtfs_operation_list *oplist, struct inode *inode); /* Flush oplist */
+	int (* mopo_gather)(struct mtfs_operation_list *oplist);                     /* Gather oplist */
 };
 
 struct mtfs_operation_list {
@@ -63,7 +66,7 @@ extern int mtfs_oplist_flush(struct mtfs_operation_list *oplist,
 extern int mtfs_oplist_gather(struct mtfs_operation_list *oplist);
 extern int mtfs_oplist_setbranch(struct mtfs_operation_list *oplist,
                                  mtfs_bindex_t bindex,
-                                 int is_successful,
+                                 __u32 flags,
                                  mtfs_operation_result_t result);
 extern mtfs_operation_result_t mtfs_oplist_result(struct mtfs_operation_list *list);
 extern struct mtfs_oplist_object mtfs_oplist_flag;

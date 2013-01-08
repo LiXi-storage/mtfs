@@ -16,13 +16,17 @@ rm $SINGLE_DIR -fr
 make_single()
 {
 	local REMOVED_DIR=$1
-	if [ -e $DIR ]; then
-		rm $DIR -fr
-	fi
+
+	$UTIL_MTFS setbranch -b 0 -d 0 $MTFS_MNT1/test/
+	$UTIL_MTFS setbranch -b 1 -d 0 $MTFS_MNT1/test/
+	check_dir_nonexist $DIR || rm $DIR -fr
+	check_dir_nonexist $DIR || error "failed to rmdir $DIR"
 	mkdir $DIR
+	check_dir_exist $DIR || error "failed to mkdir $DIR"
+	check_dir_exist $REMOVED_DIR || error "mtfs failed to mkdir a branch $REMOVED_DIR"
 	rm $REMOVED_DIR -fr
-	check_nonexist $REMOVED_DIR || error "failed to remove $REMOVED_DIR"
-	check_exist $DIR || error "failed to mkdir $DIR"
+	check_dir_nonexist $REMOVED_DIR || error "failed to remove $REMOVED_DIR"
+	[ -d $DIR ] || error "$DIR is gone"
 }
 
 export DIR=$SINGLE_DIR
@@ -37,6 +41,7 @@ fi
 
 if [ "$SKIP_ABANDON_BRANCH1" != "yes" ]; then
 	make_single $MTFS_DIR2/test/single_tests
+	exit 0;
 	bash posix.sh
 	bash multi_mnt.sh
 fi

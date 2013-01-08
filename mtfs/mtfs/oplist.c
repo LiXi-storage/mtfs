@@ -61,11 +61,12 @@ int mtfs_oplist_flush_invalidate(struct mtfs_operation_list *oplist,
 		bindex = oplist->op_binfo[i].bindex;
 		MASSERT(oplist->op_binfo[i].valid);
 
-		if (!oplist->op_binfo[i].is_suceessful) {
+		if (!oplist->op_binfo[i].flags & MTFS_OPERATION_SUCCESS) {
 			if (mtfs_i2branch(inode, bindex) == NULL) {
 				continue;
 			}
 
+			MTRACE("invalidating %d\n", bindex);
 			ret = mtfs_branch_invalidate(inode, bindex, MTFS_DATA_VALID);
 			if (ret) {
 				MERROR("invalid inode failed, ret = %d\n", ret);
@@ -91,7 +92,8 @@ int mtfs_oplist_gather_optimistic(struct mtfs_operation_list *oplist)
 
 	for (bindex = 0; bindex < oplist->valid_bnum; bindex++) {
 		MASSERT(oplist->op_binfo[bindex].valid);
-		if (oplist->op_binfo[bindex].is_suceessful) {
+		if (oplist->op_binfo[bindex].flags & MTFS_OPERATION_PREFERABLE) {
+			MASSERT(oplist->op_binfo[bindex].flags & MTFS_OPERATION_SUCCESS);
 			bindex_chosed = bindex;
 			break;
 		}
@@ -217,17 +219,17 @@ EXPORT_SYMBOL(mtfs_oplist_flush);
 
 int mtfs_oplist_setbranch(struct mtfs_operation_list *oplist,
                           mtfs_bindex_t bindex,
-                          int is_successful,
+                          __u32 flags,
                           mtfs_operation_result_t result)
 {
 	MASSERT(bindex >= 0 && bindex < oplist->bnum);
 	oplist->op_binfo[bindex].valid = 1;
-	oplist->op_binfo[bindex].is_suceessful = is_successful;
+	oplist->op_binfo[bindex].flags = flags;
 	oplist->op_binfo[bindex].result = result;
 
 	oplist->valid_bnum++;
 
-	if (oplist->op_binfo[bindex].is_suceessful) {
+	if (oplist->op_binfo[bindex].flags & MTFS_OPERATION_SUCCESS) {
 		oplist->success_bnum++;
 		if (bindex < oplist->latest_bnum) {
 			oplist->success_latest_bnum++;

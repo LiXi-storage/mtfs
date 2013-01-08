@@ -512,7 +512,7 @@ int heal_discard_dentry_sync(struct inode *dir, struct dentry *dentry, struct mt
 
 	MASSERT(inode_is_locked(dir));
 	for (i = list->latest_bnum; i < list->bnum; i++) {
-		if (list->op_binfo[i].is_suceessful) {
+		if (list->op_binfo[i].flags & MTFS_OPERATION_SUCCESS) {
 			bindex = list->op_binfo[i].bindex;
 			hidden_dentry = mtfs_cleanup_branch(dir, dentry, bindex);
 			if (IS_ERR(hidden_dentry)) {
