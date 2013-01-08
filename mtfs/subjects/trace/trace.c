@@ -399,16 +399,6 @@ const struct mtfs_io_operations mtrace_io_ops[] = {
 		.mio_iter_end   = NULL,
 		.mio_iter_fini  = mio_iter_fini_read_ops,
 	},
-	[MIOT_SETATTR] = {
-		.mio_init       = mio_init_oplist_flag,
-		.mio_fini       = mio_fini_oplist,
-		.mio_lock       = NULL,
-		.mio_unlock     = NULL,
-		.mio_iter_init  = NULL,
-		.mio_iter_start = mio_iter_start_setattr,
-		.mio_iter_end   = mio_iter_end_oplist,
-		.mio_iter_fini  = mio_iter_fini_write_ops,
-	},
 	[MIOT_OPEN] = {
 		.mio_init       = mio_init_oplist_flag,
 		.mio_fini       = mio_fini_oplist_noupdate,

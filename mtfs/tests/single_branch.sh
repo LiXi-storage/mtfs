@@ -21,13 +21,8 @@ make_single()
 	fi
 	mkdir $DIR
 	rm $REMOVED_DIR -fr
-	if [ -e $REMOVED_DIR ]; then
-		error "failed to remove $REMOVED_DIR"
-	fi
-
-	if [ ! -d  $DIR ]; then
-		error "failed mkdir $DIR"
-	fi
+	check_nonexist $REMOVED_DIR || error "failed to remove $REMOVED_DIR"
+	check_exist $DIR || error "failed to mkdir $DIR"
 }
 
 export DIR=$SINGLE_DIR

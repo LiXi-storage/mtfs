@@ -383,16 +383,6 @@ const struct mtfs_io_operations masync_io_ops[] = {
 		.mio_iter_end   = NULL,
 		.mio_iter_fini  = masync_io_iter_fini_read_ops,
 	},
-	[MIOT_SETATTR] = {
-		.mio_init       = masync_io_init_create_ops,
-		.mio_fini       = mio_fini_oplist,
-		.mio_lock       = NULL,
-		.mio_unlock     = NULL,
-		.mio_iter_init  = NULL,
-		.mio_iter_start = mio_iter_start_setattr,
-		.mio_iter_end   = mio_iter_end_oplist,
-		.mio_iter_fini  = masync_io_iter_fini_create_ops,
-	},
 	[MIOT_OPEN] = {
 		.mio_init       = masync_io_init_create_ops,
 		.mio_fini       = mio_fini_oplist,
