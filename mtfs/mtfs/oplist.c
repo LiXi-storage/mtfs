@@ -101,9 +101,15 @@ int mtfs_oplist_gather_optimistic(struct mtfs_operation_list *oplist)
 
 	if (bindex_chosed != -1) {
 		oplist->opinfo = &(oplist->op_binfo[bindex_chosed]);
-	} else if (oplist->fault_bnum) {
+	} else {
+		MASSERT(oplist->valid_bnum > 0);
+		if (!oplist->fault_bnum) {
+			MASSERT(!(oplist->op_binfo[0].flags & MTFS_OPERATION_PREFERABLE));
+		}
+		MASSERT(oplist->op_binfo[0].valid);
 		oplist->opinfo = &(oplist->op_binfo[0]);
 	}
+	MASSERT(oplist->opinfo);
 
 	MRETURN(ret);
 }
