@@ -41,7 +41,6 @@ fi
 
 if [ "$SKIP_ABANDON_BRANCH1" != "yes" ]; then
 	make_single $MTFS_DIR2/test/single_tests
-	exit 0;
 	bash posix.sh
 	bash multi_mnt.sh
 fi
