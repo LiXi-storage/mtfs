@@ -55,8 +55,6 @@ extern int mtfs_ioctl_read(struct inode *inode, struct file *file,
 extern struct file_operations mtfs_main_fops;
 extern struct file_operations mtfs_dir_fops;
 
-extern ssize_t mtfs_file_rw_branch(int is_write, struct file *file, const struct iovec *iov,
-                                   unsigned long nr_segs, loff_t *ppos, mtfs_bindex_t bindex);
 extern size_t get_iov_count(const struct iovec *iov,
                             unsigned long *nr_segs);
 /*
@@ -90,8 +88,6 @@ struct mtfs_file_info {
 #define mtfs_dentry_open(dentry, mnt, flags, cred) dentry_open(dentry, mnt, flags)
 #endif /* !HAVE_DENTRY_OPEN_4ARGS */
 
-#define READ 0
-#define WRITE 1
 ssize_t _do_read_write(int is_write, struct file *file, void *buf, ssize_t count, loff_t *ppos);
 
 #else /* !defined (__linux__) && defined(__KERNEL__) */

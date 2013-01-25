@@ -342,8 +342,7 @@ extern void mio_iter_start_open(struct mtfs_io *io);
 extern void mio_iter_start_ioctl(struct mtfs_io *io);
 extern void mio_iter_start_writepage(struct mtfs_io *io);
 extern void mio_iter_start_readpage(struct mtfs_io *io);
-extern void mio_iter_check_readv(struct mtfs_io *io);
-
+extern void mio_iter_end_readv(struct mtfs_io *io);
 
 extern const struct mtfs_io_operations mtfs_io_ops[];
 #endif /* defined (__linux__) && defined(__KERNEL__) */

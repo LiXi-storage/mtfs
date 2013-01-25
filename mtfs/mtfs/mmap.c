@@ -11,9 +11,11 @@
 #include <mtfs_file.h>
 #include <mtfs_flag.h>
 #include <mtfs_io.h>
+#include <mtfs_stack.h>
 #include "mmap_internal.h"
 #include "main_internal.h"
 #include "lowerfs_internal.h"
+#include "file_internal.h"
 
 int mtfs_writepage_branch(struct page *page,
                           struct writeback_control *wbc,
@@ -253,65 +255,18 @@ out:
 }
 EXPORT_SYMBOL(mtfs_readpage);
 
-ssize_t mtfs_direct_IO(int rw, struct kiocb *kiocb,
+ssize_t mtfs_direct_IO_nop(int rw, struct kiocb *kiocb,
                        const struct iovec *iov, loff_t file_offset,
                        unsigned long nr_segs)
 {
 	ssize_t ret = 0;
-	struct iovec *iov_new = NULL;
-	struct iovec *iov_tmp = NULL;
-	size_t length = sizeof(*iov) * nr_segs;
-	mtfs_bindex_t bindex = 0;
-	struct file *hidden_file = NULL;
-	struct file *file = kiocb->ki_filp;
-	struct kiocb new_kiocb;
 	MENTRY();
-	
-	MTFS_ALLOC(iov_new, length);
-	if (!iov_new) {
-		ret = -ENOMEM;
-		goto out;
-	}
-	
-	MTFS_ALLOC(iov_tmp, length);
-	if (!iov_tmp) {
-		ret = -ENOMEM;
-		goto out_new_alloced;
-	}	
-	memcpy((char *)iov_new, (char *)iov, length); 
-	
-	if (mtfs_f2info(file) != NULL) { 
-		for (bindex = 0; bindex < mtfs_f2bnum(file); bindex++) {
-			hidden_file = mtfs_f2branch(file, bindex);
-			if (!hidden_file) {
-				MDEBUG("direct_IO of barnch[%d] file [%.*s] is not supported\n",
-				       bindex, file->f_dentry->d_name.len, file->f_dentry->d_name.name);
-				continue;
-			}
-			MASSERT(hidden_file->f_mapping);
-			MASSERT(hidden_file->f_mapping->a_ops);	
-			MASSERT(hidden_file->f_mapping->a_ops->direct_IO);	
 
-			memcpy((char *)iov_tmp, (char *)iov_new, length); 
-			new_kiocb.ki_filp = hidden_file;
-			ret = hidden_file->f_mapping->a_ops->direct_IO(rw, &new_kiocb, iov_tmp, file_offset, nr_segs);
+	MERROR("should never come here\n");
+	MBUG();
 
-			if (rw == READ) {
-				if (ret > 0) {
-					break;
-				}
-			}
-		}
-	}
-
-//tmp_alloced_err:
-	MTFS_FREE(iov_tmp, length);
-out_new_alloced:
-	MTFS_FREE(iov_new, length);
-out:
 	MRETURN(ret);
 }
-EXPORT_SYMBOL(mtfs_direct_IO);
 
 #ifdef HAVE_VM_OP_FAULT
 int mtfs_fault(struct vm_area_struct *vma, struct vm_fault *vmf)
@@ -341,7 +296,7 @@ EXPORT_SYMBOL(mtfs_nopage);
 
 struct address_space_operations mtfs_aops =
 {
-	direct_IO:      mtfs_direct_IO,
+	direct_IO:      mtfs_direct_IO_nop,
 	writepage:      mtfs_writepage,
 	readpage:       mtfs_readpage,
 };

@@ -604,8 +604,12 @@ ssize_t _do_read_write(int is_write, struct file *file, void *buf, ssize_t count
 }
 EXPORT_SYMBOL(_do_read_write);
 
-ssize_t mtfs_file_rw_branch(int is_write, struct file *file, const struct iovec *iov,
-                            unsigned long nr_segs, loff_t *ppos, mtfs_bindex_t bindex)
+ssize_t mtfs_file_rw_branch(int is_write,
+                            struct file *file,
+                            const struct iovec *iov,
+                            unsigned long nr_segs,
+                            loff_t *ppos,
+                            mtfs_bindex_t bindex)
 {
 	ssize_t ret = 0;
 	struct file *hidden_file = mtfs_f2branch(file, bindex);
@@ -649,7 +653,6 @@ ssize_t mtfs_file_rw_branch(int is_write, struct file *file, const struct iovec 
 out:
 	MRETURN(ret);
 }
-EXPORT_SYMBOL(mtfs_file_rw_branch);
 
 int mtfs_io_init_rw_common(struct mtfs_io *io, int is_write,
                            struct file *file, const struct iovec *iov,
@@ -691,6 +694,7 @@ static int mtfs_io_init_rw(struct mtfs_io *io, int is_write,
 	io->mi_ops = &((*(mtfs_f2ops(file)->io_ops))[io->mi_type]);
 	io->mi_resource = mtfs_i2resource(file->f_dentry->d_inode);
 	io->mi_einfo.mode = is_write ? MLOCK_MODE_WRITE : MLOCK_MODE_READ;
+	/* TODO: append write */
 	io->mi_einfo.data.mlp_extent.start = *ppos;
 	io->mi_einfo.data.mlp_extent.end = *ppos + rw_size;
 

@@ -2215,7 +2215,6 @@ run_test 110 "filename length checking"
 test_119b()
 {
 	#[ "$OSTCOUNT" -lt "2" ] && skip "skipping 2-stripe test" && return
-	#$SETSTRIPE -c 2 $DIR/$tfile || error "setstripe failed"
 	dd if=/dev/zero of=$DIR/$tfile bs=1M count=1 seek=1 || error "dd failed"
 	sync
 	echo "$MULTIOP $DIR/$tfile oO_RDONLY:O_DIRECT:r$((2048 * 1024)) "

@@ -7,6 +7,7 @@
 #include <mtfs_file.h>
 #include <mtfs_dentry.h>
 #include <mtfs_inode.h>
+#include <mtfs_device.h>
 #include "async_internal.h"
 #include "async_bucket_internal.h"
 
@@ -116,7 +117,27 @@ static void masync_io_iter_start_rw(struct mtfs_io *io)
 			}
 		}
 	} else {
+		struct masync_bucket *bucket = mtfs_i2bucket(inode);
 
+		MASSERT(io->mi_type == MIOT_READV);
+		/* Not append write, so it is ok to get extent like this.
+		 * TODO: probably unnecessary length here.
+		 */
+		extent.start = *(io_rw->ppos);
+		extent.end = *(io_rw->ppos) + io_rw->rw_size;
+		MASSERT(extent.start >= 0);
+		MASSERT(extent.start <= extent.end);
+		/* Lock to prevent race of file sync */
+		down(&bucket->mab_lock);
+		ret = mtfs_interval_is_overlapped(bucket->mab_root, &extent);
+		if (!ret) {
+			mio_iter_start_rw(io);
+		} else {
+			io->mi_flags = 0;
+		}
+		up(&bucket->mab_lock);
+		
+		/* Do not read it unless checksum or layout changed */
 	}
 
 out:
@@ -136,6 +157,22 @@ static void masync_io_iter_fini_read_ops(struct mtfs_io *io, int init_ret)
 	io->mi_break = 1;
 	_MRETURN();
 }
+
+static void masync_io_iter_fini_writev(struct mtfs_io *io, int init_ret)
+{
+	MENTRY();
+
+	if (unlikely(init_ret)) {
+		io->mi_break = 1;
+		MBUG();
+		goto out;
+	}
+
+	io->mi_break = 1;
+out:
+	_MRETURN();
+}
+
 
 static void masync_io_iter_fini_create_ops(struct mtfs_io *io, int init_ret)
 {
@@ -178,9 +215,28 @@ out:
 	_MRETURN();
 }
 
-int masync_io_init_read_ops(struct mtfs_io *io)
+static int masync_io_init_readv(struct mtfs_io *io)
 {
-	return mio_init_oplist(io, &mtfs_oplist_equal);
+	struct dentry *dentry = NULL;
+	struct inode *inode = NULL;
+	int ret = 0;
+	MENTRY();
+
+	dentry = io->mi_oplist_dentry;
+	if (dentry) {
+		inode = dentry->d_inode;
+	} else {
+		MASSERT(io->mi_oplist_inode);
+		inode = io->mi_oplist_inode;
+	}
+	MASSERT(inode);
+
+	ret = mio_init_oplist(io, &mtfs_oplist_equal);
+	if (!ret && mtfs_dev2checksum(mtfs_i2dev(inode))) {
+		io->subject.mi_checksum.type = mchecksum_type_select();	
+	}
+
+	MRETURN(ret);
 }
 
 static int masync_io_init_create_ops(struct mtfs_io *io)
@@ -295,14 +351,14 @@ const struct mtfs_io_operations masync_io_ops[] = {
 		.mio_iter_fini  = masync_io_iter_fini_read_ops,
 	},
 	[MIOT_READV] = {
-		.mio_init       = NULL,
-		.mio_fini       = NULL,
+		.mio_init       = masync_io_init_readv,
+		.mio_fini       = mio_fini_oplist_noupdate,
 		.mio_lock       = NULL,
 		.mio_unlock     = NULL,
 		.mio_iter_init  = mio_iter_init_rw,
 		.mio_iter_start = masync_io_iter_start_rw,
-		.mio_iter_end   = NULL,
-		.mio_iter_fini  = masync_io_iter_fini_read_ops,
+		.mio_iter_end   = mio_iter_end_readv,
+		.mio_iter_fini  = mio_iter_fini_read_ops,
 	},
 	[MIOT_WRITEV] = {
 		.mio_init       = masync_io_init_create_ops,
@@ -312,7 +368,7 @@ const struct mtfs_io_operations masync_io_ops[] = {
 		.mio_iter_init  = mio_iter_init_rw,
 		.mio_iter_start = masync_io_iter_start_rw,
 		.mio_iter_end   = mio_iter_end_oplist,
-		.mio_iter_fini  = masync_io_iter_fini_create_ops,
+		.mio_iter_fini  = masync_io_iter_fini_writev,
 	},
 	[MIOT_GETATTR] = {
 		.mio_init       = NULL,

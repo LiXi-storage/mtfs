@@ -244,8 +244,9 @@ void mio_iter_fini_read_ops(struct mtfs_io *io, int init_ret)
 		goto out;
 	}
 
-	if ((io->mi_flags & MTFS_OPERATION_SUCCESS)
-	    && (!mtfs_dev2checksum(mtfs_i2dev(inode)))) {
+	if ((io->mi_flags & MTFS_OPERATION_SUCCESS) &&
+	    ((io->mi_type != MIOT_READV) ||
+	     (!mtfs_dev2checksum(mtfs_i2dev(inode))))) {
 		io->mi_break = 1;
 		goto out;
 	}
@@ -326,8 +327,10 @@ void mio_iter_start_rw(struct mtfs_io *io)
 	                                         &io_rw->pos_tmp,
 	                                         global_bindex);
 	if (io->mi_result.ssize >= 0) {
-		/* TODO: this check is weak */
-		io->mi_flags = MTFS_OPERATION_SUCCESS | MTFS_OPERATION_PREFERABLE;
+		io->mi_flags = MTFS_OPERATION_SUCCESS;
+		if (io->mi_result.ssize == io_rw->rw_size) {
+			io->mi_flags |= MTFS_OPERATION_PREFERABLE;
+		}
 	} else {
 		io->mi_flags = 0;
 	}
@@ -815,7 +818,7 @@ __u32 mio_iov_chechsum(const struct iovec *iov,
 	MRETURN(tmp_checksum);
 }
 
-void mio_iter_check_readv(struct mtfs_io *io)
+static void mio_iter_check_readv(struct mtfs_io *io)
 {
 	struct mtfs_io_rw *io_rw = &io->u.mi_rw;
 	struct file *file = io_rw->file;
@@ -833,7 +836,13 @@ void mio_iter_check_readv(struct mtfs_io *io)
 				       global_bindex,
 				       checksum->gather.ssize,
 				       io->mi_result.ssize);
-				MBUG();
+				if (strcmp(mtfs_dev2junction(mtfs_f2dev(file))->mj_subject,
+				           "ASYNC_REPLICA") == 0) {
+					_MRETURN();
+				} else {
+					/* TODO: handle write size for async replication*/
+					MBUG();
+				}
 			}
 		}
 
@@ -862,7 +871,13 @@ void mio_iter_check_readv(struct mtfs_io *io)
 
 	_MRETURN();
 }
-EXPORT_SYMBOL(mio_iter_check_readv);
+
+void mio_iter_end_readv(struct mtfs_io *io)
+{
+	mio_iter_end_oplist(io);
+	mio_iter_check_readv(io);
+}
+EXPORT_SYMBOL(mio_iter_end_readv);
 
 static int mtfs_io_init(struct mtfs_io *io)
 {

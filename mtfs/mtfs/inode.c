@@ -1028,6 +1028,7 @@ int mtfs_link(struct dentry *old_dentry,
 	mtfs_update_attr_times(dir);
 	mtfs_update_inode_size(dir);
 	old_dentry->d_inode->i_nlink = mtfs_get_nlinks(old_dentry->d_inode);
+
 out_free_io:
 	MTFS_SLAB_FREE_PTR(io, mtfs_io_cache);
 out:

@@ -113,13 +113,6 @@ static struct file_operations mtfs_nfs_main_fops =
 	/* TODO: splice_read, splice_write */
 };
 
-static struct address_space_operations mtfs_nfs_aops =
-{
-	direct_IO:      mtfs_direct_IO,
-	writepage:      mtfs_writepage,
-	readpage:       mtfs_readpage,
-};
-
 static int mtfs_nfs_ioctl(struct inode *inode, struct file *file, unsigned int cmd, unsigned long arg)
 {
 	int ret = 0;
@@ -142,7 +135,7 @@ static struct mtfs_operations mtfs_nfs_operations = {
 	dir_fops:                &mtfs_nfs_dir_fops,
 	sops:                    &mtfs_nfs_sops,
 	dops:                    &mtfs_nfs_dops,
-	aops:                    &mtfs_nfs_aops,
+	aops:                    &mtfs_aops,
 	ioctl:                   &mtfs_nfs_ioctl,
 	vm_ops:                  &mtfs_file_vm_ops,
 	iupdate_ops:             &mtfs_iupdate_choose,
