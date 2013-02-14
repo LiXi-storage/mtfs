@@ -321,11 +321,11 @@ void mio_iter_start_rw(struct mtfs_io *io)
 
 	is_write = (io->mi_type == MIOT_WRITEV) ? 1 : 0;
 	io->mi_result.ssize = mtfs_file_rw_branch(is_write,
-	                                         io_rw->file,
-	                                         io_rw->iov_tmp,
-	                                         io_rw->nr_segs,
-	                                         &io_rw->pos_tmp,
-	                                         global_bindex);
+	                                          io_rw->file,
+	                                          io_rw->iov_tmp,
+	                                          io_rw->nr_segs,
+	                                          &io_rw->pos_tmp,
+	                                          global_bindex);
 	if (io->mi_result.ssize >= 0) {
 		io->mi_flags = MTFS_OPERATION_SUCCESS;
 		if (io->mi_result.ssize == io_rw->rw_size) {
@@ -831,9 +831,11 @@ static void mio_iter_check_readv(struct mtfs_io *io)
 	    mtfs_dev2checksum(mtfs_f2dev(file))) {
 		if (checksum->gather.valid) {
 			if (checksum->gather.ssize != io->mi_result.ssize) {
-				MERROR("read size of branch[%d] is different, "
+				MERROR("read size of branch[%d] of file [%.*s] is different, "
 				       "expected %lld, got %lld\n",
 				       global_bindex,
+				       file->f_dentry->d_name.len,
+				       file->f_dentry->d_name.name,
 				       checksum->gather.ssize,
 				       io->mi_result.ssize);
 				if (strcmp(mtfs_dev2junction(mtfs_f2dev(file))->mj_subject,
@@ -852,9 +854,11 @@ static void mio_iter_check_readv(struct mtfs_io *io)
 		                                checksum->type);
 		if (checksum->gather.valid) {
 			if (checksum->gather.checksum != tmp_checksum) {
-				MERROR("content of branch[%d] is different, "
+				MERROR("content of branch[%d] of file [%.*s] is different, "
 				       "expected 0x%x, got 0x%x\n",
 				       global_bindex,
+				       file->f_dentry->d_name.len,
+				       file->f_dentry->d_name.name,
 				       checksum->gather.checksum,
 				       tmp_checksum);
 				MBUG();

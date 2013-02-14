@@ -7,25 +7,6 @@
 #include <mtfs_device.h>
 #include <mtfs_inode.h>
 
-static int msync_io_init_setattr(struct mtfs_io *io)
-{
-	int ret = 0;
-	struct mtfs_io_setattr *io_setattr = &io->u.mi_setattr;
-	struct iattr *attr = io_setattr->ia;
-	int ia_valid = attr->ia_valid;
-	MENTRY();
-
-	ret = mio_init_oplist_flag(io);
-	if (!ret && (ia_valid & ATTR_SIZE)) {
-	    	io->mi_resource = mtfs_i2resource(io_setattr->dentry->d_inode);
-		io->mi_einfo.mode = MLOCK_MODE_WRITE;
-		io->mi_einfo.data.mlp_extent.start = attr->ia_size;
-		io->mi_einfo.data.mlp_extent.end = MTFS_INTERVAL_EOF;
-	}
-
-	MRETURN(ret);
-}
-
 static int msync_io_lock_setattr(struct mtfs_io *io)
 {
 	int ret = 0;
@@ -211,7 +192,7 @@ const struct mtfs_io_operations mtfs_io_ops[] = {
 		.mio_iter_fini  = mio_iter_fini_read_ops,
 	},
 	[MIOT_SETATTR] = {
-		.mio_init       = msync_io_init_setattr,
+		.mio_init       = mio_init_oplist_flag,
 		.mio_fini       = mio_fini_oplist,
 		.mio_lock       = msync_io_lock_setattr,
 		.mio_unlock     = msync_io_unlock_setattr,

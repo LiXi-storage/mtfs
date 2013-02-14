@@ -6,6 +6,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <errno.h>
+#include <string.h>
 #include <stdio.h>
 #include <getopt.h>
 #include <cmd_parser.h>

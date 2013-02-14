@@ -126,12 +126,12 @@ int masync_service_main(struct mtfs_service *service, struct mservice_thread *th
 			continue;
 		}
 		async_extent = mtfs_list_entry(async->msa_cancel_extents.next,
-	                                       struct masync_extent,
-	                                       mae_cancel_linkage);
+		                               struct masync_extent,
+		                               mae_cancel_linkage);
 		mtfs_list_del_init(&async_extent->mae_cancel_linkage);
 		mtfs_spin_unlock(&async->msa_cancel_lock);
 
-		/* If not in tree, masync_extent_flush() will shikp it */
+		/* If not in tree, masync_extent_flush() will skip it */
 		retry = masync_extent_flush(async_extent, buf, buf_size);
 		if (retry) {
 			mtfs_spin_lock(&async->msa_cancel_lock);
@@ -248,16 +248,7 @@ static int __init masync_init(void)
 		goto out;
 	}
 
-	ret = mservice_start_threads(the_async.msa_service);
-        if (ret) {
-        	MERROR("failed to start theads\n");
-        	goto out_free_service;
-        }
-
 	masync_shrinker = mtfs_set_shrinker(DEFAULT_SEEKS, masync_shrink);
-	goto out;
-out_free_service:
-	mservice_fini(the_async.msa_service);
 out:
 	MRETURN(ret);
 }

@@ -73,12 +73,12 @@ struct mlock_interval_tree {
 };
 
 struct mlock_resource {
-	mtfs_list_t                mlr_granted; /* Queue of granted locks */
-	mtfs_list_t                mlr_waiting; /* Queue of waiting locks */
-	mtfs_spinlock_t            mlr_lock;    /* Lock */
-	int                        mlr_inited;  /* Resource is inited */
-	struct mlock_type_object  *mlr_type;    /* Resource type */
-
+	mtfs_list_t                mlr_granted;           /* Queue of granted locks */
+	mtfs_list_t                mlr_waiting;           /* Queue of waiting locks */
+	mtfs_spinlock_t            mlr_lock;              /* Lock, protect mlr_reprocess_linkage */
+	int                        mlr_inited;            /* Resource is inited */
+	struct mlock_type_object  *mlr_type;              /* Resource type */
+	mtfs_list_t                mlr_reprocess_linkage; /* Linkage to reprocess list, protected by mlr_lock */
 	/* fields of extent lock */
 	struct mlock_interval_tree mlr_itree[MLOCK_MODE_NUM];  /* Interval trees */
 };
@@ -145,4 +145,16 @@ struct mlock *mlock_enqueue(struct mlock_resource *resource,
                             struct mlock_enqueue_info *einfo);
 void mlock_resource_init(struct mlock_resource *resource);
 
+#if defined(__linux__) && defined(__KERNEL__)
+#include "mtfs_service.h"
+
+struct mlock_reprocess {
+	struct mtfs_service *mls_service;             /* Service of  */
+	mtfs_list_t          mls_reprocess_resources; /* Protected by mls_lock */
+	mtfs_spinlock_t      mls_lock;                /* Protect mls_reprocess_resources */
+};
+
+extern int mlock_init(void);
+extern void mlock_fini(void);
+#endif /* defined(__linux__) && defined(__KERNEL__) */
 #endif /* __MTFS_LOCK_H__ */

@@ -249,6 +249,58 @@ static int masync_io_init_unlink_ops(struct mtfs_io *io)
 	return mio_init_oplist(io, &mtfs_oplist_equal);
 }
 
+static int masync_io_lock_setattr(struct mtfs_io *io)
+{
+	int ret = 0;
+	struct mtfs_io_setattr *io_setattr = &io->u.mi_setattr;
+	struct iattr *attr = io_setattr->ia;
+	int ia_valid = attr->ia_valid;
+	MENTRY();
+
+	/* We only need to get read lock no matter readv, writev or truncate */
+	if (ia_valid & ATTR_SIZE) {
+		io->mi_einfo.mode = MLOCK_MODE_READ;
+		ret = mio_lock_mlock(io);
+	}
+
+	MRETURN(ret);
+}
+
+static void masync_io_unlock_setattr(struct mtfs_io *io)
+{
+	struct mtfs_io_setattr *io_setattr = &io->u.mi_setattr;
+	struct iattr *attr = io_setattr->ia;
+	int ia_valid = attr->ia_valid;
+	MENTRY();
+
+	if (ia_valid & ATTR_SIZE) {
+		mio_unlock_mlock(io);
+	}
+
+	_MRETURN();
+}
+
+static int masync_io_rw_lock(struct mtfs_io *io)
+{
+	int ret = 0;
+	MENTRY();
+
+	/* We only need to get read lock no matter readv or writev */
+	io->mi_einfo.mode = MLOCK_MODE_READ;
+	ret = mio_lock_mlock(io);
+
+	MRETURN(ret);
+}
+
+static void masync_io_rw_unlock(struct mtfs_io *io)
+{
+	MENTRY();
+
+	mio_unlock_mlock(io);
+
+	_MRETURN();
+}
+
 const struct mtfs_io_operations masync_io_ops[] = {
 	[MIOT_CREATE] = {
 		.mio_init       = masync_io_init_create_ops,
@@ -353,8 +405,8 @@ const struct mtfs_io_operations masync_io_ops[] = {
 	[MIOT_READV] = {
 		.mio_init       = masync_io_init_readv,
 		.mio_fini       = mio_fini_oplist_noupdate,
-		.mio_lock       = NULL,
-		.mio_unlock     = NULL,
+		.mio_lock       = masync_io_rw_lock,
+		.mio_unlock     = masync_io_rw_unlock,
 		.mio_iter_init  = mio_iter_init_rw,
 		.mio_iter_start = masync_io_iter_start_rw,
 		.mio_iter_end   = mio_iter_end_readv,
@@ -363,8 +415,8 @@ const struct mtfs_io_operations masync_io_ops[] = {
 	[MIOT_WRITEV] = {
 		.mio_init       = masync_io_init_create_ops,
 		.mio_fini       = mio_fini_oplist,
-		.mio_lock       = NULL,
-		.mio_unlock     = NULL,
+		.mio_lock       = masync_io_rw_lock,
+		.mio_unlock     = masync_io_rw_unlock,
 		.mio_iter_init  = mio_iter_init_rw,
 		.mio_iter_start = masync_io_iter_start_rw,
 		.mio_iter_end   = mio_iter_end_oplist,
@@ -383,8 +435,8 @@ const struct mtfs_io_operations masync_io_ops[] = {
 	[MIOT_SETATTR] = {
 		.mio_init       = masync_io_init_create_ops,
 		.mio_fini       = mio_fini_oplist,
-		.mio_lock       = NULL,
-		.mio_unlock     = NULL,
+		.mio_lock       = masync_io_lock_setattr,
+		.mio_unlock     = masync_io_unlock_setattr,
 		.mio_iter_init  = NULL,
 		.mio_iter_start = mio_iter_start_setattr,
 		.mio_iter_end   = mio_iter_end_oplist,

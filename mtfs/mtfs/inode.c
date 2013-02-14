@@ -2017,9 +2017,14 @@ int mtfs_setattr(struct dentry *dentry, struct iattr *ia)
 	io->mi_bnum = mtfs_d2bnum(dentry);
 	io->mi_break = 0;
 	io->mi_ops = &((*(mtfs_d2ops(dentry)->io_ops))[io->mi_type]);
-
 	io_setattr->dentry = dentry;
 	io_setattr->ia = ia;
+	if (ia->ia_valid & ATTR_SIZE) {
+		io->mi_resource = mtfs_i2resource(dentry->d_inode);
+		io->mi_einfo.mode = MLOCK_MODE_WRITE; /* Async replica may change it. */
+		io->mi_einfo.data.mlp_extent.start = ia->ia_size;
+		io->mi_einfo.data.mlp_extent.end = MTFS_INTERVAL_EOF;
+	}
 
 	ret = mtfs_io_loop(io);
 	if (ret) {

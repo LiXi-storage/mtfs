@@ -8,6 +8,7 @@
  */
 
 #if defined (__linux__) && defined(__KERNEL__)
+#include <linux/module.h>
 #include <linux/sched.h>
 #include <thread.h>
 #include "main_internal.h"
@@ -660,6 +661,10 @@ void mlock_resource_reprocess(struct mlock_resource *resource)
 	_MRETURN();
 }
 
+#if defined(__linux__) && defined(__KERNEL__)
+static void mlock_resource_add2list(struct mlock_resource *resource);
+#endif /* defined(__linux__) && defined(__KERNEL__) */
+
 void mlock_cancel(struct mlock *lock)
 {
 	struct mlock_resource *resource = lock->ml_resource;
@@ -669,9 +674,15 @@ void mlock_cancel(struct mlock *lock)
 
 	mlock_resource_lock(resource);
 	mlock_unlink(lock);
+#if defined(__linux__) && defined(__KERNEL__)
+	mlock_destroy(lock);
+	mlock_resource_unlock(resource);
+	mlock_resource_add2list(resource);
+#else /* !defined(__linux__) && defined(__KERNEL__) */
 	mlock_resource_reprocess(resource);
 	mlock_destroy(lock);
 	mlock_resource_unlock(resource);
+#endif /* !defined(__linux__) && defined(__KERNEL__) */
 
 	_MRETURN();
 }
@@ -685,16 +696,132 @@ void mlock_resource_init(struct mlock_resource *resource)
 
 	MTFS_INIT_LIST_HEAD(&resource->mlr_granted);
 	MTFS_INIT_LIST_HEAD(&resource->mlr_waiting);
+	MTFS_INIT_LIST_HEAD(&resource->mlr_reprocess_linkage);
 
 	mtfs_spin_lock_init(&resource->mlr_lock);
 	resource->mlr_type = MLOCK_TYPE_DEFAULT;
 
-        /* initialize interval trees for each lock mode*/
-        for (index = 0; index < MLOCK_MODE_NUM; index++) {
-                resource->mlr_itree[index].mlit_size = 0;
-                resource->mlr_itree[index].mlit_mode = 1 << index;
-                resource->mlr_itree[index].mlit_root = NULL;
-        }
-        resource->mlr_inited = 1;
+	/* initialize interval trees for each lock mode*/
+	for (index = 0; index < MLOCK_MODE_NUM; index++) {
+		resource->mlr_itree[index].mlit_size = 0;
+		resource->mlr_itree[index].mlit_mode = 1 << index;
+		resource->mlr_itree[index].mlit_root = NULL;
+	}
+	resource->mlr_inited = 1;
 	_MRETURN();
 }
+
+#if defined(__linux__) && defined(__KERNEL__)
+struct mlock_reprocess the_mlock;
+
+static int mlock_service_busy(struct mtfs_service *service, struct mservice_thread *thread)
+{
+	int ret = 0;
+	struct mlock_reprocess *reprocess = (struct mlock_reprocess *)service->srv_data;
+	MENTRY();
+
+	mtfs_spin_lock(&reprocess->mls_lock);
+	ret = !mtfs_list_empty(&reprocess->mls_reprocess_resources);
+	mtfs_spin_unlock(&reprocess->mls_lock);
+	MRETURN(ret);
+}
+
+static int mlock_service_main(struct mtfs_service *service, struct mservice_thread *thread)
+{
+	int ret = 0;
+	struct mlock_reprocess *reprocess = (struct mlock_reprocess *)service->srv_data;
+	struct mlock_resource *resource = NULL;
+	MENTRY();
+
+	while(1) {
+		if (mservice_wait_event(service, thread)) {
+			break;
+		}
+
+		mtfs_spin_lock(&reprocess->mls_lock);
+		if (mtfs_list_empty(&reprocess->mls_reprocess_resources)) {
+			mtfs_spin_unlock(&reprocess->mls_lock);
+			continue;
+		}
+		resource = mtfs_list_entry(reprocess->mls_reprocess_resources.next,
+	                               struct mlock_resource,
+		                           mlr_reprocess_linkage);
+		mtfs_list_del_init(&resource->mlr_reprocess_linkage);
+		mtfs_spin_unlock(&reprocess->mls_lock);
+
+		/* Reprocess the resource */
+		mlock_resource_lock(resource);
+		mlock_resource_reprocess(resource);
+		mlock_resource_unlock(resource);
+	}
+	MRETURN(ret);
+}
+
+#define MLOCK_SERVICE_NAME "mtfs_lock"
+
+static int _mlock_init(struct mlock_reprocess *reprocess)
+{
+	int ret = 0;
+	MENTRY();
+
+	MTFS_INIT_LIST_HEAD(&reprocess->mls_reprocess_resources);
+	mtfs_spin_lock_init(&reprocess->mls_lock);
+	reprocess->mls_service = mservice_init(MLOCK_SERVICE_NAME,
+	                                       MLOCK_SERVICE_NAME,
+	                                       1, 1,
+	                                       0, mlock_service_main,
+	                                       mlock_service_busy,
+	                                       reprocess);
+	if (reprocess->mls_service == NULL) {
+		MERROR("failed to init service of lock\n");
+		ret = -EINVAL;
+	}
+
+	MRETURN(ret);
+}
+
+int mlock_init(void)
+{
+	return _mlock_init(&the_mlock);
+}
+EXPORT_SYMBOL(mlock_init);
+
+static void _mlock_fini(struct mlock_reprocess *reprocess)
+{
+	MASSERT(mtfs_list_empty(&reprocess->mls_reprocess_resources));
+	mservice_fini(reprocess->mls_service);
+}
+
+void mlock_fini(void)
+{
+	_mlock_fini(&the_mlock);
+}
+EXPORT_SYMBOL(mlock_fini);
+
+static void mlock_service_wakeup(void)
+{
+	MENTRY();
+
+	wake_up(&the_mlock.mls_service->srv_waitq);
+	_MRETURN();
+}
+
+static void mlock_resource_add2list(struct mlock_resource *resource)
+{
+	struct mlock_reprocess *reprocess = &the_mlock;
+	int added = 0;
+	MENTRY();
+
+	mtfs_spin_lock(&reprocess->mls_lock);
+	if (mtfs_list_empty(&resource->mlr_reprocess_linkage)) {
+		mtfs_list_add_tail(&resource->mlr_reprocess_linkage, &reprocess->mls_reprocess_resources);
+		added = 1;
+	}
+	mtfs_spin_unlock(&reprocess->mls_lock);
+	if (added) {
+		mlock_service_wakeup();
+	}
+
+	_MRETURN();
+}
+#endif /* defined(__linux__) && defined(__KERNEL__) */

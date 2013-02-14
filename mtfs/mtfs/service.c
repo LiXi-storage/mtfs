@@ -25,16 +25,17 @@ int mservice_wait_event(struct mtfs_service *service, struct mservice_thread *th
 	int ret = 0;
 	MENTRY();
 
-        cond_resched();
+	cond_resched();
 
 	MASSERT(service->srv_busy);
-        mtfs_wait_event_exclusive_head(service->srv_waitq,
+	mtfs_wait_event_exclusive_head(service->srv_waitq,
 	                               mservice_thread_stopping(thread) ||
 	                               (service->srv_busy && service->srv_busy(service, thread)),
 	                               &mwi);
 
-	if (mservice_thread_stopping(thread))
+	if (mservice_thread_stopping(thread)) {
 		ret = -EINTR;
+	}
 
         MRETURN(ret);
 }
@@ -210,7 +211,7 @@ int mservice_start_threads(struct mtfs_service *svc)
 	int ret = 0;
 	MENTRY();
 
-        MASSERT(svc->srv_threads_min >= 1);
+	MASSERT(svc->srv_threads_min >= 1);
 	for (i = 0; i < svc->srv_threads_min; i++) {
 		ret = mservice_start_thread(svc);
 		/* We have enough threads, don't start more. */
@@ -286,6 +287,7 @@ struct mtfs_service *mservice_init(char *name,
                                    mservice_busy_t busy,
                                    void *data)
 {
+	int ret = 0;
 	struct mtfs_service *service = NULL;
 	MENTRY();
 
@@ -310,6 +312,16 @@ struct mtfs_service *mservice_init(char *name,
 	service->srv_main = main;
 	service->srv_busy = busy;
 	service->srv_data = data;
+
+	ret = mservice_start_threads(service);
+	if (ret) {
+		MERROR("failed to start theads, ret = %d\n", ret);
+		goto out_free_service;
+	}
+        goto out;
+out_free_service:
+	MTFS_FREE_PTR(service);
+	service = NULL;
 out:	
 	MRETURN(service);
 }
@@ -326,6 +338,6 @@ int mservice_fini(struct mtfs_service *service)
 
 	MTFS_FREE_PTR(service);
 
-        MRETURN(ret);
+	MRETURN(ret);
 }
 EXPORT_SYMBOL(mservice_fini);

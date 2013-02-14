@@ -10,6 +10,7 @@
 #include <mtfs_proc.h>
 #include <mtfs_device.h>
 #include <mtfs_file.h>
+#include <mtfs_service.h>
 #include "hide_internal.h"
 #include "super_internal.h"
 #include "dentry_internal.h"
@@ -906,27 +907,33 @@ static int __init mtfs_init(void)
 
 	MDEBUG("Registering mtfs\n");
 
+	ret = mlock_init();
+	if (ret) {
+		MERROR("failed to init mlock service, ret = %d\n", ret);
+		goto out;
+	}
+
 	ret = mtfs_init_kmem_caches();
 	if (ret) {
-		MERROR("Failed to allocate one or more kmem_cache objects\n");
-		goto out;
+		MERROR("failed to allocate one or more kmem_cache objects, ret = %d\n", ret);
+		goto out_fini_mlock;
 	}
 
 	ret = mtfs_insert_proc();
 	if (ret) {
-		MERROR("failed to insert_proc: error %d\n", ret);
+		MERROR("failed to insert_proc, ret = %d\n", ret);
 		goto out_free_kmem;
 	}
 	
 	ret = register_filesystem(&mtfs_fs_type);
 	if (ret) {
-		MERROR("failed to register filesystem type mtfs: error %d\n", ret);
+		MERROR("failed to register filesystem type mtfs, ret = %d\n", ret);
 		goto out_remove_proc;
 	}
 
 	ret = register_filesystem(&mtfs_hidden_fs_type);
 	if (ret) {
-		MERROR("failed to register filesystem type hidden_mtfs: error %d\n", ret);
+		MERROR("failed to register filesystem type hidden_mtfs, ret = %d\n", ret);
 		goto out_unregister_mtfs;
 	}
 
@@ -937,6 +944,8 @@ out_remove_proc:
 	mtfs_remove_proc();
 out_free_kmem:
 	mtfs_free_kmem_caches();
+out_fini_mlock:
+	mlock_fini();
 out:
 	return ret;
 }
@@ -948,6 +957,7 @@ static void __exit mtfs_exit(void)
 	unregister_filesystem(&mtfs_fs_type);
 	mtfs_remove_proc();
 	mtfs_free_kmem_caches();
+	mlock_fini();
 }
 
 MODULE_AUTHOR("MulTi File System Development Workgroup");
