@@ -318,7 +318,7 @@ struct mtfs_service *mservice_init(char *name,
 		MERROR("failed to start theads, ret = %d\n", ret);
 		goto out_free_service;
 	}
-        goto out;
+	goto out;
 out_free_service:
 	MTFS_FREE_PTR(service);
 	service = NULL;

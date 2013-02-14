@@ -814,10 +814,16 @@ static void mlock_resource_add2list(struct mlock_resource *resource)
 
 	mtfs_spin_lock(&reprocess->mls_lock);
 	if (mtfs_list_empty(&resource->mlr_reprocess_linkage)) {
-		mtfs_list_add_tail(&resource->mlr_reprocess_linkage, &reprocess->mls_reprocess_resources);
-		added = 1;
+		mlock_resource_lock(resource);
+		if (!mtfs_list_empty(&resource->mlr_waiting)) {
+			mtfs_list_add_tail(&resource->mlr_reprocess_linkage,
+			                   &reprocess->mls_reprocess_resources);
+			added = 1;
+		}
+		mlock_resource_unlock(resource);
 	}
 	mtfs_spin_unlock(&reprocess->mls_lock);
+
 	if (added) {
 		mlock_service_wakeup();
 	}
