@@ -130,16 +130,6 @@ static struct mtfs_device *_mtfs_search_device(struct mtfs_device *device)
 	return NULL;
 }
 
-struct mtfs_device *mtfs_search_device(struct mtfs_device *device)
-{
-	struct mtfs_device *found = NULL;
-	
-	spin_lock(&mtfs_device_lock);
-	found = _mtfs_search_device(device);
-	spin_unlock(&mtfs_device_lock);
-	return found;
-}
-
 static int _mtfs_register_device(struct mtfs_device *device)
 {
 	struct mtfs_device *found = NULL;
@@ -162,7 +152,7 @@ static int _mtfs_register_device(struct mtfs_device *device)
 	return ret;
 }
 
-int mtfs_device_proc_read_name(char *page, char **start, off_t off, int count,
+static int mtfs_device_proc_read_name(char *page, char **start, off_t off, int count,
                                int *eof, void *data)
 {
 	int ret = 0;
@@ -173,7 +163,7 @@ int mtfs_device_proc_read_name(char *page, char **start, off_t off, int count,
 	return ret;
 }
 
-int mtfs_device_proc_read_bnum(char *page, char **start, off_t off, int count,
+static int mtfs_device_proc_read_bnum(char *page, char **start, off_t off, int count,
                                int *eof, void *data)
 {
 	int ret = 0;
@@ -184,7 +174,7 @@ int mtfs_device_proc_read_bnum(char *page, char **start, off_t off, int count,
 	return ret;
 }
 
-int mtfs_device_proc_read_checksum(char *page, char **start, off_t off, int count,
+static int mtfs_device_proc_read_checksum(char *page, char **start, off_t off, int count,
                                    int *eof, void *data)
 {
 	int ret = 0;
@@ -195,7 +185,7 @@ int mtfs_device_proc_read_checksum(char *page, char **start, off_t off, int coun
 	return ret;
 }
 
-int mtfs_device_proc_read_noabort(char *page, char **start, off_t off, int count,
+static int mtfs_device_proc_read_noabort(char *page, char **start, off_t off, int count,
                                   int *eof, void *data)
 {
 	int ret = 0;
@@ -206,16 +196,91 @@ int mtfs_device_proc_read_noabort(char *page, char **start, off_t off, int count
 	return ret;
 }
 
-struct mtfs_proc_vars mtfs_proc_vars_device[] = {
+static const char *mdevice_debug2str(int write_type)
+{
+	switch (write_type) {
+	default:
+		return NULL;
+	case MDEVICE_WRITE_NORMAL:
+		return MDEVICE_WRITE_NORMAL_STRING;
+	case MDEVICE_WRITE_TRUNCATE:
+		return MDEVICE_WRITE_TRUNCATE_STRING;
+        }
+}
+
+static int mdevice_str2debug(const char *buf)
+{
+	int ret = -EINVAL;
+
+	if (strncmp(MDEVICE_WRITE_NORMAL_STRING,
+	            buf,
+	            strlen(MDEVICE_WRITE_NORMAL_STRING)) == 0) {
+		ret = MDEVICE_WRITE_NORMAL;
+	} else if (strncmp(MDEVICE_WRITE_TRUNCATE_STRING,
+	           buf,
+	           strlen(MDEVICE_WRITE_TRUNCATE_STRING)) == 0) {
+		ret = MDEVICE_WRITE_TRUNCATE;
+	}
+
+	return ret;
+}
+
+static int mdevice_proc_debug_read(char *page, char **start, off_t off, int count,
+                                   int *eof, void *data)
+{
+	int ret = 0;
+	struct mtfs_device *device = (struct mtfs_device *)data;
+
+	*eof = 1;
+	ret = snprintf(page, count, "%s\n", mdevice_debug2str(mtfs_dev2write(device)));
+
+	return ret;
+}
+
+static int mdevice_proc_debug_write(struct file *file, const char *buffer,
+                                    unsigned long count, void *data)
+{
+	int ret = 0;
+	char kern_buf[20];
+	struct mtfs_device *device = (struct mtfs_device *)data;
+	int debug_write = 0;
+	MENTRY();
+
+	if (count > (sizeof(kern_buf) - 1)) {
+		ret = -EINVAL;
+		goto out;
+	}
+
+	if (copy_from_user(kern_buf, buffer, count)) {
+		ret = -EINVAL;
+		goto out;
+	}
+	kern_buf[count] = '\0';
+
+	debug_write = mdevice_str2debug(kern_buf);
+	if (debug_write < 0) {
+		goto out;
+	}
+
+	mtfs_dev2write(device) = debug_write;
+out:
+	if (ret) {
+		MRETURN(ret);
+	}
+	MRETURN(count);
+}
+
+static struct mtfs_proc_vars mtfs_proc_vars_device[] = {
 	{ "device_name", mtfs_device_proc_read_name, NULL, NULL },
 	{ "bnum", mtfs_device_proc_read_bnum, NULL, NULL },
 	{ "checksum", mtfs_device_proc_read_checksum, NULL, NULL },
 	{ "noabort", mtfs_device_proc_read_noabort, NULL, NULL },
+	{ "debug_write", mdevice_proc_debug_read, mdevice_proc_debug_write, NULL },
 	{ 0 }
 };
 
 #define MTFS_ERRNO_INACTIVE "inactive"
-int mtfs_device_branch_proc_read_errno(char *page, char **start, off_t off, int count,
+static int mtfs_device_branch_proc_read_errno(char *page, char **start, off_t off, int count,
                                        int *eof, void *data)
 {
 	int ret = 0;
@@ -283,7 +348,7 @@ out:
 	MRETURN(count);
 }
 
-const char *mtfs_bops_mask2str(int mask)
+static const char *mtfs_bops_mask2str(int mask)
 {
 	switch (1 << mask) {
 	default:
@@ -295,7 +360,7 @@ const char *mtfs_bops_mask2str(int mask)
 	}
 }
 
-int mtfs_device_proc_bops_emask_read(char *page, char **start, off_t off, int count,
+static int mtfs_device_proc_bops_emask_read(char *page, char **start, off_t off, int count,
                                      int *eof, void *data)
 {
 	int ret = 0;
@@ -339,13 +404,13 @@ out:
 	MRETURN(count);
 }
 
-struct mtfs_proc_vars mtfs_proc_vars_device_branch[] = {
+static struct mtfs_proc_vars mtfs_proc_vars_device_branch[] = {
 	{ "errno", mtfs_device_branch_proc_read_errno, mtfs_device_branch_proc_write_errno, NULL },
 	{ "bops_emask", mtfs_device_proc_bops_emask_read, mtfs_device_proc_bops_emask_write, NULL },
 	{ 0 }
 };
 
-int mtfs_device_proc_register(struct mtfs_device *device)
+static int mtfs_device_proc_register(struct mtfs_device *device)
 {
 	int ret = 0;
 	unsigned int hash_num = 0;
@@ -396,7 +461,7 @@ out:
 }
 
 
-void mtfs_device_proc_unregister(struct mtfs_device *device)
+static void mtfs_device_proc_unregister(struct mtfs_device *device)
 {
 	mtfs_bindex_t bindex = 0;
 
@@ -418,7 +483,7 @@ static int mtfs_register_device(struct mtfs_device *device)
 	return ret;
 }
 
-void _mtfs_unregister_device(struct mtfs_device *device)
+static void _mtfs_unregister_device(struct mtfs_device *device)
 {
 	struct mtfs_device    *found;
 	mtfs_list_t           *p;
@@ -432,7 +497,7 @@ void _mtfs_unregister_device(struct mtfs_device *device)
 	}
 }
 
-void mtfs_unregister_device(struct mtfs_device *device)
+static void mtfs_unregister_device(struct mtfs_device *device)
 {
 	spin_lock(&mtfs_device_lock);
 	_mtfs_unregister_device(device);

@@ -98,10 +98,10 @@ void mbug(void)
 {
 	mtfs_catastrophe = 1;
 
-        if (in_interrupt()) {
-                panic("MBUG in interrupt.\n");
-                /* not reached */
-        }
+	if (in_interrupt()) {
+ 		panic("MBUG in interrupt.\n");
+		/* not reached */
+	}
 
 	mtfs_debug_dumpstack(NULL);
 	if (!mtfs_panic_on_mbug) {

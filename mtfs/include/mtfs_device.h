@@ -26,6 +26,18 @@ struct mtfs_device_branch {
 	struct proc_dir_entry     *mdb_proc_entry; /* Proc entry for each branch */
 };
 
+enum {
+	MDEVICE_WRITE_NORMAL = 0, /* Normally write */
+	MDEVICE_WRITE_TRUNCATE,   /* Truncate to the right length instead of write */
+};
+
+#define MDEVICE_WRITE_NORMAL_STRING "normal"
+#define MDEVICE_WRITE_TRUNCATE_STRING "truncate"
+
+struct mtfs_device_debug {
+	int mdd_write; /* Control what write operations actually do */
+};
+
 struct mtfs_device {
 	mtfs_list_t               md_list;                    /* Managed in the device list */
 	struct super_block       *md_sb;                      /* Super block this device belong to */
@@ -35,6 +47,7 @@ struct mtfs_device {
 	struct proc_dir_entry    *md_proc_entry;              /* Proc entry for this device */
 	__u32                     md_flags;                   /* Flags set when mounting */
 	mtfs_bindex_t             md_bnum;                    /* Branch number */
+	struct mtfs_device_debug  md_debug;                   /* Debug option */
 	struct mtfs_device_branch md_branch[MTFS_BRANCH_MAX]; /* Info for each branch */
 };
 
@@ -46,6 +59,7 @@ struct mtfs_device {
 #define mtfs_dev2flags(device)           (device->md_flags)
 #define mtfs_dev2noabort(device)         (device->md_flags & MTFS_SBI_NOABORT)
 #define mtfs_dev2checksum(device)        (device->md_flags & MTFS_SBI_CHECKSUM)
+#define mtfs_dev2write(device)           (device->md_debug.mdd_write)
 #define mtfs_dev2ops(device)             (mtfs_dev2junction(device)->mj_fs_ops)
 #define mtfs_dev2bnum(device)            (device->md_bnum)
 #define mtfs_dev2branch(device, bindex)  (&device->md_branch[bindex])

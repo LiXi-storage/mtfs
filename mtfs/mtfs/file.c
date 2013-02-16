@@ -604,6 +604,47 @@ ssize_t _do_read_write(int is_write, struct file *file, void *buf, ssize_t count
 }
 EXPORT_SYMBOL(_do_read_write);
 
+ssize_t debug_write_truncate(struct file *file, const struct iovec *iov,
+                             unsigned long nr_segs, loff_t *ppos)
+{
+	ssize_t ret = 0;
+	loff_t size = 0;
+	loff_t new_size = 0;
+	struct iattr temp_ia = {0};
+	struct dentry *dentry = file->f_dentry;
+	struct inode *inode = dentry->d_inode;
+	size_t rw_size = 0;
+	MENTRY();
+
+	rw_size = get_iov_count(iov, &nr_segs);
+	if (rw_size <= 0) {
+		ret = rw_size;
+		goto out;
+	}
+
+	size = i_size_read(inode);
+	if (file->f_flags & O_APPEND) {
+		new_size = size + rw_size;
+	} else {
+		new_size = *ppos + rw_size;
+	}
+
+	if (new_size > size) {
+		temp_ia.ia_valid = ATTR_SIZE;
+		temp_ia.ia_size = new_size;
+		mutex_lock(&inode->i_mutex);
+		ret = notify_change(dentry, &temp_ia);
+		mutex_unlock(&inode->i_mutex);
+	}
+
+	if (!ret) {
+		ret = rw_size;
+	}
+
+out:
+	MRETURN(ret);
+}
+
 ssize_t mtfs_file_rw_branch(int is_write,
                             struct file *file,
                             const struct iovec *iov,
@@ -637,7 +678,12 @@ ssize_t mtfs_file_rw_branch(int is_write,
 	}
 
 	MASSERT(hidden_file->f_op);
-	ret = _do_readv_writev(is_write, hidden_file, iov, nr_segs, ppos);
+	if (is_write && mtfs_dev2write(mtfs_f2dev(file)) == MDEVICE_WRITE_TRUNCATE) {
+		ret = debug_write_truncate(hidden_file, iov, nr_segs, ppos);
+	} else {
+		ret = _do_readv_writev(is_write, hidden_file, iov, nr_segs, ppos);
+	}
+
 	if (ret > 0 && is_write) {
 		/*
 		 * Lustre update inode size whenever read/write.
