@@ -740,9 +740,13 @@ static int mtfs_io_init_rw(struct mtfs_io *io, int is_write,
 	io->mi_ops = &((*(mtfs_f2ops(file)->io_ops))[io->mi_type]);
 	io->mi_resource = mtfs_i2resource(file->f_dentry->d_inode);
 	io->mi_einfo.mode = is_write ? MLOCK_MODE_WRITE : MLOCK_MODE_READ;
-	/* TODO: append write */
-	io->mi_einfo.data.mlp_extent.start = *ppos;
-	io->mi_einfo.data.mlp_extent.end = *ppos + rw_size;
+	if (is_write && file->f_flags & O_APPEND) {
+		io->mi_einfo.data.mlp_extent.start = 0;
+		io->mi_einfo.data.mlp_extent.end = MTFS_INTERVAL_EOF;
+	} else {
+		io->mi_einfo.data.mlp_extent.start = *ppos;
+		io->mi_einfo.data.mlp_extent.end = *ppos + rw_size;
+	}
 
 	io_rw->iov_length = sizeof(*iov) * nr_segs;
 	MTFS_ALLOC(io_rw->iov_tmp, io_rw->iov_length);

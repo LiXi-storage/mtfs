@@ -275,7 +275,9 @@ test_100()
 {
 	RACER_PROGS=$ALL_RACER_PROGS run_racer $MAX_RACER_THREADS
 }
+leak_detect_state_push "no"
 run_test 100 "run [$ALL_RACER_PROGS] for $MAX_RACER_THREADS threads"
+leak_detect_state_pop
 
 cleanup_all
 echo "=== $0: completed ==="

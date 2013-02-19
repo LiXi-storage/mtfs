@@ -306,6 +306,13 @@ init_leak_log()
 	../utils/mtfsctl debug_kernel > /dev/null
 }
 
+init_log()
+{
+	echo "error" > /proc/sys/mtfs/debug
+	echo > $MTFS_LOG
+	../utils/mtfsctl debug_kernel > /dev/null
+}
+
 check_leak_log()
 {
 	if module_is_inserted $DEBUG_MODULE; then
@@ -416,7 +423,9 @@ setup_all()
 	if [ "$DETECT_LEAK" = "yes" ]; then
 		# Since log is inited here
 		# memory leaked when inserting module won't be detected
-		init_leak_log "$INIT_NEED_CHECK_LEAK"
+		init_leak_log
+	else
+		init_log
 	fi
 
 	insert_module $MTFS_MODULE $MTFS_MODULE_PATH
