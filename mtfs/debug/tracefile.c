@@ -446,11 +446,11 @@ static void trace_cleanup_on_all_cpus(void)
 
 				mtfs_list_del(&tage->linkage);
 				mtfs_tage_free(tage);
-                        }
+			}
 
 			tcd->tcd_cur_pages = 0;
-                }
-        }
+		}
+	}
 }
 
 static void mtfs_trace_cleanup(void)

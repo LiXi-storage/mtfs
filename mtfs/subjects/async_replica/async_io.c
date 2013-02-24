@@ -8,6 +8,7 @@
 #include <mtfs_dentry.h>
 #include <mtfs_inode.h>
 #include <mtfs_device.h>
+#include <mtfs_interval_tree.h>
 #include "async_internal.h"
 #include "async_bucket_internal.h"
 
@@ -31,6 +32,99 @@ static int masync_bucket_fvalid(struct file *file)
 	MRETURN(ret);
 }
 
+static enum mtfs_interval_iter masync_checksum_overlap_cb(struct mtfs_interval_node *node,
+                                                          void *args)
+{
+	struct mtfs_interval_node_extent *interval = (struct mtfs_interval_node_extent *)args;;
+
+	MERROR("[%lu, %lu] overlaped with dirty extent [%lu, %lu]\n",
+	       interval->start, interval->end,
+	       node->in_extent.start, node->in_extent.end);
+	return MTFS_INTERVAL_ITER_STOP;
+}
+
+/* Called holding bucket->mab_lock */
+static void masync_checksum_branch_primary(struct mtfs_io *io)
+{
+	struct mtfs_io_rw *io_rw = &io->u.mi_rw;
+	//struct mtfs_io_checksum *checksum = &io->subject.mi_checksum;
+	struct file *file = io_rw->file;
+	struct dentry *dentry = file->f_dentry;
+	struct inode *inode = dentry->d_inode;
+	struct masync_bucket *bucket = mtfs_i2bucket(inode);
+	struct mtfs_interval_node_extent tmp_interval;
+	loff_t pos = *(io_rw->ppos);
+	enum mtfs_interval_iter iter = MTFS_INTERVAL_ITER_CONT;
+	MENTRY();
+
+	/* 
+	 * There should no be any dirty extent between
+	 * [pos + result_size, pos + rw_size - 1]
+	 */
+	MASSERT(io->mi_result.ssize >= 0);
+	MASSERT(io->mi_result.ssize <= io_rw->rw_size);
+	if (io->mi_result.ssize < io_rw->rw_size) {
+		tmp_interval.start = pos + io->mi_result.ssize;
+		tmp_interval.end = pos + io_rw->rw_size - 1;
+		iter = mtfs_interval_search(bucket->mab_root,
+		                            &tmp_interval,
+		                            masync_checksum_overlap_cb,
+		                            &tmp_interval);
+		if (iter == MTFS_INTERVAL_ITER_STOP) {
+			MERROR("unexpected short read\n");
+			MBUG();
+		}
+	}
+
+	_MRETURN();
+}
+
+/* Called holding bucket->mab_lock */
+static int masync_checksum_branch_secondary(struct mtfs_io_rw *io_rw,
+                                            struct mtfs_io_checksum *checksum,
+                                            struct masync_bucket *bucket,
+                                            struct mtfs_interval_node_extent *extent)
+{
+	int ret = 0;
+	MENTRY();
+
+	MRETURN(ret);
+}
+
+static void masync_iter_check_readv(struct mtfs_io *io)
+{
+	struct mtfs_io_rw *io_rw = &io->u.mi_rw;
+	struct mtfs_io_checksum *checksum = &io->subject.mi_checksum;
+	struct file *file = io_rw->file;
+	struct dentry *dentry = file->f_dentry;
+	struct inode *inode = dentry->d_inode;
+	struct masync_bucket *bucket = mtfs_i2bucket(inode);
+	struct mtfs_interval_node_extent extent;
+	int ret = 0;
+	MENTRY();
+
+	if ((io->mi_flags & MTFS_OPERATION_SUCCESS) &&
+	    mtfs_dev2checksum(mtfs_i2dev(inode))) {
+	    	extent.start = *(io_rw->ppos);
+	    	extent.end = *(io_rw->ppos) + io_rw->rw_size;
+		if (io->mi_bindex == io->mi_bnum - 1) {
+			masync_checksum_branch_primary(io);
+		} else {
+			ret = masync_checksum_branch_secondary(io_rw,
+                                                               checksum,
+                                                               bucket,
+                                                               &extent);
+			if (ret) {
+				MERROR("primary checksum error\n");
+				MBUG();
+			}
+		}
+	}
+
+
+	_MRETURN();
+}
+
 static void masync_io_iter_start_rw(struct mtfs_io *io)
 {
 	struct mtfs_io_rw *io_rw = &io->u.mi_rw;
@@ -42,12 +136,13 @@ static void masync_io_iter_start_rw(struct mtfs_io *io)
 	int ret = 0;
 	MENTRY();
 
+	mio_iter_start_rw(io);
+
 	if (io->mi_bindex == 0) {
 		/*
 		 * TODO: sign the file async,
-		 * since I may crash immediately after write a branch. 
+		 * since the server may crash immediately after branch write completes. 
 		 */
-		mio_iter_start_rw(io);
 		if (io->mi_type == MIOT_WRITEV) {
 			if (!(io->mi_flags & MTFS_OPERATION_SUCCESS)) {
 				/* Only neccessary when succeeded */
@@ -116,28 +211,6 @@ static void masync_io_iter_start_rw(struct mtfs_io *io)
 				goto out;
 			}
 		}
-	} else {
-		struct masync_bucket *bucket = mtfs_i2bucket(inode);
-
-		MASSERT(io->mi_type == MIOT_READV);
-		/* Not append write, so it is ok to get extent like this.
-		 * TODO: probably unnecessary length here.
-		 */
-		extent.start = *(io_rw->ppos);
-		extent.end = *(io_rw->ppos) + io_rw->rw_size;
-		MASSERT(extent.start >= 0);
-		MASSERT(extent.start <= extent.end);
-		/* Lock to prevent race of file sync */
-		down(&bucket->mab_lock);
-		ret = mtfs_interval_is_overlapped(bucket->mab_root, &extent);
-		if (!ret) {
-			mio_iter_start_rw(io);
-		} else {
-			io->mi_flags = 0;
-		}
-		up(&bucket->mab_lock);
-		
-		/* Do not read it unless checksum or layout changed */
 	}
 
 out:
@@ -231,9 +304,11 @@ static int masync_io_init_readv(struct mtfs_io *io)
 	}
 	MASSERT(inode);
 
-	ret = mio_init_oplist(io, &mtfs_oplist_equal);
-	if (!ret && mtfs_dev2checksum(mtfs_i2dev(inode))) {
+	if (mtfs_dev2checksum(mtfs_i2dev(inode))) {
+		ret = mio_init_oplist(io, &mtfs_oplist_reverse);
 		io->subject.mi_checksum.type = mchecksum_type_select();	
+	} else {
+		ret = mio_init_oplist(io, &mtfs_oplist_equal);
 	}
 
 	MRETURN(ret);
@@ -258,8 +333,9 @@ static int masync_io_lock_setattr(struct mtfs_io *io)
 	MENTRY();
 
 	/* We only need to get read lock no matter readv, writev or truncate */
-	if (ia_valid & ATTR_SIZE) {
-		io->mi_einfo.mode = MLOCK_MODE_READ;
+	if ((ia_valid & ATTR_SIZE) && 
+	    mtfs_dev2checksum(mtfs_d2dev(io_setattr->dentry))) {
+		io->mi_einfo.mode = MLOCK_MODE_CLEAN;
 		ret = mio_lock_mlock(io);
 	}
 
@@ -273,8 +349,35 @@ static void masync_io_unlock_setattr(struct mtfs_io *io)
 	int ia_valid = attr->ia_valid;
 	MENTRY();
 
-	if (ia_valid & ATTR_SIZE) {
+	if ((ia_valid & ATTR_SIZE) &&
+	    mtfs_dev2checksum(mtfs_d2dev(io_setattr->dentry))) {
 		mio_unlock_mlock(io);
+	}
+
+	_MRETURN();
+}
+
+static void masync_iter_start_setattr(struct mtfs_io *io)
+{
+	struct mtfs_io_setattr *io_setattr = &io->u.mi_setattr;
+	struct dentry *dentry = io_setattr->dentry;
+	struct inode *inode = dentry->d_inode;
+	struct masync_bucket *bucket = mtfs_i2bucket(inode);
+	struct iattr *attr = io_setattr->ia;
+	int ia_valid = attr->ia_valid;
+	struct mtfs_interval_node_extent interval;
+	MENTRY();
+
+	mio_iter_start_setattr(io);
+
+	if ((ia_valid & ATTR_SIZE) &&
+	    io->mi_bindex == 0 &&
+	    io->mi_flags & MTFS_OPERATION_SUCCESS) {
+	    	/* Truncate dirty extents */
+		interval.start = attr->ia_size;
+		interval.end = MTFS_INTERVAL_EOF;
+		/* This would not fail. */
+	    	masync_bucket_remove(bucket, &interval);
 	}
 
 	_MRETURN();
@@ -283,22 +386,60 @@ static void masync_io_unlock_setattr(struct mtfs_io *io)
 static int masync_io_rw_lock(struct mtfs_io *io)
 {
 	int ret = 0;
+	struct mtfs_io_rw *io_rw = &io->u.mi_rw;
+	struct file *file = io_rw->file;
+	struct dentry *dentry = file->f_dentry;
+	struct inode *inode = dentry->d_inode;
+	struct masync_bucket *bucket = mtfs_i2bucket(inode);
 	MENTRY();
 
-	/* We only need to get read lock no matter readv or writev */
-	io->mi_einfo.mode = MLOCK_MODE_READ;
-	ret = mio_lock_mlock(io);
+	if (mtfs_dev2checksum(mtfs_f2dev(file))) {
+		if (io->mi_type == MIOT_WRITEV) {
+			io->mi_einfo.mode = MLOCK_MODE_DIRTY;
+		} else {
+			/* Need to check file, so get write lock */
+			io->mi_einfo.mode = MLOCK_MODE_CHECK;
+		}
+		ret = mio_lock_mlock(io);
+		if (ret) {
+			MERROR("failed to lock extent\n");
+			goto out;
+		}
 
+		if (io->mi_type == MIOT_READV) {
+			/* Lock to prevent race of file sync */
+			down(&bucket->mab_lock);
+		}
+	}
+
+out:
 	MRETURN(ret);
 }
 
 static void masync_io_rw_unlock(struct mtfs_io *io)
 {
+	struct mtfs_io_rw *io_rw = &io->u.mi_rw;
+	struct file *file = io_rw->file;
+	struct dentry *dentry = file->f_dentry;
+	struct inode *inode = dentry->d_inode;
+	struct masync_bucket *bucket = mtfs_i2bucket(inode);
 	MENTRY();
 
-	mio_unlock_mlock(io);
+	if (mtfs_dev2checksum(mtfs_f2dev(file))) {
+		if (io->mi_type == MIOT_READV) {	
+			up(&bucket->mab_lock);
+		}
+
+		mio_unlock_mlock(io);
+	}
 
 	_MRETURN();
+}
+
+static void masync_iter_end_readv(struct mtfs_io *io)
+{
+	mio_iter_end_oplist(io);
+	masync_iter_check_readv(io);
 }
 
 const struct mtfs_io_operations masync_io_ops[] = {
@@ -409,7 +550,7 @@ const struct mtfs_io_operations masync_io_ops[] = {
 		.mio_unlock     = masync_io_rw_unlock,
 		.mio_iter_init  = mio_iter_init_rw,
 		.mio_iter_start = masync_io_iter_start_rw,
-		.mio_iter_end   = mio_iter_end_readv,
+		.mio_iter_end   = masync_iter_end_readv,
 		.mio_iter_fini  = mio_iter_fini_read_ops,
 	},
 	[MIOT_WRITEV] = {
@@ -438,7 +579,7 @@ const struct mtfs_io_operations masync_io_ops[] = {
 		.mio_lock       = masync_io_lock_setattr,
 		.mio_unlock     = masync_io_unlock_setattr,
 		.mio_iter_init  = NULL,
-		.mio_iter_start = mio_iter_start_setattr,
+		.mio_iter_start = masync_iter_start_setattr,
 		.mio_iter_end   = mio_iter_end_oplist,
 		.mio_iter_fini  = masync_io_iter_fini_create_ops,
 	},

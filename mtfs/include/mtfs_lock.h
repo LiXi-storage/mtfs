@@ -15,10 +15,16 @@ typedef enum {
 	MLOCK_MODE_READ  = 1,
 	MLOCK_MODE_WRITE = 2,
 	MLOCK_MODE_NULL  = 4,
+
+	/* For async replication */
+	MLOCK_MODE_DIRTY = 8,
+	MLOCK_MODE_CLEAN = 16,
+	MLOCK_MODE_CHECK = 32,
+
 	MLOCK_MODE_MAX
 } mlock_mode_t;
 
-#define MLOCK_MODE_NUM    3
+#define MLOCK_MODE_NUM    6
 
 /* lock types */
 typedef enum {
@@ -32,6 +38,10 @@ typedef enum {
 #define MLOCK_COMPAT_READ  (MLOCK_MODE_NULL | MLOCK_MODE_READ)
 #define MLOCK_COMPAT_NULL  (MLOCK_MODE_NULL | MLOCK_MODE_READ | MLOCK_MODE_WRITE)
 
+/* For async replication */
+#define MLOCK_COMPAT_DIRTY (MLOCK_MODE_NULL | MLOCK_MODE_DIRTY)
+#define MLOCK_COMPAT_CLEAN (MLOCK_MODE_NULL | MLOCK_MODE_CLEAN)
+#define MLOCK_COMPAT_CHECK (MLOCK_MODE_NULL)
 extern mlock_mode_t mlock_compat_array[];
 
 static inline int mlock_mode_compat(mlock_mode_t exist_mode, mlock_mode_t new_mode)

@@ -26,6 +26,9 @@ mlock_mode_t mlock_compat_array[] = {
         [MLOCK_MODE_READ]  MLOCK_COMPAT_READ,
         [MLOCK_MODE_WRITE] MLOCK_COMPAT_WRITE,
         [MLOCK_MODE_NULL]  MLOCK_COMPAT_NULL,
+        [MLOCK_MODE_DIRTY] MLOCK_COMPAT_DIRTY,
+        [MLOCK_MODE_CLEAN] MLOCK_COMPAT_CLEAN,
+        [MLOCK_MODE_CHECK] MLOCK_COMPAT_CHECK,
 };
 
 struct mlock_plain_position {

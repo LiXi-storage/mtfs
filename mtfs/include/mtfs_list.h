@@ -112,6 +112,7 @@ typedef struct hlist_node mtfs_hlist_node_t;
 #define MTFS_INIT_HLIST_NODE(p)		   INIT_HLIST_NODE(p)
 
 #else /* !defined (__linux__) || !defined(__KERNEL__) */
+#include <stdlib.h> /* For NULL */
 
 /*
  * Simple doubly linked list implementation.
@@ -645,5 +646,100 @@ static inline void mtfs_hlist_add_after(mtfs_hlist_node_t *n,
 	     pos && (n = pos->next, 1) &&                                     \
 		(tpos = mtfs_hlist_entry(pos, type, member), 1);               \
 	     pos = n)
+
+/**
+ * list_sort - sort a list.
+ * @priv: private data, passed to @cmp
+ * @head: the list to sort
+ * @cmp: the elements comparison function
+ *
+ * This function has been implemented by Mark J Roberts <mjr@znex.org>. It
+ * implements "merge sort" which has O(nlog(n)) complexity. The list is sorted
+ * in ascending order.
+ *
+ * The comparison function @cmp is supposed to return a negative value if @a is
+ * than @b, and a positive value if @a is greater than @b. If @a and @b are
+ * equivalent, then it does not matter what this function returns.
+ */
+static inline void mtfs_list_sort(void *priv, mtfs_list_t *head,
+                                  int (*cmp)(void *priv, mtfs_list_t *a,
+                                  mtfs_list_t *b))
+{
+	mtfs_list_t *p, *q, *e, *list, *tail, *oldhead;
+	int insize, nmerges, psize, qsize, i;
+
+	if (mtfs_list_empty(head))
+		return;
+
+	list = head->next;
+	mtfs_list_del(head);
+	insize = 1;
+	for (;;) {
+		p = oldhead = list;
+		list = tail = NULL;
+		nmerges = 0;
+
+		while (p) {
+			nmerges++;
+			q = p;
+			psize = 0;
+			for (i = 0; i < insize; i++) {
+				psize++;
+				q = q->next == oldhead ? NULL : q->next;
+				if (!q)
+					break;
+			}
+
+			qsize = insize;
+			while (psize > 0 || (qsize > 0 && q)) {
+				if (!psize) {
+					e = q;
+					q = q->next;
+					qsize--;
+					if (q == oldhead)
+						q = NULL;
+				} else if (!qsize || !q) {
+					e = p;
+					p = p->next;
+					psize--;
+					if (p == oldhead)
+						p = NULL;
+				} else if (cmp(priv, p, q) <= 0) {
+					e = p;
+					p = p->next;
+					psize--;
+					if (p == oldhead)
+						p = NULL;
+				} else {
+					e = q;
+					q = q->next;
+					qsize--;
+					if (q == oldhead)
+						q = NULL;
+				}
+				if (tail)
+					tail->next = e;
+				else
+					list = e;
+				e->prev = tail;
+				tail = e;
+			}
+			p = q;
+		}
+
+		tail->next = list;
+		list->prev = tail;
+
+		if (nmerges <= 1)
+			break;
+
+		insize *= 2;
+	}
+
+	head->next = list;
+	head->prev = list->prev;
+	list->prev->next = head;
+	list->prev = head;
+}
 
 #endif /* __MTFS_LIST_H__ */

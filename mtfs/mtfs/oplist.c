@@ -9,7 +9,7 @@
 #include <linux/module.h>
 #include "main_internal.h"
 
-int mtfs_oplist_init_flag(struct mtfs_operation_list *oplist, struct inode *inode)
+static int mtfs_oplist_init_flag(struct mtfs_operation_list *oplist, struct inode *inode)
 {
 	mtfs_bindex_t bindex = 0;
 	mtfs_bindex_t bnum = mtfs_i2bnum(inode);
@@ -36,7 +36,7 @@ int mtfs_oplist_init_flag(struct mtfs_operation_list *oplist, struct inode *inod
 	MRETURN(ret);
 }
 
-int mtfs_oplist_flush_invalidate(struct mtfs_operation_list *oplist,
+static int mtfs_oplist_flush_invalidate(struct mtfs_operation_list *oplist,
                               struct inode *inode)
 {
 	mtfs_bindex_t bindex = 0;
@@ -78,7 +78,7 @@ out:
 	MRETURN(ret);
 }
 
-int mtfs_oplist_gather_optimistic(struct mtfs_operation_list *oplist)
+static int mtfs_oplist_gather_optimistic(struct mtfs_operation_list *oplist)
 {
 	mtfs_bindex_t bindex = 0;
 	mtfs_bindex_t bindex_chosed = -1;
@@ -170,7 +170,7 @@ out:
 }
 EXPORT_SYMBOL(mtfs_oplist_build);
 
-int mtfs_oplist_init_sequential(struct mtfs_operation_list *list, struct inode *inode)
+static int mtfs_oplist_init_sequential(struct mtfs_operation_list *list, struct inode *inode)
 {
 	mtfs_bindex_t bindex = 0;
 	mtfs_bindex_t bnum = mtfs_i2bnum(inode);
@@ -179,6 +179,21 @@ int mtfs_oplist_init_sequential(struct mtfs_operation_list *list, struct inode *
 
 	for (bindex = 0; bindex < bnum; bindex++) {
 	        list->op_binfo[bindex].bindex = bindex;
+	}
+	list->latest_bnum = bnum;
+
+	MRETURN(ret);
+}
+
+static int mtfs_oplist_init_reverse(struct mtfs_operation_list *list, struct inode *inode)
+{
+	mtfs_bindex_t bindex = 0;
+	mtfs_bindex_t bnum = mtfs_i2bnum(inode);
+	int ret = 0;
+	MENTRY();
+
+	for (bindex = 0; bindex < bnum; bindex++) {
+	        list->op_binfo[bindex].bindex = bnum - bindex - 1;
 	}
 	list->latest_bnum = bnum;
 
@@ -297,7 +312,7 @@ struct mtfs_oplist_object mtfs_oplist_sequential = {
 };
 EXPORT_SYMBOL(mtfs_oplist_sequential);
 
-int mtfs_oplist_gather_master(struct mtfs_operation_list *oplist)
+static int mtfs_oplist_gather_master(struct mtfs_operation_list *oplist)
 {
 	int ret = 0;
 	MENTRY();
@@ -313,12 +328,35 @@ int mtfs_oplist_gather_master(struct mtfs_operation_list *oplist)
 	MRETURN(ret);
 }
 
+static int mtfs_oplist_gather_reverse(struct mtfs_operation_list *oplist)
+{
+	int ret = 0;
+	MENTRY();
+
+	MASSERT(oplist->fault_latest_bnum + oplist->fault_nonlatest_bnum == oplist->fault_bnum);
+	MASSERT(oplist->success_latest_bnum + oplist->success_nonlatest_bnum == oplist->success_bnum);
+	MASSERT(oplist->success_bnum + oplist->fault_bnum == oplist->valid_bnum);
+	MASSERT(oplist->valid_bnum <= oplist->bnum);
+
+	oplist->opinfo = &(oplist->op_binfo[oplist->bnum - 1]);
+	MASSERT(oplist->opinfo->valid);
+
+	MRETURN(ret);
+}
+
 struct mtfs_oplist_object mtfs_oplist_master = {
 	.mopo_init     = mtfs_oplist_init_sequential,
 	.mopo_flush    = NULL,
 	.mopo_gather   = mtfs_oplist_gather_master,
 };
 EXPORT_SYMBOL(mtfs_oplist_master);
+
+struct mtfs_oplist_object mtfs_oplist_reverse = {
+	.mopo_init     = mtfs_oplist_init_reverse,
+	.mopo_flush    = NULL,
+	.mopo_gather   = mtfs_oplist_gather_reverse,
+};
+EXPORT_SYMBOL(mtfs_oplist_reverse);
 
 struct mtfs_oplist_object mtfs_oplist_equal = {
 	.mopo_init     = mtfs_oplist_init_sequential,

@@ -71,7 +71,7 @@ struct masync_extent {
 	struct masync_bucket       *mae_bucket;         /* Bucket belongs to, protected by mae_lock */
 	struct msubject_async_info *mae_info;           /* Info that belongs to, unchangeable */
 	mtfs_spinlock_t             mae_lock;           /* Protect mae_bucket */
-	struct mtfs_interval        mae_interval;       /* Extent info, unchangeable */
+	struct mtfs_interval        mae_interval;       /* Extent info, protected by mab_lock */
 	mtfs_list_t                 mae_lru_linkage;    /* Linkage to LRU list, protected by msai_lru_lock */
 	mtfs_list_t                 mae_cancel_linkage; /* Linkage to cancel list, protected by msa_cancel_lock */
 	atomic_t                    mae_reference;      /* Reference number */

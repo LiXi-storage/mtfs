@@ -358,3 +358,96 @@ int masync_bucket_cleanup(struct masync_bucket *bucket)
 
 	MRETURN(extent_number);
 }
+
+/* Called holding bucket->mab_lock */
+static int _masync_bucket_remove(struct masync_bucket *bucket,
+                                 struct mtfs_interval_node_extent *interval)
+{
+	MTFS_LIST_HEAD(extent_list);
+	struct mtfs_interval *tmp_extent = NULL;
+	struct masync_extent *tmp_async_extent = NULL;
+	struct mtfs_interval *head = NULL;
+	struct masync_extent *async_extent = NULL;
+	int ret = 0;
+	MENTRY();
+
+	mtfs_interval_search(bucket->mab_root,
+	                     interval,
+	                     masync_overlap_cb,
+	                     &extent_list);
+
+	mtfs_list_for_each_entry_safe(tmp_extent, head, &extent_list, mi_linkage) {
+		if (tmp_extent->mi_node.in_extent.start < interval->start &&
+		    tmp_extent->mi_node.in_extent.end > interval->end) {
+			/*
+			 * Need to add a new dirty extent.
+			 * It can be asserted that the list only has one extent.
+			 * Not gonna happen when truncate.
+			 */
+
+			async_extent = masync_extent_init(bucket);
+			if (async_extent == NULL) {
+				MERROR("failed to create interval, not enough memory\n");
+				ret = -ENOMEM;
+				goto out;
+			}
+			masync_extent_get(async_extent);
+			atomic_inc(&bucket->mab_number);
+			mtfs_interval_set(&async_extent->mae_interval.mi_node,
+			                  interval->end + 1,
+			                  tmp_extent->mi_node.in_extent.end);
+			mtfs_interval_insert(&async_extent->mae_interval.mi_node,
+			                     &bucket->mab_root);
+			masync_extent_add_to_lru(async_extent);
+
+			tmp_extent->mi_node.in_extent.end = interval->start - 1;
+			break;
+		}
+
+		if (tmp_extent->mi_node.in_extent.start < interval->start) {
+			/* Shrink the first dirty extent */
+			tmp_extent->mi_node.in_extent.end = interval->start - 1;
+			continue;
+		}
+
+		if (tmp_extent->mi_node.in_extent.end > interval->end) {
+			/*
+			 * Shrink the last dirty extent.
+			 * Not gonna happen when truncate.
+			 */
+			tmp_extent->mi_node.in_extent.start = interval->end + 1;
+			continue;
+		}
+
+		atomic_dec(&bucket->mab_number);
+		mtfs_interval_erase(&tmp_extent->mi_node, &bucket->mab_root);
+
+		tmp_async_extent = masync_interval2extent(tmp_extent);
+
+		/* Export that this extent is not used since now */
+		mtfs_spin_lock(&tmp_async_extent->mae_lock);
+		tmp_async_extent->mae_bucket = NULL;
+		mtfs_spin_unlock(&tmp_async_extent->mae_lock);
+
+		masync_extent_remove_from_lru(tmp_async_extent);
+		/* Extent tree release reference */
+		masync_extent_put(tmp_async_extent);
+	}
+
+out:
+	MRETURN(ret);
+}
+
+int masync_bucket_remove(struct masync_bucket *bucket,
+                         struct mtfs_interval_node_extent *interval)
+{
+	int ret = 0;
+	MENTRY();
+
+	down(&bucket->mab_lock);
+	ret = _masync_bucket_remove(bucket, interval);
+	up(&bucket->mab_lock);
+
+	MRETURN(ret);
+}
+

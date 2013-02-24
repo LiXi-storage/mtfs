@@ -72,6 +72,7 @@ extern mtfs_operation_result_t mtfs_oplist_result(struct mtfs_operation_list *li
 extern struct mtfs_oplist_object mtfs_oplist_flag;
 extern struct mtfs_oplist_object mtfs_oplist_sequential;
 extern struct mtfs_oplist_object mtfs_oplist_master;
+extern struct mtfs_oplist_object mtfs_oplist_reverse;
 extern struct mtfs_oplist_object mtfs_oplist_equal;
 #endif /* defined (__linux__) && defined(__KERNEL__) */
 

@@ -198,7 +198,7 @@ struct mtfs_io_readpage {
 struct mtfs_io_checksum_branch {
 	int valid;
 	ssize_t ssize;
-	__u32 checksum;
+	__u32 checksum; 
 };
 
 struct mtfs_io_checksum {
