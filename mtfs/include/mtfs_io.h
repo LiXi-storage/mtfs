@@ -205,6 +205,7 @@ struct mtfs_io_checksum {
 	struct mtfs_io_checksum_branch branch[MTFS_BRANCH_MAX]; /* Global bindex */
 	struct mtfs_io_checksum_branch gather;                  /* First valid checksum */
 	mchecksum_type_t               type;
+	mtfs_list_t                    dirty_extents;           /* List of dirty extents */
 };
 
 struct mtfs_io {

@@ -52,4 +52,6 @@ int masync_sync_file(struct masync_bucket *bucket,
                      struct mtfs_interval_node_extent *extent,
                      char *buf,
                      int buf_size);
+enum mtfs_interval_iter masync_overlap_cb(struct mtfs_interval_node *node,
+                                          void *args);
 #endif /* __MTFS_ASYNC_BUCKET_INTERNAL_H__ */

@@ -97,8 +97,8 @@ void masync_bucket_init(struct msubject_async_info *info,
 	_MRETURN();
 }
 
-static enum mtfs_interval_iter masync_overlap_cb(struct mtfs_interval_node *node,
-                                                 void *args)
+enum mtfs_interval_iter masync_overlap_cb(struct mtfs_interval_node *node,
+                                          void *args)
 {
 	mtfs_list_t *extent_list = NULL;
 	struct mtfs_interval *extent_node = NULL;

@@ -35,63 +35,32 @@ static int masync_bucket_fvalid(struct file *file)
 static enum mtfs_interval_iter masync_checksum_overlap_cb(struct mtfs_interval_node *node,
                                                           void *args)
 {
-	struct mtfs_interval_node_extent *interval = (struct mtfs_interval_node_extent *)args;;
-
-	MERROR("[%lu, %lu] overlaped with dirty extent [%lu, %lu]\n",
-	       interval->start, interval->end,
-	       node->in_extent.start, node->in_extent.end);
 	return MTFS_INTERVAL_ITER_STOP;
 }
 
-/* Called holding bucket->mab_lock */
-static void masync_checksum_branch_primary(struct mtfs_io *io)
-{
-	struct mtfs_io_rw *io_rw = &io->u.mi_rw;
-	//struct mtfs_io_checksum *checksum = &io->subject.mi_checksum;
-	struct file *file = io_rw->file;
-	struct dentry *dentry = file->f_dentry;
-	struct inode *inode = dentry->d_inode;
-	struct masync_bucket *bucket = mtfs_i2bucket(inode);
-	struct mtfs_interval_node_extent tmp_interval;
-	loff_t pos = *(io_rw->ppos);
-	enum mtfs_interval_iter iter = MTFS_INTERVAL_ITER_CONT;
-	MENTRY();
-
-	/* 
-	 * There should no be any dirty extent between
-	 * [pos + result_size, pos + rw_size - 1]
-	 */
-	MASSERT(io->mi_result.ssize >= 0);
-	MASSERT(io->mi_result.ssize <= io_rw->rw_size);
-	if (io->mi_result.ssize < io_rw->rw_size) {
-		tmp_interval.start = pos + io->mi_result.ssize;
-		tmp_interval.end = pos + io_rw->rw_size - 1;
-		iter = mtfs_interval_search(bucket->mab_root,
-		                            &tmp_interval,
-		                            masync_checksum_overlap_cb,
-		                            &tmp_interval);
-		if (iter == MTFS_INTERVAL_ITER_STOP) {
-			MERROR("unexpected short read\n");
-			MBUG();
-		}
-	}
-
-	_MRETURN();
-}
-
-/* Called holding bucket->mab_lock */
-static int masync_checksum_branch_secondary(struct mtfs_io_rw *io_rw,
-                                            struct mtfs_io_checksum *checksum,
-                                            struct masync_bucket *bucket,
-                                            struct mtfs_interval_node_extent *extent)
+static int masync_extent_cmp(void *priv, mtfs_list_t *a, mtfs_list_t *b)
 {
 	int ret = 0;
+	struct mtfs_interval *extent_a = NULL;
+	struct mtfs_interval *extent_b = NULL;
 	MENTRY();
+
+	extent_a = mtfs_list_entry(a, struct mtfs_interval, mi_linkage);
+	extent_b = mtfs_list_entry(b, struct mtfs_interval, mi_linkage);
+
+	if (extent_a->mi_node.in_extent.start >  extent_b->mi_node.in_extent.start) {
+		MASSERT(extent_a->mi_node.in_extent.start > extent_b->mi_node.in_extent.end);
+		ret = 1;
+	} else {
+		MASSERT(extent_a->mi_node.in_extent.end < extent_b->mi_node.in_extent.start);
+		ret = -1;
+	}
 
 	MRETURN(ret);
 }
 
-static void masync_iter_check_readv(struct mtfs_io *io)
+/* Called holding bucket->mab_lock */
+static void masync_dirty_extets_build(struct mtfs_io *io)
 {
 	struct mtfs_io_rw *io_rw = &io->u.mi_rw;
 	struct mtfs_io_checksum *checksum = &io->subject.mi_checksum;
@@ -99,28 +68,502 @@ static void masync_iter_check_readv(struct mtfs_io *io)
 	struct dentry *dentry = file->f_dentry;
 	struct inode *inode = dentry->d_inode;
 	struct masync_bucket *bucket = mtfs_i2bucket(inode);
-	struct mtfs_interval_node_extent extent;
+	struct mtfs_interval_node_extent tmp_interval;
+	loff_t pos = *(io_rw->ppos);
+	MENTRY();
+
+	MTFS_INIT_LIST_HEAD(&checksum->dirty_extents);
+	/* 
+	 * Dirty extents between [pos, pos + rw_size - 1].
+	 */
+	tmp_interval.start = pos;
+	tmp_interval.end = pos + io_rw->rw_size - 1;
+	mtfs_interval_search(bucket->mab_root,
+	                     &tmp_interval,
+	                     masync_overlap_cb,
+	                     &checksum->dirty_extents);
+
+	mtfs_list_sort(NULL, &checksum->dirty_extents, masync_extent_cmp);
+	_MRETURN();
+}
+
+static void masync_dirty_extets_dump(mtfs_list_t *list)
+{
+	struct mtfs_interval *tmp_extent = NULL;
+	mtfs_list_for_each_entry(tmp_extent, list, mi_linkage) {
+		MERROR("[%lu, %lu]\n",
+		       tmp_extent->mi_node.in_extent.start,
+		       tmp_extent->mi_node.in_extent.end);
+	}
+}
+
+static __u32 masync_checksum_compute(__u32 checksum,
+                                     unsigned char const *p,
+                                     size_t len,
+                                     size_t offset,
+                                     mtfs_list_t *head,
+                                     struct mtfs_interval **extent,
+                                     mchecksum_type_t type)
+{
+	__u32 checksum_value = checksum;
+	struct mtfs_interval *tmp_extent = *extent;
+	size_t tmp_offset = offset;
+	size_t tmp_len = 0;
+	size_t tmp_total = 0;                      /* Calculated length */
+	unsigned char const *data = p; 
+	MENTRY();
+
+	MASSERT(len > 0);
+
+	/* Skip dirty extents between [offset, offset + len - 1] */
+	list_for_each_entry_from(tmp_extent, head, mi_linkage) {
+		if (tmp_extent->mi_node.in_extent.start > tmp_offset) {
+			tmp_len = tmp_extent->mi_node.in_extent.start -
+			          tmp_offset;
+
+			if (tmp_total + tmp_len > len) {
+				tmp_len = len - tmp_total;
+			}
+
+			if (tmp_len == 0) {
+				break;
+			}
+
+			MDEBUG("checksum_value = 0x%x, "
+			       "len = %lu\n",
+			       checksum_value,
+			       tmp_len);
+			checksum_value = mchecksum_compute(checksum_value,
+			                                   data,
+			                                   tmp_len,
+			                                   type);
+			MDEBUG("checksum_value = 0x%x\n", checksum_value);
+			tmp_total += tmp_len;
+			data += tmp_len;
+			tmp_offset += tmp_len;
+		 	if (tmp_total >= len) {
+		 		MASSERT(tmp_total == len);
+		 		break;
+		 	}
+		}
+
+		MASSERT(tmp_extent->mi_node.in_extent.start <= tmp_offset);
+		if (tmp_extent->mi_node.in_extent.end >= tmp_offset) {
+			/* Skip */
+			tmp_len = tmp_extent->mi_node.in_extent.end -
+			          tmp_offset + 1;
+
+			if (tmp_total + tmp_len >= len) {
+				tmp_len = len - tmp_total;
+			}
+
+			tmp_total += tmp_len;
+			data += tmp_len;
+			tmp_offset += tmp_len;
+		 	if (tmp_total >= len) {
+		 		MASSERT(tmp_total == len);
+		 		break;
+		 	}
+		}
+	}
+
+	if (tmp_total < len) {
+		MASSERT(&tmp_extent->mi_linkage == head);
+		/* All dirty extents run out */
+		tmp_len = len - tmp_total;
+		checksum_value = mchecksum_compute(checksum_value,
+		                                   data,
+		                                   tmp_len,
+		                                   type);
+		tmp_total += tmp_len;
+		data += tmp_len;
+		tmp_offset += tmp_len;
+	}
+
+	MASSERT(tmp_total == len);
+	MASSERT(data == p + len);
+	MASSERT(tmp_offset == offset + len);
+
+	*extent = tmp_extent;
+	MRETURN(checksum_value);
+}
+
+static __u32 masync_checksum_fill(__u32 checksum,
+                                  size_t *len,
+                                  size_t offset,
+                                  size_t end,
+                                  mtfs_list_t *head,
+                                  struct mtfs_interval **extent,
+                                  mchecksum_type_t type)
+{
+	__u32 checksum_value = checksum;
+	struct mtfs_interval *tmp_extent = *extent;
+	size_t tmp_offset = offset;
+	size_t tmp_len = 0;
+	size_t tmp_total = 0;
+	char data[1] = {0};
+	size_t i  = 0;
+	MENTRY();
+
+	MASSERT(len > 0);
+
+	/* Skip dirty extents between [offset, offset + len - 1] */
+	list_for_each_entry_from(tmp_extent, head, mi_linkage) {
+		if (tmp_extent->mi_node.in_extent.start > tmp_offset) {
+			MASSERT(tmp_extent->mi_node.in_extent.start <= end);
+			tmp_len = tmp_extent->mi_node.in_extent.start -
+			          tmp_offset;
+
+			for (i = 0; i < tmp_len; i++) {
+				checksum_value = mchecksum_compute(checksum_value,
+				                                   data,
+				                                   1,
+				                                   type);
+			}
+			tmp_total += tmp_len;
+			tmp_offset += tmp_len;
+		}
+
+		MASSERT(tmp_extent->mi_node.in_extent.start <= tmp_offset);
+		if (tmp_extent->mi_node.in_extent.end >= tmp_offset) {
+			/* Skip */
+			if (tmp_extent->mi_node.in_extent.end > end) {
+				/* It can be assert that this is the last extent */
+				tmp_len = end - tmp_offset + 1;
+			} else {
+				tmp_len = tmp_extent->mi_node.in_extent.end -
+				          tmp_offset + 1;
+			}
+			tmp_total += tmp_len;
+			tmp_offset += tmp_len;
+		}
+	}
+
+	*len += tmp_total;
+	*extent = tmp_extent;
+	MASSERT(tmp_offset <= end + 1);
+	MRETURN(checksum_value);
+}
+
+static __u32 masync_iov_chechsum(const struct iovec *iov,
+                                 unsigned long nr_segs,
+                                 size_t result_size,
+                                 size_t pos,
+                                 size_t end,
+                                 mtfs_list_t *dirty_extents,
+                                 size_t *total,
+                                 int do_fill,
+                                 mchecksum_type_t type)
+{
+	__u32 checksum_value = 0;                  /* Checksum value */
+	unsigned long tmp_seg = 0;                 /* Segment counter */
+	size_t tmp_total = 0;                      /* Calculated length */
+	size_t tmp_len = 0;                        /* Length this iter will calculate */
+	const struct iovec *tmp_iov = NULL;        /* IOV this iter will calculate */
+	size_t offset = pos;                       /* Start offset of extent to calculate */
+	struct mtfs_interval *tmp_extent = NULL;
+	MENTRY();
+
+	tmp_extent = list_first_entry(dirty_extents, struct mtfs_interval, mi_linkage);
+	checksum_value = mchecksum_init(type);
+	for (tmp_seg = 0; tmp_seg < nr_segs; tmp_seg++) {
+		tmp_iov = &iov[tmp_seg];
+		MASSERT(tmp_iov->iov_len >= 0);
+		if (tmp_total + tmp_iov->iov_len > result_size) {
+			tmp_len = result_size - tmp_total;
+		} else {
+			tmp_len = tmp_iov->iov_len;
+		}
+
+		if (tmp_len > 0) {
+			MDEBUG("checksum_value = 0x%x, "
+			       "offset = %lu, "
+			       "len = %lu\n",
+			       checksum_value,
+			       offset,
+			       tmp_len);
+			checksum_value = masync_checksum_compute(checksum_value,
+			                                         tmp_iov->iov_base,
+			                                         tmp_len,
+			                                         offset,
+			                                         dirty_extents,
+			                                         &tmp_extent,
+			                                         type);
+			MDEBUG("checksum_value = 0x%x\n", checksum_value);
+			offset += tmp_len;
+		}
+
+ 		tmp_total += tmp_iov->iov_len;
+ 		if (tmp_total >= result_size) {
+ 			break;
+ 		}
+	}
+
+	*total = result_size;
+	if (do_fill) {
+		MDEBUG("checksum_value = 0x%x, "
+		       "total = %lu, "
+		       "offset = %lu, "
+		       "end = %lu\n",
+		       checksum_value,
+		       *total,
+		       offset,
+		       end);
+		checksum_value = masync_checksum_fill(checksum_value,
+		                                      total,
+		                                      offset,
+		                                      end,
+                                                      dirty_extents,
+                                                      &tmp_extent,
+                                                      type);
+		MDEBUG("checksum_value = 0x%x\n", checksum_value);
+	}
+
+	MRETURN(checksum_value);
+}
+
+static int masync_checksum_push(struct mtfs_io *io,
+                                ssize_t readable_size,
+                                __u32 checksum_value)
+{
+	struct mtfs_io_checksum *checksum = &io->subject.mi_checksum;
+	struct mtfs_io_rw *io_rw = &io->u.mi_rw;
+	struct file *file = io_rw->file;
+	int ret = 0;
+	mtfs_bindex_t global_bindex = mio_bindex(io);
+	MENTRY();
+
+	if (checksum->gather.valid) {
+		if (checksum->gather.ssize != readable_size) {
+			MERROR("read size of branch[%d] of file [%.*s] is different, "
+			       "expected %lld, got %lld\n",
+			       global_bindex,
+			       file->f_dentry->d_name.len,
+			       file->f_dentry->d_name.name,
+			       checksum->gather.ssize,
+			       io->mi_result.ssize);
+			ret = 1;
+			goto out;
+		}
+	
+		if (checksum->gather.checksum != checksum_value) {
+			MERROR("content of branch[%d] of file [%.*s] is different, "
+			       "expected 0x%x, got 0x%x\n",
+			       global_bindex,
+			       file->f_dentry->d_name.len,
+			       file->f_dentry->d_name.name,
+			       checksum->gather.checksum,
+			       checksum_value);
+			ret = 1;
+			goto out;
+		}
+	} else {
+		checksum->gather.valid = 1;
+		checksum->gather.ssize = readable_size;
+		checksum->gather.checksum = checksum_value;
+	}
+out:
+	MRETURN(ret);
+}
+
+
+static int masync_checksum_need_append(struct mtfs_io_checksum *checksum,
+                                       size_t offset)
+{
+	int ret = 0;
+	struct mtfs_interval *tmp_extent = NULL;
+	MENTRY();
+
+	if (mtfs_list_empty(&checksum->dirty_extents)) {
+		ret = 1;
+	} else {
+		tmp_extent = mtfs_list_entry((&checksum->dirty_extents)->prev,
+		                             struct mtfs_interval,
+		                             mi_linkage);
+		if (tmp_extent->mi_node.in_extent.end < offset) {
+			ret = 1;
+		}
+	}
+
+	MRETURN(ret);
+}
+
+/* Called holding bucket->mab_lock */
+static void masync_checksum_branch_primary(struct mtfs_io *io)
+{
+	struct mtfs_io_rw *io_rw = &io->u.mi_rw;
+	struct mtfs_io_checksum *checksum = &io->subject.mi_checksum;
+	struct file *file = io_rw->file;
+	struct dentry *dentry = file->f_dentry;
+	struct inode *inode = dentry->d_inode;
+	struct masync_bucket *bucket = mtfs_i2bucket(inode);
+	struct mtfs_interval_node_extent tmp_interval;
+	loff_t pos = *(io_rw->ppos);
+	enum mtfs_interval_iter iter = MTFS_INTERVAL_ITER_CONT;
+	__u32 checksum_value = 0;
+	struct mtfs_interval *tmp_extent = NULL;
+	size_t total = 0;
 	int ret = 0;
 	MENTRY();
 
-	if ((io->mi_flags & MTFS_OPERATION_SUCCESS) &&
-	    mtfs_dev2checksum(mtfs_i2dev(inode))) {
-	    	extent.start = *(io_rw->ppos);
-	    	extent.end = *(io_rw->ppos) + io_rw->rw_size;
-		if (io->mi_bindex == io->mi_bnum - 1) {
-			masync_checksum_branch_primary(io);
-		} else {
-			ret = masync_checksum_branch_secondary(io_rw,
-                                                               checksum,
-                                                               bucket,
-                                                               &extent);
-			if (ret) {
-				MERROR("primary checksum error\n");
+	/* 
+	 * There should no be any dirty extent between
+	 * [pos + result_size, EOF]
+	 */
+	MASSERT(io->mi_result.ssize >= 0);
+	MASSERT(io->mi_result.ssize <= io_rw->rw_size);
+	if (io->mi_result.ssize < io_rw->rw_size) {
+		tmp_interval.start = pos + io->mi_result.ssize;
+		tmp_interval.end = MTFS_INTERVAL_EOF;
+		iter = mtfs_interval_search(bucket->mab_root,
+		                            &tmp_interval,
+		                            masync_checksum_overlap_cb,
+		                            &tmp_interval);
+		if (iter == MTFS_INTERVAL_ITER_STOP) {
+			MERROR("unexpected short read\n");
+			MERROR("tried [%lu, %lu], "
+			       "read [%lu, %lu]\n",
+			       pos, pos + io_rw->rw_size - 1,
+			       pos, pos + io->mi_result.ssize - 1);
+			MBUG();
+		}
+
+		/*
+		 * Short read check again.
+		 * Dirty_extents is between [pos, pos + rw_size - 1].
+		 * So we need only to check the end of last extent,
+		 * to insure no diry extents between [pos + result_size, pos + rw_size - 1].
+		 */
+		if (!mtfs_list_empty(&checksum->dirty_extents)) {
+			tmp_extent = mtfs_list_entry((&checksum->dirty_extents)->prev,
+			                             struct mtfs_interval,
+			                             mi_linkage);
+			if (tmp_extent->mi_node.in_extent.end > pos + io->mi_result.ssize - 1) {
+				MERROR("unexpected short read\n");
+				MERROR("tried [%lu, %lu], "
+				       "read [%lu, %lu], "
+				       "dirty [%lu, %lu]\n",
+				       pos, pos + io_rw->rw_size - 1,
+				       pos, pos + io->mi_result.ssize - 1,
+				       tmp_extent->mi_node.in_extent.start,
+				       tmp_extent->mi_node.in_extent.end);
+				masync_dirty_extets_dump(&checksum->dirty_extents);
 				MBUG();
 			}
 		}
 	}
 
+	checksum_value = masync_iov_chechsum(io_rw->iov,
+	                                     io_rw->nr_segs,
+	                                     io->mi_result.ssize,
+	                                     pos,
+	                                     pos + io_rw->rw_size - 1,
+	                                     &checksum->dirty_extents,
+	                                     &total,
+	                                     0,
+	                                     checksum->type);
+	MASSERT(total == io->mi_result.ssize);
+
+	ret = masync_checksum_push(io, total, checksum_value);
+	if (ret) {
+		MERROR("tried [%lu, %lu], "
+		       "read [%lu, %lu]\n",
+		       pos, pos + io_rw->rw_size - 1,
+		       pos, pos + io->mi_result.ssize - 1);
+		masync_dirty_extets_dump(&checksum->dirty_extents);
+		MBUG();
+	}
+	_MRETURN();
+}
+
+/* Called holding bucket->mab_lock */
+static void masync_checksum_branch_secondary(struct mtfs_io *io)
+{
+	struct mtfs_io_rw *io_rw = &io->u.mi_rw;
+	struct file *file = io_rw->file;
+	struct dentry *dentry = file->f_dentry;
+	struct inode *inode = dentry->d_inode;
+	struct masync_bucket *bucket = mtfs_i2bucket(inode);
+	struct mtfs_io_checksum *checksum = &io->subject.mi_checksum;
+	loff_t pos = *(io_rw->ppos);
+	__u32 checksum_value = 0;
+	size_t i = 0;
+	size_t total = 0;
+	size_t tmp_len = 0;
+	struct mtfs_interval_node_extent tmp_interval;
+	enum mtfs_interval_iter iter = MTFS_INTERVAL_ITER_CONT;
+	char data[1] = {0};
+	int ret = 0;
+	MENTRY();
+
+	MASSERT(io->mi_result.ssize >= 0);
+	MASSERT(io->mi_result.ssize <= io_rw->rw_size);
+	checksum_value = masync_iov_chechsum(io_rw->iov,
+	                                     io_rw->nr_segs,
+	                                     io->mi_result.ssize,
+	                                     pos,
+	                                     pos + io_rw->rw_size - 1,
+	                                     &checksum->dirty_extents,
+	                                     &total,
+	                                     1,
+	                                     checksum->type);
+
+	MASSERT(total >= io->mi_result.ssize);
+	MASSERT(total <= io_rw->rw_size);
+
+	
+	if (total < io_rw->rw_size) {
+	    	MASSERT(masync_checksum_need_append(checksum, pos + total));
+		/* Sometimes need to add zero to tail */
+		tmp_interval.start = pos + io_rw->rw_size;
+		tmp_interval.end = MTFS_INTERVAL_EOF;
+		iter = mtfs_interval_search(bucket->mab_root,
+		                            &tmp_interval,
+		                            masync_checksum_overlap_cb,
+		                            &tmp_interval);
+		if (iter == MTFS_INTERVAL_ITER_STOP) {
+			tmp_len = io_rw->rw_size - total;
+			for (i = 0; i < tmp_len; i++) {
+				checksum_value = mchecksum_compute(checksum_value,
+				                                   data,
+				                                   1,
+				                                   checksum->type);
+			}
+			total += tmp_len;
+		}
+	}
+	MASSERT(total >= io->mi_result.ssize);
+	MASSERT(total <= io_rw->rw_size);
+
+	ret = masync_checksum_push(io, total, checksum_value);
+	if (ret) {
+		MERROR("tried [%lu, %lu], "
+		       "read [%lu, %lu]\n",
+		       pos, pos + io_rw->rw_size - 1,
+		       pos, pos + io->mi_result.ssize - 1);
+		masync_dirty_extets_dump(&checksum->dirty_extents);
+		MBUG();
+	}
+
+	_MRETURN();
+}
+
+static void masync_iter_check_readv(struct mtfs_io *io)
+{
+	struct mtfs_io_rw *io_rw = &io->u.mi_rw;
+	struct file *file = io_rw->file;
+	struct dentry *dentry = file->f_dentry;
+	struct inode *inode = dentry->d_inode;
+	MENTRY();
+
+	if ((io->mi_flags & MTFS_OPERATION_SUCCESS) &&
+	    mtfs_dev2checksum(mtfs_i2dev(inode))) {
+		if (io->mi_bindex == io->mi_bnum - 1) {
+			masync_checksum_branch_primary(io);
+		} else {
+			masync_checksum_branch_secondary(io);
+		}
+	}
 
 	_MRETURN();
 }
@@ -409,6 +852,7 @@ static int masync_io_rw_lock(struct mtfs_io *io)
 		if (io->mi_type == MIOT_READV) {
 			/* Lock to prevent race of file sync */
 			down(&bucket->mab_lock);
+			masync_dirty_extets_build(io);
 		}
 	}
 
