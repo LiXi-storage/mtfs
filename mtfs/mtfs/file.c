@@ -638,6 +638,7 @@ ssize_t debug_write_truncate(struct file *file, const struct iovec *iov,
 	}
 
 	if (!ret) {
+		*ppos = new_size;
 		ret = rw_size;
 	}
 
