@@ -41,7 +41,7 @@ typedef enum {
 /* For async replication */
 #define MLOCK_COMPAT_DIRTY (MLOCK_MODE_NULL | MLOCK_MODE_DIRTY)
 #define MLOCK_COMPAT_CLEAN (MLOCK_MODE_NULL | MLOCK_MODE_CLEAN)
-#define MLOCK_COMPAT_CHECK (MLOCK_MODE_NULL)
+#define MLOCK_COMPAT_CHECK (MLOCK_MODE_NULL | MLOCK_MODE_CHECK)
 extern mlock_mode_t mlock_compat_array[];
 
 static inline int mlock_mode_compat(mlock_mode_t exist_mode, mlock_mode_t new_mode)

@@ -45,6 +45,7 @@ int masync_inode_init(struct inode *inode)
 	int ret = 0;
 	mtfs_bindex_t bindex = 0;
 	mtfs_bindex_t bnum = mtfs_i2bnum(inode);
+	struct mtfs_lowerfs *lowerfs = NULL;
 	MENTRY();
 
 	masync_bucket_init((struct msubject_async_info *)mtfs_s2subinfo(inode->i_sb),
@@ -52,7 +53,9 @@ int masync_inode_init(struct inode *inode)
 
 	for (bindex = 0; bindex < bnum; bindex++) {
 		if (mtfs_i2branch(inode, bindex)) {
-			mlowerfs_bucket_init(mtfs_i2bbucket(inode, bindex));
+			lowerfs = mtfs_i2bops(inode, bindex);
+			mlowerfs_bucket_init(mtfs_i2bbucket(inode, bindex),
+			                     lowerfs->ml_bucket_type);
 		}
 	}
 	MRETURN(ret);

@@ -1,0 +1,6 @@
+MODULES := mtfs_junction_async_cache_ext
+mtfs_junction_async_cache_ext-objs := async_cache_ext.o
+
+EXTRA_DIST := $(mtfs_junction_async_cache_ext-objs:.o=.c)
+EXTRA_DIST += async_cache_ext.h
+@INCLUDE_RULES@

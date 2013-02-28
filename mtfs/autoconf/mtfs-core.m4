@@ -810,6 +810,19 @@ AC_ARG_ENABLE([junction-async-replica-ext2],
 AC_MSG_RESULT([$enable_junction_async_replica_ext2])])
 
 #
+# LC_CONFIG_JUNCTION_ASYNC_CACHE_EXT
+#
+# whether to build async cache junction for ext
+#
+AC_DEFUN([LC_CONFIG_JUNCTION_ASYNC_CACHE_EXT],
+[AC_MSG_CHECKING([whether to build async cache junction for ext])
+AC_ARG_ENABLE([junction-async-cache-ext],
+        AC_HELP_STRING([--disable-junction-async-cache-ext],
+                        [disable async cache junction for lowerfs ext]),
+        [],[enable_junction_async_cache_ext='yes'])
+AC_MSG_RESULT([$enable_junction_async_cache_ext])])
+
+#
 # LC_CONFIG_JUNCTION_SYNC_REPLICA_TMPFS
 #
 # whether to build sync replica junction for tmpfs
@@ -1147,6 +1160,7 @@ AM_CONDITIONAL(LIBMTFS, test x$enable_libmtfs = xyes)
 AM_CONDITIONAL(LIBMTFS_TESTS, test x$enable_libmtfs_tests = xyes)
 AM_CONDITIONAL(LUSTRE_SUPPORT, test x$enable_lustre_support = xyes)
 AM_CONDITIONAL(JUNCTION_SYNC_REPLICA_EXT, test x$enable_junction_sync_replica_ext = xyes)
+AM_CONDITIONAL(JUNCTION_ASYNC_CACHE_EXT, test x$enable_junction_async_cache_ext = xyes)
 AM_CONDITIONAL(JUNCTION_ASYNC_REPLICA_EXT2, test x$enable_junction_async_replica_ext2 = xyes)
 AM_CONDITIONAL(JUNCTION_SYNC_REPLICA_TMPFS, test x$enable_junction_sync_replica_tmpfs = xyes)
 AM_CONDITIONAL(JUNCTION_SYNC_REPLICA_NFS, test x$enable_junction_sync_replica_nfs = xyes)
@@ -1179,6 +1193,8 @@ mtfs/doc/Makefile
 mtfs/include/Makefile
 mtfs/junctions/Makefile
 mtfs/junctions/autoMakefile
+mtfs/junctions/async_cache_ext/Makefile
+mtfs/junctions/async_cache_ext/autoMakefile
 mtfs/junctions/async_replica_ext2/Makefile
 mtfs/junctions/async_replica_ext2/autoMakefile
 mtfs/junctions/sync_replica_ext/Makefile

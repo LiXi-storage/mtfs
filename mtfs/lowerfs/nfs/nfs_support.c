@@ -16,6 +16,7 @@ struct mtfs_lowerfs lowerfs_nfs = {
 	ml_owner:           THIS_MODULE,
 	ml_type:            "nfs",
 	ml_magic:           NFS_SUPER_MAGIC,
+	ml_bucket_type:     &mlowerfs_bucket_xattr,
 	ml_flag:            0,
 	ml_setflag:         mlowerfs_setflag_nop,
 	ml_getflag:         mlowerfs_getflag_nop,

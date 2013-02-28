@@ -431,6 +431,9 @@ setup_all()
 	insert_module $MTFS_MODULE $MTFS_MODULE_PATH
 	insert_module $SUBJECT_MODULE $SUBJECT_MODULE_PATH
 	insert_module $LOWERFS_SUPPORT_MODULE $LOWERFS_SUPPORT_MODULE_PATH
+	if [ "$LOWERFS_SUPPORT_MODULE2" != "" ]; then
+		insert_module $LOWERFS_SUPPORT_MODULE2 $LOWERFS_SUPPORT_MODULE_PATH2
+	fi
 	insert_module $JUNCTION_MODULE $JUNCTION_MODULE_PATH
 
 	mount_mtfs
@@ -457,6 +460,9 @@ cleanup_all()
 
 	remove_module $JUNCTION_MODULE
 	remove_module $LOWERFS_SUPPORT_MODULE
+	if [ "$LOWERFS_SUPPORT_MODULE2" != "" ]; then
+		remove_module $LOWERFS_SUPPORT_MODULE2
+	fi
 	remove_module $SUBJECT_MODULE
 	remove_module $MTFS_MODULE
 

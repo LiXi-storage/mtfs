@@ -449,6 +449,7 @@ static int mlowerfs_check(struct mtfs_lowerfs *lowerfs)
 	if (lowerfs->ml_owner == NULL ||
 	    lowerfs->ml_type == NULL ||
 	    lowerfs->ml_magic == 0 ||
+	    lowerfs->ml_bucket_type == NULL ||
 	    !mlowerfs_flag_is_valid(lowerfs->ml_flag) ||
 	    lowerfs->ml_setflag == NULL ||
 	    lowerfs->ml_getflag == NULL) {
@@ -805,7 +806,8 @@ static inline void mlowerfs_bucket_unlock(struct mlowerfs_bucket *bucket)
 	up(mlowerfs_bucket2lock(bucket));
 }
 
-int mlowerfs_bucket_init(struct mlowerfs_bucket *bucket)
+int mlowerfs_bucket_init(struct mlowerfs_bucket *bucket,
+                         struct mlowerfs_bucket_type_object *type)
 {
 	int ret = 0;
 	MENTRY();
@@ -814,7 +816,7 @@ int mlowerfs_bucket_init(struct mlowerfs_bucket *bucket)
 	memset(mlowerfs_bucket2disk(bucket), 0,
 	       sizeof(struct mlowerfs_disk_bucket));
 	mlowerfs_bucket_lock_init(bucket);
-	mlowerfs_bucket2type(bucket) = MLOWERFS_BUCKET_TYPE_DEFAULT;
+	mlowerfs_bucket2type(bucket) = type;
 
 	if (mlowerfs_bucket2type(bucket)->mbto_init) {
 		ret = mlowerfs_bucket2type(bucket)->mbto_init(bucket);
@@ -897,7 +899,7 @@ out_unlock:
 }
 EXPORT_SYMBOL(mlowerfs_bucket_add);
 
-int mlowerfs_bucket_flush_xattr(struct mlowerfs_bucket *bucket)
+static int mlowerfs_bucket_flush_xattr(struct mlowerfs_bucket *bucket)
 {
 	int ret = 0;
 	struct inode *inode = mlowerfs_bucket2inode(bucket);
@@ -918,7 +920,7 @@ int mlowerfs_bucket_flush_xattr(struct mlowerfs_bucket *bucket)
 	MRETURN(ret);
 }
 
-int mlowerfs_bucket_read_xattr(struct mlowerfs_bucket *bucket)
+static int mlowerfs_bucket_read_xattr(struct mlowerfs_bucket *bucket)
 {
 	int ret = 0;
 	struct inode *inode = mlowerfs_bucket2inode(bucket);
@@ -953,6 +955,32 @@ struct mlowerfs_bucket_type_object mlowerfs_bucket_xattr = {
 	.mbto_read     = mlowerfs_bucket_read_xattr,
 	.mbto_flush    = mlowerfs_bucket_flush_xattr,
 };
+EXPORT_SYMBOL(mlowerfs_bucket_xattr);
+
+static int mlowerfs_bucket_read_nop(struct mlowerfs_bucket *bucket)
+{
+	int ret = 0;
+	MENTRY();
+
+	MRETURN(ret);
+}
+
+static int mlowerfs_bucket_write_nop(struct mlowerfs_bucket *bucket)
+{
+	int ret = 0;
+	MENTRY();
+
+	MRETURN(ret);
+}
+
+
+struct mlowerfs_bucket_type_object mlowerfs_bucket_nop = {
+	.mbto_type     = MLOWERFS_BUCKET_TYPE_NOP,
+	.mbto_init     = NULL,
+	.mbto_read     = mlowerfs_bucket_read_nop,
+	.mbto_flush    = mlowerfs_bucket_write_nop,
+};
+EXPORT_SYMBOL(mlowerfs_bucket_nop);
 
 int mlowerfs_getflag(struct mtfs_lowerfs *lowerfs,
                      struct inode *inode,

@@ -7,7 +7,7 @@
 
 #include "mtfs_interval_tree.h"
 #if defined (__linux__) && defined(__KERNEL__)
-
+#include <mtfs_device.h>
 #include <linux/list.h>
 #include <linux/fs.h>
 #include <linux/mutex.h>
@@ -29,10 +29,11 @@ static inline int mlowerfs_flag_is_valid(unsigned long flag)
 
 struct mtfs_lowerfs {
 	struct list_head ml_linkage;
-	struct module   *ml_owner;
-	const char      *ml_type;
-	unsigned long    ml_magic; /* The same with sb->s_magic */
-	unsigned long    ml_flag;
+	struct module                      *ml_owner;
+	const char                         *ml_type;
+	unsigned long                       ml_magic; /* The same with sb->s_magic */
+	unsigned long                       ml_flag;
+	struct mlowerfs_bucket_type_object *ml_bucket_type;
 
 	/* Operations that should be provided */
 	int (* ml_setflag)(struct inode *inode, __u32 flag);
@@ -43,6 +44,7 @@ struct mtfs_lowerfs {
 typedef enum {
 	MLOWERFS_BUCKET_TYPE_MIN    = 0,
 	MLOWERFS_BUCKET_TYPE_XATTR  = 1,
+	MLOWERFS_BUCKET_TYPE_NOP    = 2,
 	MLOWERFS_BUCKET_TYPE_MAX
 } mlowerfs_bucket_type_t;
 
@@ -56,10 +58,12 @@ struct mlowerfs_bucket_type_object {
 };
 
 extern struct mlowerfs_bucket_type_object mlowerfs_bucket_xattr;
+extern struct mlowerfs_bucket_type_object mlowerfs_bucket_nop;
 
 #define MLOWERFS_BUCKET_TYPE_DEFAULT (&mlowerfs_bucket_xattr)
 
-extern int mlowerfs_bucket_init(struct mlowerfs_bucket *bucket);
+extern int mlowerfs_bucket_init(struct mlowerfs_bucket *bucket,
+                                struct mlowerfs_bucket_type_object *type);
 extern int mlowerfs_bucket_add(struct mlowerfs_bucket *bucket,
                                struct mtfs_interval_node_extent *extent);
 extern int mlowerfs_register(struct mtfs_lowerfs *fs_ops);
@@ -70,6 +74,51 @@ extern int mlowerfs_getflag_default(struct inode *inode, __u32 *mtfs_flag);
 extern int mlowerfs_setflag_default(struct inode *inode, __u32 mtfs_flag);
 extern int mlowerfs_getflag_nop(struct inode *inode, __u32 *mtfs_flag);
 extern int mlowerfs_setflag_nop(struct inode *inode, __u32 mtfs_flag);
+
+static inline struct mtfs_lowerfs *mtfs_s2bops(struct super_block *sb, mtfs_bindex_t bindex)
+{
+	struct mtfs_device *device = mtfs_s2dev(sb);
+	struct mtfs_lowerfs *lowerfs = mtfs_dev2bops(device, bindex);
+	return lowerfs;
+}
+
+static inline struct mtfs_lowerfs *mtfs_i2bops(struct inode *inode, mtfs_bindex_t bindex)
+{
+	struct super_block *sb = inode->i_sb;
+	return mtfs_s2bops(sb, bindex);
+}
+
+static inline struct mtfs_lowerfs *mtfs_d2bops(struct dentry *dentry, mtfs_bindex_t bindex)
+{
+	struct super_block *sb = dentry->d_sb;
+	return mtfs_s2bops(sb, bindex);
+}
+
+static inline struct mtfs_operations *mtfs_s2ops(struct super_block *sb)
+{
+	struct mtfs_device *device = mtfs_s2dev(sb);
+	struct mtfs_operations *ops = mtfs_dev2ops(device);
+	return ops;
+}
+
+static inline struct mtfs_operations *mtfs_i2ops(struct inode *inode)
+{
+	struct super_block *sb = inode->i_sb;
+	return mtfs_s2ops(sb);
+}
+
+static inline struct mtfs_operations *mtfs_d2ops(struct dentry *dentry)
+{
+	struct super_block *sb = dentry->d_sb;
+	return mtfs_s2ops(sb);
+}
+
+static inline struct mtfs_operations *mtfs_f2ops(struct file *file)
+{
+	struct dentry *dentry = file->f_dentry;
+	return mtfs_d2ops(dentry);
+}
+
 #endif /* defined (__linux__) && defined(__KERNEL__) */
 
 #define MLOWERFS_BUCKET_NUMBER (64)

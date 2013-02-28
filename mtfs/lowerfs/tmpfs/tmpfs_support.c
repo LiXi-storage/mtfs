@@ -17,6 +17,7 @@ static struct mtfs_lowerfs lowerfs_tmpfs = {
 	ml_owner:           THIS_MODULE,
 	ml_type:            "tmpfs",
 	ml_magic:           TMPFS_MAGIC,
+	ml_bucket_type:     &mlowerfs_bucket_nop,
 	ml_flag:            0,
 	ml_setflag:         mlowerfs_setflag_nop,
 	ml_getflag:         mlowerfs_getflag_nop,
