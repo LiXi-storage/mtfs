@@ -22,6 +22,7 @@
 /openfile
 /openfilleddirunlink
 /openunlink
+/random_rw
 /rename_many
 /runas
 /rwv

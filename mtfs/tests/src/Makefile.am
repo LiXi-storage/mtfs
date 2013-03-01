@@ -28,6 +28,7 @@ noinst_PROGRAMS += rename_many runas small_write
 noinst_PROGRAMS += statmany truncate unlinkmany utime
 noinst_PROGRAMS += mlink rwv sendfile correct
 noinst_PROGRAMS += multicorrect append_many skipwrite_many
+noinst_PROGRAMS += random_rw
 
 testsrcdir = $(libdir)/mtfs/tests/src
 testsrc_SCRIPTS = $(noinst_SCRIPTS) $(noinst_PROGRAMS)

@@ -35,7 +35,7 @@ static inline void mtfs_random_init(int seed)
 static inline int mtfs_rand_range(int lower_bound, int upper_bound)
 {
 	int num = 0;
-	int range = upper_bound - lower_bound;
+	int range = upper_bound - lower_bound + 1;
 	
 	MASSERT(range > 0 && range < RAND_MAX);
 

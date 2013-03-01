@@ -19,6 +19,7 @@ struct mtfs_service {
 	int               srv_threads_starting;
 	int               srv_threads_min;
 	int               srv_threads_max;
+	int               srv_sleep_time;
 	unsigned          srv_threads_next_id;
 	unsigned          srv_is_stopping:1;
 	unsigned          srv_cpu_affinity:1;
@@ -53,12 +54,13 @@ extern void mservice_stop_threads(struct mtfs_service *svc);
 extern int mservice_start_threads(struct mtfs_service *svc);
 extern struct mtfs_service *mservice_init(char *name,
                                           char *thread_name,
-                                           int threads_min,
-                                           int threads_max,
-                                           unsigned cpu_affinity,
-                                           mservice_main_t main,
-                                           mservice_busy_t busy,
-                                           void *data);
+                                          int threads_min,
+                                          int threads_max,
+                                          int sleep_time,
+                                          unsigned cpu_affinity,
+                                          mservice_main_t main,
+                                          mservice_busy_t busy,
+                                          void *data);
 extern int mservice_fini(struct mtfs_service *service);
 extern int mservice_main_loop(struct mtfs_service *service, struct mservice_thread *thread);
 extern int mservice_wait_event(struct mtfs_service *service, struct mservice_thread *thread);

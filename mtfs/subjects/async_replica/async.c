@@ -11,6 +11,7 @@
 #include "async_info_internal.h"
 #include "async_extent_internal.h"
 
+static int _masync_shrink(int nr_to_scan, unsigned int gfp_mask);
 int masync_super_init(struct super_block *sb)
 {
 	int ret = 0;
@@ -100,6 +101,8 @@ int masync_service_busy(struct mtfs_service *service, struct mservice_thread *th
 	MRETURN(ret);
 }
 
+#define MTFS_MAX_NR_ONCE 8
+
 int masync_service_main(struct mtfs_service *service, struct mservice_thread *thread)
 {
 	struct msubject_async *async = (struct msubject_async *)service->srv_data;
@@ -108,6 +111,7 @@ int masync_service_main(struct mtfs_service *service, struct mservice_thread *th
 	int buf_size = MASYNC_BULK_SIZE;
 	struct masync_extent *async_extent = NULL;
 	int retry = 0;
+	int nr_to_scan = 0;
 	MENTRY();
 
 	MTFS_ALLOC(buf, buf_size);
@@ -124,10 +128,25 @@ int masync_service_main(struct mtfs_service *service, struct mservice_thread *th
 		}
 
 		mtfs_spin_lock(&async->msa_cancel_lock);
+#if 0
 		if (mtfs_list_empty(&async->msa_cancel_extents)) {
 			mtfs_spin_unlock(&async->msa_cancel_lock);
 			continue;
 		}
+#else
+		if (mtfs_list_empty(&async->msa_cancel_extents)) {
+			/* I am idle */
+			mtfs_spin_unlock(&async->msa_cancel_lock);
+			nr_to_scan = _masync_shrink(0, __GFP_FS);
+			if (nr_to_scan != 0) {
+				if (nr_to_scan > MTFS_MAX_NR_ONCE) {
+					nr_to_scan /= 2;
+				}
+				nr_to_scan = _masync_shrink(nr_to_scan, __GFP_FS);
+			}
+			continue;
+		}
+#endif
 		async_extent = mtfs_list_entry(async->msa_cancel_extents.next,
 		                               struct masync_extent,
 		                               mae_cancel_linkage);
@@ -240,7 +259,7 @@ static int __init masync_init(void)
 	atomic_set(&the_async.msa_info_number, 0);
 	the_async.msa_service = mservice_init(MSLEFHEAL_SERVICE_NAME,
 	                                      MSLEFHEAL_SERVICE_NAME,
-	                                      1, 1,
+	                                      1, 1, 100,
 	                                      0, masync_service_main,
 	                                      masync_service_busy,
 	                                      &the_async);

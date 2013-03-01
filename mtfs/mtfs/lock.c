@@ -771,7 +771,7 @@ static int _mlock_init(struct mlock_reprocess *reprocess)
 	mtfs_spin_lock_init(&reprocess->mls_lock);
 	reprocess->mls_service = mservice_init(MLOCK_SERVICE_NAME,
 	                                       MLOCK_SERVICE_NAME,
-	                                       1, 1,
+	                                       1, 1, 100,
 	                                       0, mlock_service_main,
 	                                       mlock_service_busy,
 	                                       reprocess);

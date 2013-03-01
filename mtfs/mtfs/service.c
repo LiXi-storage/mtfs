@@ -20,7 +20,7 @@ mtfs_threads_increasable(struct mtfs_service *svc)
 
 int mservice_wait_event(struct mtfs_service *service, struct mservice_thread *thread)
 {
-	struct mtfs_wait_info mwi = MWI_TIMEOUT(mtfs_time_seconds(100),
+	struct mtfs_wait_info mwi = MWI_TIMEOUT(mtfs_time_seconds(service->srv_sleep_time),
                                                 NULL, NULL);
 	int ret = 0;
 	MENTRY();
@@ -282,6 +282,7 @@ struct mtfs_service *mservice_init(char *name,
                                    char *thread_name,
                                    int threads_min,
                                    int threads_max,
+                                   int sleep_time,
                                    unsigned cpu_affinity,
                                    mservice_main_t main,
                                    mservice_busy_t busy,
@@ -304,6 +305,7 @@ struct mtfs_service *mservice_init(char *name,
 	service->srv_threads_starting = 0;
 	service->srv_threads_min = threads_min;
 	service->srv_threads_max = threads_max;
+	service->srv_sleep_time = sleep_time;
 	service->srv_threads_next_id = 0;
 	service->srv_is_stopping = 0;
 	service->srv_cpu_affinity = cpu_affinity;
@@ -312,6 +314,8 @@ struct mtfs_service *mservice_init(char *name,
 	service->srv_main = main;
 	service->srv_busy = busy;
 	service->srv_data = data;
+
+	MASSERT(sleep_time > 0);
 
 	ret = mservice_start_threads(service);
 	if (ret) {
