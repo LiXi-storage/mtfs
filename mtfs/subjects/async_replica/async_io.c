@@ -90,11 +90,35 @@ static void masync_dirty_extets_build(struct mtfs_io *io)
 static void masync_dirty_extets_dump(mtfs_list_t *list)
 {
 	struct mtfs_interval *tmp_extent = NULL;
+	MERROR("dirty:\n");
 	mtfs_list_for_each_entry(tmp_extent, list, mi_linkage) {
 		MERROR("[%lu, %lu]\n",
 		       tmp_extent->mi_node.in_extent.start,
 		       tmp_extent->mi_node.in_extent.end);
 	}
+}
+
+static enum mtfs_interval_iter masync_dump_overlap_cb(struct mtfs_interval_node *node,
+                                                          void *args)
+{
+	MERROR("[%lu, %lu]\n",
+	       node->in_extent.start,
+	       node->in_extent.end);
+	return MTFS_INTERVAL_ITER_CONT;
+}
+
+static void masync_extets_dump(struct masync_bucket *bucket)
+{
+	struct mtfs_interval_node_extent tmp_interval;
+
+	MERROR("all:\n");
+	tmp_interval.start = 0;
+	tmp_interval.end = MTFS_INTERVAL_EOF;
+	mtfs_interval_search(bucket->mab_root,
+	                     &tmp_interval,
+	                     masync_dump_overlap_cb,
+	                     NULL);
+	return;
 }
 
 static __u32 masync_checksum_compute(__u32 checksum,
@@ -264,7 +288,12 @@ static __u32 masync_iov_chechsum(const struct iovec *iov,
 	struct mtfs_interval *tmp_extent = NULL;
 	MENTRY();
 
-	tmp_extent = list_first_entry(dirty_extents, struct mtfs_interval, mi_linkage);
+	if (!mtfs_list_empty(dirty_extents)) {
+		tmp_extent = list_first_entry(dirty_extents,
+		                              struct mtfs_interval,
+		                              mi_linkage);
+	}
+
 	checksum_value = mchecksum_init(type);
 	for (tmp_seg = 0; tmp_seg < nr_segs; tmp_seg++) {
 		tmp_iov = &iov[tmp_seg];
@@ -282,13 +311,20 @@ static __u32 masync_iov_chechsum(const struct iovec *iov,
 			       checksum_value,
 			       offset,
 			       tmp_len);
-			checksum_value = masync_checksum_compute(checksum_value,
-			                                         tmp_iov->iov_base,
-			                                         tmp_len,
-			                                         offset,
-			                                         dirty_extents,
-			                                         &tmp_extent,
-			                                         type);
+			if (tmp_extent) {
+				checksum_value = masync_checksum_compute(checksum_value,
+				                                         tmp_iov->iov_base,
+				                                         tmp_len,
+				                                         offset,
+				                                         dirty_extents,
+				                                         &tmp_extent,
+				                                         type);
+			} else {
+				checksum_value = mchecksum_compute(checksum_value,
+				                                   tmp_iov->iov_base,
+				                                   tmp_len,
+				                                   type);
+			}
 			MDEBUG("checksum_value = 0x%x\n", checksum_value);
 			offset += tmp_len;
 		}
@@ -301,6 +337,12 @@ static __u32 masync_iov_chechsum(const struct iovec *iov,
 
 	*total = result_size;
 	if (do_fill) {
+		/*
+		 * Sometimes, async branch may short read,
+		 * but there are some dirty extexts between
+		 * [pos + result_size, pos + rw_size - 1],
+		 * we should fill the holes whith zero.
+		 */
 		MDEBUG("checksum_value = 0x%x, "
 		       "total = %lu, "
 		       "offset = %lu, "
@@ -309,13 +351,15 @@ static __u32 masync_iov_chechsum(const struct iovec *iov,
 		       *total,
 		       offset,
 		       end);
-		checksum_value = masync_checksum_fill(checksum_value,
-		                                      total,
-		                                      offset,
-		                                      end,
-                                                      dirty_extents,
-                                                      &tmp_extent,
-                                                      type);
+		if (tmp_extent) {
+			checksum_value = masync_checksum_fill(checksum_value,
+			                                      total,
+			                                      offset,
+			                                      end,
+	                                                      dirty_extents,
+	                                                      &tmp_extent,
+	                                                      type);
+		}
 		MDEBUG("checksum_value = 0x%x\n", checksum_value);
 	}
 
@@ -388,6 +432,21 @@ static int masync_checksum_need_append(struct mtfs_io_checksum *checksum,
 	MRETURN(ret);
 }
 
+static void masync_inode_size_dump(struct inode *inode)
+{
+	mtfs_bindex_t bindex = 0;
+	mtfs_bindex_t bnum = mtfs_i2bnum(inode);
+	struct inode *hidden_inode = NULL;
+
+	for (bindex = 0; bindex < bnum; bindex++) {
+		hidden_inode = mtfs_i2branch(inode, bindex);
+		if (hidden_inode != NULL) {
+			MERROR("[%d] %lu\n", bindex, i_size_read(hidden_inode));
+		}
+	}
+
+}
+
 /* Called holding bucket->mab_lock */
 static void masync_checksum_branch_primary(struct mtfs_io *io)
 {
@@ -448,6 +507,7 @@ static void masync_checksum_branch_primary(struct mtfs_io *io)
 				       tmp_extent->mi_node.in_extent.start,
 				       tmp_extent->mi_node.in_extent.end);
 				masync_dirty_extets_dump(&checksum->dirty_extents);
+				masync_extets_dump(bucket);
 				MBUG();
 			}
 		}
@@ -471,6 +531,8 @@ static void masync_checksum_branch_primary(struct mtfs_io *io)
 		       pos, pos + io_rw->rw_size - 1,
 		       pos, pos + io->mi_result.ssize - 1);
 		masync_dirty_extets_dump(&checksum->dirty_extents);
+		masync_extets_dump(bucket);
+		masync_inode_size_dump(inode);
 		MBUG();
 	}
 	_MRETURN();
@@ -513,6 +575,12 @@ static void masync_checksum_branch_secondary(struct mtfs_io *io)
 
 	
 	if (total < io_rw->rw_size) {
+		/*
+		 * Sometimes, async branch may short read,
+		 * but there are some dirty extexts between
+		 * [pos + rw_size, EOF],
+		 * we should fill the holes whith zero.
+		 */
 	    	MASSERT(masync_checksum_need_append(checksum, pos + total));
 		/* Sometimes need to add zero to tail */
 		tmp_interval.start = pos + io_rw->rw_size;
@@ -820,7 +888,7 @@ static void masync_iter_start_setattr(struct mtfs_io *io)
 		interval.start = attr->ia_size;
 		interval.end = MTFS_INTERVAL_EOF;
 		/* This would not fail. */
-	    	masync_bucket_remove(bucket, &interval);
+	    	masync_bucket_cleanup_interval(bucket, &interval);
 	}
 
 	_MRETURN();

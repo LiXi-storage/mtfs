@@ -259,7 +259,7 @@ static int __init masync_init(void)
 	atomic_set(&the_async.msa_info_number, 0);
 	the_async.msa_service = mservice_init(MSLEFHEAL_SERVICE_NAME,
 	                                      MSLEFHEAL_SERVICE_NAME,
-	                                      1, 1, 100,
+	                                      1, 1, 1,
 	                                      0, masync_service_main,
 	                                      masync_service_busy,
 	                                      &the_async);
