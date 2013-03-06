@@ -4,6 +4,7 @@
 
 #include <debug.h>
 #include <memory.h>
+#include <mtfs_inode.h>
 #include "async_extent_internal.h"
 #include "async_bucket_internal.h"
 
@@ -69,28 +70,43 @@ void masync_extent_put(struct masync_extent *async_extent)
  * Return 0 if succeeded, return 1 if retry is needed.
  */
 int masync_extent_flush(struct masync_extent *async_extent,
-			char *buf,
+                        char *buf,
                         int buf_size)
 {
-	struct masync_bucket *bucket = NULL;
-	struct mtfs_interval *node = NULL;
+	struct masync_bucket     *bucket = NULL;
+	struct mtfs_interval     *node = NULL;
+	struct mlock             *mlock= NULL;
+	struct inode             *inode = NULL;
+	struct mlock_resource    *resource = NULL;
+	struct mlock_enqueue_info einfo = {0};
 	int ret = 0;
 	MENTRY();
 
 	node = &async_extent->mae_interval;
 	mtfs_spin_lock(&async_extent->mae_lock);
 	bucket = async_extent->mae_bucket;
+	inode = mtfs_bucket2inode(bucket);
+	resource = mtfs_i2resource(inode);
 	if (bucket == NULL) {
 		/* Already been removed from tree */
 		mtfs_spin_unlock(&async_extent->mae_lock);
 		goto out;
 	}
 
+	einfo.mode = MLOCK_COMPAT_FLUSH;
+	einfo.data.mlp_extent.start = node->mi_node.in_extent.start;
+	einfo.data.mlp_extent.end = node->mi_node.in_extent.end;
+	mlock = mlock_enqueue(resource, &einfo);
+	if (IS_ERR(mlock)) {
+		MERROR("failed to enqueue lock, ret = %d\n", PTR_ERR(mlock));
+		mtfs_spin_unlock(&async_extent->mae_lock);
+		ret = 1;
+		goto out;
+	}
+
 	if (down_trylock(&bucket->mab_lock)) {
-		/* 
-		 * Some one else is flushing the file,
-		 * retry next time
-		 */
+		MDEBUG("failed to lock bucket\n");
+		mlock_cancel(mlock);
 		mtfs_spin_unlock(&async_extent->mae_lock);
 		ret = 1;
 		goto out;
@@ -100,10 +116,17 @@ int masync_extent_flush(struct masync_extent *async_extent,
 	MASSERT(atomic_read(&async_extent->mae_reference) == 2);
 
 	if (bucket->mab_fvalid) {
+
 		ret = masync_sync_file(bucket,
 		                       &node->mi_node.in_extent,
 		                       buf, buf_size);
-		//HASSERT(!ret);
+		if (ret) {
+			MERROR("failed to sync file between branches\n");
+			mtfs_inode_size_dump(inode);
+			masync_extets_dump(bucket); 
+			ret = 0;
+			//MBUG();
+		}
 	}
 	atomic_dec(&bucket->mab_number);
 	mtfs_interval_erase(&node->mi_node, &bucket->mab_root);
@@ -111,11 +134,12 @@ int masync_extent_flush(struct masync_extent *async_extent,
 	/* Export that this extent is not used since now */
 	async_extent->mae_bucket = NULL;
 	up(&bucket->mab_lock);
+	mlock_cancel(mlock);
 	mtfs_spin_unlock(&async_extent->mae_lock);
 
 	/* Extent tree release reference */
 	masync_extent_put(async_extent);
-
+	goto out;
 out:
 	MRETURN(ret);
 }

@@ -166,9 +166,9 @@ int mio_lock_mlock(struct mtfs_io *io)
 	MENTRY();
 
 	io->mi_mlock = mlock_enqueue(io->mi_resource, &io->mi_einfo);
-	if (io->mi_mlock == NULL) {
-		MERROR("failed to enqueue lock\n");
-		ret = -ENOMEM;
+	if (unlikely(IS_ERR(io->mi_mlock))) {
+		ret = PTR_ERR(io->mi_mlock);
+		MERROR("failed to enqueue lock, ret = %d\n", ret);
 	}
 
 	MRETURN(ret);

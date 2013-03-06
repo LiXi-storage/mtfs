@@ -78,6 +78,7 @@ extern int mtfs_update_attr_times(struct inode *inode);
 extern int mtfs_update_attr_atime(struct inode *inode);
 extern int mtfs_update_inode_attrs(struct inode *inode);
 extern int mtfs_update_inode_size(struct inode *inode);
+extern void mtfs_inode_size_dump(struct inode *inode);
 
 static inline int mtfs_get_nlinks(struct inode *inode) 
 {

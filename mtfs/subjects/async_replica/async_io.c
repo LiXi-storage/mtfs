@@ -98,29 +98,6 @@ static void masync_dirty_extets_dump(mtfs_list_t *list)
 	}
 }
 
-static enum mtfs_interval_iter masync_dump_overlap_cb(struct mtfs_interval_node *node,
-                                                          void *args)
-{
-	MERROR("[%lu, %lu]\n",
-	       node->in_extent.start,
-	       node->in_extent.end);
-	return MTFS_INTERVAL_ITER_CONT;
-}
-
-static void masync_extets_dump(struct masync_bucket *bucket)
-{
-	struct mtfs_interval_node_extent tmp_interval;
-
-	MERROR("all:\n");
-	tmp_interval.start = 0;
-	tmp_interval.end = MTFS_INTERVAL_EOF;
-	mtfs_interval_search(bucket->mab_root,
-	                     &tmp_interval,
-	                     masync_dump_overlap_cb,
-	                     NULL);
-	return;
-}
-
 static __u32 masync_checksum_compute(__u32 checksum,
                                      unsigned char const *p,
                                      size_t len,
@@ -432,21 +409,6 @@ static int masync_checksum_need_append(struct mtfs_io_checksum *checksum,
 	MRETURN(ret);
 }
 
-static void masync_inode_size_dump(struct inode *inode)
-{
-	mtfs_bindex_t bindex = 0;
-	mtfs_bindex_t bnum = mtfs_i2bnum(inode);
-	struct inode *hidden_inode = NULL;
-
-	for (bindex = 0; bindex < bnum; bindex++) {
-		hidden_inode = mtfs_i2branch(inode, bindex);
-		if (hidden_inode != NULL) {
-			MERROR("[%d] %lu\n", bindex, i_size_read(hidden_inode));
-		}
-	}
-
-}
-
 /* Called holding bucket->mab_lock */
 static void masync_checksum_branch_primary(struct mtfs_io *io)
 {
@@ -532,7 +494,7 @@ static void masync_checksum_branch_primary(struct mtfs_io *io)
 		       pos, pos + io->mi_result.ssize - 1);
 		masync_dirty_extets_dump(&checksum->dirty_extents);
 		masync_extets_dump(bucket);
-		masync_inode_size_dump(inode);
+		mtfs_inode_size_dump(inode);
 		MBUG();
 	}
 	_MRETURN();
@@ -657,6 +619,10 @@ static void masync_io_iter_start_rw(struct mtfs_io *io)
 		if (io->mi_type == MIOT_WRITEV) {
 			if (!(io->mi_flags & MTFS_OPERATION_SUCCESS)) {
 				/* Only neccessary when succeeded */
+				goto out;
+			}
+
+			if (io->mi_result.ssize == 0) {
 				goto out;
 			}
 
@@ -888,7 +854,7 @@ static void masync_iter_start_setattr(struct mtfs_io *io)
 		interval.start = attr->ia_size;
 		interval.end = MTFS_INTERVAL_EOF;
 		/* This would not fail. */
-	    	masync_bucket_cleanup_interval(bucket, &interval);
+		masync_bucket_cleanup_interval(bucket, &interval);
 	}
 
 	_MRETURN();

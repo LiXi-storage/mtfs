@@ -20,11 +20,12 @@ typedef enum {
 	MLOCK_MODE_DIRTY = 8,
 	MLOCK_MODE_CLEAN = 16,
 	MLOCK_MODE_CHECK = 32,
+	MLOCK_MODE_FLUSH = 64,
 
 	MLOCK_MODE_MAX
 } mlock_mode_t;
 
-#define MLOCK_MODE_NUM    6
+#define MLOCK_MODE_NUM    7
 
 /* lock types */
 typedef enum {
@@ -42,6 +43,8 @@ typedef enum {
 #define MLOCK_COMPAT_DIRTY (MLOCK_MODE_NULL | MLOCK_MODE_DIRTY)
 #define MLOCK_COMPAT_CLEAN (MLOCK_MODE_NULL | MLOCK_MODE_CLEAN)
 #define MLOCK_COMPAT_CHECK (MLOCK_MODE_NULL | MLOCK_MODE_CHECK)
+#define MLOCK_COMPAT_FLUSH (MLOCK_MODE_NULL)
+
 extern mlock_mode_t mlock_compat_array[];
 
 static inline int mlock_mode_compat(mlock_mode_t exist_mode, mlock_mode_t new_mode)
@@ -63,9 +66,13 @@ union mlock_policy_data {
 	struct mlock_extent       mlp_extent;
 };
 
+/* Return failure when conflict */
+#define MLOCK_FL_BLOCK_NOWAIT 0x000001
+
 struct mlock_enqueue_info {
 	mlock_mode_t mode;
 	union mlock_policy_data data;
+	int flag;
 };
 
 struct mlock_type_object {
@@ -74,6 +81,7 @@ struct mlock_type_object {
 	void (* mto_grant)(struct mlock *lock);
 	int  (* mto_conflict)(mtfs_list_t *queue, struct mlock *lock);
 	void (* mto_unlink)(struct mlock *lock);
+	void (* mto_free)(struct mlock *lock);
 };
 
 struct mlock_interval_tree {
@@ -151,9 +159,11 @@ static inline int mlock_is_granted(struct mlock *lock)
 }
 
 extern void mlock_cancel(struct mlock *lock);
-struct mlock *mlock_enqueue(struct mlock_resource *resource,
-                            struct mlock_enqueue_info *einfo);
+extern struct mlock *mlock_enqueue(struct mlock_resource *resource,
+                                   struct mlock_enqueue_info *einfo);
 void mlock_resource_init(struct mlock_resource *resource);
+
+extern int mlock_state(struct mlock *lock);
 
 #if defined(__linux__) && defined(__KERNEL__)
 #include "mtfs_service.h"

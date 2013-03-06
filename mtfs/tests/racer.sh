@@ -271,6 +271,14 @@ test_16()
 run_test 16 "run [$ALL_RACER_PROGS] for 2 threads"
 #
 
+test_17()
+{
+	RACER_PROGS="oo_create" run_racer $MAX_RACER_THREADS
+}
+leak_detect_state_push "no"
+run_test 17 "run [$ALL_RACER_PROGS] for $MAX_RACER_THREADS threads"
+leak_detect_state_pop
+
 test_100()
 {
 	RACER_PROGS=$ALL_RACER_PROGS run_racer $MAX_RACER_THREADS

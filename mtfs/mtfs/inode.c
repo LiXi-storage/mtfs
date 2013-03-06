@@ -48,6 +48,23 @@ out:
 	return ret;
 }
 
+void mtfs_inode_size_dump(struct inode *inode)
+{
+	mtfs_bindex_t bindex = 0;
+	mtfs_bindex_t bnum = mtfs_i2bnum(inode);
+	struct inode *hidden_inode = NULL;
+
+	for (bindex = 0; bindex < bnum; bindex++) {
+		hidden_inode = mtfs_i2branch(inode, bindex);
+		if (hidden_inode) {
+			MERROR("[%d] %lu\n", bindex, i_size_read(hidden_inode));
+		} else {
+			MERROR("[%d] NULL\n");
+		}
+	}
+}
+EXPORT_SYMBOL(mtfs_inode_size_dump);
+
 static int mtfs_update_attr_times_choose(struct inode *inode)
 {
 	struct inode *hidden_inode = NULL;

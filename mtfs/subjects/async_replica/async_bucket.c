@@ -49,10 +49,13 @@ int masync_sync_file(struct masync_bucket *bucket,
 		result = _do_read_write(READ, src_file, buf, len, &tmp_pos);
 		if (result != len) {
 			/* TODO: MERROR */
-			MDEBUG("failed to read file, expected %ld, got %ld\n",
+			MERROR("failed to read extent [%lu, %lu] of file, "
+			       "expected %ld, got %ld\n",
+			       extent->start, extent->end,
 			       len, result);
 			if (result == 0) {
 				/* Sync completed */
+				ret = -ENOMEM;
 				break;
 			}
 
@@ -67,7 +70,9 @@ int masync_sync_file(struct masync_bucket *bucket,
 		tmp_pos = pos;
 		result = _do_read_write(WRITE, dest_file, buf, len, &tmp_pos);
 		if (result != len) {
-			MERROR("failed to write file, expected %ld, got %ld\n",
+			MERROR("failed to write extent [%lu, %lu] of file, "
+			       "expected %ld, got %ld\n",
+			       extent->start, extent->end,
 			       len, result);
 			if (result >= 0) {
 				ret = -EIO;
@@ -215,6 +220,7 @@ int masync_bucket_add(struct file *file,
 	__u64 max_end = interval->end;
 	struct inode *inode = file->f_dentry->d_inode;
 	struct masync_bucket *bucket = mtfs_i2bucket(inode);
+	struct mtfs_interval_node *found = NULL;
 	MENTRY();
 
 	MDEBUG("adding [%lu, %lu]\n", interval->start, interval->end);
@@ -268,7 +274,8 @@ int masync_bucket_add(struct file *file,
 	}
 	atomic_inc(&bucket->mab_number);
 	mtfs_interval_set(&node->mi_node, min_start, max_end);
-	mtfs_interval_insert(&node->mi_node, &bucket->mab_root);
+	found = mtfs_interval_insert(&node->mi_node, &bucket->mab_root);
+	MASSERT(!found);
 
 	if (!bucket->mab_fvalid) {
 		masycn_bucket_fget(bucket, file);
@@ -318,7 +325,10 @@ int masync_bucket_cleanup(struct masync_bucket *bucket)
 				ret = masync_sync_file(bucket,
 				                       &node->mi_node.in_extent,
 				                       buf, buf_size);
-				//MASSERT(!ret);
+				if (ret) {
+					MERROR("failed sync file between branches\n");
+					mtfs_inode_size_dump(mtfs_bucket2inode(bucket));
+				}
 			}
 		}
 		atomic_dec(&bucket->mab_number);
@@ -383,6 +393,7 @@ static int _masync_bucket_add(struct masync_bucket *bucket,
 {
 	struct masync_extent *async_extent = NULL;
 	int ret = 0;
+	struct mtfs_interval_node *found = NULL;
 	MENTRY();
 
 	async_extent = masync_extent_init(bucket);
@@ -398,8 +409,9 @@ static int _masync_bucket_add(struct masync_bucket *bucket,
 	mtfs_interval_set(&async_extent->mae_interval.mi_node,
 	                  interval->start,
 	                  interval->end);
-	mtfs_interval_insert(&async_extent->mae_interval.mi_node,
-	                     &bucket->mab_root);
+	found = mtfs_interval_insert(&async_extent->mae_interval.mi_node,
+	                             &bucket->mab_root);
+	MASSERT(!found);
 	masync_extent_add_to_lru(async_extent);
 out:
 	MRETURN(ret);
@@ -435,13 +447,13 @@ static int _masync_bucket_cleanup_interval(struct masync_bucket *bucket,
 			tmp_interval.start = tmp_extent->mi_node.in_extent.start;
 			tmp_interval.end = interval->start - 1;
 			_masync_bucket_remove(bucket,
-                                              masync_interval2extent(tmp_extent));
+                	                      masync_interval2extent(tmp_extent));
 			_masync_bucket_add(bucket, &tmp_interval);
 		} else if (tmp_extent->mi_node.in_extent.end > interval->end) {
 			MBUG();
 		} else {
 			_masync_bucket_remove(bucket,
-                                              masync_interval2extent(tmp_extent));
+                	                      masync_interval2extent(tmp_extent));
 		}
 	}
 
@@ -461,3 +473,26 @@ int masync_bucket_cleanup_interval(struct masync_bucket *bucket,
 	MRETURN(ret);
 }
 
+static enum mtfs_interval_iter masync_dump_overlap_cb(struct mtfs_interval_node *node,
+                                                          void *args)
+{
+	MERROR("[%lu, %lu]\n",
+	       node->in_extent.start,
+	       node->in_extent.end);
+	return MTFS_INTERVAL_ITER_CONT;
+}
+
+/* Called holding bucket->mab_lock */
+void masync_extets_dump(struct masync_bucket *bucket)
+{
+	struct mtfs_interval_node_extent tmp_interval;
+
+	MERROR("all:\n");
+	tmp_interval.start = 0;
+	tmp_interval.end = MTFS_INTERVAL_EOF;
+	mtfs_interval_search(bucket->mab_root,
+	                     &tmp_interval,
+	                     masync_dump_overlap_cb,
+	                     NULL);
+	return;
+}

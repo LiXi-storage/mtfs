@@ -3,6 +3,7 @@
  */
 
 #include <debug.h>
+#include <memory.h>
 #include <multithread.h>
 #include <pthread.h>
 #include <stdlib.h>
@@ -16,11 +17,11 @@
 
 struct mtfs_hlist_head thread_head;
 
-thread_info_t *create_thread_info(const char *identifier)
+struct thread_info *create_thread_info(const char *identifier)
 {
-	thread_info_t *thread_info = NULL;
-	
-	thread_info = calloc(1, sizeof(*thread_info));
+	struct thread_info *thread_info = NULL;
+
+	MTFS_ALLOC_PTR(thread_info);
 	if (thread_info == NULL) {
 		MERROR("Not enough memory\n");
 		goto out;
@@ -31,13 +32,13 @@ out:
 	return thread_info;
 }
 
-int destroy_thread_info(thread_info_t *thread_info)
+int destroy_thread_info(struct thread_info *thread_info)
 {
-	free(thread_info);
+	MTFS_FREE_PTR(thread_info);
 	return 0;
 }
 
-int add_thread_info(thread_info_t *thread_info)
+int add_thread_info(struct thread_info *thread_info)
 {
 	int ret = 0;
 	
@@ -51,10 +52,10 @@ out:
 	return ret;
 }
 
-int delete_thread_info(thread_info_t *thread_info)
+int delete_thread_info(struct thread_info *thread_info)
 {
 	struct mtfs_hlist_node *pos = NULL;
-	thread_info_t *tpos = NULL;
+	struct thread_info *tpos = NULL;
 	int ret = -1;
 	
 	mtfs_hlist_for_each_entry(tpos, pos, &thread_head, hnode) {
@@ -68,9 +69,9 @@ int delete_thread_info(thread_info_t *thread_info)
 }
 
 
-thread_info_t *find_thread_info(const char *identifier)
+struct thread_info *find_thread_info(const char *identifier)
 {
-	thread_info_t *thread_info = NULL;
+	struct thread_info *thread_info = NULL;
 	struct mtfs_hlist_node *pos = NULL;
 	
 	mtfs_hlist_for_each_entry(thread_info, pos, &thread_head, hnode) {
@@ -83,7 +84,7 @@ thread_info_t *find_thread_info(const char *identifier)
 	return NULL;	
 }
 
-int create_thread(const char *identifier, void *(*start_routine)(thread_info_t *), thread_info_t *thread_info)
+int create_thread(const char *identifier, void *(*start_routine)(struct thread_info *), struct thread_info *thread_info)
 {
 	int ret = -1;
 		
@@ -141,17 +142,24 @@ out:
 	return ret;
 }
 
-int create_thread_group(const thread_group_t *thread_group, thread_data_t *thread_data_template)
+int create_thread_group(struct thread_group *thread_group, void *thread_data_template)
 {
 	int ret = 0;
 	char identifier[THREAD_IDENTIFIER_LENGTH]; /* todo: identifier[%u] length */
 	unsigned int i = 0;
-	thread_info_t *thread_info = NULL;
+	struct thread_info *thread_info = NULL;
 
-	
 	if (thread_group == NULL || thread_group->thread_number == 0
 		|| thread_group->start_routine == NULL) {
 		MERROR("thread group illegal\n");
+		ret = -1;
+		goto out;
+	}
+
+	MTFS_ALLOC(thread_group->thread_infos,
+	           sizeof(* thread_group->thread_infos) * thread_group->thread_number); 
+	if (thread_group->thread_infos == NULL) {
+		MERROR("not enough memory\n");
 		ret = -1;
 		goto out;
 	}
@@ -162,26 +170,29 @@ int create_thread_group(const thread_group_t *thread_group, thread_data_t *threa
 		if (thread_info == NULL) {
 			MERROR("fail to create thread information for thread %s\n", identifier);
 			ret = -1;
+			MBUG();
 			goto out;
 		}
 
 		/* init thread_info */
 		if (thread_data_template) {
-			thread_info->thread_data = *thread_data_template;
+			thread_info->thread_data = thread_data_template;
 		}
 		
 		ret = create_thread(identifier, thread_group->start_routine, thread_info);
 		if (ret == -1) {
 			MERROR("fail to create thread for thread %s\n", identifier);
 			destroy_thread_info(thread_info);
+			MBUG();
 			goto out;
 		}
+		thread_group->thread_infos[i] = thread_info;
 	}
 out:
 	return ret;
 }
 
-int create_thread_groups(const thread_group_t *thread_groups, const int group_number)
+int create_thread_groups(struct thread_group *thread_groups, const int group_number)
 {
 	int ret = 0;
 	int i = 0;
@@ -194,4 +205,34 @@ int create_thread_groups(const thread_group_t *thread_groups, const int group_nu
 	}
 out:
 	return ret;
+}
+
+void stop_thread_group(struct thread_group *thread_group)
+{
+	int i = 0;
+	int ret = 0;
+
+	for (i = 0; i < thread_group->thread_number; i++) {
+		ret = pthread_cancel(thread_group->thread_infos[i]->thread);
+		if (ret) {
+			MERROR("failed to cancel thread\n");
+		}
+		ret = pthread_join(thread_group->thread_infos[i]->thread, NULL);
+		if (ret) {
+			MERROR("failed to join thread\n");
+		}
+		
+		destroy_thread_info(thread_group->thread_infos[i]);
+	}
+	MTFS_FREE(thread_group->thread_infos,
+	          sizeof(*thread_group->thread_infos) * thread_group->thread_number); 
+}
+
+void stop_thread_groups(struct thread_group *thread_groups, const int group_number)
+{
+	int i = 0;
+	
+	for (i = 0; i < group_number; i++) {
+		stop_thread_group(&(thread_groups[i]));
+	}
 }

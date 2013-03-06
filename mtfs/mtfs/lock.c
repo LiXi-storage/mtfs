@@ -29,6 +29,7 @@ mlock_mode_t mlock_compat_array[] = {
         [MLOCK_MODE_DIRTY] MLOCK_COMPAT_DIRTY,
         [MLOCK_MODE_CLEAN] MLOCK_COMPAT_CLEAN,
         [MLOCK_MODE_CHECK] MLOCK_COMPAT_CHECK,
+        [MLOCK_MODE_FLUSH] MLOCK_COMPAT_FLUSH,
 };
 
 struct mlock_plain_position {
@@ -148,6 +149,14 @@ static int mlock_plain_init(struct mlock *lock, struct mlock_enqueue_info *einfo
 	MRETURN(ret);
 }
 
+static void mlock_plain_free(struct mlock *lock)
+{
+	MENTRY();
+
+	MTFS_SLAB_FREE_PTR(lock, mtfs_lock_cache);
+	_MRETURN();
+}
+
 static void mlock_plain_grant(struct mlock *lock)
 {
 	struct mlock_resource *resource = lock->ml_resource;
@@ -170,6 +179,7 @@ struct mlock_type_object mlock_type_pain = {
 	.mto_grant    = mlock_plain_grant,
 	.mto_conflict = mlock_plain_conflict,
 	.mto_unlink   = mlock_plain_unlink,
+	.mto_free     = mlock_plain_free,
 };
 
 static inline int __is_po2(unsigned long long val)
@@ -234,7 +244,7 @@ static int mlock_extent_init(struct mlock *lock, struct mlock_enqueue_info *einf
 	lock->ml_policy_data.mlp_extent = einfo->data.mlp_extent;
 	start = lock->ml_policy_data.mlp_extent.start;
 	end = lock->ml_policy_data.mlp_extent.end;
-	MASSERT(start < end);
+	MASSERT(start <= end);
 
 	MTFS_INIT_LIST_HEAD(&node->mi_linkage);
 	mlock_interval_attach(node, lock);
@@ -242,6 +252,12 @@ static int mlock_extent_init(struct mlock *lock, struct mlock_enqueue_info *einf
 	MTFS_INIT_LIST_HEAD(&lock->ml_res_link);
 out:
 	MRETURN(ret);
+}
+
+static void mlock_extent_free(struct mlock *lock)
+{
+	MTFS_SLAB_FREE_PTR(lock->ml_tree_node, mtfs_interval_cache);
+	MTFS_SLAB_FREE_PTR(lock, mtfs_lock_cache);
 }
 
 static void mlock_interval_free(struct mtfs_interval *node)
@@ -341,8 +357,10 @@ static int mlock_extent_conflict_granted(struct mlock *lock)
 			continue;
 		}
 
-		ret = mtfs_interval_is_overlapped(tree->mlit_root,&extent);
+		ret = mtfs_interval_is_overlapped(tree->mlit_root, &extent);
 		if (ret) {
+			MDEBUG("interval [%llu, %llu] overlapped\n",
+			       extent.start, extent.end);
 			break;
 		}
 	}
@@ -416,6 +434,7 @@ struct mlock_type_object mlock_type_extent = {
 	.mto_grant    = mlock_extent_grant,
 	.mto_conflict = mlock_extent_conflict,
 	.mto_unlink   = mlock_extent_unlink,
+	.mto_free     = mlock_extent_free,
 };
 
 #if defined (__linux__) && defined(__KERNEL__)
@@ -528,7 +547,7 @@ static void mlock_pend(struct mlock *lock)
 	_MRETURN();
 }
 
-static int mlock_enqueue_try_nolock(struct mlock *lock)
+static int mlock_enqueue_try_nolock(struct mlock *lock, int flag)
 {
 	struct mlock_resource *resource = lock->ml_resource;
 	int ret = 0;
@@ -552,14 +571,16 @@ static int mlock_enqueue_try_nolock(struct mlock *lock)
 	mlock_grant(lock);
 	goto out;
 out_pend:
-	if (lock->ml_state == MLOCK_STATE_NEW) {
+	if (flag & MLOCK_FL_BLOCK_NOWAIT) {
+		ret = -EWOULDBLOCK;
+	} else if (lock->ml_state == MLOCK_STATE_NEW) {
 		mlock_pend(lock);
 	}
 out:
 	MRETURN(ret);
 }
 
-static int mlock_enqueue_try(struct mlock *lock)
+static int mlock_enqueue_try(struct mlock *lock, int flag)
 {
 	struct mlock_resource *resource = lock->ml_resource;
 	int ret = 0;
@@ -568,7 +589,7 @@ static int mlock_enqueue_try(struct mlock *lock)
 	MASSERT(lock->ml_state == MLOCK_STATE_NEW || lock->ml_state == MLOCK_STATE_WAITING);
 
 	mlock_resource_lock(resource);
-	ret = mlock_enqueue_try_nolock(lock);
+	ret = mlock_enqueue_try_nolock(lock, flag);
 	mlock_resource_unlock(resource);
 	MRETURN(ret);
 }
@@ -594,6 +615,16 @@ do {                                            \
 
 #endif /* !defined (__linux__) && defined(__KERNEL__) */
 
+static void mlock_free(struct mlock *lock)
+{
+	MENTRY();
+
+	if (lock->ml_type->mto_free) {
+		lock->ml_type->mto_free(lock);
+	}
+	_MRETURN();
+}
+
 struct mlock *mlock_enqueue(struct mlock_resource *resource, struct mlock_enqueue_info *einfo)
 {
 	int ret = 0;
@@ -603,16 +634,27 @@ struct mlock *mlock_enqueue(struct mlock_resource *resource, struct mlock_enqueu
 	lock = mlock_create(resource, einfo);
 	if (lock == NULL) {
 		MERROR("failed to create lock\n");
+		ret = -ENOMEM;
+		goto out;
 	}
 
 	MASSERT(lock->ml_state == MLOCK_STATE_NEW);
-	ret = mlock_enqueue_try(lock);
-	if (ret) {
+	ret = mlock_enqueue_try(lock, einfo->flag);
+	if (ret && !(einfo->flag & MLOCK_FL_BLOCK_NOWAIT)) {
 		mlock_wait_condition(lock, mlock_is_granted(lock));
 		MDEBUG("lock is granted because another lock is canceled\n");
+		ret = 0;
+	}
+out:
+	if (ret) {
+		if (lock != NULL) {
+			mlock_free(lock);
+		}
+		lock = ERR_PTR(ret);
 	}
 	MRETURN(lock);
 }
+EXPORT_SYMBOL(mlock_enqueue);
 
 void mlock_destroy(struct mlock *lock)
 {
@@ -655,7 +697,7 @@ void mlock_resource_reprocess(struct mlock_resource *resource)
 	mtfs_list_for_each_safe(tmp, pos, &resource->mlr_waiting) {
 		lock = mtfs_list_entry(tmp, struct mlock, ml_res_link);
 		MASSERT(lock->ml_state == MLOCK_STATE_WAITING);
-		ret = mlock_enqueue_try_nolock(lock);
+		ret = mlock_enqueue_try_nolock(lock, 0);
 		if (ret) {
 			continue;
 		}
@@ -689,6 +731,21 @@ void mlock_cancel(struct mlock *lock)
 
 	_MRETURN();
 }
+EXPORT_SYMBOL(mlock_cancel);
+
+int mlock_state(struct mlock *lock)
+{
+	int state = 0;
+	struct mlock_resource *resource = lock->ml_resource;
+	MENTRY();
+
+	mlock_resource_lock(resource);
+	state = lock->ml_state;
+	mlock_resource_unlock(resource);
+
+	MRETURN(state);
+}
+EXPORT_SYMBOL(mlock_state);
 
 #define MLOCK_TYPE_DEFAULT (&mlock_type_extent)
 

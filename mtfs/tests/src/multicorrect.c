@@ -137,7 +137,7 @@ void sleep_random()
 }
 
 int begin = 0;
-void *write_little_proc(thread_info_t *thread_info)
+void *write_little_proc(struct thread_info *thread_info)
 {
 	size_t block_size = 1;
 	size_t count = 0;
@@ -183,7 +183,7 @@ out:
 	return NULL;
 }
 
-void *write_proc(thread_info_t *thread_info)
+void *write_proc(struct thread_info *thread_info)
 {
 	size_t block_size = MAX_BUFF_LENGTH;
 	size_t count = 0;
@@ -230,7 +230,7 @@ out:
 	return NULL;
 }
 
-void *check_proc(thread_info_t *thread_info)
+void *check_proc(struct thread_info *thread_info)
 {
 	char *buf = NULL;
 	size_t count = MAX_BUFF_LENGTH;
@@ -356,11 +356,11 @@ out:
 	return NULL;
 }
 
-const thread_group_t thread_groups[] = {
-	{4, "write_little", (void *(*)(thread_info_t *))write_little_proc},
-	{1, "write", (void *(*)(thread_info_t *))write_proc},
-	{1, "check", (void *(*)(thread_info_t *))check_proc},
-	{0, NULL, NULL}, /* for end detection */
+struct thread_group thread_groups[] = {
+	{4, "write_little", (void *(*)(struct thread_info *))write_little_proc, NULL},
+	{1, "write", (void *(*)(struct thread_info *))write_proc, NULL},
+	{1, "check", (void *(*)(struct thread_info *))check_proc, NULL},
+	{0, NULL, NULL, NULL}, /* for end detection */
 };
 
 void usage(const char *progname)

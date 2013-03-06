@@ -184,7 +184,8 @@ int masync_cancel_list_prepare(struct msubject_async_info *info,
 		mtfs_spin_unlock(&info->msai_lru_lock);
 
 		if (ret == 0) {
-			MERROR("trying to prepare %d, only got %d\n", extent_number, number);
+			MDEBUG("trying to prepare %d, only got %d\n",
+			       extent_number, number);
 			break;
 		}
 
