@@ -54,8 +54,7 @@ int masync_sync_file(struct masync_bucket *bucket,
 			       extent->start, extent->end,
 			       len, result);
 			if (result == 0) {
-				/* Sync completed */
-				ret = -ENOMEM;
+				MBUG();
 				break;
 			}
 

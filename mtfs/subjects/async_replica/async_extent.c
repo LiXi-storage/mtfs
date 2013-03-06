@@ -93,12 +93,13 @@ int masync_extent_flush(struct masync_extent *async_extent,
 		goto out;
 	}
 
-	einfo.mode = MLOCK_COMPAT_FLUSH;
+	einfo.mode = MLOCK_MODE_FLUSH;
+	einfo.flag = MLOCK_FL_BLOCK_NOWAIT;
 	einfo.data.mlp_extent.start = node->mi_node.in_extent.start;
 	einfo.data.mlp_extent.end = node->mi_node.in_extent.end;
 	mlock = mlock_enqueue(resource, &einfo);
 	if (IS_ERR(mlock)) {
-		MERROR("failed to enqueue lock, ret = %d\n", PTR_ERR(mlock));
+		MDEBUG("failed to enqueue lock, ret = %d\n", PTR_ERR(mlock));
 		mtfs_spin_unlock(&async_extent->mae_lock);
 		ret = 1;
 		goto out;
@@ -124,8 +125,11 @@ int masync_extent_flush(struct masync_extent *async_extent,
 			MERROR("failed to sync file between branches\n");
 			mtfs_inode_size_dump(inode);
 			masync_extets_dump(bucket); 
-			ret = 0;
-			//MBUG();
+			up(&bucket->mab_lock);
+			mlock_cancel(mlock);
+			mtfs_spin_unlock(&async_extent->mae_lock);
+			ret = 1;
+			goto out;
 		}
 	}
 	atomic_dec(&bucket->mab_number);
