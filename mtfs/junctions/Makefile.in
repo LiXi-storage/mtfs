@@ -1,5 +1,6 @@
 @JUNCTION_SYNC_REPLICA_EXT_TRUE@subdir-m += sync_replica_ext
 @JUNCTION_ASYNC_REPLICA_EXT2_TRUE@subdir-m += async_replica_ext2
+@JUNCTION_ASYNC_REPLICA_EXT_NFS_TRUE@subdir-m += async_replica_ext_nfs
 @JUNCTION_ASYNC_CACHE_EXT_TRUE@subdir-m += async_cache_ext
 @JUNCTION_SYNC_REPLICA_TMPFS_TRUE@subdir-m += sync_replica_tmpfs
 @JUNCTION_SYNC_REPLICA_NFS_TRUE@subdir-m += sync_replica_nfs

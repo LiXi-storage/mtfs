@@ -1,0 +1,6 @@
+MODULES := mtfs_junction_async_replica_ext_nfs
+mtfs_junction_async_replica_ext_nfs-objs := async_replica_ext_nfs.o
+
+EXTRA_DIST := $(mtfs_junction_async_replica_ext_nfs-objs:.o=.c)
+EXTRA_DIST += async_replica_ext_nfs.h
+@INCLUDE_RULES@

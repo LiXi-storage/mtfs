@@ -1,0 +1,9 @@
+/.*.cmd
+/*.ko
+/*.mod.c
+
+/autoMakefile
+/autoMakefile.in
+/Makefile
+/modules.order
+/mtfs_junction_async_replica_ext_nfs.ko.unsigned
