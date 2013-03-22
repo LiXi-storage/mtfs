@@ -9,7 +9,7 @@ EXCEPT_SLOW=""
 export CONFIGS=${CONFIGS:-local}
 . $TESTS_DIR/cfg/$CONFIGS.sh
 
-if [ "$SUBJECT_NAME" != "replica" ]; then
+if [ "$SUBJECT_NAME" != "sync_replica" -o ${#BRANCH_DIR_ARRAY[@]} -lt 2 ]; then
 	SKIP_4="4"
 fi
 
@@ -216,9 +216,16 @@ test_3b()
 run_test 3b "rmbranch all branches"
 
 test_4() {
-	$MULTICORRECT $DIR/$tfile $BRANCH_0/$tfile $BRANCH_1/$tfile -s 60 > /dev/null \
+	local INDEX
+	local FILE_LIST
+	for INDEX in ${!BRANCH_DIR_ARRAY[@]}; do
+		BRANCH_DIR=${BRANCH_DIR_ARRAY[$INDEX]}
+		FILE_LIST="$FILE_LIST $BRANCH_DIR/$DIR_SUB/$tfile"
+	done;
+
+	$MULTICORRECT $DIR/$tfile $FILE_LIST -s 60 > /dev/null \
 	|| error "multicorret failed"
-	diff $BRANCH_0/$tfile $BRANCH_1/$tfile > /dev/null || error "file diff"
+	diff $FILE_LIST > /dev/null || error "file diff"
 	rm -f $DIR/$tfile
 }
 leak_detect_state_push "no"

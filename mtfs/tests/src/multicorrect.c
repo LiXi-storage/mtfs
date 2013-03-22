@@ -357,7 +357,7 @@ out:
 }
 
 struct thread_group thread_groups[] = {
-	{4, "write_little", (void *(*)(struct thread_info *))write_little_proc, NULL},
+	{1, "write_little", (void *(*)(struct thread_info *))write_little_proc, NULL},
 	{1, "write", (void *(*)(struct thread_info *))write_proc, NULL},
 	{1, "check", (void *(*)(struct thread_info *))check_proc, NULL},
 	{0, NULL, NULL, NULL}, /* for end detection */

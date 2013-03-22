@@ -1,18 +1,25 @@
 # Base define area
-SUBJECT_NAME=${SUBJECT_NAME:-sync_replica}
+SUBJECT_NAME=${SUBJECT_NAME:-async_replica}
 
 # Mount lowerfs area
 MOUNT_LOWERFS=${MOUNT_LOWERFS:-yes}
-LOWERFS_NAME_ARRAY=([0]=ext2)
-LOWERFS_MNT_ARRAY=([0]="/mnt/${LOWERFS_NAME_ARRAY[0]}0")
-LOWERFS_MOUNT_CMD_ARRAY=([0]="mount")
-LOWERFS_DEV_ARRAY=([0]="/dev/sda4")
-LOWERFS_OPTION_ARRAY=([0]="-o user_xattr")
+LOWERFS_NAME_ARRAY=([0]=ext2
+                    [1]=nfs)
+LOWERFS_MNT_ARRAY=([0]="/mnt/${LOWERFS_NAME_ARRAY[0]}0"
+                   [1]="/mnt/${LOWERFS_NAME_ARRAY[1]}1")
+LOWERFS_MOUNT_CMD_ARRAY=([0]="mount"
+                         [1]="mount")
+LOWERFS_DEV_ARRAY=([0]="/dev/sda4"
+                   [1]="192.168.2.103:/mnt")
+LOWERFS_OPTION_ARRAY=([0]=""
+                      [1]="-o vers=3")
 
 # Lowerfs module area
 LOWERFS_MODULE_COMMON_PATH=${LOWERFS_COMMON_DIR:-`pwd`/../lowerfs}
-LOWERFS_MODULE_ARRAY=([0]=mtfs_lowerfs_ext)
-LOWERFS_MODULE_PATH_ARRAY=([0]="${LOWERFS_MODULE_COMMON_PATH}/ext/${LOWERFS_MODULE_ARRAY[0]}.ko")
+LOWERFS_MODULE_ARRAY=([0]=mtfs_lowerfs_ext
+                      [1]=mtfs_lowerfs_nfs)
+LOWERFS_MODULE_PATH_ARRAY=([0]="${LOWERFS_MODULE_COMMON_PATH}/ext/${LOWERFS_MODULE_ARRAY[0]}.ko"
+                           [1]="${LOWERFS_MODULE_COMMON_PATH}/nfs/${LOWERFS_MODULE_ARRAY[1]}.ko")
 
 MTFS_DIR=${MTFS_DIR:-`pwd`/../mtfs}
 UTILS_DIR=${UTILS_DIR:-`pwd`/../utils}
@@ -28,18 +35,20 @@ SUBJECT_MODULE=${SUBJECT_MODULE:-mtfs_subject_${SUBJECT_NAME}}
 SUBJECT_MODULE_PATH=${SUBJECT_MODULE_PATH:-${SUBJECT_DIR}/${SUBJECT_MODULE}.ko}
 
 JUNCTION_COMMON_PATH=${JUNCTION_COMMON_PATH:-`pwd`/../junctions}
-JUNCTION_MODULE=${JUNCTION_MODULE:-mtfs_junction_sync_replica_ext}
-JUNCTION_MODULE_PATH=${JUNCTION_MODULE_PATH:-${JUNCTION_COMMON_PATH}/sync_replica_ext/${JUNCTION_MODULE}.ko}
+JUNCTION_MODULE=${JUNCTION_MODULE:-mtfs_junction_async_replica_ext_nfs}
+JUNCTION_MODULE_PATH=${JUNCTION_MODULE_PATH:-${JUNCTION_COMMON_PATH}/async_replica_ext_nfs/${JUNCTION_MODULE}.ko}
 MTFS_OPTION=${MTFS_OPTION:-"-o subject=${SUBJECT_NAME_UPPER},checksum"}
 
 # Mtfs Mount area
 BRANCH_DIR_ARRAY=([0]="${LOWERFS_MNT_ARRAY[0]}/mtfs/dir0"
-                  [1]="${LOWERFS_MNT_ARRAY[0]}/mtfs/dir1")
+                  [1]="${LOWERFS_MNT_ARRAY[1]}/mtfs/dir1")
 MTFS_MNT1=${MTFS_MNT1:-/mnt/mtfs1}
 
 DIR_SUB=${DIR_SUB:-test}
 DIR=${DIR:-${MTFS_MNT1}/${DIR_SUB}}
 DIR1=${DIR1:-${MTFS_MNT1}/${DIR_SUB}}
+BRANCH_0=${BRANCH_0:-${MTFS_DIR1}/${DIR_SUB}}
+BRANCH_1=${BRANCH_1:-${MTFS_DIR2}/${DIR_SUB}}
 
 # Mount point 1 area
 LOWERFS_MNT2=${LOWERFS_MNT2:-/mnt/${LOWERFS_NAME}2}
@@ -95,4 +104,9 @@ LOWERFS_STRICT_TIMESTAMP=${LOWERFS_STRICT_TIMESTAMP:-yes}
 #
 # Skip tests that abandon branch[0].
 #
-SKIP_ABANDON_BRANCHES=()
+SKIP_ABANDON_BRANCH0=${SKIP_ABANDON_BRANCH0:-yes}
+
+#
+# Skip tests that abandon branch[1].
+#
+SKIP_ABANDON_BRANCH1=${SKIP_ABANDON_BRANCH1:-no}
