@@ -3,7 +3,12 @@ set -e
 ONLY=${ONLY:-"$*"}
 
 EXCEPT_SLOW="51a"
-ALWAYS_EXCEPT=${ALWAYS_EXCEPT:-"0b 0c $MOUNT_EXCEPT"}
+
+if [ ${#LOWERFS_MNT_ARRAY[@]} -ne 1 ]; then
+	SKIP_MULTI_MNT="1"
+fi
+
+ALWAYS_EXCEPT=${ALWAYS_EXCEPT:-"0b 0c $MOUNT_EXCEPT $SKIP_MULTI_MNT"}
 
 TESTS_DIR=${TESTS_DIR:-$(cd $(dirname $0); echo $PWD)}
 . $TESTS_DIR/test-framework.sh
@@ -82,7 +87,7 @@ run_test 0e "mount mtfs without lowerfs support module should fail"
 test_1() #BUG226
 {
 	local MTFS_STATICS=$(stat -f $MTFS_MNT1 -c "%s %S %b %c")
-	local LOWERFS_STATICS=$(stat -f $LOWERFS_MNT1 -c "%s %S %b %c")
+	local LOWERFS_STATICS=$(stat -f ${LOWERFS_MNT_ARRAY[0]} -c "%s %S %b %c")
 	[ "$MTFS_STATICS" = "$LOWERFS_STATICS" ] || error "mtfs $MTFS_STATICS != lowerfs $LOWERFS_STATICS"	
 }
 run_test 1 "mtfs statics is same to lowerfs statics"

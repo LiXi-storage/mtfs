@@ -100,14 +100,20 @@ mount_filesystem()
 
 mount_lowerfs()
 {
-	mount_filesystem "$LOWERFS_MOUNT_CMD" $LOWERFS_NAME $LOWERFS_DEV $LOWERFS_MNT1 "$LOWERFS_OPTION"
-	return $?
-}
-
-mount_lowerfs2()
-{
-	mount_filesystem "$LOWERFS_MOUNT_CMD" $LOWERFS_NAME $LOWERFS_DEV $LOWERFS_MNT2 "$LOWERFS_OPTION"
-	return $?
+	local INDEX;
+	local LOWERFS_NAME;
+	local LOWERFS_MNT;
+	local LOWERFS_MOUNT_CMD;
+	local LOWERFS_DEV;
+	
+	for INDEX in ${!LOWERFS_NAME_ARRAY[@]}; do
+		LOWERFS_NAME=${LOWERFS_NAME_ARRAY[$INDEX]}
+		LOWERFS_MNT=${LOWERFS_MNT_ARRAY[$INDEX]}
+		LOWERFS_MOUNT_CMD=${LOWERFS_MOUNT_CMD_ARRAY[$INDEX]}
+		LOWERFS_DEV=${LOWERFS_DEV_ARRAY[$INDEX]}
+		LOWERFS_OPTION=${LOWERFS_OPTION_ARRAY[$INDEX]}
+		mount_filesystem "$LOWERFS_MOUNT_CMD" $LOWERFS_NAME $LOWERFS_DEV $LOWERFS_MNT "$LOWERFS_OPTION"
+	done;
 }
 
 umount_filesystem_noexit()
@@ -159,27 +165,20 @@ umount_filesystem()
 
 umount_lowerfs()
 {
-	umount_filesystem $LOWERFS_NAME $LOWERFS_MNT1
-	return $?
-}
-
-umount_lowerfs2()
-{
-	umount_filesystem $LOWERFS_NAME $LOWERFS_MNT2
-	return $?
+	local INDEX;
+	local LOWERFS_NAME;
+	local LOWERFS_MNT;
+	for INDEX in ${!LOWERFS_NAME_ARRAY[@]}; do
+		LOWERFS_NAME=${LOWERFS_NAME_ARRAY[$INDEX]}
+		LOWERFS_MNT=${LOWERFS_MNT_ARRAY[$INDEX]}
+		umount_filesystem $LOWERFS_NAME $LOWERFS_MNT
+	done;
 }
 
 remount_lowerfs()
 {
 	umount_lowerfs
-	if [ "$DOING_MUTLTI" = "yes" ]; then
-		umount_lowerfs2
-	fi
-
 	mount_lowerfs
-	if [ "$DOING_MUTLTI" = "yes" ]; then
-		mount_lowerfs2
-	fi
 	return
 }
 
@@ -405,18 +404,32 @@ undo_abandon_branches()
 	fi
 }
 
+lowerfs_insert_module()
+{
+	local INDEX;
+	local LOWERFS_MODULE;
+	local LOWERFS_MODULE_PATH;
+	for INDEX in ${!LOWERFS_MODULE_ARRAY[@]}; do
+		LOWERFS_MODULE=${LOWERFS_MODULE_ARRAY[$INDEX]}
+		LOWERFS_MODULE_PATH=${LOWERFS_MODULE_PATH_ARRAY[$INDEX]}
+		insert_module $LOWERFS_MODULE $LOWERFS_MODULE_PATH
+	done;
+}
+
+lowerfs_remove_module()
+{
+	local INDEX;
+	local LOWERFS_MODULE;
+	for INDEX in ${!LOWERFS_MODULE_ARRAY[@]}; do
+		LOWERFS_MODULE=${LOWERFS_MODULE_ARRAY[$INDEX]}
+		remove_module $LOWERFS_MODULE
+	done;
+}
+
 setup_all()
 {
 	if [ "$MOUNT_LOWERFS" = "yes" ]; then
 		mount_lowerfs
-
-		if [ "$DOING_MUTLTI" = "yes" ]; then
-			if [ "$LOWERFS_HAVE_DEV" = "yes" ]; then
-				echo "lowerfs have backup dev, not able to mount $LOWERFS_NAME to mnt2"
-			else
-				mount_lowerfs2
-			fi
-		fi
 	fi
 
 	insert_module $DEBUG_MODULE $DEBUG_MODULE_PATH
@@ -430,10 +443,7 @@ setup_all()
 
 	insert_module $MTFS_MODULE $MTFS_MODULE_PATH
 	insert_module $SUBJECT_MODULE $SUBJECT_MODULE_PATH
-	insert_module $LOWERFS_SUPPORT_MODULE $LOWERFS_SUPPORT_MODULE_PATH
-	if [ "$LOWERFS_SUPPORT_MODULE2" != "" ]; then
-		insert_module $LOWERFS_SUPPORT_MODULE2 $LOWERFS_SUPPORT_MODULE_PATH2
-	fi
+	lowerfs_insert_module
 	insert_module $JUNCTION_MODULE $JUNCTION_MODULE_PATH
 
 	mount_mtfs
@@ -454,15 +464,9 @@ cleanup_all()
 	CHECK_LEAK="$1"
 
 	umount_mtfs
-	if [ "$DOING_MUTLTI" = "yes" ]; then
-		umount_mtfs2
-	fi
 
 	remove_module $JUNCTION_MODULE
-	remove_module $LOWERFS_SUPPORT_MODULE
-	if [ "$LOWERFS_SUPPORT_MODULE2" != "" ]; then
-		remove_module $LOWERFS_SUPPORT_MODULE2
-	fi
+	lowerfs_remove_module
 	remove_module $SUBJECT_MODULE
 	remove_module $MTFS_MODULE
 
@@ -474,9 +478,6 @@ cleanup_all()
 
 	if [ "$MOUNT_LOWERFS" = "yes" ]; then
 		umount_lowerfs
-		if [ "$DOING_MUTLTI" = "yes" ]; then
-			umount_lowerfs2
-		fi
 	fi
 
 	return
@@ -570,6 +571,25 @@ remake_dir()
 	echo "mkdir succeed"
 }
 
+export_mtfs_dev()
+{
+	local INDEX;
+	local BRANCH_DIR;
+	local DEV
+	local FIRST="yes";
+
+	for INDEX in ${!BRANCH_DIR_ARRAY[@]}; do
+		BRANCH_DIR=${BRANCH_DIR_ARRAY[$INDEX]}
+		if [ "$FIRST" = "yes" ]; then
+			DEV=$BRANCH_DIR
+			FIRST="no"
+		else
+			DEV="$DEV:$BRANCH_DIR"
+		fi
+	done;
+	export MTFS_DEV=$DEV
+}
+
 init_test_env()
 {
 	export CONFIGS=${CONFIGS:-local}
@@ -581,6 +601,8 @@ init_test_env()
 	export TMP=${TMP:-/tmp}
 	export DIR=${DIR:-$MTFS_MNT1/test}
 	export ABANDON_BINDEX=${ABANDON_BINDEX:-"-1"}
+
+	export_mtfs_dev
 
 	if [ "$DOING_MUTLTI" = "yes" ]; then
 		export DIR1=${DIR1:-$MTFS_MNT1/$DIR_SUB}
