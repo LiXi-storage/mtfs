@@ -3,6 +3,7 @@
  */
 
 #include <linux/module.h>
+#include <linux/version.h>
 #include <mtfs_list.h>
 #include <mtfs_inode.h>
 #include <mtfs_dentry.h>
@@ -77,11 +78,58 @@ out:
 	MRETURN(dchild_new);
 }
 
+#if (LINUX_VERSION_CODE == KERNEL_VERSION(2,6,32))
+static int vfs_create_safe(struct inode *dir, struct dentry *dentry, int mode,
+		           struct nameidata *nd, struct vfsmount *mnt)
+{
+	struct nameidata *tmp_nd = NULL;
+	int ret = 0;
+
+	if (nd || strncmp(dir->i_sb->s_type->name, "nfs", strlen("nfs"))) {
+		ret = vfs_create(dir, dentry, mode, nd);
+	} else {
+		MTFS_ALLOC_PTR(tmp_nd);
+		if (tmp_nd == NULL) {
+			MERROR("not enough memory\n");
+			ret = -ENOMEM;
+			goto out;
+		}
+#if 0
+		/* nfs4_proc_create need this */
+		tmp_nd->path.mnt = mnt;
+		tmp_nd->flags = LOOKUP_CREATE;
+		tmp_nd->intent.open.flags = O_RDONLY | O_CREAT | O_EXCL;
+		tmp_nd->intent.open.create_mode = mode;
+#endif
+
+		ret = vfs_create(dir, dentry, mode, tmp_nd);
+		if (ret) {
+			MERROR("failed to create file [%.*s], ret = %d\n",
+			       dentry->d_name.len, dentry->d_name.name, ret);
+		}
+		MTFS_FREE_PTR(tmp_nd);
+	}
+out:
+	return ret;
+}
+#else /* (LINUX_VERSION_CODE == KERNEL_VERSION(2,6,32)) */
+static int vfs_create_safe(struct inode *dir, struct dentry *dentry, int mode,
+		           struct nameidata *nd, struct vfsmount *mnt)
+{
+	return vfs_create(dir, dentry, mode, nd);
+}
+#endif /* (LINUX_VERSION_CODE == KERNEL_VERSION(2,6,32)) */
+
 /*
  * Return d_child needed to be dput() if succeed
  */
-struct dentry *_mtfs_dchild_create(struct dentry *dparent, const unsigned char *name,
-                                  unsigned int len, umode_t mode, dev_t rdev, int rename)
+struct dentry *_mtfs_dchild_create(struct dentry *dparent,
+                                   const unsigned char *name,
+                                   unsigned int len,
+                                   umode_t mode,
+                                   dev_t rdev,
+                                   struct vfsmount *mnt,
+                                   int rename)
 {
 	int ret = 0;
 	struct dentry *dchild = NULL;
@@ -136,7 +184,7 @@ struct dentry *_mtfs_dchild_create(struct dentry *dparent, const unsigned char *
 
 	switch (mode & S_IFMT) {
 	case S_IFREG:
-		ret = vfs_create(dparent->d_inode, dchild, mode, NULL);
+		ret = vfs_create_safe(dparent->d_inode, dchild, mode, NULL, mnt);
 		break;
 	case S_IFDIR:
 		ret = vfs_mkdir(dparent->d_inode, dchild, mode);
@@ -169,8 +217,13 @@ out:
 /*
  * Return d_child needed to be dput() if succeed
  */
-struct dentry *mtfs_dchild_create(struct dentry *dparent, const unsigned char *name,
-                                  unsigned int len, umode_t mode, dev_t rdev, int repeat)
+struct dentry *mtfs_dchild_create(struct dentry *dparent,
+                                  const unsigned char *name,
+                                  unsigned int len,
+                                  umode_t mode,
+                                  dev_t rdev,
+                                  struct vfsmount *mnt,
+                                  int repeat)
 {
 	struct dentry *dchild = NULL;
 	MENTRY();
@@ -179,10 +232,16 @@ struct dentry *mtfs_dchild_create(struct dentry *dparent, const unsigned char *n
 	MASSERT(name);
 	MASSERT(dparent->d_inode);
 	mutex_lock(&dparent->d_inode->i_mutex);
-	dchild = _mtfs_dchild_create(dparent, name, len, mode, rdev, repeat);
+	dchild = _mtfs_dchild_create(dparent, name, len, mode, rdev, mnt, repeat);
 	if (IS_ERR(dchild)) {
 		if ((PTR_ERR(dchild) == -EAGAIN) && repeat) {
-			dchild = _mtfs_dchild_create(dparent, name, len, mode, rdev, 0);
+			dchild = _mtfs_dchild_create(dparent,
+			                             name,
+			                             len,
+			                             mode,
+			                             rdev,
+			                             mnt,
+			                             0);
 		}
 	}
 	mutex_unlock(&dparent->d_inode->i_mutex);
@@ -241,7 +300,8 @@ struct dentry *mtfs_dentry_list_mkpath(struct dentry *d_parent, mtfs_list_t *den
 
 	mtfs_list_for_each_entry(tmp_entry, dentry_list, list) {
 		d_child = mtfs_dchild_create(d_parent_tmp, tmp_entry->dentry->d_name.name,
-		                             tmp_entry->dentry->d_name.len, S_IFDIR | S_IRWXU, 0, 1);
+		                             tmp_entry->dentry->d_name.len, S_IFDIR | S_IRWXU,
+		                             0, NULL, 1);
 		if (d_parent_tmp != d_parent) {
 			dput(d_parent_tmp);
 		}	

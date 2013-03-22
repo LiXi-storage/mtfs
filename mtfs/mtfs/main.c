@@ -185,7 +185,7 @@ static struct mtfs_config *mtfs_config_read_branch(struct super_block *sb,
 	                               current_cred());
 	if (IS_ERR(hidden_file)) {
 		ret = PTR_ERR(hidden_file);
-		MERROR("failed to open branch[%d] of file [%.*s], ret = %ld\n", 
+		MERROR("failed to open branch[%d] of file [%.*s], ret = %d\n", 
 		       bindex, hidden_dentry->d_name.len, hidden_dentry->d_name.name,
 		       ret);
 		goto out_free_mc;
@@ -414,7 +414,8 @@ int mtfs_reserve_init_branch(struct dentry *d_root, mtfs_bindex_t bindex)
 	name = MTFS_RESERVE_ROOT;
 	hidden_child = mtfs_dchild_create(hidden_parent,
 	                                  name, strlen(name),
-	                                  S_IFDIR | S_IRWXU, 0, 0);
+	                                  S_IFDIR | S_IRWXU, 0,
+	                                  NULL, 0);
 	if (IS_ERR(hidden_child)) {
 		ret = PTR_ERR(hidden_child);
 		MERROR("create branch[%d] of [%.*s/%s] failed, ret = %d\n",
@@ -429,7 +430,8 @@ int mtfs_reserve_init_branch(struct dentry *d_root, mtfs_bindex_t bindex)
 	name = MTFS_RESERVE_RECOVER;
 	hidden_child = mtfs_dchild_create(hidden_parent,
 	                                  name, strlen(name),
-	                                  S_IFDIR | S_IRWXU, 0, 0);
+	                                  S_IFDIR | S_IRWXU, 0,
+	                                  NULL, 0);
 	if (IS_ERR(hidden_child)) {
 		ret = PTR_ERR(hidden_child);
 		MERROR("create branch[%d] of [%.*s/%s] failed, ret = %d\n",
@@ -444,7 +446,8 @@ int mtfs_reserve_init_branch(struct dentry *d_root, mtfs_bindex_t bindex)
 	name = MTFS_RESERVE_CONFIG;
 	hidden_child = mtfs_dchild_create(hidden_parent,
 	                                  name, strlen(name),
-	                                  S_IFREG | S_IRWXU, 0, 0);
+	                                  S_IFREG | S_IRWXU, 0,
+	                                  mtfs_s2mntbranch(sb, bindex), 0);
 	if (IS_ERR(hidden_child)) {
 		ret = PTR_ERR(hidden_child);
 		MERROR("create branch[%d] of [%.*s/%s] failed, ret = %d\n",

@@ -823,7 +823,7 @@ int mtfs_create_branch(struct inode *dir,
 		hidden_dir_dentry = lock_parent(hidden_dentry);
 #if (LINUX_VERSION_CODE == KERNEL_VERSION(2,6,32))
 		/* God damn the nfs_create of this version */
-		if (strcmp(hidden_dir_dentry->d_sb->s_type->name, "nfs") == 0) {
+		if (strncmp(hidden_dir_dentry->d_sb->s_type->name, "nfs", strlen("nfs")) == 0) {
 			dentry_save = nd->path.dentry;
 			vfsmount_save = nd->path.mnt;
 			flags_save = nd->flags;

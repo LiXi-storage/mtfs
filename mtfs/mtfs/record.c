@@ -85,7 +85,8 @@ static int mrecord_file_init(struct mrecord_handle *handle)
 	mrh_file->mrfi_dchild = mtfs_dchild_create(mrh_file->mrfi_dparent,
 	                                           mrh_file->mrfi_fname,
 	                                           strlen(mrh_file->mrfi_fname),
-	                                           S_IFREG | S_IRWXU, 0, 0);
+	                                           S_IFREG | S_IRWXU, 0,
+	                                           NULL, 0);
 	if (IS_ERR(mrh_file->mrfi_dchild)) {
 		ret = PTR_ERR(mrh_file->mrfi_dchild);
 		MERROR("failed to  create [%.*s/%s], ret = %d\n",
