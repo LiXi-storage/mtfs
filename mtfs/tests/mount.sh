@@ -4,6 +4,9 @@ ONLY=${ONLY:-"$*"}
 
 EXCEPT_SLOW="51a"
 
+export CONFIGS=${CONFIGS:-local}
+. $TESTS_DIR/cfg/$CONFIGS.sh
+
 if [ ${#LOWERFS_MNT_ARRAY[@]} -ne 1 ]; then
 	SKIP_MULTI_MNT="1"
 fi
@@ -34,8 +37,7 @@ test_0a()
 	mount_lowerfs
 	insert_mtfs_module
 	insert_support_module
-	#BUG: origin mtfs will not report error, and lustre will not be able to umount
-	$MOUNT_MTFS -o device=$MTFS_DIR1:$MTFS_DIR2 -o device=$MTFS_DIR1/not_exist1:$MTFS_DIR2/not_exist1 -o debug=$MTFS_DEBUG $MTFS_DEV $MTFS_MOUNT && error "unexpected mount success"
+	$MOUNT_MTFS -o device=/not_exist0:/not_exist1 -o device=/not_exist2:/not_exist3 -o debug=$MTFS_DEBUG $MTFS_DEV $MTFS_MOUNT && error "unexpected mount success"
 	cleanup_and_setup
 	return 0
 }

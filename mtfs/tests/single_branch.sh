@@ -33,17 +33,18 @@ export DIR=$SINGLE_DIR
 export DIR1=$MTFS_MNT1/$DIR_SUB/single_tests
 export DIR2=$MTFS_MNT2/$DIR_SUB/single_tests
 
-if [ "$SKIP_ABANDON_BRANCH0" != "yes" ]; then
-	make_single $MTFS_DIR1/test/single_tests
-	bash posix.sh
-	bash multi_mnt.sh
-fi
+for INDEX in ${!BRANCH_DIR_ARRAY[@]}; do
+	for SKIP_INDEX in ${SKIP_ABANDON_BRANCHES[@]}; do
+		if [ "$SKIP_INDEX" = "$INDEX" ]; then
+			continue 2
+		fi
+	done
 
-if [ "$SKIP_ABANDON_BRANCH1" != "yes" ]; then
-	make_single $MTFS_DIR2/test/single_tests
+	BRANCH_DIR=${BRANCH_DIR_ARRAY[$INDEX]}
+	make_single $BRANCH_DIR/$DIR_SUB/single_tests
 	bash posix.sh
 	bash multi_mnt.sh
-fi
+done;
 
 rm $DIR -fr
 

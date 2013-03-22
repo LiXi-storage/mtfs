@@ -8,11 +8,19 @@ init_test_env
 
 cleanup_abandon()
 {
-	rm $MTFS_DIR1/test/* -fr
-	rm $MTFS_DIR2/test/* -fr
+	local INDEX;
+	local BRANCH_DIR;
+
+	for INDEX in ${!BRANCH_DIR_ARRAY[@]}; do
+		BRANCH_DIR=${BRANCH_DIR_ARRAY[$INDEX]}
+		rm $BRANCH_DIR/$DIR_SUB/* -fr
+	done;
+
 	cleanup_and_setup
-	$UTIL_MTFS setbranch -b 0 -d 0 $MTFS_MNT1/test/
-	$UTIL_MTFS setbranch -b 1 -d 0 $MTFS_MNT1/test/
+
+	for INDEX in ${!BRANCH_DIR_ARRAY[@]}; do
+		$UTIL_MTFS setbranch -b $INDEX -d 0 $MTFS_MNT1/$DIR_SUB/
+	done;
 }
 
 cleanup_abandon
@@ -31,19 +39,18 @@ export DIR=$ABANDON_DIR
 export DIR1=$MTFS_MNT1/$DIR_SUB/abandon_tests
 export DIR2=$MTFS_MNT2/$DIR_SUB/abandon_tests
 
-if [ "$SKIP_ABANDON_BRANCH0" != "yes" ]; then
-	export ABANDON_BINDEX="0"
+for INDEX in ${!BRANCH_DIR_ARRAY[@]}; do
+	for SKIP_INDEX in ${SKIP_ABANDON_BRANCHES[@]}; do
+		if [ "$SKIP_INDEX" = "$INDEX" ]; then
+			continue 2
+		fi
+	done
+
+	export ABANDON_BINDEX="$INDEX"
 	bash posix.sh
 	bash multi_mnt.sh
-fi
-
-cleanup_abandon
-
-if [ "$SKIP_ABANDON_BRANCH1" != "yes" ]; then
-	export ABANDON_BINDEX="1"
-	bash posix.sh
-	bash multi_mnt.sh
-fi
+	cleanup_abandon
+done;
 
 export ABANDON_BINDEX="-1"
 

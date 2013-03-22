@@ -5,7 +5,15 @@ ONLY=${ONLY:-"$*"}
 BUG_343="1a"
 
 EXCEPT_SLOW=""
-ALWAYS_EXCEPT=${ALWAYS_EXCEPT:-"$EXAMPLE_EXCEPT $BUG_343"}
+
+export CONFIGS=${CONFIGS:-local}
+. $TESTS_DIR/cfg/$CONFIGS.sh
+
+if [ "$SUBJECT_NAME" != "replica" ]; then
+	SKIP_4="4"
+fi
+
+ALWAYS_EXCEPT=${ALWAYS_EXCEPT:-"$EXAMPLE_EXCEPT $BUG_343 $SKIP_4"}
 
 TESTS_DIR=${TESTS_DIR:-$(cd $(dirname $0); echo $PWD)}
 . $TESTS_DIR/test-framework.sh
@@ -24,22 +32,27 @@ liberate_file()
 remove_bad_branch() 
 {
 	local BRANCH_NUM=$1
-	local BRANCH="BRANCH"_"$BRANCH_NUM"
-	local BRANCH_DIR=${!BRANCH}
+	local BRANCH_DIR
+	local INDEX
 
 	rm $DIR/$tfile -f 2>&1 > /dev/null
-	check_nonexist $BRANCH_0/$tfile || error "branch[0]: exist $?"
-	check_nonexist $BRANCH_1/$tfile || error "branch[1]: exist $?"
+	for INDEX in ${!BRANCH_DIR_ARRAY[@]}; do
+		BRANCH_DIR=${BRANCH_DIR_ARRAY[$INDEX]}
+		check_nonexist $BRANCH_DIR/$DIR_SUB/$tfile || error "branch[$INDEX]: exist $?"
+	done;
 	check_nonexist $DIR/$tfile || error "exist $? after remove"
 	touch $DIR/$tfile || error "create failed"
-	check_exist $BRANCH_0/$tfile || error "branch[0]: not exist $?"
-	check_exist $BRANCH_1/$tfile || error "branch[1]: not exist $?"
+	for INDEX in ${!BRANCH_DIR_ARRAY[@]}; do
+		BRANCH_DIR=${BRANCH_DIR_ARRAY[$INDEX]}
+		check_exist $BRANCH_DIR/$DIR_SUB/$tfile || error "branch[$INDEX]: not exist $?"
+	done;
 
 	liberate_file $DIR
 	check_exist $DIR/$tfile || error "not exist $?"
 
 	$UTIL_MTFS setbranch -b $BRANCH_NUM -d 1 $DIR 2>&1 > /dev/null || error "set flag failed"
-	rm $BRANCH_DIR/$tfile -f || error "rm branch[$BRANCH_NUM] failed"
+	BRANCH_DIR=${BRANCH_DIR_ARRAY[$BRANCH_NUM]}
+	rm $BRANCH_DIR/$DIR_SUB/$tfile -f || error "rm branch[$BRANCH_NUM] failed"
 
 	if [ "$LOWERFS_DIR_INVALID_WHEN_REMOVED" = "no" ]; then
 		cleanup_and_setup
@@ -64,24 +77,29 @@ get_opposite_bindex()
 remove_good_branch() 
 {
 	local BRANCH_NUM=$1
-	local BRANCH="BRANCH"_"$BRANCH_NUM"
-	local BRANCH_DIR=${!BRANCH}
-	
+	local BRANCH_DIR
+	local INDEX
+
 	local BAD_BRANCH_NUM=$(get_opposite_bindex $BRANCH_NUM)
 
 	rm $DIR/$tfile -f 2>&1 > /dev/null
-	check_nonexist $BRANCH_0/$tfile || error "branch[0]: $BRANCH_0/$tfile exist $?"
-	check_nonexist $BRANCH_1/$tfile || error "branch[1]: $BRANCH_1/$tfile exist $?"
+	for INDEX in ${!BRANCH_DIR_ARRAY[@]}; do
+		BRANCH_DIR=${BRANCH_DIR_ARRAY[$INDEX]}
+		check_nonexist $BRANCH_DIR/$DIR_SUB/$tfile || error "branch[$INDEX]: exist $?"
+	done;
 	check_nonexist $DIR/$tfile || error "exist $? after remove"
 	touch $DIR/$tfile || error "create failed"
-	check_exist $BRANCH_0/$tfile || error "branch[0]: not exist $?"
-	check_exist $BRANCH_1/$tfile || error "branch[1]: not exist $?"
+	for INDEX in ${!BRANCH_DIR_ARRAY[@]}; do
+		BRANCH_DIR=${BRANCH_DIR_ARRAY[$INDEX]}
+		check_exist $BRANCH_DIR/$DIR_SUB/$tfile || error "branch[$INDEX]: not exist $?"
+	done;
 
 	liberate_file $DIR
 	check_exist $DIR/$tfile || error "not exist $?"
 
 	$UTIL_MTFS setbranch -b $BAD_BRANCH_NUM -d 1 $DIR 2>&1 > /dev/null || error "set flag failed"
-	rm $BRANCH_DIR/$tfile -f || error "rm branch[$BRANCH_NUM] failed"
+	BRANCH_DIR=${BRANCH_DIR_ARRAY[$BRANCH_NUM]}
+	rm $BRANCH_DIR/$DIR_SUB/$tfile -f || error "rm branch[$BRANCH_NUM] failed"
 
 	if [ "$LOWERFS_DIR_INVALID_WHEN_REMOVED" = "no" ]; then
 		cleanup_and_setup
@@ -198,11 +216,6 @@ test_3b()
 run_test 3b "rmbranch all branches"
 
 test_4() {
-	if [ "$SUBJECT_NAME" != "replica" ]; then
-		echo "skipped"
-		return 0
-	fi
-
 	$MULTICORRECT $DIR/$tfile $BRANCH_0/$tfile $BRANCH_1/$tfile -s 60 > /dev/null \
 	|| error "multicorret failed"
 	diff $BRANCH_0/$tfile $BRANCH_1/$tfile > /dev/null || error "file diff"

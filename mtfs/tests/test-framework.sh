@@ -113,7 +113,7 @@ mount_lowerfs()
 		LOWERFS_DEV=${LOWERFS_DEV_ARRAY[$INDEX]}
 		LOWERFS_OPTION=${LOWERFS_OPTION_ARRAY[$INDEX]}
 		mount_filesystem "$LOWERFS_MOUNT_CMD" $LOWERFS_NAME $LOWERFS_DEV $LOWERFS_MNT "$LOWERFS_OPTION"
-	done;
+	done
 }
 
 umount_filesystem_noexit()
@@ -172,7 +172,7 @@ umount_lowerfs()
 		LOWERFS_NAME=${LOWERFS_NAME_ARRAY[$INDEX]}
 		LOWERFS_MNT=${LOWERFS_MNT_ARRAY[$INDEX]}
 		umount_filesystem $LOWERFS_NAME $LOWERFS_MNT
-	done;
+	done
 }
 
 remount_lowerfs()
@@ -367,6 +367,7 @@ abandon_branch()
 
 	local PROC_EMASK="/proc/fs/mtfs/devices/"$HASH_NAME"/branch"$BRANCH"/bops_emask"
 	echo "write_ops read_ops" > $PROC_EMASK
+	echo "$BRANCH abandoned"
 }
 
 abandon_branches()
@@ -413,7 +414,7 @@ lowerfs_insert_module()
 		LOWERFS_MODULE=${LOWERFS_MODULE_ARRAY[$INDEX]}
 		LOWERFS_MODULE_PATH=${LOWERFS_MODULE_PATH_ARRAY[$INDEX]}
 		insert_module $LOWERFS_MODULE $LOWERFS_MODULE_PATH
-	done;
+	done
 }
 
 lowerfs_remove_module()
@@ -423,7 +424,7 @@ lowerfs_remove_module()
 	for INDEX in ${!LOWERFS_MODULE_ARRAY[@]}; do
 		LOWERFS_MODULE=${LOWERFS_MODULE_ARRAY[$INDEX]}
 		remove_module $LOWERFS_MODULE
-	done;
+	done
 }
 
 setup_all()
@@ -586,7 +587,7 @@ export_mtfs_dev()
 		else
 			DEV="$DEV:$BRANCH_DIR"
 		fi
-	done;
+	done
 	export MTFS_DEV=$DEV
 }
 
