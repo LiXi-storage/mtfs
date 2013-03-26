@@ -223,8 +223,14 @@ test_4() {
 		FILE_LIST="$FILE_LIST $BRANCH_DIR/$DIR_SUB/$tfile"
 	done;
 
+	rm $DIR/$tfile -f
 	$MULTICORRECT $DIR/$tfile $FILE_LIST -s 60 > /dev/null \
 	|| error "multicorret failed"
+	$UTIL_MTFS getstate $DIR/$tfile | grep 0xa0 > /dev/null
+	if [ $? -eq 0 ]; then
+		echo "inconsistence set, skip diff"
+		return 0;
+	fi
 	diff $FILE_LIST > /dev/null || error "file diff"
 	rm -f $DIR/$tfile
 }

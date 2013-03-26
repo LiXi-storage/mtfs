@@ -43,7 +43,7 @@ static int mtfs_oplist_flush_invalidate(struct mtfs_operation_list *oplist,
 	mtfs_bindex_t i = 0;
 	int ret = 0;
 	MENTRY();
-	
+
 	/*
 	 * Degradate only if some of latest branches failed
 	 * and others succeeded 
@@ -298,20 +298,6 @@ mtfs_operation_result_t mtfs_oplist_result(struct mtfs_operation_list *oplist)
 }
 EXPORT_SYMBOL(mtfs_oplist_result);
 
-struct mtfs_oplist_object mtfs_oplist_flag = {
-	.mopo_init     = mtfs_oplist_init_flag,
-	.mopo_flush    = mtfs_oplist_flush_invalidate,
-	.mopo_gather   = mtfs_oplist_gather_optimistic,
-};
-EXPORT_SYMBOL(mtfs_oplist_flag);
-
-struct mtfs_oplist_object mtfs_oplist_sequential = {
-	.mopo_init     = mtfs_oplist_init_sequential,
-	.mopo_flush    = mtfs_oplist_flush_invalidate,
-	.mopo_gather   = mtfs_oplist_gather_optimistic,
-};
-EXPORT_SYMBOL(mtfs_oplist_sequential);
-
 static int mtfs_oplist_gather_master(struct mtfs_operation_list *oplist)
 {
 	int ret = 0;
@@ -343,6 +329,93 @@ static int mtfs_oplist_gather_reverse(struct mtfs_operation_list *oplist)
 
 	MRETURN(ret);
 }
+
+static int mtfs_oplist_gather_writev(struct mtfs_operation_list *oplist)
+{
+	mtfs_bindex_t bindex = 0;
+	int ret = 0;
+	ssize_t max_size = 0;
+	mtfs_bindex_t max_bindex = -1;
+	mtfs_bindex_t valid_bnum = oplist->valid_bnum;
+	MENTRY();
+
+	MASSERT(oplist->fault_latest_bnum + oplist->fault_nonlatest_bnum == oplist->fault_bnum);
+	MASSERT(oplist->success_latest_bnum + oplist->success_nonlatest_bnum == oplist->success_bnum);
+	MASSERT(oplist->success_bnum + oplist->fault_bnum == oplist->valid_bnum);
+	MASSERT(oplist->valid_bnum <= oplist->bnum);
+	MASSERT(oplist->valid_bnum > 0);
+
+	for (bindex = 0; bindex < valid_bnum; bindex++) {
+		MASSERT(oplist->op_binfo[bindex].valid);
+
+		if (max_size < oplist->op_binfo[bindex].result.ssize){
+			max_size = oplist->op_binfo[bindex].result.ssize;
+			max_bindex = bindex;
+		}
+
+		if (oplist->op_binfo[bindex].flags & MTFS_OPERATION_PREFERABLE) {
+			MASSERT(oplist->op_binfo[bindex].flags & MTFS_OPERATION_SUCCESS);
+			MASSERT(max_size == oplist->op_binfo[bindex].result.ssize);
+			break;
+		}
+	}
+
+	oplist->valid_bnum = 0;
+	oplist->success_bnum = 0;
+	oplist->success_latest_bnum = 0;
+	oplist->success_nonlatest_bnum = 0;
+	oplist->fault_bnum = 0;
+	oplist->fault_latest_bnum = 0;
+	oplist->fault_nonlatest_bnum = 0;
+	for (bindex = 0; bindex < valid_bnum; bindex++) {
+		MASSERT(max_size >= oplist->op_binfo[bindex].result.ssize);
+		if (max_size == oplist->op_binfo[bindex].result.ssize) {
+			mtfs_oplist_setbranch(oplist, bindex,
+			                      MTFS_OPERATION_SUCCESS | MTFS_OPERATION_PREFERABLE,
+			                      oplist->op_binfo[bindex].result);
+		} else {
+			mtfs_oplist_setbranch(oplist, bindex,
+			                      0,
+			                      oplist->op_binfo[bindex].result);
+		}
+	}
+	MASSERT(oplist->fault_latest_bnum + oplist->fault_nonlatest_bnum == oplist->fault_bnum);
+	MASSERT(oplist->success_latest_bnum + oplist->success_nonlatest_bnum == oplist->success_bnum);
+	MASSERT(oplist->success_bnum + oplist->fault_bnum == oplist->valid_bnum);
+	MASSERT(oplist->valid_bnum <= oplist->bnum);
+	MASSERT(oplist->valid_bnum == valid_bnum);
+
+	if (max_bindex == -1) {
+		max_bindex = 0;
+		MASSERT(oplist->success_bnum == 0);
+	}
+	oplist->opinfo = &(oplist->op_binfo[max_bindex]);
+
+	MASSERT(oplist->opinfo);
+
+	MRETURN(ret);
+}
+
+struct mtfs_oplist_object mtfs_oplist_flag = {
+	.mopo_init     = mtfs_oplist_init_flag,
+	.mopo_flush    = mtfs_oplist_flush_invalidate,
+	.mopo_gather   = mtfs_oplist_gather_optimistic,
+};
+EXPORT_SYMBOL(mtfs_oplist_flag);
+
+struct mtfs_oplist_object mtfs_oplist_sequential = {
+	.mopo_init     = mtfs_oplist_init_sequential,
+	.mopo_flush    = mtfs_oplist_flush_invalidate,
+	.mopo_gather   = mtfs_oplist_gather_optimistic,
+};
+EXPORT_SYMBOL(mtfs_oplist_sequential);
+
+struct mtfs_oplist_object mtfs_oplist_flag_writev = {
+	.mopo_init     = mtfs_oplist_init_flag,
+	.mopo_flush    = mtfs_oplist_flush_invalidate,
+	.mopo_gather   = mtfs_oplist_gather_writev,
+};
+EXPORT_SYMBOL(mtfs_oplist_flag_writev);
 
 struct mtfs_oplist_object mtfs_oplist_master = {
 	.mopo_init     = mtfs_oplist_init_sequential,

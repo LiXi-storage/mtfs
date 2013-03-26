@@ -54,6 +54,12 @@ int mio_init_oplist_flag(struct mtfs_io *io)
 }
 EXPORT_SYMBOL(mio_init_oplist_flag);
 
+int mio_init_oplist_flag_writev(struct mtfs_io *io)
+{
+	return mio_init_oplist(io, &mtfs_oplist_flag_writev);
+}
+EXPORT_SYMBOL(mio_init_oplist_flag_writev);
+
 void mio_iter_end_oplist(struct mtfs_io *io)
 {
 	struct mtfs_operation_list *oplist = &io->mi_oplist;

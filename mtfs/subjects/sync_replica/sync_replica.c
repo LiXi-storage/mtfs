@@ -172,7 +172,7 @@ const struct mtfs_io_operations mtfs_io_ops[] = {
 		.mio_iter_fini  = mio_iter_fini_read_ops,
 	},
 	[MIOT_WRITEV] = {
-		.mio_init       = mio_init_oplist_flag,
+		.mio_init       = mio_init_oplist_flag_writev,
 		.mio_fini       = mio_fini_oplist,
 		.mio_lock       = mio_lock_mlock,
 		.mio_unlock     = mio_unlock_mlock,

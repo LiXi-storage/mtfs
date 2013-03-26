@@ -70,6 +70,7 @@ extern int mtfs_oplist_setbranch(struct mtfs_operation_list *oplist,
                                  mtfs_operation_result_t result);
 extern mtfs_operation_result_t mtfs_oplist_result(struct mtfs_operation_list *list);
 extern struct mtfs_oplist_object mtfs_oplist_flag;
+extern struct mtfs_oplist_object mtfs_oplist_flag_writev;
 extern struct mtfs_oplist_object mtfs_oplist_sequential;
 extern struct mtfs_oplist_object mtfs_oplist_master;
 extern struct mtfs_oplist_object mtfs_oplist_reverse;

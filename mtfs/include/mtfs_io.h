@@ -310,6 +310,7 @@ static inline mtfs_bindex_t mio_bindex(struct mtfs_io *io)
 extern int mtfs_io_loop(struct mtfs_io *io);
 extern int mio_init_oplist(struct mtfs_io *io, struct mtfs_oplist_object *oplist_obj);
 extern int mio_init_oplist_flag(struct mtfs_io *io);
+extern int mio_init_oplist_flag_writev(struct mtfs_io *io);
 extern void mio_iter_end_oplist(struct mtfs_io *io);
 extern void mio_fini_oplist_noupdate(struct mtfs_io *io);
 extern void mio_fini_oplist(struct mtfs_io *io);
