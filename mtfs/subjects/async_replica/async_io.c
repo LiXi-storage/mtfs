@@ -657,7 +657,7 @@ static void masync_io_iter_start_rw(struct mtfs_io *io)
 				io->mi_result.ssize = ret;
 				io->mi_flags = 0;
 				MBUG();
-				goto out;
+				goto out_bucket_abort;
 			}
 
 			/* Set slave */
@@ -667,7 +667,7 @@ static void masync_io_iter_start_rw(struct mtfs_io *io)
 				       bindex,
 				       dentry->d_name.len, dentry->d_name.name);
 				ret = -ENOENT;
-				goto out;
+				goto out_bucket_abort;
 			}
 
 			ret = mlowerfs_bucket_add(mtfs_i2bbucket(inode, bindex),
@@ -683,13 +683,15 @@ static void masync_io_iter_start_rw(struct mtfs_io *io)
 
 			if (!masync_bucket_fvalid(file)) {
 				/* TODO: reconstruct the bucket */
-				goto out;
+				goto out_bucket_abort;
 			}
 
 			masync_bucket_add_end(file, &extent, async_extent);
 		}
 	}
-
+	goto out;
+out_bucket_abort:
+	masync_bucket_add_abort(file, &extent, async_extent);
 out:
 	_MRETURN();
 }

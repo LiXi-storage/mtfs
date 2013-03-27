@@ -31,7 +31,7 @@ out:
 }
 
 
-static void masync_extent_fini(struct masync_extent *async_extent)
+void masync_extent_fini(struct masync_extent *async_extent)
 {
 	MENTRY();
 

@@ -319,6 +319,14 @@ void masync_bucket_add_end(struct file *file,
 	_MRETURN();
 }
 
+void masync_bucket_add_abort(struct file *file,
+                             struct mtfs_interval_node_extent *interval,
+                             struct masync_extent *async_extent)
+{
+	async_extent->mae_bucket = NULL;
+	masync_extent_fini(async_extent);
+}
+
 /* Return extent_number canceled */
 int masync_bucket_cleanup(struct masync_bucket *bucket)
 {

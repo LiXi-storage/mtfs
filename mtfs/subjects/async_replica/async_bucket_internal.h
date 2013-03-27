@@ -44,6 +44,9 @@ int masync_bucket_add_start(struct file *file,
 void masync_bucket_add_end(struct file *file,
                            struct mtfs_interval_node_extent *interval,
                            struct masync_extent *async_extent);
+void masync_bucket_add_abort(struct file *file,
+                             struct mtfs_interval_node_extent *interval,
+                             struct masync_extent *async_extent);
 int masync_bucket_cancel(struct masync_bucket *bucket,
                          char *buf, int buf_len,
                          int nr_to_cacel);

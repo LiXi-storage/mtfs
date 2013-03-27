@@ -8,6 +8,7 @@
 #include <mtfs_async.h>
 
 struct masync_extent *masync_extent_init(struct masync_bucket *bucket);
+void masync_extent_fini(struct masync_extent *async_extent);
 void masync_extent_get(struct masync_extent *async_extent);
 void masync_extent_put(struct masync_extent *async_extent);
 
