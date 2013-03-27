@@ -606,6 +606,7 @@ static void masync_io_iter_start_rw(struct mtfs_io *io)
 	struct dentry *dentry = file->f_dentry;
 	struct inode *inode = dentry->d_inode;
 	mtfs_bindex_t bindex = 0;
+	struct masync_extent *async_extent = NULL;
 	int ret = 0;
 	MENTRY();
 
@@ -631,6 +632,16 @@ static void masync_io_iter_start_rw(struct mtfs_io *io)
 			extent.end = io_rw->pos_tmp - 1;
 			MASSERT(extent.start >= 0);
 			MASSERT(extent.start <= extent.end);
+
+			ret = masync_bucket_add_start(file,
+			                              &extent,
+		                                      &async_extent);
+			if (ret) {
+				MERROR("failed to add extent to bucket of [%.*s], ret = %d\n",
+				       dentry->d_name.len, dentry->d_name.name,
+				       ret);
+				goto out;
+			}
 
 			/* Set master */
 			bindex = 0;
@@ -675,18 +686,7 @@ static void masync_io_iter_start_rw(struct mtfs_io *io)
 				goto out;
 			}
 
-			masync_bucket_add(file, &extent);
-			if (ret) {
-				MASSERT(ret < 0);
-				MERROR("failed to add extent to bucket of [%.*s], ret = %d\n",
-				       dentry->d_name.len, dentry->d_name.name,
-				       ret);
-				/* TODO: invalidate and reconstruct the bucket */
-				MBUG();
-				io->mi_result.ssize = ret;
-				io->mi_flags = 0;
-				goto out;
-			}
+			masync_bucket_add_end(file, &extent, async_extent);
 		}
 	}
 

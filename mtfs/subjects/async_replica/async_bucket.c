@@ -203,18 +203,44 @@ int masync_bucket_put(struct masync_bucket *bucket)
 	MRETURN(ret);
 }
 
+/*
+ * Start adding bucket.
+ * Any operation that may fail should be here.
+ */
+int masync_bucket_add_start(struct file *file,
+                            struct mtfs_interval_node_extent *interval,
+                            struct masync_extent **async_extent)
+{
+	int ret = 0;
+	struct inode *inode = file->f_dentry->d_inode;
+	struct masync_bucket *bucket = mtfs_i2bucket(inode);
+	struct masync_extent *extent;
+	MENTRY();
 
-int masync_bucket_add(struct file *file,
-                      struct mtfs_interval_node_extent *interval)
+	extent = masync_extent_init(bucket);
+	if (extent == NULL) {
+		MERROR("failed to create interval, not enough memory\n");
+		ret = -ENOMEM;
+		goto out;
+	}
+	*async_extent = extent;
+out:
+	MRETURN(ret);
+}
+
+/*
+ * Never fail.
+ */
+void masync_bucket_add_end(struct file *file,
+                           struct mtfs_interval_node_extent *interval,
+                           struct masync_extent *async_extent)
 {
 	MTFS_LIST_HEAD(extent_list);
 	struct mtfs_interval_node_extent tmp_interval;
 	struct mtfs_interval *tmp_extent = NULL;
 	struct mtfs_interval *node = NULL;
 	struct mtfs_interval *head = NULL;
-	struct masync_extent *async_extent = NULL;
 	struct masync_extent *tmp_async_extent = NULL;
-	int ret = 0;
 	__u64 min_start = interval->start;
 	__u64 max_end = interval->end;
 	struct inode *inode = file->f_dentry->d_inode;
@@ -224,12 +250,6 @@ int masync_bucket_add(struct file *file,
 
 	MDEBUG("adding [%lu, %lu]\n", interval->start, interval->end);
 
-	async_extent = masync_extent_init(bucket);
-	if (async_extent == NULL) {
-		MERROR("failed to create interval, not enough memory\n");
-		ret = -ENOMEM;
-		goto out;
-	}
 	/* Extent tree increase reference */
 	masync_extent_get(async_extent);
 
@@ -295,8 +315,8 @@ int masync_bucket_add(struct file *file,
 		/* Extent tree release reference */
 		masync_extent_put(tmp_async_extent);
 	}
-out:
-	MRETURN(ret);
+
+	_MRETURN();
 }
 
 /* Return extent_number canceled */
