@@ -1,6 +1,6 @@
 MODULES := mtfs_lowerfs_ext
-mtfs_lowerfs_ext-objs := ext_support.o
+mtfs_lowerfs_ext-objs := lowerfs_ext.o
 
 EXTRA_DIST := $(mtfs_lowerfs_ext-objs:.o=.c)
-EXTRA_DIST += ext_support.h
+EXTRA_DIST += lowerfs_ext.h
 @INCLUDE_RULES@
