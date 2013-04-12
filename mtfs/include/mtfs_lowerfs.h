@@ -35,6 +35,13 @@ struct mtfs_lowerfs {
 	unsigned long                       ml_flag;
 	struct mlowerfs_bucket_type_object *ml_bucket_type;
 
+	void *(* ml_start)(struct inode *inode, int op);
+	int (* ml_extend)(struct inode *inode, unsigned nblocks, void *h);
+	int (* ml_commit)(struct inode *inode, void *handle,int force_sync);
+	int (* ml_commit_async)(struct inode *inode, void *handle,
+	                        void **wait_handle);
+	int (* ml_commit_wait)(struct inode *inode, void *handle);
+
 	/* Operations that should be provided */
 	int (* ml_setflag)(struct inode *inode, __u32 flag);
 	int (* ml_getflag)(struct inode *inode, __u32 *mtfs_flag);
