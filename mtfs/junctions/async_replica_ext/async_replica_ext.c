@@ -65,7 +65,7 @@ struct inode_operations mtfs_ext_main_iops =
 	listxattr:      mtfs_listxattr,
 };
 
-int mtfs_d_revalidate_local(struct dentry *dentry, struct nameidata *nd)
+static int mtfs_d_revalidate_local(struct dentry *dentry, struct nameidata *nd)
 {
 	int ret = 0;
 	MENTRY();
@@ -167,7 +167,7 @@ out:
 	MRETURN(ret);
 }
 
-int mtfs_ext2_ioctl(struct inode *inode, struct file *file, unsigned int cmd, unsigned long arg)
+static int mtfs_ext2_ioctl(struct inode *inode, struct file *file, unsigned int cmd, unsigned long arg)
 {
 	int ret = 0;
 	MENTRY();
@@ -217,30 +217,73 @@ struct mtfs_junction mtfs_ext2_junction = {
 	mj_fs_ops:              &mtfs_ext2_operations,
 };
 
-static int async_replica_ext_init(void)
+struct mtfs_operations mtfs_ext3_operations = {
+	symlink_iops:            &mtfs_ext_symlink_iops,
+	dir_iops:                &mtfs_ext_dir_iops,
+	main_iops:               &mtfs_ext_main_iops,
+	main_fops:               &mtfs_ext_main_fops,
+	dir_fops:                &mtfs_ext_dir_fops,
+	sops:                    &mtfs_ext_sops,
+	dops:                    &mtfs_ext_dops,
+	aops:                    &mtfs_aops,
+	vm_ops:                  &mtfs_file_vm_ops,
+	ioctl:                    NULL,
+	subject_ops:             &masync_subject_ops,
+	iupdate_ops:             &mtfs_iupdate_master,
+	io_ops:                  &masync_io_ops,
+};
+
+const char *ext3_supported_secondary_types[] = {
+	"ext3",
+	NULL,
+};
+
+struct mtfs_junction mtfs_ext3_junction = {
+	mj_owner:                THIS_MODULE,
+	mj_name:                 "ext3",
+	mj_subject:              "ASYNC_REPLICA",
+	mj_primary_type:         "ext3",
+	mj_secondary_types:      ext3_supported_secondary_types,
+	mj_fs_ops:              &mtfs_ext3_operations,
+};
+
+static int masync_replica_ext_init(void)
 {
 	int ret = 0;
 
-	MDEBUG("registering mtfs_ext2 support\n");
-
+	MDEBUG("registering async_replica junction for ext2/ext3/ext4\n");
 
 	ret = junction_register(&mtfs_ext2_junction);
 	if (ret) {
-		MERROR("failed to register junction: error %d\n", ret);
+		MERROR("failed to register async_replica junction for ext2: error %d\n",
+		       ret);
+		goto out;
 	}
 
+	ret = junction_register(&mtfs_ext3_junction);
+	if (ret) {
+		MERROR("failed to register async_replica junction for ext3: error %d\n",
+		       ret);
+		goto out_unregister_ext2;
+	}
+	goto out;
+
+out_unregister_ext2:
+	junction_unregister(&mtfs_ext2_junction);
+out:
 	return ret;
 }
 
-static void async_replica_ext_exit(void)
+static void masync_replica_ext_exit(void)
 {
-	MDEBUG("unregistering mtfs_ext2 support\n");
+	MDEBUG("unregistering async_replica junction for ext2/ext3/ext4\n");
 	junction_unregister(&mtfs_ext2_junction);
+	junction_unregister(&mtfs_ext3_junction);
 }
 
 MODULE_AUTHOR("MulTi File System Workgroup");
-MODULE_DESCRIPTION("mtfs's async support for ext");
+MODULE_DESCRIPTION("mtfs's async_replica junction for ext2/ext3/ext4");
 MODULE_LICENSE("GPL");
 
-module_init(async_replica_ext_init);
-module_exit(async_replica_ext_exit);
+module_init(masync_replica_ext_init);
+module_exit(masync_replica_ext_exit);

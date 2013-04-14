@@ -312,7 +312,7 @@ out:
 
 static void ext_support_exit(void)
 {
-	MDEBUG("unregistering mtfs async juntion for ext2\n");
+	MDEBUG("unregistering mtfs sync juntion for ext2/ext3/ext4\n");
 
 	junction_unregister(&mtfs_ext4_junction);
 	junction_unregister(&mtfs_ext3_junction);
