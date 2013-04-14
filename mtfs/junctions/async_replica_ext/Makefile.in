@@ -1,0 +1,6 @@
+MODULES := mtfs_junction_async_replica_ext
+mtfs_junction_async_replica_ext-objs := async_replica_ext.o
+
+EXTRA_DIST := $(mtfs_junction_async_replica_ext-objs:.o=.c)
+EXTRA_DIST += async_replica_ext.h
+@INCLUDE_RULES@

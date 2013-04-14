@@ -11,7 +11,7 @@
 #include <mtfs_file.h>
 #include <mtfs_mmap.h>
 #include <mtfs_junction.h>
-#include "async_replica_ext2.h"
+#include "async_replica_ext.h"
 
 struct super_operations mtfs_ext_sops =
 {

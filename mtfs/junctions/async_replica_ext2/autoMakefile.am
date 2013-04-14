@@ -1,5 +1,0 @@
-if MODULES
-modulefs_DATA = mtfs_junction_async_replica_ext2$(KMODEXT)
-endif
-
-MOSTLYCLEANFILES := @MOSTLYCLEANFILES@
