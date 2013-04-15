@@ -7,12 +7,12 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <signal.h>
+#include <time.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <cmd_parser.h>
 #include <raid.h>
-#include <log.h>
 #include "libmtfsapi.h"
 #include "hide.h"
 #include "grouplock.h"
@@ -45,7 +45,6 @@ static int mtfs_example(int argc, char **argv);
 static int mtfs_getstate(int argc, char **argv);
 static int mtfs_setbranch(int argc, char **argv);
 static int mtfs_setraid(int argc, char **argv);
-static int mtfs_log(int argc, char **argv);
 static int mtfs_hide(int argc, char **argv);
 static int mtfs_grouplock(int argc, char **argv);
 static int mtfs_rmbranch(int argc, char **argv);
@@ -103,10 +102,6 @@ command_t mtfs_cmdlist[] = {
 	/* repair commands */
 
 	/* test commands */
-	{"log", mtfs_log, 0,
-	"To test mtfs log system.\n"
-	"usage: log [--quiet | -q] [--verbose | -v]\n"
-	"                               log_messages ...\n"},
 	{"grouplock", mtfs_grouplock, 0,
 	"To test mtfs group lock.\n"
 	"usage: grouplock [--quiet | -q] [--verbose | -v] \n"
@@ -485,62 +480,6 @@ static int mtfs_example(int argc, char **argv)
 		printf("arg[%d] = %s\n", optind, argv[optind]);
 		rc = 0;
 	} while (++optind < argc && !rc);
-
-	if (rc) {
-		fprintf(stderr, "error: %s failed for %s, rc = %d.\n",
-		        argv[0], argv[optind - 1], rc);
-	}
-out:
-	return rc;
-}
-
-static int mtfs_log(int argc, char **argv)
-{
-	struct option long_opts[] = {
-		{"quiet", no_argument, 0, 'q'},
-		{"verbose", no_argument, 0, 'v'},
-		{0, 0, 0, 0}
-	};
-	char short_opts[] = "qv";
-	int c = 0;
-	int rc = 0;
-	struct mtfs_param param = { 0 };
-
-	optind = 0;
-	while ((c = getopt_long(argc, argv, short_opts, long_opts, NULL)) != -1) {
-		switch (c) {
-		case 'q':
- 			param.quiet++;
-			param.verbose = 0;
-			break;
-		case 'v':
-			param.verbose++;
-			param.quiet = 0;
-			break;
-		case '?':
-			rc = CMD_HELP;
-			goto out;
-		default:
-			fprintf(stderr, "error: %s: option '%s' unrecognized\n",
-			        argv[0], argv[optind - 1]);
-			rc = CMD_HELP;
-			goto out;
-		}
-	}
-
-	if (optind >= argc) {
-		rc = CMD_HELP;
-		goto out;
-	}
-
-	mtfs_log_init(MTFS_LOG_FILENAME, MTFS_LOGLEVEL_DEBUG);
-	HLOG_DEBUG("Here is log test\n");
-	do {
-		HLOG_DEBUG("arg[%d] = %s\n", optind, argv[optind]);
-		rc = 0;
-	} while (++optind < argc && !rc);
-
-	mtfs_log_finit();
 
 	if (rc) {
 		fprintf(stderr, "error: %s failed for %s, rc = %d.\n",
