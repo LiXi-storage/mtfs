@@ -126,6 +126,41 @@ static inline struct mtfs_operations *mtfs_f2ops(struct file *file)
 	return mtfs_d2ops(dentry);
 }
 
+#define DISK_TIMEOUT 50          /* Beyond this we warn about disk speed */
+
+#define __mlowerfs_check_slow(start, msg)                                 \
+do {                                                                      \
+        if (time_before(jiffies, start + 15 * HZ))                        \
+                break;                                                    \
+        else if (time_before(jiffies, start + 30 * HZ))                   \
+                MDEBUG("slow disk %s %lus\n",                             \
+                       msg, (jiffies - start) / HZ);                      \
+        else if (time_before(jiffies, start + DISK_TIMEOUT * HZ))         \
+                MWARN("slow disk %s %lus\n", msg,                         \
+                      (jiffies - start) / HZ);                            \
+        else                                                              \
+                MERROR("%s: slow %s %lus\n", msg,                         \
+                       (jiffies - start) / HZ);                           \
+} while (0)
+
+#define mlowerfs_check_slow(start, msg)              \
+do {                                                 \
+        __mlowerfs_check_slow(start, msg);           \
+        start = jiffies;                             \
+} while (0)
+
+static inline void *mlowerfs_start_log(struct mtfs_lowerfs *lowerfs,
+                                       struct inode *inode, int op)
+{
+        unsigned long now = jiffies;
+        void *handle;
+
+        handle = lowerfs->ml_start(inode, op);
+
+        mlowerfs_check_slow(now, "journal start");
+        return handle;
+}
+
 #endif /* defined (__linux__) && defined(__KERNEL__) */
 
 #define MLOWERFS_BUCKET_NUMBER (64)
