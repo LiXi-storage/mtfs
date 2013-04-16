@@ -149,7 +149,7 @@ do {                                                 \
         start = jiffies;                             \
 } while (0)
 
-static inline void *mlowerfs_start_log(struct mtfs_lowerfs *lowerfs,
+static inline void *mlowerfs_start(struct mtfs_lowerfs *lowerfs,
                                        struct inode *inode, int op)
 {
         unsigned long now = jiffies;

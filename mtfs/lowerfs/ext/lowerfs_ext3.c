@@ -4,6 +4,8 @@
 
 #include <linux/module.h>
 #include <linux/ext3_jbd.h>
+#include <linux/quota.h>
+#include <linux/quotaops.h>
 #include <debug.h>
 #include <mtfs_lowerfs.h>
 
@@ -71,6 +73,62 @@ journal_start:
 	}
 
 	MRETURN(handle);
+}
+
+static inline int mlowerfs_ext3_should_journal_data(struct inode *inode)
+{
+	if (!S_ISREG(inode->i_mode))
+		return 1;
+	if (test_opt(inode->i_sb, DATA_FLAGS) == EXT3_MOUNT_JOURNAL_DATA)
+		return 1;
+	if (EXT3_I(inode)->i_flags & EXT3_JOURNAL_DATA_FL)
+		return 1;
+	return 0;
+}
+
+/*
+ * Calculate the number of buffer credits needed to write multiple pages in
+ * a single ext3 transaction. 
+ *
+ * With N blocks, we have at most:
+ * N for leaf
+ * 
+ * min(N*P, blocksize/4 + 1) dindirect blocks
+ * niocount tindirect
+ *
+ */
+int mlowerfs_ext3_credits_needed(struct inode *inode, __u64 offset, __u64 len)
+{
+	struct super_block *sb = inode->i_sb;
+	int _nblock = len >> sb->s_blocksize_bits;
+	int nblock = _nblock > 2 ? _nblock : 2;
+	int _nindirect = len / (EXT3_ADDR_PER_BLOCK(sb) << sb->s_blocksize_bits);
+	int nindirect = _nindirect > 2 ? _nindirect : 2;
+	int _ndindirect = (len >> sb->s_blocksize_bits) / (EXT3_ADDR_PER_BLOCK(sb) * EXT3_ADDR_PER_BLOCK(sb));
+	int ndindirect = _ndindirect > 2 ? _ndindirect : 2;
+	int nbitmaps = 1 + nblock + nindirect + ndindirect; /* tindirect */
+	int ngdblocks = nbitmaps > EXT3_SB(sb)->s_gdb_count ? EXT3_SB(sb)->s_gdb_count : nbitmaps;
+	int ngroups = nbitmaps > EXT3_SB(sb)->s_groups_count ? EXT3_SB(sb)->s_groups_count : nbitmaps;
+	int needed = 2; /* inodes + superblock */
+	int i = 0;
+
+	if (mlowerfs_ext3_should_journal_data(inode)) {
+		needed += nbitmaps;
+	}
+
+	needed += ngdblocks + ngroups;
+
+	/* last_rcvd update, this used to be handled in vfs_dq_init() */
+	needed += EXT3_DATA_TRANS_BLOCKS(sb);
+
+#if defined(CONFIG_QUOTA)
+	for (i = 0; i < MAXQUOTAS; i++) {
+		if (sb_has_quota_active(sb, i)) {
+			needed += EXT3_SINGLEDATA_TRANS_BLOCKS;
+		}
+	}
+#endif
+	return needed;
 }
 
 static inline int _mlowerfs_ext3_journal_extend(handle_t *handle, int nblocks)
