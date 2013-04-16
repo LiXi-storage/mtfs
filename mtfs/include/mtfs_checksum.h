@@ -6,6 +6,10 @@
 #define __MTFS_CHECKSUM_H__
 
 #include "debug.h"
+#if defined (__linux__) && defined(__KERNEL__)
+#include <asm/cpufeature.h>
+#include <asm/processor.h>
+#endif
 
 #if defined (__linux__) && defined(__KERNEL__) && (defined(CONFIG_CRC32) || defined(CONFIG_CRC32_MODULE))
 #include <linux/crc32.h>
@@ -137,13 +141,13 @@ static inline __u32 mchecksum_compute(__u32 checksum, unsigned char const *p,
                                       size_t len, mchecksum_type_t type)
 {
 	switch (type) {
-	case MCHECKSUM_CRC32:
+	case MCHECKSUM_CRC32C:
 		return crc32c_hw(checksum, p, len);
 #ifdef HAVE_ADLER
 	case MCHECKSUM_ADLER:
 		return adler32(checksum, p, len);
 #endif
-	case MCHECKSUM_CRC32C:
+	case MCHECKSUM_CRC32:
 		return crc32_le(checksum, p, len);
         default:
                 MERROR("Unknown checksum type (%x)!!!\n", type);
