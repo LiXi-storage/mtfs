@@ -36,6 +36,7 @@ struct mtfs_lowerfs {
 	struct mlowerfs_bucket_type_object *ml_bucket_type;
 
 	void *(* ml_start)(struct inode *inode, int op);
+	void *(* ml_brw_start)(struct inode *inode, __u64 len);
 	int (* ml_extend)(struct inode *inode, unsigned nblocks, void *h);
 	int (* ml_commit)(struct inode *inode, void *handle,int force_sync);
 	int (* ml_commit_async)(struct inode *inode, void *handle,
@@ -153,12 +154,41 @@ static inline void *mlowerfs_start(struct mtfs_lowerfs *lowerfs,
                                        struct inode *inode, int op)
 {
         unsigned long now = jiffies;
-        void *handle;
+        void *handle = NULL;
 
         handle = lowerfs->ml_start(inode, op);
 
         mlowerfs_check_slow(now, "journal start");
+
         return handle;
+}
+
+static inline void *mlowerfs_brw_start(struct mtfs_lowerfs *lowerfs,
+                                       struct inode *inode, __u64 len)
+{
+        unsigned long now = jiffies;
+        void *handle = NULL;
+
+        handle = lowerfs->ml_brw_start(inode, len);
+
+        mlowerfs_check_slow(now, "journal start");
+
+        return handle;
+}
+
+static inline int mlowerfs_commit(struct mtfs_lowerfs *lowerfs,
+                                  struct inode *inode,
+                                  void *handle,
+                                  int force_sync)
+{
+	unsigned long now = jiffies;
+	int ret = 0;
+
+	ret = lowerfs->ml_commit(inode, handle, force_sync);
+
+	mlowerfs_check_slow(now, "journal start");
+
+	return ret;
 }
 
 #endif /* defined (__linux__) && defined(__KERNEL__) */

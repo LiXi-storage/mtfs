@@ -93,7 +93,7 @@ static inline int mlowerfs_ext3_should_journal_data(struct inode *inode)
  * Check ext3_writepage_trans_blocks() for detail
  *
  */
-int mlowerfs_ext3_credits_needed(struct inode *inode, __u64 offset, __u64 len)
+int mlowerfs_ext3_credits_needed(struct inode *inode, __u64 len)
 {
 	struct super_block *sb = inode->i_sb;
 	int nblock = (len >> sb->s_blocksize_bits) + 2; /* Two block or more */
@@ -111,9 +111,6 @@ int mlowerfs_ext3_credits_needed(struct inode *inode, __u64 offset, __u64 len)
 
 	needed += ngdblocks + ngroups;
 
-	/* last_rcvd update */
-	needed += EXT3_DATA_TRANS_BLOCKS(sb);
-
 #if defined(CONFIG_QUOTA)
 	if (!IS_NOQUOTA(inode)) {
 		for (i = 0; i < MAXQUOTAS; i++) {
@@ -124,6 +121,45 @@ int mlowerfs_ext3_credits_needed(struct inode *inode, __u64 offset, __u64 len)
 	}
 #endif
 	return needed;
+}
+
+void *mlowerfs_ext3_brw_start(struct inode *inode, __u64 len)
+{
+	journal_t *journal = NULL;
+	int needed = 0;
+	handle_t *handle = NULL;
+	MENTRY();
+
+	journal = EXT3_SB(inode->i_sb)->s_journal;
+	needed = mlowerfs_ext3_credits_needed(inode, len);
+
+	/* The number of blocks we could _possibly_ dirty can very large.
+	 * We reduce our request if it is absurd (and we couldn't get that
+	 * many credits for a single handle anyways).
+	 *
+	 * At some point we have to limit the size of I/Os sent at one time,
+	 * increase the size of the journal, or we have to calculate the
+	 * actual journal requirements more carefully by checking all of
+	 * the blocks instead of being maximally pessimistic.  It remains to
+	 * be seen if this is a real problem or not.
+	 */
+	if (needed > journal->j_max_transaction_buffers) {
+		MERROR("want too many journal credits (%d) using %d instead\n",
+		       needed, journal->j_max_transaction_buffers);
+		needed = journal->j_max_transaction_buffers;
+        }
+
+	MASSERT(needed > 0);
+	handle = _mlowerfs_ext3_journal_start(inode, needed);
+	if (IS_ERR(handle)) {
+		MERROR("can't get handle for %d credits: rc = %ld\n", needed,
+		       PTR_ERR(handle));
+        } else {
+		MASSERT(handle->h_buffer_credits >= needed);
+		MASSERT(current->journal_info == handle);
+	}
+
+	MRETURN(handle);
 }
 
 static inline int _mlowerfs_ext3_journal_extend(handle_t *handle, int nblocks)
@@ -258,6 +294,7 @@ struct mtfs_lowerfs lowerfs_ext3 = {
 	ml_bucket_type:     &mlowerfs_bucket_xattr,
 	ml_flag:            0,
 	ml_start:           mlowerfs_ext3_start,
+	ml_brw_start:       mlowerfs_ext3_brw_start,
 	ml_extend:          mlowerfs_ext3_extend,
 	ml_commit:          mlowerfs_ext3_commit,
 	ml_commit_async:    mlowerfs_ext3_commit_async,
