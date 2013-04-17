@@ -90,22 +90,15 @@ static inline int mlowerfs_ext3_should_journal_data(struct inode *inode)
  * Calculate the number of buffer credits needed to write multiple pages in
  * a single ext3 transaction. 
  *
- * With N blocks, we have at most:
- * N for leaf
- * 
- * min(N*P, blocksize/4 + 1) dindirect blocks
- * niocount tindirect
+ * Check ext3_writepage_trans_blocks() for detail
  *
  */
 int mlowerfs_ext3_credits_needed(struct inode *inode, __u64 offset, __u64 len)
 {
 	struct super_block *sb = inode->i_sb;
-	int _nblock = len >> sb->s_blocksize_bits;
-	int nblock = _nblock > 2 ? _nblock : 2;
-	int _nindirect = len / (EXT3_ADDR_PER_BLOCK(sb) << sb->s_blocksize_bits);
-	int nindirect = _nindirect > 2 ? _nindirect : 2;
-	int _ndindirect = (len >> sb->s_blocksize_bits) / (EXT3_ADDR_PER_BLOCK(sb) * EXT3_ADDR_PER_BLOCK(sb));
-	int ndindirect = _ndindirect > 2 ? _ndindirect : 2;
+	int nblock = (len >> sb->s_blocksize_bits) + 2; /* Two block or more */
+	int nindirect = len / (EXT3_ADDR_PER_BLOCK(sb) << sb->s_blocksize_bits) + 2;
+	int ndindirect = (len >> sb->s_blocksize_bits) / (EXT3_ADDR_PER_BLOCK(sb) * EXT3_ADDR_PER_BLOCK(sb)) + 2;
 	int nbitmaps = 1 + nblock + nindirect + ndindirect; /* tindirect */
 	int ngdblocks = nbitmaps > EXT3_SB(sb)->s_gdb_count ? EXT3_SB(sb)->s_gdb_count : nbitmaps;
 	int ngroups = nbitmaps > EXT3_SB(sb)->s_groups_count ? EXT3_SB(sb)->s_groups_count : nbitmaps;
@@ -118,13 +111,15 @@ int mlowerfs_ext3_credits_needed(struct inode *inode, __u64 offset, __u64 len)
 
 	needed += ngdblocks + ngroups;
 
-	/* last_rcvd update, this used to be handled in vfs_dq_init() */
+	/* last_rcvd update */
 	needed += EXT3_DATA_TRANS_BLOCKS(sb);
 
 #if defined(CONFIG_QUOTA)
-	for (i = 0; i < MAXQUOTAS; i++) {
-		if (sb_has_quota_active(sb, i)) {
-			needed += EXT3_SINGLEDATA_TRANS_BLOCKS;
+	if (!IS_NOQUOTA(inode)) {
+		for (i = 0; i < MAXQUOTAS; i++) {
+			if (sb_has_quota_active(sb, i)) {
+				needed += EXT3_SINGLEDATA_TRANS_BLOCKS;
+			}
 		}
 	}
 #endif
