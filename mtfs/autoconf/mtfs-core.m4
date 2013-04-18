@@ -728,6 +728,20 @@ LB_LINUX_TRY_COMPILE([
 ])
 
 #
+# LC_KALLSYMS_LOOKUP_NAME
+#
+# 2.6.32 kallsyms_lookup_name is not exported in some kernels
+#
+AC_DEFUN([LC_KALLSYMS_LOOKUP_NAME],
+[LB_CHECK_SYMBOL_EXPORT([kallsyms_lookup_name],
+[kernel/kallsyms.c],[
+AC_DEFINE(HAVE_KALLSYMS_LOOKUP_NAME, 1,
+          [kallsyms_lookup_name is exported])
+],[
+])
+])
+
+#
 # LC_PROG_LINUX
 #
 # MTFS linux kernel checks
@@ -768,6 +782,7 @@ AC_DEFUN([LC_PROG_LINUX],
 	LC_FUNC_DUMP_TRACE
 	LC_FUNC_SHOW_TASK
 	LC_STACKTRACE_OPS_HAVE_WALK_STACK
+	LC_KALLSYMS_LOOKUP_NAME
 ])
 
 #

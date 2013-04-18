@@ -97,7 +97,7 @@ int mlowerfs_ext3_credits_needed(struct inode *inode, __u64 len)
 {
 	struct super_block *sb = inode->i_sb;
 	int nblock = (len >> sb->s_blocksize_bits) + 2; /* Two block or more */
-	int nindirect = len / (EXT3_ADDR_PER_BLOCK(sb) << sb->s_blocksize_bits) + 2;
+	int nindirect = (len >> sb->s_blocksize_bits) / EXT3_ADDR_PER_BLOCK(sb) + 2;
 	int ndindirect = (len >> sb->s_blocksize_bits) / (EXT3_ADDR_PER_BLOCK(sb) * EXT3_ADDR_PER_BLOCK(sb)) + 2;
 	int nbitmaps = 1 + nblock + nindirect + ndindirect; /* tindirect */
 	int ngdblocks = nbitmaps > EXT3_SB(sb)->s_gdb_count ? EXT3_SB(sb)->s_gdb_count : nbitmaps;

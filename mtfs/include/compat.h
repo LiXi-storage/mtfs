@@ -2,17 +2,19 @@
  * Copyright (C) 2011 Li Xi <pkuelelixi@gmail.com>
  */
 
-#ifndef _MTFS_COMPAT_H_
-#define _MTFS_COMPAT_H_
+#ifndef __MTFS_COMPAT_H__
+#define __MTFS_COMPAT_H__
 
 #if defined(__linux__) && defined(__KERNEL__)
+#include <linux/cpumask.h>
+#include <linux/kallsyms.h>
+
 #ifdef HAVE_FS_RENAME_DOES_D_MOVE
 #define MTFS_RENAME_DOES_D_MOVE   FS_RENAME_DOES_D_MOVE
 #else /* !HAVE_FS_RENAME_DOES_D_MOVE */
 #define MTFS_RENAME_DOES_D_MOVE   FS_ODD_RENAME
 #endif /* !HAVE_FS_RENAME_DOES_D_MOVE */
 
-#include <linux/cpumask.h>
 #ifdef for_each_possible_cpu
 #define mtfs_for_each_possible_cpu(cpu) for_each_possible_cpu(cpu)
 #elif defined(for_each_cpu)
@@ -22,6 +24,12 @@
 #ifndef HAVE_STRCASECMP
 extern int strncasecmp(const char *s1, const char *s2, size_t n);
 #endif
+
+#ifndef HAVE_KALLSYMS_LOOKUP_NAME
+extern unsigned long mtfs_kallsyms_lookup_name(const char *name);
+#else /* !HAVE_KALLSYMS_LOOKUP_NAME */
+#define mtfs_kallsyms_lookup_name kallsyms_lookup_name
+#endif /* !HAVE_KALLSYMS_LOOKUP_NAME */
 
 #else /* !defined(__linux__) && defined(__KERNEL__) */
 
@@ -48,4 +56,4 @@ extern int strncasecmp(const char *s1, const char *s2, size_t n);
 
 
 #endif  /* !defined(__linux__) && defined(__KERNEL__) */
-#endif /* _MTFS_COMPAT_H_ */
+#endif /* __MTFS_COMPAT_H__ */

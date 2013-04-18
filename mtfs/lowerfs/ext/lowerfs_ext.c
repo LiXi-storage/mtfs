@@ -10,10 +10,10 @@
 #include <mtfs_inode.h>
 #include <mtfs_file.h>
 #include <mtfs_junction.h>
+#include <mtfs_flag.h>
 #include "lowerfs_ext.h"
 #include "lowerfs_ext3.h"
 #include "lowerfs_ext4.h"
-#include <mtfs_flag.h>
 
 struct mtfs_lowerfs lowerfs_ext2 = {
 	ml_owner:           THIS_MODULE,

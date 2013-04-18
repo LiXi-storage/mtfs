@@ -6,6 +6,7 @@
 /test_branch_bitmap
 /test_cfg
 /test_interval_tree
+/test_kallsyms
 /test_mchecksum
 /test_mlock
 /test_mlowerfs_bucket

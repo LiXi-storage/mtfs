@@ -17,6 +17,7 @@ noinst_PROGRAMS += test_interval_tree test_mlock
 noinst_PROGRAMS += test_mlowerfs_bucket
 noinst_PROGRAMS += test_mlowerfs_bucket_random
 noinst_PROGRAMS += test_mchecksum
+noinst_PROGRAMS += test_kallsyms
 
 test_rule_tree_SOURCES = test_rule_tree.c
 test_rule_tree_CFLAGS = $(LL_CFLAGS)
@@ -57,6 +58,11 @@ test_mchecksum_SOURCES = test_mchecksum.c
 test_mchecksum_CFLAGS = $(LL_CFLAGS)
 test_mchecksum_LDADD := $(LIBMTFS_LIBS) $(ZLIB)
 test_mchecksum_DEPENDENCIES := $(LIBMTFS_LIBS)
+
+test_kallsyms_SOURCES = test_kallsyms.c
+test_kallsyms_CFLAGS = $(LL_CFLAGS)
+test_kallsyms_LDADD := $(LIBMTFS_LIBS)
+test_kallsyms_DEPENDENCIES := $(LIBMTFS_LIBS)
 
 endif #LIBMTFS_TESTS
 
