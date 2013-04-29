@@ -8,6 +8,7 @@
 #if defined (__linux__) && defined(__KERNEL__)
 #include <linux/module.h>
 #include <linux/ctype.h>
+#include <linux/fs.h>
 
 #ifndef HAVE_STRCASECMP
 static int strncasecmp(const char *s1, const char *s2, size_t n)

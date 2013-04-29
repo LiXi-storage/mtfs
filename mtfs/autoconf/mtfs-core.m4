@@ -1080,6 +1080,27 @@ LB_CHECK_FILE([$LUSTRE/lustre/include],[],
 
 ]) # end of LC_CONFIG_LUSTRE_PATH
 
+#
+# LC_LOWERFS_EXT_SOURCE
+#
+AC_DEFUN([LC_LOWERFS_EXT_SOURCE],
+[
+	LB_CHECK_FILE([$LINUX/fs/ext4/ext4_jbd2.h], [], [
+		enable_lowerfs_ext='no'
+	])
+
+	LB_CHECK_FILE([$LINUX/fs/ext3/ext3_jbd.h], [], [
+		LB_CHECK_FILE([$LINUX/include/linux/ext3_jbd.h], [
+			AC_DEFINE(HAVE_EXPORT_EXT3_JBD, 1, [Kernel has exported ext3_jbd.h])
+		], [
+			enable_lowerfs_ext='no'
+		])
+	])
+
+	if test x$enable_lowerfs_ext = xno; then
+		AC_MSG_WARN([Disabling lowerfs support for ext because complete ext3/ext4 source does not exist.])
+	fi
+])
 
 #
 # LC_CONFIG_READLINE
@@ -1152,6 +1173,10 @@ fi
 
 if test x$enable_lustre_support = xyes ; then
 	LC_CONFIG_LUSTRE_PATH
+fi
+
+if test x$enable_lowerfs_ext = xyes ; then
+	LC_LOWERFS_EXT_SOURCE
 fi
 
 # check for -lz support
