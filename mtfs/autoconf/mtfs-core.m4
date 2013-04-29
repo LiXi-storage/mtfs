@@ -793,9 +793,9 @@ AC_DEFUN([LC_PROG_LINUX],
 AC_DEFUN([LC_CONFIG_BACKEDN_LUSTRE],
 [AC_MSG_CHECKING([whether to build lustre backend support])
 AC_ARG_ENABLE([lustre-support],
-        AC_HELP_STRING([--disable-lustre-support],
-                        [disable lustre backend support]),
-        [],[enable_lustre_support='yes'])
+        AC_HELP_STRING([--enable-lustre-support],
+                        [enable lustre backend support]),
+        [enable_lustre_support='yes'],[])
 AC_MSG_RESULT([$enable_lustre_support])])
 
 #
