@@ -3,8 +3,7 @@
  */
 
 #include <linux/module.h>
-#include <linux/quota.h>
-#include <linux/quotaops.h>
+#include <linux/fs.h>
 #include <debug.h>
 #include <mtfs_lowerfs.h>
 
