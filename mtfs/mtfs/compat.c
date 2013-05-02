@@ -284,6 +284,9 @@ unsigned long mtfs_kallsyms_lookup_name(const char *name)
 out_free_buff:
 	MTFS_FREE(buff, MTFS_KALLSYMS_BUFF_SIZE);
 out_free_name:
+	if (colon) {
+		*colon = ':';
+	}
 	MTFS_FREE_STR(tmp_name);
 out:
 	return address;
@@ -403,5 +406,6 @@ void mtfs_symbol_put(struct module *owner)
 }
 EXPORT_SYMBOL(mtfs_symbol_put);
 #endif /* !defined (__linux__) && defined(__KERNEL__) */
+
 
 #endif /* !define HAVE_KALLSYMS_LOOKUP_NAME */

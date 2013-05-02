@@ -3,6 +3,7 @@
  */
 
 #include <linux/module.h>
+#include <compat.h>
 #include <mtfs_heal.h>
 #include <mtfs_lowerfs.h>
 #include <mtfs_super.h>
@@ -28,24 +29,31 @@ struct mtfs_lowerfs lowerfs_ext2 = {
 static int ext_support_init(void)
 {
 	int ret = 0;
+	unsigned long address = 0;
+	struct module *owner = NULL;
 
-	MDEBUG("registering mtfs_ext lowerfs support\n");
+	MDEBUG("registering mtfs lowerfs for ext\n");
+	ret = mtfs_symbol_get("ext3", "ext3_bread", &address, &owner);
+	if (ret) {
+		MERROR("failed to get address of symbple ext3_bread, ret = %d\n", ret);
+		goto out;
+	}
 
 	ret = mlowerfs_register(&lowerfs_ext2);
 	if (ret) {
-		MERROR("failed to register lowerfs for ext2: error %d\n", ret);
-		goto out;
+		MERROR("failed to register lowerfs for ext2, ret = %d\n", ret);
+		goto out_symbol_put;
 	}
 
 	ret = mlowerfs_register(&lowerfs_ext3);
 	if (ret) {
-		MERROR("failed to register lowerfs for ext3: error %d\n", ret);
+		MERROR("failed to register lowerfs for ext3, ret = %d\n", ret);
 		goto out_unregister_ext2;
 	}
 
 	ret = mlowerfs_register(&lowerfs_ext4);
 	if (ret) {
-		MERROR("failed to register lowerfs for ext4: error %d\n", ret);
+		MERROR("failed to register lowerfs for ext4, ret = %d\n", ret);
 		goto out_unregister_ext3;
 	}
 	goto out;
@@ -53,13 +61,15 @@ out_unregister_ext3:
 	mlowerfs_unregister(&lowerfs_ext3);
 out_unregister_ext2:
 	mlowerfs_unregister(&lowerfs_ext2);
+out_symbol_put:
+	mtfs_symbol_put(owner);
 out:
 	return ret;
 }
 
 static void ext_support_exit(void)
 {
-	MDEBUG("unregistering mtfs_ext2 lowerfs support\n");
+	MDEBUG("unregistering mtfs lowerfs for ext\n");
 	mlowerfs_unregister(&lowerfs_ext2);
 	mlowerfs_unregister(&lowerfs_ext3);
 	mlowerfs_unregister(&lowerfs_ext4);
