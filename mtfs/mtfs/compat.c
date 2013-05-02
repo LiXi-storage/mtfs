@@ -35,6 +35,7 @@ EXPORT_SYMBOL(strncasecmp);
 #endif /* !HAVE_STRCASECMP */
 #endif /* !defined (__linux__) && defined(__KERNEL__) */
 
+#ifndef HAVE_KALLSYMS_LOOKUP_NAME
 #if defined (__linux__) && defined(__KERNEL__)
 #define mtfs_strtoul simple_strtoul
 #else
@@ -49,7 +50,8 @@ EXPORT_SYMBOL(strncasecmp);
  * Return 1 if matched, return 0 if not.
  * Reutrn -errno if error.
  */
-static int mtfs_parse_kallsyms(char *line, const char *symbol_name, unsigned long *address)
+static int mtfs_parse_kallsyms(char *line, const char *module_name,
+                               const char *symbol_name, unsigned long *address)
 {
 	int ret = 0;
 	int word_num = 0;
@@ -58,6 +60,7 @@ static int mtfs_parse_kallsyms(char *line, const char *symbol_name, unsigned lon
 	char *endp = NULL;
 	char *next_word = line;
 	char *symbol = NULL;
+	char *tmp_module_name = NULL;
 
 	while ((word = strsep(&next_word, " "))) {
 		if (!*word) {
@@ -87,7 +90,33 @@ static int mtfs_parse_kallsyms(char *line, const char *symbol_name, unsigned lon
 				/* There might be */
 				if (*endp == '\t') {
 					*endp = '\0';
+					tmp_module_name = endp + 1;
 					break;
+				}
+			}
+			
+			if (tmp_module_name) {
+				if (*tmp_module_name != '[') {
+					MERROR("invalid module name, should start with [: %s\n",
+					       line);
+					ret = -EINVAL;
+					break;
+				}
+				tmp_module_name++;
+				for (endp = tmp_module_name; *endp != '\0'; endp++);
+				endp--;
+				if (endp <= tmp_module_name || *endp != ']') {
+					MERROR("invalid module name, should end with ]: %s\n",
+					       line);
+					ret = -EINVAL;
+					break;
+				}
+				*endp = '\0';
+			}
+
+			if (module_name) {
+				if (!tmp_module_name || strcmp(module_name, tmp_module_name)) {
+					continue;
 				}
 			}
 
@@ -124,11 +153,21 @@ unsigned long mtfs_kallsyms_lookup_name(const char *name)
 	char *line = NULL;
 	int keepon = 1;
 	int line_found = 0;
+	char *tmp_name = NULL;
+	char *module_name = NULL;
+	char *symbol_name = NULL;
+	char *colon = NULL;
+
+	MTFS_STRDUP(tmp_name, name);
+	if (tmp_name == NULL) {
+		MERROR("not enough memory\n");
+		goto out;
+	}
 
 	MTFS_ALLOC(buff, MTFS_KALLSYMS_BUFF_SIZE);
 	if (buff == NULL) {
 		MERROR("not enough memory\n");
-		goto out;
+		goto out_free_name;
 	}
 
 #if defined (__linux__) && defined(__KERNEL__)
@@ -149,6 +188,15 @@ unsigned long mtfs_kallsyms_lookup_name(const char *name)
 		goto out_free_buff;
 	}
 #endif
+
+	if ((colon = strchr(tmp_name, ':')) != NULL) {
+		*colon = '\0';
+		module_name = tmp_name;
+		symbol_name = colon + 1;
+	} else {
+		module_name = NULL;
+		symbol_name = tmp_name;
+	}
 
 	while (keepon) {
 #if defined (__linux__) && defined(__KERNEL__)
@@ -179,7 +227,7 @@ unsigned long mtfs_kallsyms_lookup_name(const char *name)
 			if (buff[i] == '\n') {
 				line_found = 1;
 				buff[i] = '\0';
-				ret = mtfs_parse_kallsyms(line, name, &address);
+				ret = mtfs_parse_kallsyms(line, module_name, symbol_name, &address);
 				if (ret == 1) {
 					keepon = 0;
 					break;
@@ -204,7 +252,7 @@ unsigned long mtfs_kallsyms_lookup_name(const char *name)
 					/* The last line */
 					MASSERT(readlen < MTFS_KALLSYMS_BUFF_SIZE - 1);
 
-					mtfs_parse_kallsyms(line, name, &address);
+					mtfs_parse_kallsyms(line, module_name, symbol_name, &address);
 					/* Read again to make sure this is the EOF */
 #if defined (__linux__) && defined(__KERNEL__)
 					readlen = file->f_op->read(file, buff,
@@ -226,6 +274,7 @@ unsigned long mtfs_kallsyms_lookup_name(const char *name)
 			}
 		}
 	}
+
 #if defined (__linux__) && defined(__KERNEL__)
 	set_fs(old_fs);
 	filp_close(file, NULL);
@@ -234,7 +283,122 @@ unsigned long mtfs_kallsyms_lookup_name(const char *name)
 #endif
 out_free_buff:
 	MTFS_FREE(buff, MTFS_KALLSYMS_BUFF_SIZE);
+out_free_name:
+	MTFS_FREE_STR(tmp_name);
 out:
 	return address;
 }
 EXPORT_SYMBOL(mtfs_kallsyms_lookup_name);
+
+char *combine_str(const char *str1, const char *str2)
+{
+	size_t len = 0;
+	char *new_str = NULL;
+
+	len = strlen(str1);
+	MTFS_ALLOC(new_str, len + strlen(str2) + 1);
+	if (new_str == NULL) {
+		MERROR("not enough memory\n");
+		goto out;
+	}
+
+	strcpy(new_str, str1);
+	strcpy(new_str + len, str2);
+out:
+	return new_str;
+}
+
+char *combine_triple_str(const char *str1, const char *str2, const char *str3)
+{
+	size_t len1 = 0;
+	size_t len2 = 0;
+	char *new_str = NULL;
+	
+	len1 = strlen(str1);
+	len2 = strlen(str2);
+	MTFS_ALLOC(new_str, len1 + len2 + strlen(str3) + 1);
+	if (new_str == NULL) {
+		MERROR("not enough memory\n");
+		goto out;
+	}
+
+	strcpy(new_str, str1);
+	strcpy(new_str + len1, str2);
+	strcpy(new_str + len1 + len2, str3);
+out:
+	return new_str;
+}
+
+#if defined (__linux__) && defined(__KERNEL__)
+int mtfs_symbol_get(const char *module_name,
+                    const char *symbol_name,
+                    unsigned long *address,
+                    struct module **owner)
+#else /* !defined (__linux__) && defined(__KERNEL__) */
+int mtfs_symbol_get(const char *module_name,
+                    const char *symbol_name,
+                    unsigned long *address)
+#endif /* !defined (__linux__) && defined(__KERNEL__) */
+{
+	int ret = 0;
+	char *name = NULL;
+	unsigned long tmp_address = 0;
+
+	if (module_name) {
+#if defined (__linux__) && defined(__KERNEL__)
+		mutex_lock(&module_mutex);
+		*owner = find_module(module_name);
+		if (*owner == NULL) {
+			mutex_unlock(&module_mutex);
+			if (request_module(module_name) != 0) {
+				MERROR("failed to load module %s\n", module_name);
+				goto out;
+			}
+			mutex_lock(&module_mutex);
+		}
+
+		if (try_module_get(*owner) == 0) {
+			MERROR("failed to get module %s\n",
+			       module_name);
+			ret = -ENOENT;
+			goto out;
+		}
+		mutex_unlock(&module_mutex);
+#endif /* defined (__linux__) && defined(__KERNEL__) */
+
+		name = combine_triple_str(module_name, ":", symbol_name);
+		if (name == NULL) {
+			MERROR("failed to combine string\n");
+			ret = -ENOMEM;
+			goto out;
+		}
+		tmp_address = mtfs_kallsyms_lookup_name(name);
+		MTFS_FREE_STR(name);
+	} else {
+		tmp_address = mtfs_kallsyms_lookup_name(symbol_name);
+	}
+
+	if (tmp_address == 0) {
+		MERROR("failed to find symbol %s\n", symbol_name);
+		ret = -ENOENT;
+		goto out;
+	}
+
+	*address = tmp_address;
+	/* Todo: Check address in the module: sprint_symbol() */
+out:
+	return ret;
+}
+EXPORT_SYMBOL(mtfs_symbol_get);
+
+#if defined (__linux__) && defined(__KERNEL__)
+void mtfs_symbol_put(struct module *owner)
+{
+	if (owner) {
+		module_put(owner);
+	}
+}
+EXPORT_SYMBOL(mtfs_symbol_put);
+#endif /* !defined (__linux__) && defined(__KERNEL__) */
+
+#endif /* !define HAVE_KALLSYMS_LOOKUP_NAME */

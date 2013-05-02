@@ -31,6 +31,11 @@ extern unsigned long mtfs_kallsyms_lookup_name(const char *name);
 #define mtfs_kallsyms_lookup_name kallsyms_lookup_name
 #endif /* !HAVE_KALLSYMS_LOOKUP_NAME */
 
+extern int mtfs_symbol_get(const char *module_name,
+                           const char *symbol_name,
+                           unsigned long *address,
+                           struct module **owner);
+extern void mtfs_symbol_put(struct module *owner);
 #else /* !defined(__linux__) && defined(__KERNEL__) */
 
 #ifndef offsetof
@@ -54,6 +59,8 @@ extern unsigned long mtfs_kallsyms_lookup_name(const char *name);
 #define MODULE_PARM(a, b)
 #define MODULE_PARM_DESC(a, b)
 
-
+extern int mtfs_symbol_get(const char *module_name,
+                           const char *symbol_name,
+                           unsigned long *address);
 #endif  /* !defined(__linux__) && defined(__KERNEL__) */
 #endif /* __MTFS_COMPAT_H__ */

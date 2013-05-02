@@ -42,6 +42,9 @@ struct mtfs_lowerfs {
 	int (* ml_commit_async)(struct inode *inode, void *handle,
 	                        void **wait_handle);
 	int (* ml_commit_wait)(struct inode *inode, void *handle);
+	int (* ml_write_record)(struct file *, void *, int size, loff_t *,
+	                        int force_sync);
+	int (* ml_read_record)(struct file *, void *, int size, loff_t *);
 
 	/* Operations that should be provided */
 	int (* ml_setflag)(struct inode *inode, __u32 flag);
