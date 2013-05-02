@@ -344,6 +344,9 @@ int mtfs_symbol_get(const char *module_name,
 	char *name = NULL;
 	unsigned long tmp_address = 0;
 
+	MASSERT(module_name);
+	MASSERT(symbol_name);
+
 	if (module_name) {
 #if defined (__linux__) && defined(__KERNEL__)
 		mutex_lock(&module_mutex);
