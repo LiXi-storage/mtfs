@@ -3,11 +3,13 @@
  */
 
 #include <linux/module.h>
+#include <linux/smp_lock.h>
 #include <linux/ext3_jbd.h>
 #include <linux/quota.h>
 #include <linux/quotaops.h>
 #include <debug.h>
 #include <mtfs_lowerfs.h>
+#include "lowerfs_ext.h"
 
 #define _mlowerfs_ext3_abort(sb, fmt, ...)                               \
 do {                                                                     \
@@ -49,7 +51,41 @@ static inline handle_t *_mlowerfs_ext3_journal_start(struct inode *inode, int nb
 	return _mlowerfs_ext3_journal_start_sb(inode->i_sb, nblocks);
 }
 
-void *mlowerfs_ext3_start(struct inode *inode, int op)
+#define _mlowerfs_ext3_journal_abort_handle(handle, bh, ret)    \
+do {                                                            \
+    if (bh) {                                                   \
+        BUFFER_TRACE(bh, "abort");                              \
+    }                                                           \
+    if (!handle->h_err)                                         \
+        handle->h_err = ret;                                    \
+    if (!is_handle_aborted(handle)) {                           \
+        MERROR("EXT3-fs: %s: aborting transaction: ret = %d\n", \
+               ret);                                            \
+        journal_abort_handle(handle);                           \
+    }                                                           \
+} while (0)
+
+static int _mlowerfs_ext3_journal_get_write_access(handle_t *handle,
+				                   struct buffer_head *bh)
+{
+    int ret = journal_get_write_access(handle, bh);
+    if (ret) {
+    	_mlowerfs_ext3_journal_abort_handle(handle, bh, ret);
+    }
+    return ret;
+}
+
+static int _mlowerfs_ext3_journal_dirty_metadata(handle_t *handle,
+                                              struct buffer_head *bh)
+{
+    int ret = journal_dirty_metadata(handle, bh);
+    if (ret) {
+    	_mlowerfs_ext3_journal_abort_handle(handle, bh, ret);
+    }
+    return ret;
+}
+
+static void *mlowerfs_ext3_start(struct inode *inode, int op)
 {
 	int nblocks = EXT3_SINGLEDATA_TRANS_BLOCKS;
 	//journal_t *journal = NULL;
@@ -93,7 +129,7 @@ static inline int mlowerfs_ext3_should_journal_data(struct inode *inode)
  * Check ext3_writepage_trans_blocks() for detail
  *
  */
-int mlowerfs_ext3_credits_needed(struct inode *inode, __u64 len)
+static int mlowerfs_ext3_credits_needed(struct inode *inode, __u64 len)
 {
 	struct super_block *sb = inode->i_sb;
 	int _nblock = (int)(len >> sb->s_blocksize_bits); /* Any possible overflow? */
@@ -124,7 +160,7 @@ int mlowerfs_ext3_credits_needed(struct inode *inode, __u64 len)
 	return needed;
 }
 
-void *mlowerfs_ext3_brw_start(struct inode *inode, __u64 len)
+static void *mlowerfs_ext3_brw_start(struct inode *inode, __u64 len)
 {
 	journal_t *journal = NULL;
 	int needed = 0;
@@ -173,7 +209,7 @@ static inline int _lowerfs_ext3_journal_restart(handle_t *handle, int nblocks)
 	return journal_restart(handle, nblocks);
 }
 
-int mlowerfs_ext3_extend(struct inode *inode, unsigned int nblocks, void *h)
+static int mlowerfs_ext3_extend(struct inode *inode, unsigned int nblocks, void *h)
 {
 	handle_t *handle = h;
 	int ret = 0;
@@ -203,7 +239,7 @@ out:
 	MRETURN(ret);
 }
 
-int _mlowerfs_ext3_journal_stop(handle_t *handle)
+static int _mlowerfs_ext3_journal_stop(handle_t *handle)
 {
 	struct super_block *sb;
 	int err;
@@ -218,7 +254,7 @@ int _mlowerfs_ext3_journal_stop(handle_t *handle)
 	return err;
 }
 
-int mlowerfs_ext3_commit(struct inode *inode, void *h, int force_sync)
+static int mlowerfs_ext3_commit(struct inode *inode, void *h, int force_sync)
 {
 	int ret = 0;
 	handle_t *handle = h;
@@ -237,7 +273,7 @@ int mlowerfs_ext3_commit(struct inode *inode, void *h, int force_sync)
         MRETURN(ret);
 }
 
-int mlowerfs_ext3_commit_async(struct inode *inode, void *h,
+static int mlowerfs_ext3_commit_async(struct inode *inode, void *h,
                                void **wait_handle)
 {
 	unsigned long tid = 0;
@@ -266,7 +302,7 @@ out:
 	MRETURN(ret);
 }
 
-int mlowerfs_ext3_commit_wait(struct inode *inode, void *h)
+static int mlowerfs_ext3_commit_wait(struct inode *inode, void *h)
 {
 	journal_t *journal = EXT3_JOURNAL(inode);
 	tid_t tid = (tid_t)(long)h;
@@ -288,6 +324,89 @@ out:
         return ret;
 }
 
+int mlowerfs_ext3_write_record(struct file *file, void *buf, int bufsize,
+                               loff_t *offs, int force_sync)
+{
+	struct buffer_head *bh = NULL;
+	unsigned long block;
+	struct inode *inode = file->f_dentry->d_inode;
+	loff_t old_size = i_size_read(inode), offset = *offs;
+	loff_t new_size = i_size_read(inode);
+	handle_t *handle;
+	int err = 0, block_count = 0, blocksize, size, boffs;
+
+	/* Determine how many transaction credits are needed */
+	blocksize = 1 << inode->i_blkbits;
+	block_count = (*offs & (blocksize - 1)) + bufsize;
+	block_count = (block_count + blocksize - 1) >> inode->i_blkbits;
+
+	handle = _mlowerfs_ext3_journal_start(inode,
+	                                      block_count * EXT3_DATA_TRANS_BLOCKS(inode->i_sb) + 2);
+	if (IS_ERR(handle)) {
+		MERROR("can't start transaction for %d blocks (%d bytes)\n",
+		       block_count * EXT3_DATA_TRANS_BLOCKS(inode->i_sb) + 2, bufsize);
+		return PTR_ERR(handle);
+	}
+
+	while (bufsize > 0) {
+		if (bh != NULL)
+			brelse(bh);
+
+		block = offset >> inode->i_blkbits;
+		boffs = offset & (blocksize - 1);
+		size = min(blocksize - boffs, bufsize);
+		bh = _mlowerfs_ext3_bread(handle, inode, block, 1, &err);
+		if (!bh) {
+			MERROR("can't read/create block: %d\n", err);
+			goto out;
+		}
+
+		err = _mlowerfs_ext3_journal_get_write_access(handle, bh);
+		if (err) {
+			MERROR("journal_get_write_access() returned error %d\n",
+			       err);
+			goto out;
+		}
+		MASSERT(bh->b_data + boffs + size <= bh->b_data + bh->b_size);
+		memcpy(bh->b_data + boffs, buf, size);
+		err = _mlowerfs_ext3_journal_dirty_metadata(handle, bh);
+		if (err) {
+			MERROR("journal_dirty_metadata() returned error %d\n",
+			       err);
+			goto out;
+		}
+		if (offset + size > new_size)
+			new_size = offset + size;
+		offset += size;
+		bufsize -= size;
+		buf += size;
+	}
+
+	if (force_sync)
+		handle->h_sync = 1; /* recovery likes this */
+out:
+	if (bh)
+		brelse(bh);
+
+	/* correct in-core and on-disk sizes */
+	if (new_size > i_size_read(inode)) {
+		lock_kernel();
+		if (new_size > i_size_read(inode))
+			i_size_write(inode, new_size);
+		if (i_size_read(inode) > EXT3_I(inode)->i_disksize)
+			EXT3_I(inode)->i_disksize = i_size_read(inode);
+		if (i_size_read(inode) > old_size)
+			mark_inode_dirty(inode);
+		unlock_kernel();
+	}
+
+	_mlowerfs_ext3_journal_stop(handle);
+
+	if (err == 0)
+		*offs = offset;
+	return err;
+}
+
 struct mtfs_lowerfs lowerfs_ext3 = {
 	ml_owner:           THIS_MODULE,
 	ml_type:            "ext3",
@@ -300,6 +419,8 @@ struct mtfs_lowerfs lowerfs_ext3 = {
 	ml_commit:          mlowerfs_ext3_commit,
 	ml_commit_async:    mlowerfs_ext3_commit_async,
 	ml_commit_wait:     mlowerfs_ext3_commit_wait,
+	ml_write_record:    mlowerfs_ext3_write_record,
+	ml_read_record:     NULL,
 	ml_setflag:         mlowerfs_setflag_default,
 	ml_getflag:         mlowerfs_getflag_default,
 };
