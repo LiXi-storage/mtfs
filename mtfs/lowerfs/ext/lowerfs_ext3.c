@@ -324,6 +324,52 @@ out:
         return ret;
 }
 
+static int mlowerfs_ext3_read_record(struct file * file, void *buf,
+                                     int size, loff_t *offs)
+{
+	struct inode *inode = file->f_dentry->d_inode;
+	unsigned long block;
+	struct buffer_head *bh;
+	int err, blocksize, csize, boffs;
+
+	/* prevent reading after eof */
+	lock_kernel();
+	if (i_size_read(inode) < *offs + size) {
+		size = i_size_read(inode) - *offs;
+		unlock_kernel();
+		if (size < 0) {
+			MDEBUG("size %llu is too short for read @%llu\n",
+			       i_size_read(inode), *offs);
+			return -EBADR;
+		} else if (size == 0) {
+			return 0;
+		}
+	} else {
+		unlock_kernel();
+	}
+
+	blocksize = 1 << inode->i_blkbits;
+
+	while (size > 0) {
+		block = *offs >> inode->i_blkbits;
+		boffs = *offs & (blocksize - 1);
+		csize = min(blocksize - boffs, size);
+		bh = _mlowerfs_ext3_bread(NULL, inode, block, 0, &err);
+		if (!bh) {
+			MERROR("can't read block: %d\n", err);
+			return err;
+		}
+
+		memcpy(buf, bh->b_data + boffs, csize);
+		brelse(bh);
+
+		*offs += csize;
+		buf += csize;
+		size -= csize;
+	}
+	return 0;
+}
+
 int mlowerfs_ext3_write_record(struct file *file, void *buf, int bufsize,
                                loff_t *offs, int force_sync)
 {
@@ -420,7 +466,7 @@ struct mtfs_lowerfs lowerfs_ext3 = {
 	ml_commit_async:    mlowerfs_ext3_commit_async,
 	ml_commit_wait:     mlowerfs_ext3_commit_wait,
 	ml_write_record:    mlowerfs_ext3_write_record,
-	ml_read_record:     NULL,
+	ml_read_record:     mlowerfs_ext3_read_record,
 	ml_setflag:         mlowerfs_setflag_default,
 	ml_getflag:         mlowerfs_getflag_default,
 };
