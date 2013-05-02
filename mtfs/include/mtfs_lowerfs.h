@@ -156,12 +156,13 @@ do {                                                 \
 static inline void *mlowerfs_start(struct mtfs_lowerfs *lowerfs,
                                        struct inode *inode, int op)
 {
-        unsigned long now = jiffies;
-        void *handle = NULL;
+	unsigned long now = jiffies;
+	void *handle = NULL;
 
+	MASSERT(lowerfs->ml_start);
         handle = lowerfs->ml_start(inode, op);
 
-        mlowerfs_check_slow(now, "journal start");
+	mlowerfs_check_slow(now, "journal start");
 
         return handle;
 }
@@ -169,10 +170,11 @@ static inline void *mlowerfs_start(struct mtfs_lowerfs *lowerfs,
 static inline void *mlowerfs_brw_start(struct mtfs_lowerfs *lowerfs,
                                        struct inode *inode, __u64 len)
 {
-        unsigned long now = jiffies;
-        void *handle = NULL;
+	unsigned long now = jiffies;
+	void *handle = NULL;
 
-        handle = lowerfs->ml_brw_start(inode, len);
+	MASSERT(lowerfs->ml_brw_start);
+	handle = lowerfs->ml_brw_start(inode, len);
 
         mlowerfs_check_slow(now, "journal start");
 
@@ -187,9 +189,45 @@ static inline int mlowerfs_commit(struct mtfs_lowerfs *lowerfs,
 	unsigned long now = jiffies;
 	int ret = 0;
 
+	MASSERT(lowerfs->ml_commit);
 	ret = lowerfs->ml_commit(inode, handle, force_sync);
 
 	mlowerfs_check_slow(now, "journal start");
+
+	return ret;
+}
+
+static inline int mlowerfs_read_record(struct mtfs_lowerfs *lowerfs,
+                                     struct file *file,
+                                     void *buf,
+                                     loff_t size,
+                                     loff_t *offs)
+{
+	unsigned long now = jiffies;
+	int ret = 0;
+
+	MASSERT(lowerfs->ml_read_record);
+	ret = lowerfs->ml_read_record(file, buf, size, offs);
+
+	mlowerfs_check_slow(now, "read record");
+
+	return ret;
+}
+
+static inline int mlowerfs_write_record(struct mtfs_lowerfs *lowerfs,
+                                        struct file *file,
+                                        void *buf,
+                                        loff_t size,
+                                        loff_t *offs,
+                                        int force_sync)
+{
+	unsigned long now = jiffies;
+	int ret = 0;
+
+	MASSERT(lowerfs->ml_write_record);
+	ret = lowerfs->ml_write_record(file, buf, size, offs, force_sync);
+
+	mlowerfs_check_slow(now, "write record");
 
 	return ret;
 }
