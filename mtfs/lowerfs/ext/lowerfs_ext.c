@@ -13,18 +13,9 @@
 #include <mtfs_junction.h>
 #include <mtfs_flag.h>
 #include "lowerfs_ext.h"
+#include "lowerfs_ext2.h"
 #include "lowerfs_ext3.h"
 #include "lowerfs_ext4.h"
-
-struct mtfs_lowerfs lowerfs_ext2 = {
-	ml_owner:           THIS_MODULE,
-	ml_type:            "ext2",
-	ml_magic:           EXT2_SUPER_MAGIC,
-	ml_bucket_type:     &mlowerfs_bucket_xattr,
-	ml_flag:            0,
-	ml_setflag:         mlowerfs_setflag_default,
-	ml_getflag:         mlowerfs_getflag_default,
-};
 
 static int ext_support_init(void)
 {
