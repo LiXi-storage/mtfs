@@ -17,18 +17,37 @@
 #include "lowerfs_ext3.h"
 #include "lowerfs_ext4.h"
 
+typedef struct buffer_head *(* _mlowerfs_ext3_bread_t)(handle_t *handle,
+                                                       struct inode *inode,
+                                                       int block,
+                                                       int create,
+                                                       int *err);
+
+_mlowerfs_ext3_bread_t _mlowerfs_ext3_bread_pointer = NULL;
+struct module *_mlowerfs_ext3_bread_owner = NULL;
+
+struct buffer_head *_mlowerfs_ext3_bread(handle_t *handle,
+                                         struct inode *inode,
+                                         int block,
+                                         int create,
+                                         int *err)
+{
+	MASSERT(_mlowerfs_ext3_bread_pointer);
+	return _mlowerfs_ext3_bread_pointer(handle, inode, block, create, err);
+}
+
 static int ext_support_init(void)
 {
 	int ret = 0;
 	unsigned long address = 0;
-	struct module *owner = NULL;
 
 	MDEBUG("registering mtfs lowerfs for ext\n");
-	ret = mtfs_symbol_get("ext3", "ext3_bread", &address, &owner);
+	ret = mtfs_symbol_get("ext3", "ext3_bread", &address, &_mlowerfs_ext3_bread_owner);
 	if (ret) {
 		MERROR("failed to get address of symbple ext3_bread, ret = %d\n", ret);
 		goto out;
 	}
+	_mlowerfs_ext3_bread_pointer = (_mlowerfs_ext3_bread_t)address;
 
 	ret = mlowerfs_register(&lowerfs_ext2);
 	if (ret) {
@@ -53,7 +72,7 @@ out_unregister_ext3:
 out_unregister_ext2:
 	mlowerfs_unregister(&lowerfs_ext2);
 out_symbol_put:
-	mtfs_symbol_put(owner);
+	mtfs_symbol_put(_mlowerfs_ext3_bread_owner);
 out:
 	return ret;
 }
@@ -64,6 +83,8 @@ static void ext_support_exit(void)
 	mlowerfs_unregister(&lowerfs_ext2);
 	mlowerfs_unregister(&lowerfs_ext3);
 	mlowerfs_unregister(&lowerfs_ext4);
+	MASSERT(_mlowerfs_ext3_bread_owner);
+	mtfs_symbol_put(_mlowerfs_ext3_bread_owner);
 }
 
 MODULE_AUTHOR("MulTi File System Workgroup");

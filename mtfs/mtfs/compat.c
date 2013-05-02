@@ -358,18 +358,20 @@ int mtfs_symbol_get(const char *module_name,
 			mutex_unlock(&module_mutex);
 			if (request_module(module_name) != 0) {
 				MERROR("failed to load module %s\n", module_name);
+				ret = -ENOENT;
 				goto out;
 			}
 			mutex_lock(&module_mutex);
 		}
 
-		if (try_module_get(*owner) == 0) {
-			MERROR("failed to get module %s\n",
-			       module_name);
+		ret = try_module_get(*owner);
+		mutex_unlock(&module_mutex);
+		if (ret == 0) {
+			MERROR("failed to get module %s\n", module_name);
 			ret = -ENOENT;
 			goto out;
 		}
-		mutex_unlock(&module_mutex);
+		ret = 0;
 #endif /* defined (__linux__) && defined(__KERNEL__) */
 
 		name = combine_triple_str(module_name, ":", symbol_name);
@@ -400,9 +402,7 @@ EXPORT_SYMBOL(mtfs_symbol_get);
 #if defined (__linux__) && defined(__KERNEL__)
 void mtfs_symbol_put(struct module *owner)
 {
-	if (owner) {
-		module_put(owner);
-	}
+	module_put(owner);
 }
 EXPORT_SYMBOL(mtfs_symbol_put);
 #endif /* !defined (__linux__) && defined(__KERNEL__) */
