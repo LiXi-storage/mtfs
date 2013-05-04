@@ -247,6 +247,7 @@ struct dentry *mtfs_dchild_create(struct dentry *dparent,
 	mutex_unlock(&dparent->d_inode->i_mutex);
 	MRETURN(dchild);
 }
+EXPORT_SYMBOL(mtfs_dchild_create);
 
 /*
  * Add the inode number to a dentry.

@@ -1,8 +1,11 @@
 /*
  * Copied from Lustre-2.x
  */
+#include <linux/namei.h>
+#include <linux/mount.h>
 #include <mtfs_lowerfs.h>
 #include <mtfs_log.h>
+#include <mtfs_file.h>
 
 static int mlog_vfs_pad(struct mtfs_lowerfs *lowerfs,
                     struct file *file,
@@ -326,4 +329,197 @@ void mlog_free_handle(struct mlog_handle *loghandle)
 
  out:
 	MTFS_FREE(loghandle, sizeof(*loghandle));
+}
+
+/* Return name length*/
+int mlog_id2name(struct mlog_logid *logid, char **name)
+{
+	char *tmp_name = NULL;
+	int ret = 64;
+
+	MTFS_ALLOC(tmp_name, ret);
+	if (tmp_name == NULL) {
+		MERROR("not enough memory\n");
+		ret = -ENOMEM;
+		goto out;
+	}
+
+	snprintf(tmp_name, sizeof(tmp_name), "log_0x%llx", logid->mgl_oid);
+	*name = tmp_name;
+out:
+	return ret;
+}
+
+static struct file *mlog_vfs_open_id(struct mlog_ctxt *ctxt, struct mlog_logid *logid)
+{
+	struct dentry *dchild = NULL;
+	struct file *file = NULL;
+	int length = 0;
+	char *name = NULL;
+	MENTRY();
+
+	length = mlog_id2name(logid, &name);
+	if (length < 0) {
+		MERROR("failed to get name from id\n");
+		file = ERR_PTR(length);
+		goto out;
+	}
+
+	dchild = lookup_one_len(name,
+	                        ctxt->moc_dlog,
+	                        strlen(name));
+	if (IS_ERR(dchild)) {
+		MERROR("lookup [%.*s/%s] failed, ret = %d\n",
+		       ctxt->moc_dlog->d_name.len,
+		       ctxt->moc_dlog->d_name.name,
+		       name,
+		       PTR_ERR(dchild));
+		file = (struct file *)dchild;
+		goto out_free_name;
+	}
+
+	if (dchild->d_inode == NULL) {
+		MERROR("lookup [%.*s/%s] failed, no such file\n",
+		       ctxt->moc_dlog->d_name.len,
+		       ctxt->moc_dlog->d_name.name,
+		       name);
+		file = ERR_PTR(-ENOENT);
+		goto out_put_dchild;
+	}
+
+	if (dchild->d_inode->i_nlink == 0) {
+		if (dchild->d_inode->i_mode == 0 &&
+		    dchild->d_inode->i_ctime.tv_sec == 0 ) {
+			MERROR("found inode with zero nlink, mode and ctime, "
+			       "this may indicate disk corruption, "
+			       "inode = %lu, "
+			       "link = %lu, "
+			       "count = %d\n",
+			       dchild->d_inode->i_ino,
+			       (unsigned long)dchild->d_inode->i_nlink,
+			       atomic_read(&dchild->d_inode->i_count));
+                } else {
+             	  	MERROR("found inode with zero nlink, "
+             	  	       "inode = %lu, "
+             	  	       "link = %lu, "
+             	  	       "count = %d\n",
+             	  	       dchild->d_inode->i_ino,
+			       (unsigned long)dchild->d_inode->i_nlink,
+			       atomic_read(&dchild->d_inode->i_count));
+		}
+		file = ERR_PTR(-ENOENT);
+		goto out_put_dchild;
+	}
+
+	if (dchild->d_inode->i_generation != logid->mgl_ogen) {
+		/* we didn't find the right inode.. */
+		MDEBUG("found wrong generation, "
+		       "inode = %lu,"
+		       "link = %lu, "
+		       "count = %d, "
+		       "generation = %u/%u\n",
+		        dchild->d_inode->i_ino,
+		        (unsigned long)dchild->d_inode->i_nlink,
+		        atomic_read(&dchild->d_inode->i_count),
+		        dchild->d_inode->i_generation,
+		        logid->mgl_ogen);
+		file = ERR_PTR(-ENOENT);
+		goto out_put_dchild;
+	}
+
+	file = mtfs_dentry_open(dchild,
+	                        mntget(ctxt->moc_mnt),
+	                        O_RDWR | O_CREAT | O_LARGEFILE,
+	                        current_cred()); 
+	if (IS_ERR(file)) {
+		MERROR("failed to open file\n");
+		goto out_put_dchild;
+	}
+	goto out_free_name;
+out_put_dchild:
+	dput(dchild);
+out_free_name:
+	MTFS_ALLOC(name, length);
+out:
+	MRETURN(file);
+}
+
+static struct file *mlog_vfs_open_name(struct mlog_ctxt *ctxt, const char *name)
+{
+	struct dentry *dchild = NULL;
+	struct file *file = NULL;
+	MENTRY();
+
+	dchild = mtfs_dchild_create(ctxt->moc_dlog,
+	                            name, strlen(name),
+	                            S_IFREG | S_IRWXU, 0, NULL, 0);
+	if (IS_ERR(dchild)) {
+		MERROR("failed to create [%.*s/%s], ret = %d\n",
+		       ctxt->moc_dlog->d_name.len,
+		       ctxt->moc_dlog->d_name.name,
+		       name, PTR_ERR(dchild));
+		file = (struct file *)dchild;
+		goto out;
+	}
+
+	file = mtfs_dentry_open(dchild,
+	                        mntget(ctxt->moc_mnt),
+	                        O_RDWR | O_CREAT | O_LARGEFILE,
+	                        current_cred()); 
+	if (IS_ERR(file)) {
+		MERROR("failed to open file\n");
+		goto out_put_dchild;
+	}
+
+	goto out_free_name;
+out_put_dchild:
+	dput(dchild);
+out_free_name:
+	
+out:
+	MRETURN(file);
+}
+
+/* This is a callback from the llog_* functions.
+ * Assumes caller has already pushed us into the kernel context. */
+int mlog_vfs_create(struct mlog_ctxt *ctxt, struct mlog_handle **res,
+                    struct mlog_logid *logid, char *name)
+{
+	struct mlog_handle *handle = NULL;
+	int ret = 0;
+	MENTRY();
+
+	handle = mlog_alloc_handle();
+	if (handle == NULL) {
+		ret = -ENOMEM;
+		goto out;
+	}
+	*res = handle;
+
+	MASSERT(ctxt);
+	if (logid != NULL) {
+		handle->mgh_file = mlog_vfs_open_id(ctxt, logid);
+		if (IS_ERR(handle->mgh_file)) {
+			goto out_free_handle;
+		}
+		/* assign the value of lgh_id for handle directly */
+		handle->mgh_id = *logid;
+	} else if (name) {
+		handle->mgh_file = mlog_vfs_open_name(ctxt, name);
+		if (IS_ERR(handle->mgh_file)) {
+			goto out_free_handle;
+		}
+                handle->mgh_id.mgl_ogr = 1;
+                handle->mgh_id.mgl_oid =
+                        handle->mgh_file->f_dentry->d_inode->i_ino;
+                handle->mgh_id.mgl_ogen =
+                        handle->mgh_file->f_dentry->d_inode->i_generation;
+	} else {
+		MBUG();
+	}
+	goto out;
+out_free_handle:
+	mlog_free_handle(handle);
+out:
+	MRETURN(ret);
 }

@@ -69,6 +69,8 @@ struct mlog_log_hdr {
 struct mlog_ctxt {
         int                      moc_idx; /* my index the obd array of ctxt's */
         struct mlog_gen          moc_gen;
+        struct dentry           *moc_dlog; /* Which directory the logs saved in */
+        struct vfsmount         *moc_mnt;  /* Mnt of lowerfs */
         struct mtfs_lowerfs     *moc_lowerfs;
 
         struct mlog_operations  *moc_logops;

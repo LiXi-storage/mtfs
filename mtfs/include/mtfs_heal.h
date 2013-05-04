@@ -17,6 +17,13 @@ struct heal_operations {
 
 extern int heal_discard_dentry_sync(struct inode *dir,
                                     struct dentry *dentry, struct mtfs_operation_list *list);
+struct dentry *mtfs_dchild_create(struct dentry *dparent,
+                                  const unsigned char *name,
+                                  unsigned int len,
+                                  umode_t mode,
+                                  dev_t rdev,
+                                  struct vfsmount *mnt,
+                                  int repeat);
 #else /* !defined (__linux__) && defined(__KERNEL__) */
 #error This head is only for kernel space use
 #endif /* !defined (__linux__) && defined(__KERNEL__) */
