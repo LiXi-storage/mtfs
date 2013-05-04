@@ -4,7 +4,7 @@
 #include <mtfs_lowerfs.h>
 #include <mtfs_log.h>
 
-static int mlog_pad(struct mtfs_lowerfs *lowerfs,
+static int mlog_vfs_pad(struct mtfs_lowerfs *lowerfs,
                     struct file *file,
                     int len,
                     int index)
@@ -37,7 +37,7 @@ static int mlog_pad(struct mtfs_lowerfs *lowerfs,
         MRETURN(ret);
 }
 
-static int mlog_read_blob(struct mtfs_lowerfs *lowerfs,
+static int mlog_vfs_read_blob(struct mtfs_lowerfs *lowerfs,
                           struct file *file,
                           void *buf,
                           int size,
@@ -56,7 +56,7 @@ out:
 	MRETURN(0);
 }
 
-static int mlog_write_blob(struct mtfs_lowerfs *lowerfs,
+static int mlog_vfs_write_blob(struct mtfs_lowerfs *lowerfs,
                            struct file *file,
                            struct mlog_rec_hdr *rec,
                            void *buf,
@@ -114,7 +114,7 @@ static int mlog_write_blob(struct mtfs_lowerfs *lowerfs,
 
 /* returns negative in on error; 0 if success && reccookie == 0; 1 otherwise */
 /* appends if idx == -1, otherwise overwrites record idx. */
-int mlog_write_rec(struct mlog_handle *loghandle,
+int mlog_vfs_write_rec(struct mlog_handle *loghandle,
                    struct mlog_rec_hdr *rec,
                    struct mlog_cookie *reccookie,
                    int cookiecount,
@@ -173,7 +173,7 @@ int mlog_write_rec(struct mlog_handle *loghandle,
 			MERROR("Index mismatch %d %u\n", idx, rec->mrh_index);
 		}
 
-                ret = mlog_write_blob(lowerfs, file, &mlh->mlh_hdr, NULL, 0);
+                ret = mlog_vfs_write_blob(lowerfs, file, &mlh->mlh_hdr, NULL, 0);
                 /* we are done if we only write the header or on error */
                 if (ret || idx == 0) {
 			goto out;
@@ -202,7 +202,7 @@ int mlog_write_rec(struct mlog_handle *loghandle,
 #if 1  /* FIXME remove this safety check at some point */
                         /* Verify that the record we're modifying is the 
                            right one. */
-			ret = mlog_read_blob(lowerfs, file, &check,
+			ret = mlog_vfs_read_blob(lowerfs, file, &check,
 			                    sizeof(check), saved_offset);
 			if (check.mrh_index != idx || check.mrh_len != reclen) {
 				MERROR("bad modify idx %u/%u size %u/%u (%d)\n",
@@ -214,7 +214,7 @@ int mlog_write_rec(struct mlog_handle *loghandle,
 #endif
 		}
 
-		ret = mlog_write_blob(lowerfs, file, rec, buf, saved_offset);
+		ret = mlog_vfs_write_blob(lowerfs, file, rec, buf, saved_offset);
 		if (ret == 0 && reccookie) {
 			reccookie->mgc_lgl = loghandle->mgh_id;
 			reccookie->mgc_index = idx;
@@ -235,7 +235,7 @@ int mlog_write_rec(struct mlog_handle *loghandle,
 	if (left != 0 && left != reclen &&
 	    left < (reclen + MLOG_MIN_REC_SIZE)) {
 		index = loghandle->mgh_last_idx + 1;
-		ret = mlog_pad(lowerfs, file, left, index);
+		ret = mlog_vfs_pad(lowerfs, file, left, index);
 		if (ret) {
 			goto out;
 		}
@@ -265,12 +265,12 @@ int mlog_write_rec(struct mlog_handle *loghandle,
         mlh->mlh_count++;
         mlh->mlh_tail.mrt_index = index;
 
-        ret = mlog_write_blob(lowerfs, file, &mlh->mlh_hdr, NULL, 0);
+        ret = mlog_vfs_write_blob(lowerfs, file, &mlh->mlh_hdr, NULL, 0);
         if (ret) {
                 goto out;
         }
 
-	ret = mlog_write_blob(lowerfs, file, rec, buf, file->f_pos);
+	ret = mlog_vfs_write_blob(lowerfs, file, rec, buf, file->f_pos);
         if (ret) {
                 goto out;
         }
