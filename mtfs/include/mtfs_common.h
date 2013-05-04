@@ -18,6 +18,7 @@ typedef signed char mtfs_bindex_t;
 #define MTFS_RESERVE_ROOT    ".mtfs"
 #define MTFS_RESERVE_RECOVER "RECOVER"
 #define MTFS_RESERVE_CONFIG  "CONFIG"
+#define MTFS_RESERVE_LOG     "LOG"
 
 static inline int mtfs_is_primary_bindex(mtfs_bindex_t bindex)
 {

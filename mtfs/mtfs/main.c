@@ -457,7 +457,26 @@ int mtfs_reserve_init_branch(struct dentry *d_root, mtfs_bindex_t bindex)
 	}
 	mtfs_s2bdconfig(sb, bindex) = hidden_child;
 
+	hidden_parent = mtfs_s2bdreserve(sb, bindex);
+	MASSERT(hidden_parent);
+	name = MTFS_RESERVE_LOG;
+	hidden_child = mtfs_dchild_create(hidden_parent,
+	                                  name, strlen(name),
+	                                  S_IFDIR | S_IRWXU, 0,
+	                                  mtfs_s2mntbranch(sb, bindex), 0);
+	if (IS_ERR(hidden_child)) {
+		ret = PTR_ERR(hidden_child);
+		MERROR("create branch[%d] of [%.*s/%s] failed, ret = %d\n",
+		       bindex, hidden_parent->d_name.len,
+		       hidden_parent->d_name.name, name, ret);
+		goto out_put_config;
+	}
+	mtfs_s2bdlog(sb, bindex) = hidden_child;
+
 	goto out;
+out_put_config:
+	dput(mtfs_s2bdconfig(sb, bindex));
+	mtfs_s2bdconfig(sb, bindex) = NULL;
 out_put_recover:
 	dput(mtfs_s2bdrecover(sb, bindex));
 	mtfs_s2bdrecover(sb, bindex) = NULL;
@@ -470,6 +489,10 @@ out:
 
 void mtfs_reserve_fini_branch(struct super_block *sb, mtfs_bindex_t bindex)
 {
+	MASSERT(mtfs_s2bdlog(sb, bindex));
+	dput(mtfs_s2bdlog(sb, bindex));
+	mtfs_s2bdlog(sb, bindex) = NULL;
+
 	MASSERT(mtfs_s2bdconfig(sb, bindex));
 	dput(mtfs_s2bdconfig(sb, bindex));
 	mtfs_s2bdconfig(sb, bindex) = NULL;
