@@ -289,3 +289,41 @@ int mlog_vfs_write_rec(struct mlog_handle *loghandle,
 out:
 	MRETURN(ret);
 }
+
+/* Allocate a new log or catalog handle */
+struct mlog_handle *mlog_alloc_handle(void)
+{
+	struct mlog_handle *loghandle;
+	MENTRY();
+
+	MTFS_ALLOC(loghandle, sizeof(*loghandle));
+	if (loghandle == NULL) {
+		goto out;
+	}
+
+	init_rwsem(&loghandle->mgh_lock);
+out:
+	MRETURN(loghandle);
+}
+
+void mlog_free_handle(struct mlog_handle *loghandle)
+{
+	if (!loghandle) {
+		return;
+	}
+
+	if (!loghandle->mgh_hdr) {
+		goto out;
+	}
+
+	if (loghandle->mgh_hdr->mlh_flags & MLOG_F_IS_PLAIN) {
+		list_del_init(&loghandle->u.phd.phd_entry);
+	}
+	if (loghandle->mgh_hdr->mlh_flags & MLOG_F_IS_CAT) {
+		MASSERT(list_empty(&loghandle->u.chd.chd_head));
+	}
+	MTFS_FREE(loghandle->mgh_hdr, MLOG_CHUNK_SIZE);
+
+ out:
+	MTFS_FREE(loghandle, sizeof(*loghandle));
+}

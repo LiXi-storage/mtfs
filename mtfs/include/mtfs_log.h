@@ -42,6 +42,11 @@ struct mlog_gen {
 
 #define MLOG_MIN_REC_SIZE       (24) /* round(mlog_rec_hdr + mlog_rec_tail) */
 
+/* flags for the logs */
+#define MLOG_F_ZAP_WHEN_EMPTY   0x1
+#define MLOG_F_IS_CAT           0x2
+#define MLOG_F_IS_PLAIN         0x4
+
 struct mlog_log_hdr {
 	struct mlog_rec_hdr     mlh_hdr;
 	__u64                   mlh_timestamp;
