@@ -55,8 +55,6 @@ struct mlog_log_hdr {
 	__u32                   mlh_size;
 	__u32                   mlh_flags;
 	__u32                   mlh_cat_idx;
-	/* for a catalog the first plain slot is next to it */
-	//struct obd_uuid         mlh_tgtuuid;
 	__u32                   mlh_reserved[MLOG_HEADER_SIZE/sizeof(__u32) - 23];
 	__u32                   mlh_bitmap[MLOG_BITMAP_BYTES/sizeof(__u32)];
 	struct mlog_rec_tail    mlh_tail;
@@ -67,20 +65,11 @@ struct mlog_log_hdr {
                                  sizeof(mlh->mlh_tail)) * 8)
 
 struct mlog_ctxt {
-        int                      moc_idx; /* my index the obd array of ctxt's */
-        struct mlog_gen          moc_gen;
         struct dentry           *moc_dlog; /* Which directory the logs saved in */
         struct vfsmount         *moc_mnt;  /* Mnt of lowerfs */
         struct mtfs_lowerfs     *moc_lowerfs;
 
         struct mlog_operations  *moc_logops;
-        struct mlog_handle      *moc_handle;
-        struct mog_canceld_ctxt *moc_llcd;
-        struct semaphore         moc_sem; /* protects loc_llcd and loc_imp */
-        atomic_t                 moc_refcount;
-        //struct mlog_commit_master *moc_lcm;
-        void                    *mlog_proc_cb;
-        long                     moc_flags; /* flags, see above defines */
 };
 
 /** log cookies are used to reference a specific log file and a record therein */
