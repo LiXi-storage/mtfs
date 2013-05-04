@@ -962,7 +962,7 @@ static int __init mtfs_init(void)
 		MERROR("failed to register filesystem type hidden_mtfs, ret = %d\n", ret);
 		goto out_unregister_mtfs;
 	}
-
+	
 	goto out;
 out_unregister_mtfs:
 	unregister_filesystem(&mtfs_fs_type);

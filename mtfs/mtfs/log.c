@@ -2,6 +2,7 @@
  * Copied from Lustre-2.x
  */
 #include <linux/namei.h>
+#include <linux/module.h>
 #include <linux/mount.h>
 #include <mtfs_lowerfs.h>
 #include <mtfs_log.h>
@@ -308,6 +309,7 @@ struct mlog_handle *mlog_alloc_handle(void)
 out:
 	MRETURN(loghandle);
 }
+EXPORT_SYMBOL(mlog_alloc_handle);
 
 void mlog_free_handle(struct mlog_handle *loghandle)
 {
@@ -330,6 +332,7 @@ void mlog_free_handle(struct mlog_handle *loghandle)
  out:
 	MTFS_FREE(loghandle, sizeof(*loghandle));
 }
+EXPORT_SYMBOL(mlog_free_handle);
 
 /* Return name length*/
 int mlog_id2name(struct mlog_logid *logid, char **name)
@@ -483,7 +486,7 @@ out:
 /* This is a callback from the llog_* functions.
  * Assumes caller has already pushed us into the kernel context. */
 int mlog_vfs_create(struct mlog_ctxt *ctxt, struct mlog_handle **res,
-                    struct mlog_logid *logid, char *name)
+                    struct mlog_logid *logid, const char *name)
 {
 	struct mlog_handle *handle = NULL;
 	int ret = 0;
@@ -517,9 +520,76 @@ int mlog_vfs_create(struct mlog_ctxt *ctxt, struct mlog_handle **res,
 	} else {
 		MBUG();
 	}
+	handle->mgh_ctxt = ctxt;
 	goto out;
 out_free_handle:
 	mlog_free_handle(handle);
 out:
 	MRETURN(ret);
 }
+
+static int mlog_vfs_close(struct mlog_handle *handle)
+{
+	int ret = 0;
+	MENTRY();
+
+	ret = filp_close(handle->mgh_file, 0);
+	if (ret) {
+		MERROR("error closing log, ret = %d\n", ret);
+	}
+	MRETURN(ret);
+}
+
+/* Test named-log create/open, close */
+static int mlog_test_0(struct mlog_ctxt *ctxt,
+                       const char *name)
+{
+        struct mlog_handle *mlh = NULL;
+        int ret = 0;
+        MENTRY();
+
+        MPRINT("1a: create a log with name: %s\n", name);
+        MASSERT(ctxt);
+
+        ret = mlog_create(ctxt, &mlh, NULL, name);
+        if (ret) {
+                MERROR("1a: mlog_create with name %s failed: %d\n", name, ret);
+		goto out;
+        }
+
+        //llog_init_handle(llh, LLOG_F_IS_PLAIN, &uuid);
+
+        ret = mlog_close(mlh);
+        if (ret) {
+                MERROR("1b: close log %s failed: %d\n", name, ret);
+        }
+out:
+        MRETURN(ret);
+}
+
+int mlog_run_tests(struct mlog_ctxt *ctxt)
+{
+	int ret = 0;
+	char *name = "log_test";
+	MENTRY();
+
+	mlog_test_0(ctxt, name);
+	MRETURN(ret);
+}
+EXPORT_SYMBOL(mlog_run_tests);
+
+struct mlog_operations mlog_vfs_operations = {
+	mop_write_rec:      NULL,
+	mop_destroy:        NULL,
+	mop_next_block:     NULL,
+	mop_prev_block:     NULL,
+	mop_create:         mlog_vfs_create,
+	mop_close:          mlog_vfs_close,
+	mop_read_header:    NULL,
+	mop_setup:          NULL,
+	mop_sync:           NULL,
+	mop_cleanup:        NULL,
+	mop_add:            NULL,
+	mop_cancel:         NULL,
+};
+EXPORT_SYMBOL(mlog_vfs_operations);
