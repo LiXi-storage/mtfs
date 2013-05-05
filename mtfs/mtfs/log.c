@@ -713,26 +713,70 @@ out:
 	MRETURN(ret);
 }
 
+static int mlog_verify_handle(char *test, struct mlog_handle *mlh, int num_recs)
+{
+	int i;
+	int last_idx = 0;
+	int active_recs = 0;
+	int ret = 0;
+
+	for (i = 0; i < MLOG_BITMAP_BYTES * 8; i++) {
+		if (ext2_test_bit(i, mlh->mgh_hdr->mlh_bitmap)) {
+			last_idx = i;
+			active_recs++;
+		}
+	}
+
+	if (active_recs != num_recs) {
+		MERROR("%s: expected %d active recs after write, found %d\n",
+		       test, num_recs, active_recs);
+		ret = -ERANGE;
+		goto out;
+	}
+
+	if (mlh->mgh_hdr->mlh_count != num_recs) {
+		MERROR("%s: handle->count is %d, expected %d after write\n",
+		       test, mlh->mgh_hdr->mlh_count, num_recs);
+		ret = -ERANGE;
+		goto out;
+	}
+
+	if (mlh->mgh_last_idx < last_idx) {
+		MERROR("%s: handle->last_idx is %d, expected %d after write\n",
+		       test, mlh->mgh_last_idx, last_idx);
+		ret = -ERANGE;
+		goto out;
+	}
+
+out:
+	MRETURN(ret);
+}
+
 static struct mlog_uuid mlog_test_uuid = { .uuid = "test_uuid" };
 
 /* Test named-log create/open, close */
 static int mlog_test_1(struct mlog_ctxt *ctxt,
                        const char *name)
 {
-        struct mlog_handle *mlh = NULL;
-        int ret = 0;
-        MENTRY();
+	struct mlog_handle *mlh = NULL;
+	int ret = 0;
+	MENTRY();
 
-        MPRINT("1a: create a log with name: %s\n", name);
-        MASSERT(ctxt);
+	MPRINT("1a: create a log with name: %s\n", name);
+	MASSERT(ctxt);
 
-        ret = mlog_create(ctxt, &mlh, NULL, name);
-        if (ret) {
-                MERROR("1a: mlog_create with name %s failed: %d\n", name, ret);
+	ret = mlog_create(ctxt, &mlh, NULL, name);
+	if (ret) {
+		MERROR("1a: mlog_create with name %s failed: %d\n", name, ret);
 		goto out;
-        }
+	}
 
-        mlog_init_handle(mlh, MLOG_F_IS_PLAIN, &mlog_test_uuid);
+	mlog_init_handle(mlh, MLOG_F_IS_PLAIN, &mlog_test_uuid);
+
+	ret = mlog_verify_handle("1", mlh, 1);
+	if (ret) {
+		MERROR("handle error, ret = %d\n", ret);
+	}
 
         ret = mlog_close(mlh);
         if (ret) {
