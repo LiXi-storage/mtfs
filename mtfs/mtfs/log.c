@@ -221,11 +221,11 @@ out:
 
 /* returns negative in on error; 0 if success && reccookie == 0; 1 otherwise */
 /* appends if idx == -1, otherwise overwrites record idx. */
-int mlog_vfs_write_rec(struct mlog_handle *loghandle,
-                   struct mlog_rec_hdr *rec,
-                   struct mlog_cookie *reccookie,
-                   int cookiecount,
-                   void *buf, int idx)
+static int mlog_vfs_write_rec(struct mlog_handle *loghandle,
+                              struct mlog_rec_hdr *rec,
+                              struct mlog_cookie *reccookie,
+                              int cookiecount,
+                              void *buf, int idx)
 {
 	struct mlog_log_hdr *mlh;
 	int reclen = rec->mrh_len;
@@ -915,7 +915,7 @@ out:
 
 /* Test named-log reopen; returns opened log on success */
 int mlog_test_2(struct mlog_ctxt *ctxt, char *name,
-                       struct mlog_handle **mlh)
+                struct mlog_handle **mlh)
 {
 	struct mlog_handle *loghandle = NULL;
 	struct mlog_logid logid;
@@ -971,6 +971,115 @@ out:
 	MRETURN(ret);
 }
 
+/* Test record writing, single and in bulk */
+static int mlog_test_3(struct mlog_ctxt *ctxt, struct mlog_handle *mlh)
+{
+	struct mlog_logid_rec mid;
+	int ret = 0;
+	int i = 0;
+	int num_recs = 1; /* 1 for the header */
+	MENTRY();
+
+	mid.mid_hdr.mrh_len = mid.mid_tail.mrt_len = sizeof(mid);
+	mid.mid_hdr.mrh_type = MLOG_LOGID_MAGIC;
+
+	MPRINT("3a: write one logid record\n");
+	ret = mlog_write_rec(mlh,  &mid.mid_hdr, NULL, 0, NULL, -1);
+	num_recs++;
+	if (ret) {
+		MERROR("3a: write one log record failed: %d\n", ret);
+		goto out;
+        }
+
+	if ((ret = mlog_verify_handle("3a", mlh, num_recs))) {
+		MERROR("handle error, ret = %d\n", ret);
+		goto out;
+	}
+
+	MPRINT("3b: write 10 cfg log records with 8 bytes bufs\n");
+	for (i = 0; i < 10; i++) {
+		struct mlog_rec_hdr hdr;
+		char buf[8];
+		hdr.mrh_len = 8;
+		hdr.mrh_type = MLOG_LOGID_MAGIC;
+		memset(buf, 0, sizeof buf);
+		ret = mlog_write_rec(mlh, &hdr, NULL, 0, buf, -1);
+                if (ret) {
+			MERROR("3b: write 10 records failed at #%d: %d\n",
+			       i + 1, ret);
+			goto out;
+		}
+		num_recs++;
+		if ((ret = mlog_verify_handle("3c", mlh, num_recs))) {
+			MERROR("handle error, ret = %d\n", ret);
+			goto out;
+		}
+	}
+
+	if ((ret = mlog_verify_handle("3b", mlh, num_recs))) {
+                goto out;
+	}
+
+	MPRINT("3c: write 1000 more log records\n");
+	for (i = 0; i < 1000; i++) {
+		ret = mlog_write_rec(mlh, &mid.mid_hdr, NULL, 0, NULL, -1);
+		if (ret) {
+			MERROR("3c: write 1000 records failed at #%d: %d\n",
+			       i + 1, ret);
+			goto out;
+		}
+		num_recs++;
+		if ((ret = mlog_verify_handle("3b", mlh, num_recs))) {
+			MERROR("handle error, ret = %d\n", ret);
+			goto out;
+		}
+	}
+
+	if ((ret = mlog_verify_handle("3c", mlh, num_recs))){
+		MERROR("handle error, ret = %d\n", ret);
+		goto out;
+	}
+	
+        MPRINT("3d: write log more than BITMAP_SIZE, return -ENOSPC\n");
+        for (i = 0; i < MLOG_BITMAP_SIZE(mlh->mgh_hdr) + 1; i++) {
+		struct mlog_rec_hdr hdr;
+		char buf_even[24];
+		char buf_odd[32];
+
+		memset(buf_odd, 0, sizeof buf_odd);
+		memset(buf_even, 0, sizeof buf_even);
+		if ((i % 2) == 0) {
+			hdr.mrh_len = 24;
+			hdr.mrh_type = MLOG_LOGID_MAGIC;
+			ret = mlog_write_rec(mlh, &hdr, NULL, 0, buf_even, -1);
+		} else {
+			hdr.mrh_len = 32;
+			hdr.mrh_type = MLOG_LOGID_MAGIC;
+			ret = mlog_write_rec(mlh, &hdr, NULL, 0, buf_odd, -1);
+		}
+		if (ret) {
+			if (ret == -ENOSPC) {
+				break;
+			} else {
+				MERROR("3c: write recs failed at #%d: %d\n",
+				       i + 1, ret);
+				goto out;
+			}
+		}
+		num_recs++;
+	}
+	if (ret != -ENOSPC) {
+                MPRINT("3d: write record more than BITMAP size!\n");
+                ret = -EINVAL;
+        }
+	if ((ret = mlog_verify_handle("3d", mlh, num_recs))) {
+		MERROR("handle error, ret = %d\n", ret);
+                goto out;
+        }
+out:
+	MRETURN(ret);
+}
+
 int mlog_run_tests(struct mlog_ctxt *ctxt)
 {
 	int ret = 0;
@@ -984,12 +1093,19 @@ int mlog_run_tests(struct mlog_ctxt *ctxt)
 		goto out;
 	}
 
-	mlog_test_2(ctxt, name, &mlh);
+	ret = mlog_test_2(ctxt, name, &mlh);
 	if (ret) {
 		MERROR("test 2 failed\n");
 		goto out;
 	}
 
+	ret = mlog_test_3(ctxt, mlh);
+	if (ret) {
+		MERROR("test 3 failed\n");
+		goto out_close;
+	}
+
+out_close:
 	ret = mlog_close(mlh);
 	if (ret) {
 		MERROR("failed to close handle, ret = %d\n", ret);
@@ -1000,7 +1116,7 @@ out:
 EXPORT_SYMBOL(mlog_run_tests);
 
 struct mlog_operations mlog_vfs_operations = {
-	mop_write_rec:      NULL,
+	mop_write_rec:      mlog_vfs_write_rec,
 	mop_destroy:        mlog_vfs_destroy,
 	mop_next_block:     NULL,
 	mop_prev_block:     NULL,

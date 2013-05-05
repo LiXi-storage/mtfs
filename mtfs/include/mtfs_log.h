@@ -224,6 +224,34 @@ static inline int mlog_destroy(struct mlog_handle *loghandle)
 	MRETURN(ret);
 }
 
+static inline int mlog_write_rec(struct mlog_handle *loghandle,
+                                 struct mlog_rec_hdr *rec,
+                                 struct mlog_cookie *logcookies,
+                                 int numcookies, void *buf, int idx)
+{
+	struct mlog_ctxt *ctxt = NULL;
+	struct mlog_operations *mop = NULL;
+	int ret = 0;
+	int buflen = 0;
+	MENTRY();
+
+	ctxt = loghandle->mgh_ctxt;
+	mop = ctxt->moc_logops;
+	MASSERT(mop->mop_write_rec);
+
+
+	if (buf) {
+		buflen = rec->mrh_len + sizeof(struct mlog_rec_hdr)
+		         + sizeof(struct mlog_rec_tail);
+	} else {
+		buflen = rec->mrh_len;
+	}
+	MASSERT(size_round(buflen) == buflen);
+
+	ret = mop->mop_write_rec(loghandle, rec, logcookies, numcookies, buf, idx);
+	MRETURN(ret);
+}
+
 static inline int mlog_read_header(struct mlog_handle *loghandle)
 {
 	struct mlog_ctxt *ctxt = NULL;
