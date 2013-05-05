@@ -109,6 +109,7 @@ static int mtfs_config_write_branch(struct super_block *sb,
 	}
 
 	mci->mci_bindex = bindex;
+	/* TODO: swab before write/read to/from disk */
 	size = _do_read_write(WRITE, hidden_file, (void *)mci, count, &off);
 	if (size != count) {
 		MERROR("failed to write branch[%d] of file [%.*s], ret = %d\n",

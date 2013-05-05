@@ -61,10 +61,10 @@ out:
 }
 
 static int mlog_vfs_write_blob(struct mtfs_lowerfs *lowerfs,
-                           struct file *file,
-                           struct mlog_rec_hdr *rec,
-                           void *buf,
-                           loff_t off)
+                               struct file *file,
+                               struct mlog_rec_hdr *rec,
+                               void *buf,
+                               loff_t off)
 {
 	int ret = 0;
 	struct mlog_rec_tail end;
@@ -95,14 +95,14 @@ static int mlog_vfs_write_blob(struct mtfs_lowerfs *lowerfs,
                 goto out;
         }
 
-        ret = mlowerfs_write_record(lowerfs, file, buf, buflen, &file->f_pos, 0);
-        if (ret) {
-                MERROR("error writing log buffer, ret = %d\n", ret);
-                goto out;
-        }
+	ret = mlowerfs_write_record(lowerfs, file, buf, buflen, &file->f_pos, 0);
+	if (ret) {
+		MERROR("error writing log buffer, ret = %d\n", ret);
+		goto out;
+	}
 
-        end.mrt_len = rec->mrh_len;
-        end.mrt_index = rec->mrh_index;
+	end.mrt_len = rec->mrh_len;
+	end.mrt_index = rec->mrh_index;
 	ret = mlowerfs_write_record(lowerfs, file, &end, sizeof(end), &file->f_pos, 0);
 	if (ret) {
 		MERROR("error writing log tail, ret = %d\n", ret);
@@ -113,6 +113,108 @@ static int mlog_vfs_write_blob(struct mtfs_lowerfs *lowerfs,
 	if (saved_off > file->f_pos)
 		file->f_pos = saved_off;
 	MASSERT(ret <= 0);
+	MRETURN(ret);
+}
+
+static void mlog_swab_rec(struct mlog_rec_hdr *rec, struct mlog_rec_tail *tail)
+{
+	__swab32s(&rec->mrh_len);
+	__swab32s(&rec->mrh_index);
+	__swab32s(&rec->mrh_type);
+
+	switch (rec->mrh_type) {
+        case MLOG_HDR_MAGIC: {
+		struct mlog_log_hdr *mlh = (struct mlog_log_hdr *)rec;
+
+		__swab64s(&mlh->mlh_timestamp);
+		__swab32s(&mlh->mlh_count);
+		__swab32s(&mlh->mlh_bitmap_offset);
+		__swab32s(&mlh->mlh_flags);
+		__swab32s(&mlh->mlh_size);
+		__swab32s(&mlh->mlh_cat_idx);
+		if (tail != &mlh->mlh_tail) {
+			__swab32s(&mlh->mlh_tail.mrt_index);
+			__swab32s(&mlh->mlh_tail.mrt_len);
+		}
+
+                break;
+        }
+	case MLOG_LOGID_MAGIC: {
+		struct mlog_logid_rec *mid = (struct mlog_logid_rec *)rec;
+
+		__swab64s(&mid->mid_id.mgl_oid);
+		__swab64s(&mid->mid_id.mgl_ogr);
+		__swab32s(&mid->mid_id.mgl_ogen);
+		break;
+        }
+	case MLOG_PAD_MAGIC:
+        /* ignore old pad records of type 0 */
+        default:
+                MERROR("Unknown llog rec type %#x swabbing rec %p\n",
+                       rec->mrh_type, rec);
+	}
+
+        if (tail) {
+		__swab32s(&tail->mrt_len);
+		__swab32s(&tail->mrt_index);
+        }
+}
+
+static void mlog_swab_hdr(struct mlog_log_hdr *h)
+{
+	mlog_swab_rec(&h->mlh_hdr, &h->mlh_tail);
+}
+
+static int mlog_vfs_read_header(struct mlog_handle *handle)
+{
+	struct mtfs_lowerfs *lowerfs = NULL;
+	int ret = 0;
+	MENTRY();
+
+	MASSERT(sizeof(*handle->mgh_hdr) == MLOG_CHUNK_SIZE);
+
+	lowerfs = handle->mgh_ctxt->moc_lowerfs;
+
+	if (i_size_read(handle->mgh_file->f_dentry->d_inode) == 0) {
+		MDEBUG("not reading header from 0-byte log\n");
+		ret = MLOG_EEMPTY;
+		goto out;
+	}
+
+	ret = mlog_vfs_read_blob(lowerfs, handle->mgh_file,
+	                         handle->mgh_hdr,
+	                         MLOG_CHUNK_SIZE, 0);
+	if (ret) {
+		MERROR("error reading log header from %.*s\n",
+		       handle->mgh_file->f_dentry->d_name.len,
+		       handle->mgh_file->f_dentry->d_name.name);
+        } else {
+		struct mlog_rec_hdr *mlh_hdr = &handle->mgh_hdr->mlh_hdr;
+
+		if (MLOG_REC_HDR_NEEDS_SWABBING(mlh_hdr)) {
+			mlog_swab_hdr(handle->mgh_hdr);
+		}
+
+		if (mlh_hdr->mrh_type != MLOG_HDR_MAGIC) {
+			MERROR("bad log %.*s header magic: %#x (expected %#x)\n",
+			       handle->mgh_file->f_dentry->d_name.len,
+			       handle->mgh_file->f_dentry->d_name.name,
+			       mlh_hdr->mrh_type, MLOG_HDR_MAGIC);
+			ret = -EIO;
+		} else if (mlh_hdr->mrh_len != MLOG_CHUNK_SIZE) {
+			MERROR("incorrectly sized log %.*s header: %#x "
+			       "(expected %#x)\n",
+			       handle->mgh_file->f_dentry->d_name.len,
+			       handle->mgh_file->f_dentry->d_name.name,
+			       mlh_hdr->mrh_len, MLOG_CHUNK_SIZE);
+			ret = -EIO;
+		}
+	}
+
+	handle->mgh_last_idx = handle->mgh_hdr->mlh_tail.mrt_index;
+	handle->mgh_file->f_pos = i_size_read(handle->mgh_file->f_dentry->d_inode);
+
+out:
 	MRETURN(ret);
 }
 
@@ -540,8 +642,81 @@ static int mlog_vfs_close(struct mlog_handle *handle)
 	MRETURN(ret);
 }
 
+static inline int mlog_uuid_equals(struct mlog_uuid *u1, struct mlog_uuid *u2)
+{
+        return strcmp((char *)u1->uuid, (char *)u2->uuid) == 0;
+}
+
+int mlog_init_handle(struct mlog_handle *handle, int flags,
+                     struct mlog_uuid *uuid)
+{
+	int ret = 0;
+	struct mlog_log_hdr *mlh = NULL;
+	MENTRY();
+
+	MASSERT(handle->mgh_hdr == NULL);
+
+        MTFS_ALLOC(mlh, sizeof(*mlh));
+        if (mlh == NULL) {
+        	MERROR("not enough memory\n");
+                ret = -ENOMEM;
+                goto out;
+        }
+
+	handle->mgh_hdr = mlh;
+	/* first assign flags to use llog_client_ops */
+	mlh->mlh_flags = flags;
+	ret = mlog_read_header(handle);
+	if (ret == 0) {
+		flags = mlh->mlh_flags;
+		if (uuid && !mlog_uuid_equals(uuid, &mlh->mlh_tgtuuid)) {
+			MERROR("uuid mismatch: %s/%s\n", (char *)uuid->uuid,
+			       (char *)mlh->mlh_tgtuuid.uuid);
+			ret = -EEXIST;
+		}
+		goto out;
+	} else if (ret != MLOG_EEMPTY || !flags) {
+		/* set a pesudo flag for initialization */
+		flags = MLOG_F_IS_CAT;
+		goto out;
+	}
+	ret = 0;
+
+	handle->mgh_last_idx = 0; /* header is record with index 0 */
+	mlh->mlh_count = 1;         /* for the header record */
+	mlh->mlh_hdr.mrh_type = MLOG_HDR_MAGIC;
+	mlh->mlh_hdr.mrh_len = mlh->mlh_tail.mrt_len = MLOG_CHUNK_SIZE;
+	mlh->mlh_hdr.mrh_index = mlh->mlh_tail.mrt_index = 0;
+	mlh->mlh_timestamp = get_seconds();
+	if (uuid)
+		memcpy(&mlh->mlh_tgtuuid, uuid, sizeof(mlh->mlh_tgtuuid));
+	mlh->mlh_bitmap_offset = offsetof(typeof(*mlh), mlh_bitmap);
+        ext2_set_bit(0, mlh->mlh_bitmap);
+
+out:
+	if (flags & MLOG_F_IS_CAT) {
+		MTFS_INIT_LIST_HEAD(&handle->u.chd.chd_head);
+		mlh->mlh_size = sizeof(struct mlog_logid_rec);
+	} else if (flags & MLOG_F_IS_PLAIN) {
+		MTFS_INIT_LIST_HEAD(&handle->u.phd.phd_entry);
+	} else {
+		MERROR("Unknown flags: %#x (Expected %#x or %#x\n",
+		       flags, MLOG_F_IS_CAT, MLOG_F_IS_PLAIN);
+		MBUG();
+	}
+
+        if (ret) {
+		MTFS_FREE(mlh, sizeof(*mlh));
+		handle->mgh_hdr = NULL;
+	}
+
+	MRETURN(ret);
+}
+
+static struct mlog_uuid mlog_test_uuid = { .uuid = "test_uuid" };
+
 /* Test named-log create/open, close */
-static int mlog_test_0(struct mlog_ctxt *ctxt,
+static int mlog_test_1(struct mlog_ctxt *ctxt,
                        const char *name)
 {
         struct mlog_handle *mlh = NULL;
@@ -557,7 +732,7 @@ static int mlog_test_0(struct mlog_ctxt *ctxt,
 		goto out;
         }
 
-        //llog_init_handle(llh, LLOG_F_IS_PLAIN, &uuid);
+        mlog_init_handle(mlh, MLOG_F_IS_PLAIN, &mlog_test_uuid);
 
         ret = mlog_close(mlh);
         if (ret) {
@@ -573,7 +748,7 @@ int mlog_run_tests(struct mlog_ctxt *ctxt)
 	char *name = "log_test";
 	MENTRY();
 
-	mlog_test_0(ctxt, name);
+	mlog_test_1(ctxt, name);
 	MRETURN(ret);
 }
 EXPORT_SYMBOL(mlog_run_tests);
@@ -585,7 +760,7 @@ struct mlog_operations mlog_vfs_operations = {
 	mop_prev_block:     NULL,
 	mop_create:         mlog_vfs_create,
 	mop_close:          mlog_vfs_close,
-	mop_read_header:    NULL,
+	mop_read_header:    mlog_vfs_read_header,
 	mop_setup:          NULL,
 	mop_sync:           NULL,
 	mop_cleanup:        NULL,

@@ -30,6 +30,17 @@ struct mlog_rec_tail {
         __u32 mrt_index;
 };
 
+struct mlog_logid_rec {
+        struct mlog_rec_hdr     mid_hdr;
+        struct mlog_logid       mid_id;
+        __u32                   padding1;
+        __u32                   padding2;
+        __u32                   padding3;
+        __u32                   padding4;
+        __u32                   padding5;
+        struct mlog_rec_tail    mid_tail;
+} __attribute__((packed));
+
 struct mlog_gen {
         __u64 mnt_cnt;
         __u64 conn_cnt;
@@ -47,6 +58,10 @@ struct mlog_gen {
 #define MLOG_F_IS_CAT           0x2
 #define MLOG_F_IS_PLAIN         0x4
 
+struct mlog_uuid {
+        char uuid[40];
+};
+
 struct mlog_log_hdr {
 	struct mlog_rec_hdr     mlh_hdr;
 	__u64                   mlh_timestamp;
@@ -55,6 +70,8 @@ struct mlog_log_hdr {
 	__u32                   mlh_size;
 	__u32                   mlh_flags;
 	__u32                   mlh_cat_idx;
+	/* for a catalog the first plain slot is next to it */
+        struct mlog_uuid        mlh_tgtuuid;
 	__u32                   mlh_reserved[MLOG_HEADER_SIZE/sizeof(__u32) - 23];
 	__u32                   mlh_bitmap[MLOG_BITMAP_BYTES/sizeof(__u32)];
 	struct mlog_rec_tail    mlh_tail;
@@ -63,6 +80,8 @@ struct mlog_log_hdr {
 #define MLOG_BITMAP_SIZE(mlh)  ((mlh->mlh_hdr.mrh_len -         \
                                  mlh->mlh_bitmap_offset -       \
                                  sizeof(mlh->mlh_tail)) * 8)
+
+#define MLOG_EEMPTY 4711
 
 struct mlog_ctxt {
         struct dentry           *moc_dlog; /* Which directory the logs saved in */
@@ -117,9 +136,14 @@ struct mlog_handle {
 #define MLOG_OP_MASK  0xfff00000
 
 typedef enum {
-        MLOG_PAD_MAGIC   = MLOG_OP_MAGIC | 0x00000,
+	MLOG_PAD_MAGIC   = MLOG_OP_MAGIC | 0x00000,
 	MLOG_GEN_REC     = MLOG_OP_MAGIC | 0x40000,
+	MLOG_HDR_MAGIC   = MLOG_OP_MAGIC | 0x45539,
+	MLOG_LOGID_MAGIC = MLOG_OP_MAGIC | 0x4553b,
 } mlog_op_type;
+
+#define MLOG_REC_HDR_NEEDS_SWABBING(r)                                     \
+    (((r)->mrh_type & __swab32(MLOG_OP_MASK)) ==  __swab32(MLOG_OP_MAGIC))
 
 struct mlog_operations {
 	int (*mop_write_rec)(struct mlog_handle *loghandle,
@@ -184,6 +208,22 @@ static inline int mlog_close(struct mlog_handle *loghandle)
 	mlog_free_handle(loghandle);
 	MRETURN(ret);
 }
+
+static inline int mlog_read_header(struct mlog_handle *loghandle)
+{
+	struct mlog_ctxt *ctxt = NULL;
+	struct mlog_operations *mop = NULL;
+	int ret = 0;
+	MENTRY();
+
+	ctxt = loghandle->mgh_ctxt;
+	mop = ctxt->moc_logops;
+	MASSERT(mop->mop_close);
+
+	ret = mop->mop_read_header(loghandle);
+	MRETURN(ret);
+}
+
 
 static inline struct mlog_ctxt *mlog_context_init(struct dentry *log_directory,
                                                   struct vfsmount *mnt,
