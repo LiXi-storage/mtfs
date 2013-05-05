@@ -209,6 +209,21 @@ static inline int mlog_close(struct mlog_handle *loghandle)
 	MRETURN(ret);
 }
 
+static inline int mlog_destroy(struct mlog_handle *loghandle)
+{
+	struct mlog_ctxt *ctxt = NULL;
+	struct mlog_operations *mop = NULL;
+	int ret = 0;
+	MENTRY();
+
+	ctxt = loghandle->mgh_ctxt;
+	mop = ctxt->moc_logops;
+	MASSERT(mop->mop_destroy);
+
+	ret = mop->mop_destroy(loghandle);
+	MRETURN(ret);
+}
+
 static inline int mlog_read_header(struct mlog_handle *loghandle)
 {
 	struct mlog_ctxt *ctxt = NULL;

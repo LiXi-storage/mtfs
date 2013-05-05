@@ -4,6 +4,7 @@
 #include <linux/namei.h>
 #include <linux/module.h>
 #include <linux/mount.h>
+#include <linux/random.h>
 #include <mtfs_lowerfs.h>
 #include <mtfs_log.h>
 #include <mtfs_file.h>
@@ -437,42 +438,36 @@ void mlog_free_handle(struct mlog_handle *loghandle)
 EXPORT_SYMBOL(mlog_free_handle);
 
 /* Return name length*/
-int mlog_id2name(struct mlog_logid *logid, char **name)
+void mlog_id2name(struct mlog_logid *logid, char *name, int length)
 {
-	char *tmp_name = NULL;
-	int ret = 64;
-
-	MTFS_ALLOC(tmp_name, ret);
-	if (tmp_name == NULL) {
-		MERROR("not enough memory\n");
-		ret = -ENOMEM;
-		goto out;
-	}
-
-	snprintf(tmp_name, sizeof(tmp_name), "log_0x%llx", logid->mgl_oid);
-	*name = tmp_name;
-out:
-	return ret;
+	snprintf(name, length,
+	         "log_0x%llx.0x%x",
+	         logid->mgl_oid,
+	         logid->mgl_ogen);
 }
 
 static struct file *mlog_vfs_open_id(struct mlog_ctxt *ctxt, struct mlog_logid *logid)
 {
 	struct dentry *dchild = NULL;
 	struct file *file = NULL;
-	int length = 0;
+	int length = 64;
 	char *name = NULL;
 	MENTRY();
 
-	length = mlog_id2name(logid, &name);
-	if (length < 0) {
-		MERROR("failed to get name from id\n");
-		file = ERR_PTR(length);
+	MTFS_ALLOC(name, length);
+	if (name == NULL) {
+		MERROR("not enough memory\n");
+		file = ERR_PTR(-ENOMEM);
 		goto out;
 	}
 
+	mlog_id2name(logid, name, length);
+
+	mutex_lock(&ctxt->moc_dlog->d_inode->i_mutex);
 	dchild = lookup_one_len(name,
 	                        ctxt->moc_dlog,
 	                        strlen(name));
+	mutex_unlock(&ctxt->moc_dlog->d_inode->i_mutex);
 	if (IS_ERR(dchild)) {
 		MERROR("lookup [%.*s/%s] failed, ret = %d\n",
 		       ctxt->moc_dlog->d_name.len,
@@ -544,12 +539,12 @@ static struct file *mlog_vfs_open_id(struct mlog_ctxt *ctxt, struct mlog_logid *
 out_put_dchild:
 	dput(dchild);
 out_free_name:
-	MTFS_ALLOC(name, length);
+	MTFS_FREE(name, length);
 out:
 	MRETURN(file);
 }
 
-static struct file *mlog_vfs_open_name(struct mlog_ctxt *ctxt, const char *name)
+static struct file *mlog_vfs_create_open_name(struct mlog_ctxt *ctxt, const char *name)
 {
 	struct dentry *dchild = NULL;
 	struct file *file = NULL;
@@ -585,6 +580,102 @@ out:
 	MRETURN(file);
 }
 
+int mlog_vfs_create_new(struct mlog_ctxt *ctxt, struct mlog_logid *logid)
+{
+	struct dentry *dchild = NULL;
+	struct dentry *new_dchild = NULL;
+	int ret = 0;
+	int length = 64;
+	char *name = NULL;
+	unsigned int tmpname = random32();
+	MENTRY();
+
+	MTFS_ALLOC(name, length);
+	if (name == NULL) {
+		MERROR("not enough memory\n");
+		ret = -ENOMEM;
+		goto out;
+	}
+
+	sprintf(name, "%u.%u", tmpname, current->pid);
+
+	dchild = mtfs_dchild_create(ctxt->moc_dlog,
+	                            name,
+		                    strlen(name),
+		                    S_IFREG | S_IRWXU,
+		                    0, NULL, 0);
+	if (IS_ERR(dchild)) {
+		MERROR("create [%.*s/%s] failed, ret = %d\n",
+		       ctxt->moc_dlog->d_name.len,
+		       ctxt->moc_dlog->d_name.name,
+		       name, PTR_ERR(dchild));
+		ret = PTR_ERR(dchild);
+		goto out_free_name;
+	}
+
+	logid->mgl_oid = dchild->d_inode->i_ino;
+	logid->mgl_ogen = dchild->d_inode->i_generation;
+	mlog_id2name(logid, name, length);
+
+	mutex_lock(&ctxt->moc_dlog->d_inode->i_mutex);
+	new_dchild = lookup_one_len(name, ctxt->moc_dlog, strlen(name));
+        if (IS_ERR(new_dchild)) {
+                MERROR("getting neg dentry for obj rename: %d\n", ret);
+		ret = PTR_ERR(new_dchild);
+		goto out_unlock;
+	}
+
+	if (new_dchild->d_inode != NULL) {
+		MERROR("impossible non-negative obj dentry %s\n",
+		       name);
+		mutex_unlock(&ctxt->moc_dlog->d_inode->i_mutex);
+		ret = -EEXIST;
+		goto out_put_new_dchild;
+	}
+
+	ret = vfs_rename(ctxt->moc_dlog->d_inode, dchild,
+                         ctxt->moc_dlog->d_inode, new_dchild);
+	if (ret) {
+		MERROR("error renaming new object %s, ret = %d\n",
+		       name);
+	}
+out_put_new_dchild:
+	dput(new_dchild);
+out_unlock:
+	mutex_unlock(&ctxt->moc_dlog->d_inode->i_mutex);
+	dput(dchild);
+out_free_name:
+	MTFS_FREE(name, length);
+out:
+	MRETURN(ret);
+}
+
+static struct file *mlog_vfs_create_open_new(struct mlog_ctxt *ctxt, struct mlog_logid *logid)
+{
+	struct dentry *dchild = NULL;
+	struct file *file = NULL;
+	int ret = 0;
+	MENTRY();
+
+	ret = mlog_vfs_create_new(ctxt, logid);
+	if (ret) {
+		MERROR("failed to create new log\n");
+		file = ERR_PTR(ret);
+		goto out;
+	}
+
+	file = mlog_vfs_open_id(ctxt, logid);
+	if (IS_ERR(file)) {
+		MERROR("failed to open file\n");
+		goto out_put_dchild;
+	}
+	goto out;
+out_put_dchild:
+	dput(dchild);
+out:
+	MRETURN(file);
+}
+
 /* This is a callback from the llog_* functions.
  * Assumes caller has already pushed us into the kernel context. */
 int mlog_vfs_create(struct mlog_ctxt *ctxt, struct mlog_handle **res,
@@ -605,13 +696,17 @@ int mlog_vfs_create(struct mlog_ctxt *ctxt, struct mlog_handle **res,
 	if (logid != NULL) {
 		handle->mgh_file = mlog_vfs_open_id(ctxt, logid);
 		if (IS_ERR(handle->mgh_file)) {
+			MERROR("failed to open by logid\n");
+			ret = PTR_ERR(handle->mgh_file);
 			goto out_free_handle;
 		}
 		/* assign the value of lgh_id for handle directly */
 		handle->mgh_id = *logid;
 	} else if (name) {
-		handle->mgh_file = mlog_vfs_open_name(ctxt, name);
+		handle->mgh_file = mlog_vfs_create_open_name(ctxt, name);
 		if (IS_ERR(handle->mgh_file)) {
+			MERROR("failed to open by name\n");
+			ret = PTR_ERR(handle->mgh_file);
 			goto out_free_handle;
 		}
                 handle->mgh_id.mgl_ogr = 1;
@@ -620,7 +715,12 @@ int mlog_vfs_create(struct mlog_ctxt *ctxt, struct mlog_handle **res,
                 handle->mgh_id.mgl_ogen =
                         handle->mgh_file->f_dentry->d_inode->i_generation;
 	} else {
-		MBUG();
+		handle->mgh_file = mlog_vfs_create_open_new(ctxt, &handle->mgh_id);
+		if (IS_ERR(handle->mgh_file)) {
+			MERROR("failed to open new\n");
+			ret = PTR_ERR(handle->mgh_file);
+			goto out_free_handle;
+		}
 	}
 	handle->mgh_ctxt = ctxt;
 	goto out;
@@ -640,6 +740,33 @@ static int mlog_vfs_close(struct mlog_handle *handle)
 		MERROR("error closing log, ret = %d\n", ret);
 	}
 	MRETURN(ret);
+}
+
+static int mlog_vfs_destroy(struct mlog_handle *handle)
+{
+	struct dentry *dentry = NULL;
+	struct mlog_ctxt *ctxt = NULL;
+	int ret = 0;
+	struct vfsmount *mnt = NULL;
+	MENTRY();
+
+	dentry = handle->mgh_file->f_dentry;
+	mnt = handle->mgh_file->f_vfsmnt;
+	ctxt = handle->mgh_ctxt;
+	MASSERT(dentry->d_parent == ctxt->moc_dlog);
+
+	mntget(mnt);
+	dget(dentry);
+	ret = mlog_vfs_close(handle);
+	if (ret == 0) {
+		mutex_lock(&dentry->d_parent->d_inode->i_mutex);
+		ret = vfs_unlink(dentry->d_parent->d_inode, dentry);
+		mutex_unlock(&dentry->d_parent->d_inode->i_mutex);
+	}
+	dput(dentry);
+	mntput(mnt);
+
+        MRETURN(ret);
 }
 
 static inline int mlog_uuid_equals(struct mlog_uuid *u1, struct mlog_uuid *u2)
@@ -786,20 +913,95 @@ out:
         MRETURN(ret);
 }
 
+/* Test named-log reopen; returns opened log on success */
+int mlog_test_2(struct mlog_ctxt *ctxt, char *name,
+                       struct mlog_handle **mlh)
+{
+	struct mlog_handle *loghandle = NULL;
+	struct mlog_logid logid;
+	int ret = 0;
+	MENTRY();
+
+	MPRINT("2a: re-open a log with name: %s\n", name);
+	ret = mlog_create(ctxt, mlh, NULL, name);
+	if (ret) {
+		MERROR("2a: re-open log with name %s failed: %d\n", name, ret);
+		goto out;
+	}
+	mlog_init_handle(*mlh, MLOG_F_IS_PLAIN, &mlog_test_uuid);
+
+	if ((ret = mlog_verify_handle("2", *mlh, 1))) {
+		MERROR("handle error, ret = %d\n", ret);
+		goto out_close_mlh;
+	}
+
+	MPRINT("2b: create a log without specified NAME and LOGID\n");
+	ret = mlog_create(ctxt, &loghandle, NULL, NULL);
+	if (ret) {
+		MERROR("2b: create log failed, ret = %d\n", ret);
+		goto out_close_mlh;
+	}
+	mlog_init_handle(loghandle, MLOG_F_IS_PLAIN, &mlog_test_uuid);
+
+	logid = loghandle->mgh_id;
+	mlog_close(loghandle);
+
+	MPRINT("2b: re-open the log by LOGID\n");
+	ret = mlog_create(ctxt, &loghandle, &logid, NULL);
+	if (ret) {
+		MERROR("2b: re-open log by LOGID failed\n");
+		goto out;
+	}
+	mlog_init_handle(loghandle, MLOG_F_IS_PLAIN, &mlog_test_uuid);
+
+	MPRINT("2b: destroy this log\n");
+	ret = mlog_destroy(loghandle);
+	if (ret) {
+		MERROR("2b: destroy log failed\n");
+		goto out_free_handle;
+	}
+	mlog_free_handle(loghandle);
+	goto out;
+out_free_handle:
+	mlog_free_handle(loghandle);
+out_close_mlh:
+	mlog_close(*mlh);
+	*mlh = NULL;
+out:
+	MRETURN(ret);
+}
+
 int mlog_run_tests(struct mlog_ctxt *ctxt)
 {
 	int ret = 0;
 	char *name = "log_test";
+	struct mlog_handle *mlh = NULL;
 	MENTRY();
 
-	mlog_test_1(ctxt, name);
+	ret = mlog_test_1(ctxt, name);
+	if (ret) {
+		MERROR("test 1 failed\n");
+		goto out;
+	}
+
+	mlog_test_2(ctxt, name, &mlh);
+	if (ret) {
+		MERROR("test 2 failed\n");
+		goto out;
+	}
+
+	ret = mlog_close(mlh);
+	if (ret) {
+		MERROR("failed to close handle, ret = %d\n", ret);
+	}
+out:
 	MRETURN(ret);
 }
 EXPORT_SYMBOL(mlog_run_tests);
 
 struct mlog_operations mlog_vfs_operations = {
 	mop_write_rec:      NULL,
-	mop_destroy:        NULL,
+	mop_destroy:        mlog_vfs_destroy,
 	mop_next_block:     NULL,
 	mop_prev_block:     NULL,
 	mop_create:         mlog_vfs_create,
