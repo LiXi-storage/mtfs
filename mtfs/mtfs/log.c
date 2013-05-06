@@ -1102,13 +1102,15 @@ int mlog_run_tests(struct mlog_ctxt *ctxt)
 	ret = mlog_test_3(ctxt, mlh);
 	if (ret) {
 		MERROR("test 3 failed\n");
-		goto out_close;
+		goto out_destroy;
 	}
 
-out_close:
-	ret = mlog_close(mlh);
+out_destroy:
+	ret = mlog_destroy(mlh);
 	if (ret) {
-		MERROR("failed to close handle, ret = %d\n", ret);
+		MERROR("failed to destroy handle, ret = %d\n", ret);
+	} else {
+		mlog_free_handle(mlh); 
 	}
 out:
 	MRETURN(ret);
