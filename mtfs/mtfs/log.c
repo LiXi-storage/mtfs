@@ -1080,6 +1080,43 @@ out:
 	MRETURN(ret);
 }
 
+static int mlog_test_7(struct mlog_ctxt *ctxt)
+{
+	struct mlog_handle *mlh = NULL;
+	struct mlog_logid_rec mid;
+	char name[10];
+	int ret = 0;
+	MENTRY();
+
+	sprintf(name, "%x", random32());
+	MPRINT("7: create a log with name: %s\n", name);
+        MASSERT(ctxt);
+
+	ret = mlog_create(ctxt, &mlh, NULL, name);
+        if (ret) {
+		MERROR("7: llog_create with name %s failed: %d\n", name, ret);
+		goto out;
+        }
+	mlog_init_handle(mlh, MLOG_F_IS_PLAIN, &mlog_test_uuid);
+
+	mid.mid_hdr.mrh_len = mid.mid_tail.mrt_len = sizeof(mid);
+	mid.mid_hdr.mrh_type = MLOG_LOGID_MAGIC;
+	ret = mlog_write_rec(mlh,  &mid.mid_hdr, NULL, 0, NULL, -1);
+	if (ret) {
+		MERROR("7: write one log record failed: %d\n", ret);
+		goto out;
+	}
+
+	ret = mlog_destroy(mlh);
+	if (ret) {
+		MERROR("7: mlog_destroy failed: %d\n", ret);
+	} else {
+		mlog_free_handle(mlh); 
+	}
+out:
+	MRETURN(ret);
+}
+
 int mlog_run_tests(struct mlog_ctxt *ctxt)
 {
 	int ret = 0;
@@ -1102,6 +1139,12 @@ int mlog_run_tests(struct mlog_ctxt *ctxt)
 	ret = mlog_test_3(ctxt, mlh);
 	if (ret) {
 		MERROR("test 3 failed\n");
+		goto out_destroy;
+	}
+
+	ret = mlog_test_7(ctxt);
+	if (ret) {
+		MERROR("test 7 failed\n");
 		goto out_destroy;
 	}
 
