@@ -366,3 +366,68 @@ int mlog_cat_destroy(struct mlog_handle *cathandle)
 	MRETURN(ret);
 }
 EXPORT_SYMBOL(mlog_cat_destroy);
+
+int mlog_cat_process_cb(struct mlog_handle *cat_mlh, struct mlog_rec_hdr *rec,
+                        void *data)
+{
+	struct mlog_process_data *d = data;
+	struct mlog_logid_rec *mir = (struct mlog_logid_rec *)rec;
+	struct mlog_handle *mlh;
+	int ret = 0;
+	MENTRY();
+
+	if (rec->mrh_type != MLOG_LOGID_MAGIC) {
+		MERROR("invalid record in catalog\n");
+		ret = -EINVAL;
+		goto out;
+	}
+	MDEBUG("processing log %llx:%x at index %u of catalog %llx\n",
+	       mir->mid_id.mgl_oid, mir->mid_id.mgl_ogen,
+	       rec->mrh_index, cat_mlh->mgh_id.mgl_oid);
+
+	ret = mlog_cat_id2handle(cat_mlh, &mlh, &mir->mid_id);
+	if (ret) {
+		MERROR("Cannot find handle for log %llx\n",
+		       mir->mid_id.mgl_oid);
+		goto out;
+	}
+
+	ret = mlog_process(mlh, d->mpd_cb, d->mpd_data, NULL);
+out:
+	MRETURN(ret);
+}
+
+int mlog_cat_process(struct mlog_handle *cat_mlh, mlog_cb_t cb, void *data)
+{
+	struct mlog_process_data d;
+	struct mlog_process_cat_data cd;
+	struct mlog_log_hdr *mlh = cat_mlh->mgh_hdr;
+	int ret = 0;
+	MENTRY();
+
+	MASSERT(mlh->mlh_flags & MLOG_F_IS_CAT);
+	d.mpd_data = data;
+	d.mpd_cb = cb;
+
+	if (mlh->mlh_cat_idx > cat_mlh->mgh_last_idx) {
+		MPRINT("catlog %llx crosses index zero\n",
+		       cat_mlh->mgh_id.mgl_oid);
+
+		cd.mpcd_first_idx = mlh->mlh_cat_idx;
+		cd.mpcd_last_idx = 0;
+		ret = mlog_process(cat_mlh, mlog_cat_process_cb, &d, &cd);
+		if (ret != 0) {
+			goto out;
+		}
+
+		cd.mpcd_first_idx = 0;
+		cd.mpcd_last_idx = cat_mlh->mgh_last_idx;
+		ret = mlog_process(cat_mlh, mlog_cat_process_cb, &d, &cd);
+	} else {
+		ret = mlog_process(cat_mlh, mlog_cat_process_cb, &d, NULL);
+	}
+
+out:
+	MRETURN(ret);
+}
+EXPORT_SYMBOL(mlog_cat_process);

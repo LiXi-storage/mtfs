@@ -5,6 +5,7 @@
 #include <linux/module.h>
 #include <linux/mount.h>
 #include <linux/random.h>
+#include <thread.h>
 #include <mtfs_lowerfs.h>
 #include <mtfs_log.h>
 #include <mtfs_file.h>
@@ -253,7 +254,7 @@ static int mlog_vfs_write_rec(struct mlog_handle *loghandle,
 		goto out;
 	}
 	if (buf) {
-		/* write_blob adds header and tail to lrh_len. */ 
+		/* write_blob adds header and tail to mrh_len. */ 
 		reclen = sizeof(*rec) + rec->mrh_len + 
 			 sizeof(struct mlog_rec_tail);
 	}
@@ -286,7 +287,7 @@ static int mlog_vfs_write_rec(struct mlog_handle *loghandle,
 			goto out;
 		}
 
-		/* Assumes constant lrh_len */
+		/* Assumes constant mrh_len */
 		saved_offset = sizeof(*mlh) + (idx - 1) * reclen;
 
 		if (buf) {
@@ -769,6 +770,118 @@ static int mlog_vfs_destroy(struct mlog_handle *handle)
 	MRETURN(ret);
 }
 
+/* We can skip reading at least as many log blocks as the number of
+* minimum sized log records we are skipping.  If it turns out
+* that we are not far enough along the log (because the
+* actual records are larger than minimum size) we just skip
+* some more records. */
+
+static void mlog_skip_over(__u64 *off, int curr, int goal)
+{
+	if (goal <= curr)
+		return;
+	*off = (*off + (goal-curr-1) * MLOG_MIN_REC_SIZE) &
+		~(MLOG_CHUNK_SIZE - 1);
+}
+
+/* sets:
+ *  - cur_offset to the furthest point read in the log file
+ *  - cur_idx to the log index preceeding cur_offset
+ * returns -EIO/-EINVAL on error
+ */
+static int mlog_lvfs_next_block(struct mlog_handle *loghandle, int *cur_idx,
+                                int next_idx, __u64 *cur_offset, void *buf,
+                                int len)
+{
+        int ret = 0;
+	MENTRY();
+
+	if (len == 0 || len & (MLOG_CHUNK_SIZE - 1)) {
+		ret = -EINVAL;
+		goto out;
+	}
+
+	MDEBUG("looking for log index %u (cur idx %u off %llx)\n",
+	       next_idx, *cur_idx, *cur_offset);
+
+	while (*cur_offset < i_size_read(loghandle->mgh_file->f_dentry->d_inode)) {
+		struct mlog_rec_hdr *rec;
+		struct mlog_rec_tail *tail;
+		loff_t ppos;
+
+		mlog_skip_over(cur_offset, *cur_idx, next_idx);
+
+		ppos = *cur_offset;
+		ret = mlowerfs_read_record(loghandle->mgh_ctxt->moc_lowerfs,
+		                           loghandle->mgh_file, buf, len,
+		                           &ppos);
+		if (ret) {
+			MERROR("Cant read mlog block at log id %llx/%u offset %llx\n",
+			       loghandle->mgh_id.mgl_oid,
+			       loghandle->mgh_id.mgl_ogen,
+			       *cur_offset);
+			goto out;
+		}
+
+		/* put number of bytes read into rc to make code simpler */
+		ret = ppos - *cur_offset;
+		*cur_offset = ppos;
+		
+		if (ret < len) {
+			/* signal the end of the valid buffer to mlog_process */
+			memset(buf + ret, 0, len - ret);
+		}
+
+		if (ret == 0) {
+			/* end of file, nothing to do */
+			goto out;
+		}
+
+		if (ret < sizeof(*tail)) {
+			MERROR("Invalid mlog block at log id %llx/%u offset %llx\n",
+			       loghandle->mgh_id.mgl_oid,
+			       loghandle->mgh_id.mgl_ogen, *cur_offset);
+			ret = -EINVAL;
+			goto out;
+		}
+
+		rec = buf;
+		tail = (struct mlog_rec_tail *)((char *)buf + ret -
+		                                sizeof(struct mlog_rec_tail));
+
+		if (MLOG_REC_HDR_NEEDS_SWABBING(rec)) {
+			mlog_swab_rec(rec, tail);
+		}
+
+		*cur_idx = tail->mrt_index;
+
+		/* this shouldn't happen */
+		if (tail->mrt_index == 0) {
+			MERROR("Invalid mlog tail at log id %llx/%u offset %llx\n",
+			       loghandle->mgh_id.mgl_oid,
+			       loghandle->mgh_id.mgl_ogen, *cur_offset);
+			ret = -EINVAL;
+			goto out;
+		}
+		if (tail->mrt_index < next_idx)
+			continue;
+
+		/* sanity check that the start of the new buffer is no farther
+		 * than the record that we wanted.  This shouldn't happen. */
+		if (rec->mrh_index > next_idx) {
+			MERROR("missed desired record? %u > %u\n",
+			       rec->mrh_index, next_idx);
+			ret = -ENOENT;
+			goto out;
+		}
+		ret = 0;
+		goto out;
+	}
+	ret = -EIO;
+out:
+	MRETURN(ret);
+}
+
 /* returns negative on error; 0 if success; 1 if success & log destroyed */
 int mlog_cancel_rec(struct mlog_handle *loghandle, int index)
 {
@@ -890,10 +1003,189 @@ out:
 	MRETURN(ret);
 }
 
+static int mlog_process_thread(void *arg)
+{
+	struct mlog_process_info     *mpi = (struct mlog_process_info *)arg;
+	struct mlog_handle           *loghandle = mpi->mpi_loghandle;
+	struct mlog_log_hdr          *mlh = loghandle->mgh_hdr;
+	struct mlog_process_cat_data *cd  = mpi->mpi_catdata;
+	char	                     *buf;
+	__u64			      cur_offset = MLOG_CHUNK_SIZE;
+	__u64			      last_offset;
+	int			      ret = 0, index = 1, last_index;
+	int			      saved_index = 0, last_called_index = 0;
+
+	MASSERT(mlh);
+
+	MTFS_ALLOC(buf, MLOG_CHUNK_SIZE);
+	if (!buf) {
+		mpi->mpi_ret = -ENOMEM;
+#ifdef __KERNEL__
+		complete(&mpi->mpi_completion);
+#endif
+		return 0;
+	}
+
+	mtfs_daemonize_ctxt("mlog_process_thread");
+
+	if (cd != NULL) {
+		last_called_index = cd->mpcd_first_idx;
+		index = cd->mpcd_first_idx + 1;
+	}
+	if (cd != NULL && cd->mpcd_last_idx)
+		last_index = cd->mpcd_last_idx;
+	else
+		last_index = MLOG_BITMAP_BYTES * 8 - 1;
+
+	while (ret == 0) {
+		struct mlog_rec_hdr *rec;
+
+		/* skip records not set in bitmap */
+		while (index <= last_index &&
+		       !ext2_test_bit(index, mlh->mlh_bitmap))
+			++index;
+
+		MASSERT(index <= last_index + 1);
+		if (index == last_index + 1)
+			break;
+
+		MDEBUG("index: %d last_index %d\n",
+		       index, last_index);
+
+		/* get the buf with our target record; avoid old garbage */
+		last_offset = cur_offset;
+		ret = mlog_next_block(loghandle, &saved_index, index,
+				     &cur_offset, buf, MLOG_CHUNK_SIZE);
+		if (ret) {
+			goto out;
+		}
+
+		/* NB: when rec->mrh_len is accessed it is already swabbed
+		 * since it is used at the "end" of the loop and the rec
+		 * swabbing is done at the beginning of the loop. */
+		for (rec = (struct mlog_rec_hdr *)buf;
+		     (char *)rec < buf + MLOG_CHUNK_SIZE;
+		     rec = (struct mlog_rec_hdr *)((char *)rec + rec->mrh_len)){
+
+			MDEBUG("processing rec 0x%p type %#x\n",
+			       rec, rec->mrh_type);
+
+			if (MLOG_REC_HDR_NEEDS_SWABBING(rec))
+				mlog_swab_rec(rec, NULL);
+
+			MDEBUG("after swabbing, type=%#x idx=%d\n",
+			       rec->mrh_type, rec->mrh_index);
+
+			if (rec->mrh_index == 0) {
+				/* no more records */
+				goto out;
+			}
+
+			if (rec->mrh_len == 0 || rec->mrh_len > MLOG_CHUNK_SIZE){
+				MERROR("invalid length %d in mlog record for "
+				       "index %d/%d\n", rec->mrh_len,
+				       rec->mrh_index, index);
+				ret = -EINVAL;
+				goto out;
+			}
+
+			if (rec->mrh_index < index) {
+				MDEBUG("skipping mrh_index %d\n",
+				       rec->mrh_index);
+				continue;
+			}
+
+			MDEBUG("mrh_index: %d mrh_len: %d (%d remains)\n",
+			       rec->mrh_index, rec->mrh_len,
+			       (int)(buf + MLOG_CHUNK_SIZE - (char *)rec));
+
+			loghandle->mgh_cur_idx    = rec->mrh_index;
+			loghandle->mgh_cur_offset = (char *)rec - (char *)buf +
+						    last_offset;
+
+			/* if set, process the callback on this record */
+			if (ext2_test_bit(index, mlh->mlh_bitmap)) {
+				ret = mpi->mpi_cb(loghandle, rec,
+						 mpi->mpi_cbdata);
+				last_called_index = index;
+				if (ret == MLOG_PROC_BREAK) {
+					MDEBUG("recovery from log: %llx:%x stopped\n",
+					       loghandle->mgh_id.mgl_oid,
+					       loghandle->mgh_id.mgl_ogen);
+					goto out;
+				} else if (ret == MLOG_DEL_RECORD) {
+					mlog_cancel_rec(loghandle,
+							rec->mrh_index);
+					ret = 0;
+				}
+				if (ret) {
+					goto out;
+				}
+			} else {
+				MDEBUG("Skipped index %d\n", index);
+			}
+
+			/* next record, still in buffer? */
+			++index;
+			if (index > last_index) {
+				goto out;
+			}
+		}
+	}
+
+ out:
+	if (cd != NULL)
+		cd->mpcd_last_idx = last_called_index;
+	if (buf)
+		MTFS_FREE(buf, MLOG_CHUNK_SIZE);
+	mpi->mpi_ret = ret;
+#ifdef __KERNEL__
+	complete(&mpi->mpi_completion);
+#endif
+	MRETURN(ret);
+}
+
+int mlog_process(struct mlog_handle *loghandle, mlog_cb_t cb,
+                 void *data, void *catdata)
+{
+	struct mlog_process_info *mpi;
+	int                       ret;
+	MENTRY();
+
+	MTFS_ALLOC_PTR(mpi);
+	if (mpi == NULL) {
+		MERROR("cannot alloc pointer\n");
+		ret = -ENOMEM;
+		goto out;
+	}
+	mpi->mpi_loghandle = loghandle;
+	mpi->mpi_cb        = cb;
+	mpi->mpi_cbdata    = data;
+	mpi->mpi_catdata   = catdata;
+
+#ifdef __KERNEL__
+	init_completion(&mpi->mpi_completion);
+	ret = mtfs_create_thread(mlog_process_thread, mpi, CLONE_VM | CLONE_FILES);
+	if (ret < 0) {
+		MERROR("cannot start thread: %d\n", ret);
+		MTFS_FREE_PTR(mpi);
+		goto out;
+	}
+	wait_for_completion(&mpi->mpi_completion);
+#else
+	mlog_process_thread(mpi);
+#endif
+	ret = mpi->mpi_ret;
+	MTFS_FREE_PTR(mpi);
+out:
+	MRETURN(ret);
+}
+EXPORT_SYMBOL(mlog_process);
+
 struct mlog_operations mlog_vfs_operations = {
 	mop_write_rec:      mlog_vfs_write_rec,
 	mop_destroy:        mlog_vfs_destroy,
-	mop_next_block:     NULL,
+	mop_next_block:     mlog_lvfs_next_block,
 	mop_prev_block:     NULL,
 	mop_create:         mlog_vfs_create,
 	mop_close:          mlog_vfs_close,

@@ -350,6 +350,23 @@ out_close:
 	MRETURN(ret);
 }
 
+static int cat_print_cb(struct mlog_handle *mlh, struct mlog_rec_hdr *rec,
+                        void *data)
+{
+	struct mlog_logid_rec *mir = (struct mlog_logid_rec *)rec;
+	MENTRY();
+
+	if (rec->mrh_type != MLOG_LOGID_MAGIC) {
+		MERROR("invalid record in catalog\n");
+		MRETURN(-EINVAL);
+	}
+
+	MPRINT("seeing record at index %d - %llx:%x in log %llx\n",
+	       rec->mrh_index, mir->mid_id.mgl_oid,
+	       mir->mid_id.mgl_ogen, mlh->mgh_id.mgl_oid);
+        MRETURN(0);
+}
+
 /* Test log and catalogue processing */
 static int mlog_test_5(struct mlog_ctxt *ctxt,
                        char *name,
@@ -373,6 +390,12 @@ static int mlog_test_5(struct mlog_ctxt *ctxt,
 	}
 
 	mlog_init_handle(mlh, MLOG_F_IS_CAT, &mlog_test_uuid);
+
+        MPRINT("5b: print the catalog entries.. we expect 2\n");
+        ret = mlog_process(mlh, cat_print_cb, "test 5", NULL);
+        if (ret) {
+                MERROR("5b: process with cat_print_cb failed: %d\n", ret);
+        }
 
 	ret = mlog_cat_destroy(mlh);
 	if (ret) {

@@ -6,6 +6,7 @@
 #define __MTFS_LOG_H__
 
 #if defined (__linux__) && defined(__KERNEL__)
+#include <linux/completion.h>
 #include <debug.h>
 #include <memory.h>
 #include <mtfs_common.h>
@@ -174,6 +175,44 @@ struct mlog_operations {
 	                  int count, struct mlog_cookie *cookies, int flags);
 };
 
+typedef int (*mlog_cb_t)(struct mlog_handle *, struct mlog_rec_hdr *, void *);
+struct mlog_process_info {
+	struct mlog_handle *mpi_loghandle;
+	mlog_cb_t           mpi_cb;
+	void               *mpi_cbdata;
+	void               *mpi_catdata;
+	int                 mpi_ret;
+	struct completion   mpi_completion;
+};
+
+/* mlog_cat.c - catalog api */
+struct mlog_process_data {
+	/**
+	 * Any useful data needed while processing catalog. This is
+	 * passed later to process callback.
+	 */
+	void                *mpd_data;
+	/**
+	 * Catalog process callback function, called for each record
+	 * in catalog.
+	 */
+	mlog_cb_t            mpd_cb;
+};
+
+#define MLOG_PROC_BREAK 0x0001
+#define MLOG_DEL_RECORD 0x0002
+
+struct mlog_process_cat_data {
+	/**
+	 * Temporary stored first_idx while scanning log.
+	 */
+	int                  mpcd_first_idx;
+	/**
+	 * Temporary stored last_idx while scanning log.
+	 */
+	int                  mpcd_last_idx;
+};
+
 extern struct mlog_handle *mlog_alloc_handle(void);
 extern void mlog_free_handle(struct mlog_handle *loghandle);
 extern int mlog_run_tests(struct mlog_ctxt *ctxt);
@@ -227,6 +266,24 @@ static inline int mlog_destroy(struct mlog_handle *loghandle)
 	MRETURN(ret);
 }
 
+static inline int mlog_next_block(struct mlog_handle *loghandle, int *cur_idx,
+                                  int next_idx, __u64 *cur_offset, void *buf,
+                                  int len)
+{
+	struct mlog_ctxt *ctxt = NULL;
+	struct mlog_operations *mop = NULL;
+	int ret = 0;
+	MENTRY();
+
+	ctxt = loghandle->mgh_ctxt;
+	mop = ctxt->moc_logops;
+	MASSERT(mop->mop_next_block);
+
+	ret = mop->mop_next_block(loghandle, cur_idx, next_idx, cur_offset, buf,
+	                          len);
+	MRETURN(ret);
+}
+
 static inline int mlog_write_rec(struct mlog_handle *loghandle,
                                  struct mlog_rec_hdr *rec,
                                  struct mlog_cookie *logcookies,
@@ -270,7 +327,6 @@ static inline int mlog_read_header(struct mlog_handle *loghandle)
 	MRETURN(ret);
 }
 
-
 static inline struct mlog_ctxt *mlog_context_init(struct dentry *log_directory,
                                                   struct vfsmount *mnt,
                                                   struct mtfs_lowerfs *lowerfs,
@@ -307,6 +363,8 @@ static inline int mlog_logid_equals(struct mlog_logid *id1, struct mlog_logid *i
 
 extern int mlog_init_handle(struct mlog_handle *handle, int flags,
                             struct mlog_uuid *uuid);
+extern int mlog_process(struct mlog_handle *loghandle, mlog_cb_t cb,
+                        void *data, void *catdata);
 extern int mlog_cancel_rec(struct mlog_handle *loghandle, int index);
 extern int mlog_cat_add_rec(struct mlog_handle *cathandle, struct mlog_rec_hdr *rec,
 		            struct mlog_cookie *reccookie, void *buf);
@@ -314,6 +372,7 @@ extern int mlog_cat_cancel_records(struct mlog_handle *cathandle, int count,
 			    struct mlog_cookie *cookies);
 extern int mlog_cat_put(struct mlog_handle *cathandle);
 extern int mlog_cat_destroy(struct mlog_handle *cathandle);
+extern int mlog_cat_process(struct mlog_handle *cat_mlh, mlog_cb_t cb, void *data);
 #else /* !defined (__linux__) && defined(__KERNEL__) */
 #error This head is only for kernel space use
 #endif /* !defined (__linux__) && defined(__KERNEL__) */
