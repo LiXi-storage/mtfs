@@ -37,12 +37,12 @@ static inline mtfs_bindex_t mtfs_get_primary_bindex(void)
 # define MAX(a,b) (((a)>(b)) ? (a): (b))
 #endif
 
-static inline int size_round4 (int val)
+static inline int size_round4(int val)
 {
 	return (val + 3) & (~0x3);
 }
 
-static inline int size_round (int val)
+static inline int size_round(int val)
 {
 	return (val + 7) & (~0x7);
 }

@@ -6,6 +6,9 @@
 #define __MTFS_LOG_H__
 
 #if defined (__linux__) && defined(__KERNEL__)
+#include <debug.h>
+#include <memory.h>
+#include <mtfs_common.h>
 
 /** Identifier for a single log object */
 struct mlog_logid {
@@ -294,6 +297,9 @@ static inline void mlog_context_fini(struct mlog_ctxt *ctxt)
 {
 	MTFS_FREE_PTR(ctxt);
 }
+
+extern int mlog_init_handle(struct mlog_handle *handle, int flags,
+                            struct mlog_uuid *uuid);
 
 #else /* !defined (__linux__) && defined(__KERNEL__) */
 #error This head is only for kernel space use

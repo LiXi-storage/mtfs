@@ -6,7 +6,7 @@ MOUNT_LOWERFS=${MOUNT_LOWERFS:-yes}
 LOWERFS_NAME_ARRAY=([0]=ext3)
 LOWERFS_MNT_ARRAY=([0]="/mnt/${LOWERFS_NAME_ARRAY[0]}0")
 LOWERFS_MOUNT_CMD_ARRAY=([0]="mount")
-LOWERFS_DEV_ARRAY=([0]="/dev/sdb4")
+LOWERFS_DEV_ARRAY=([0]="/dev/sdb5")
 LOWERFS_OPTION_ARRAY=([0]="-o user_xattr")
 
 # Lowerfs module area
