@@ -8,6 +8,11 @@
 #include <mtfs_log.h>
 #include <mtfs_file.h>
 
+struct mlog_mini_rec {
+        struct mlog_rec_hdr     mmr_hdr;
+        struct mlog_rec_tail    mmr_tail;
+} __attribute__((packed));
+
 static int mlog_verify_handle(char *test, struct mlog_handle *mlh, int num_recs)
 {
 	int i;
@@ -51,7 +56,7 @@ static struct mlog_uuid mlog_test_uuid = { .uuid = "test_uuid" };
 
 /* Test named-log create/open, close */
 static int mlog_test_1(struct mlog_ctxt *ctxt,
-                       const char *name)
+		       const char *name)
 {
 	struct mlog_handle *mlh = NULL;
 	int ret = 0;
@@ -73,17 +78,17 @@ static int mlog_test_1(struct mlog_ctxt *ctxt,
 		MERROR("handle error, ret = %d\n", ret);
 	}
 
-        ret = mlog_close(mlh);
-        if (ret) {
-                MERROR("1b: close log %s failed: %d\n", name, ret);
-        }
+	ret = mlog_close(mlh);
+	if (ret) {
+		MERROR("1b: close log %s failed: %d\n", name, ret);
+	}
 out:
-        MRETURN(ret);
+	MRETURN(ret);
 }
 
 /* Test named-log reopen; returns opened log on success */
 int mlog_test_2(struct mlog_ctxt *ctxt, char *name,
-                struct mlog_handle **mlh)
+		struct mlog_handle **mlh)
 {
 	struct mlog_handle *loghandle = NULL;
 	struct mlog_logid logid;
@@ -157,7 +162,7 @@ static int mlog_test_3(struct mlog_ctxt *ctxt, struct mlog_handle *mlh)
 	if (ret) {
 		MERROR("3a: write one log record failed: %d\n", ret);
 		goto out;
-        }
+	}
 
 	if ((ret = mlog_verify_handle("3a", mlh, num_recs))) {
 		MERROR("handle error, ret = %d\n", ret);
@@ -172,7 +177,7 @@ static int mlog_test_3(struct mlog_ctxt *ctxt, struct mlog_handle *mlh)
 		hdr.mrh_type = MLOG_LOGID_MAGIC;
 		memset(buf, 0, sizeof buf);
 		ret = mlog_write_rec(mlh, &hdr, NULL, 0, buf, -1);
-                if (ret) {
+		if (ret) {
 			MERROR("3b: write 10 records failed at #%d: %d\n",
 			       i + 1, ret);
 			goto out;
@@ -185,7 +190,7 @@ static int mlog_test_3(struct mlog_ctxt *ctxt, struct mlog_handle *mlh)
 	}
 
 	if ((ret = mlog_verify_handle("3b", mlh, num_recs))) {
-                goto out;
+		goto out;
 	}
 
 	MPRINT("3c: write 1000 more log records\n");
@@ -208,8 +213,8 @@ static int mlog_test_3(struct mlog_ctxt *ctxt, struct mlog_handle *mlh)
 		goto out;
 	}
 	
-        MPRINT("3d: write log more than BITMAP_SIZE, return -ENOSPC\n");
-        for (i = 0; i < MLOG_BITMAP_SIZE(mlh->mgh_hdr) + 1; i++) {
+	MPRINT("3d: write log more than BITMAP_SIZE, return -ENOSPC\n");
+	for (i = 0; i < MLOG_BITMAP_SIZE(mlh->mgh_hdr) + 1; i++) {
 		struct mlog_rec_hdr hdr;
 		char buf_even[24];
 		char buf_odd[32];
@@ -237,13 +242,150 @@ static int mlog_test_3(struct mlog_ctxt *ctxt, struct mlog_handle *mlh)
 		num_recs++;
 	}
 	if (ret != -ENOSPC) {
-                MPRINT("3d: write record more than BITMAP size!\n");
-                ret = -EINVAL;
-        }
+		MPRINT("3d: write record more than BITMAP size!\n");
+		ret = -EINVAL;
+	}
 	if ((ret = mlog_verify_handle("3d", mlh, num_recs))) {
 		MERROR("handle error, ret = %d\n", ret);
-                goto out;
-        }
+		goto out;
+	}
+out:
+	MRETURN(ret);
+}
+
+/* Test catalogue additions */
+static int mlog_test_4(struct mlog_ctxt *ctxt, char *name, struct mlog_logid *cat_logid)
+{
+	struct mlog_handle *cath;
+	int ret, i, buflen;
+	struct mlog_mini_rec mmr;
+	struct mlog_cookie cookie;
+	int num_recs = 0;
+	char *buf;
+	struct mlog_rec_hdr rec;
+	MENTRY();
+
+	mmr.mmr_hdr.mrh_len = mmr.mmr_tail.mrt_len = MLOG_MIN_REC_SIZE;
+	mmr.mmr_hdr.mrh_type = 0xf00f00;
+
+	sprintf(name, "%x", random32());
+	MPRINT("4a: create a catalog log with name: %s\n", name);
+	ret = mlog_create(ctxt, &cath, NULL, name);
+	if (ret) {
+		MERROR("1a: mlog_create with name %s failed: %d\n", name, ret);
+		goto out;
+	}
+
+	mlog_init_handle(cath, MLOG_F_IS_CAT, &mlog_test_uuid);
+	num_recs++;
+	*cat_logid = cath->mgh_id;
+
+	MPRINT("4b: write 1 record into the catalog\n");
+	ret = mlog_cat_add_rec(cath, &mmr.mmr_hdr, &cookie, NULL);
+	if (ret != 1) {
+		MERROR("4b: write 1 catalog record failed at: %d\n", ret);
+		goto out_close;
+	}
+	num_recs++;
+	if ((ret = mlog_verify_handle("4b", cath, 2))) {
+		goto out_close;
+	}
+
+	if ((ret = mlog_verify_handle("4b", cath->u.chd.chd_current_log, num_recs))) {
+		goto out_close;
+	}
+
+	MPRINT("4c: cancel 1 log record\n");
+	ret = mlog_cat_cancel_records(cath, 1, &cookie);
+	if (ret) {
+		MERROR("4c: cancel 1 catalog based record failed: %d\n", ret);
+		goto out_close;
+	}
+	num_recs--;
+
+	if ((ret = mlog_verify_handle("4c", cath->u.chd.chd_current_log, num_recs))) {
+		goto out_close;
+	}
+
+	MPRINT("4d: write 40,000 more log records\n");
+	for (i = 0; i < 40000; i++) {
+		ret = mlog_cat_add_rec(cath, &mmr.mmr_hdr, NULL, NULL);
+		if (ret) {
+			MERROR("4d: write 40000 records failed at #%d: %d\n",
+			       i + 1, ret);
+			goto out_close;
+		}
+		num_recs++;
+	}
+
+	MPRINT("4e: add 5 large records, one record per block\n");
+	buflen = MLOG_CHUNK_SIZE - sizeof(struct mlog_rec_hdr)
+			- sizeof(struct mlog_rec_tail);
+	MTFS_ALLOC(buf, buflen);
+	if (buf == NULL) {
+		ret = -ENOMEM;
+		goto out_close;
+	}
+
+	for (i = 0; i < 5; i++) {
+		rec.mrh_len = buflen;
+		rec.mrh_type = MLOG_LOGID_MAGIC;
+		ret = mlog_cat_add_rec(cath, &rec, NULL, buf);
+		if (ret) {
+			MERROR("4e: write 5 records failed at #%d: %d\n",
+			       i + 1, ret);
+			goto out_free;
+		}
+		num_recs++;
+	}
+
+out_free:
+	MTFS_FREE(buf, buflen);
+out_close:
+	mlog_cat_put(cath);
+	if (ret) {
+		MERROR("1b: close log %s failed: %d\n", name, ret);
+	}
+ out:
+	MRETURN(ret);
+}
+
+/* Test log and catalogue processing */
+static int mlog_test_5(struct mlog_ctxt *ctxt,
+                       char *name,
+                       struct mlog_logid *cat_logid)
+{
+	int ret = 0;
+	struct mlog_handle *mlh = NULL;
+	MENTRY();
+
+	MPRINT("5a: re-open catalog by nam\n");
+	ret = mlog_create(ctxt, &mlh, NULL, name);
+        if (ret) {
+		MERROR("5a: mlog_create with name failed: %d\n", ret);
+		goto out;
+	}
+
+	if (!mlog_logid_equals(&mlh->mgh_id, cat_logid)) {
+		ret = -EEXIST;
+		MERROR("5a: logid different\n");
+		goto out_close;
+	}
+
+	mlog_init_handle(mlh, MLOG_F_IS_CAT, &mlog_test_uuid);
+
+	ret = mlog_cat_destroy(mlh);
+	if (ret) {
+		MERROR("failed to destroy handle, ret = %d\n", ret);
+	} else {
+		mlog_free_handle(mlh); 
+	}
+	goto out;
+out_close:
+	ret = mlog_cat_put(mlh);
+	if (ret) {
+		MERROR("failed to close hangle, ret = %d", ret);
+	}
 out:
 	MRETURN(ret);
 }
@@ -258,13 +400,13 @@ static int mlog_test_7(struct mlog_ctxt *ctxt)
 
 	sprintf(name, "%x", random32());
 	MPRINT("7: create a log with name: %s\n", name);
-        MASSERT(ctxt);
+	MASSERT(ctxt);
 
 	ret = mlog_create(ctxt, &mlh, NULL, name);
-        if (ret) {
-		MERROR("7: llog_create with name %s failed: %d\n", name, ret);
+	if (ret) {
+		MERROR("7: mlog_create with name %s failed: %d\n", name, ret);
 		goto out;
-        }
+	}
 	mlog_init_handle(mlh, MLOG_F_IS_PLAIN, &mlog_test_uuid);
 
 	mid.mid_hdr.mrh_len = mid.mid_tail.mrt_len = sizeof(mid);
@@ -290,6 +432,8 @@ int mlog_run_tests(struct mlog_ctxt *ctxt)
 	int ret = 0;
 	char *name = "log_test";
 	struct mlog_handle *mlh = NULL;
+	char cat_name[64];
+	struct mlog_logid cat_logid;
 	MENTRY();
 
 	MERROR("running mlog tests\n");
@@ -308,6 +452,18 @@ int mlog_run_tests(struct mlog_ctxt *ctxt)
 	ret = mlog_test_3(ctxt, mlh);
 	if (ret) {
 		MERROR("test 3 failed\n");
+		goto out_destroy;
+	}
+
+	ret = mlog_test_4(ctxt, cat_name, &cat_logid);
+	if (ret) {
+		MERROR("test 4 failed\n");
+		goto out_destroy;
+	}
+
+	ret = mlog_test_5(ctxt, cat_name, &cat_logid);
+	if (ret) {
+		MERROR("test 5 failed\n");
 		goto out_destroy;
 	}
 

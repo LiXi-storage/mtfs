@@ -10,9 +10,9 @@
 #include <mtfs_file.h>
 
 static int mlog_vfs_pad(struct mtfs_lowerfs *lowerfs,
-                    struct file *file,
-                    int len,
-                    int index)
+		    struct file *file,
+		    int len,
+		    int index)
 {
 	struct mlog_rec_hdr rec = { 0 };
 	struct mlog_rec_tail tail;
@@ -27,7 +27,7 @@ static int mlog_vfs_pad(struct mtfs_lowerfs *lowerfs,
 
 	ret = mlowerfs_write_record(lowerfs, file, &rec, sizeof(rec), &file->f_pos, 0);
 	if (ret) {
-                MERROR("error writing padding record, ret = %d\n", ret);
+		MERROR("error writing padding record, ret = %d\n", ret);
 		goto out;
 	}
 
@@ -39,14 +39,14 @@ static int mlog_vfs_pad(struct mtfs_lowerfs *lowerfs,
 	}
 
  out:
-        MRETURN(ret);
+	MRETURN(ret);
 }
 
 static int mlog_vfs_read_blob(struct mtfs_lowerfs *lowerfs,
-                          struct file *file,
-                          void *buf,
-                          int size,
-                          loff_t off)
+			  struct file *file,
+			  void *buf,
+			  int size,
+			  loff_t off)
 {
 	loff_t offset = off;
 	int ret = 0;
@@ -62,10 +62,10 @@ out:
 }
 
 static int mlog_vfs_write_blob(struct mtfs_lowerfs *lowerfs,
-                               struct file *file,
-                               struct mlog_rec_hdr *rec,
-                               void *buf,
-                               loff_t off)
+			       struct file *file,
+			       struct mlog_rec_hdr *rec,
+			       void *buf,
+			       loff_t off)
 {
 	int ret = 0;
 	struct mlog_rec_tail end;
@@ -83,18 +83,18 @@ static int mlog_vfs_write_blob(struct mtfs_lowerfs *lowerfs,
 		ret = mlowerfs_write_record(lowerfs, file, rec, buflen,&file->f_pos,0);
 		if (ret) {
 			MERROR("error writing log record, ret = %d\n", ret);
-                        goto out;
-                }
-                goto out;
-        }
+			goto out;
+		}
+		goto out;
+	}
 
-        /* the buf case */
-        rec->mrh_len = sizeof(*rec) + buflen + sizeof(end);
-        ret = mlowerfs_write_record(lowerfs, file, rec, sizeof(*rec), &file->f_pos, 0);
-        if (ret) {
-                MERROR("error writing log hdr, ret = %d\n", ret);
-                goto out;
-        }
+	/* the buf case */
+	rec->mrh_len = sizeof(*rec) + buflen + sizeof(end);
+	ret = mlowerfs_write_record(lowerfs, file, rec, sizeof(*rec), &file->f_pos, 0);
+	if (ret) {
+		MERROR("error writing log hdr, ret = %d\n", ret);
+		goto out;
+	}
 
 	ret = mlowerfs_write_record(lowerfs, file, buf, buflen, &file->f_pos, 0);
 	if (ret) {
@@ -124,7 +124,7 @@ static void mlog_swab_rec(struct mlog_rec_hdr *rec, struct mlog_rec_tail *tail)
 	__swab32s(&rec->mrh_type);
 
 	switch (rec->mrh_type) {
-        case MLOG_HDR_MAGIC: {
+	case MLOG_HDR_MAGIC: {
 		struct mlog_log_hdr *mlh = (struct mlog_log_hdr *)rec;
 
 		__swab64s(&mlh->mlh_timestamp);
@@ -138,8 +138,8 @@ static void mlog_swab_rec(struct mlog_rec_hdr *rec, struct mlog_rec_tail *tail)
 			__swab32s(&mlh->mlh_tail.mrt_len);
 		}
 
-                break;
-        }
+		break;
+	}
 	case MLOG_LOGID_MAGIC: {
 		struct mlog_logid_rec *mid = (struct mlog_logid_rec *)rec;
 
@@ -147,18 +147,18 @@ static void mlog_swab_rec(struct mlog_rec_hdr *rec, struct mlog_rec_tail *tail)
 		__swab64s(&mid->mid_id.mgl_ogr);
 		__swab32s(&mid->mid_id.mgl_ogen);
 		break;
-        }
+	}
 	case MLOG_PAD_MAGIC:
-        /* ignore old pad records of type 0 */
-        default:
-                MERROR("Unknown llog rec type %#x swabbing rec %p\n",
-                       rec->mrh_type, rec);
+	/* ignore old pad records of type 0 */
+	default:
+		MERROR("Unknown mlog rec type %#x swabbing rec %p\n",
+		       rec->mrh_type, rec);
 	}
 
-        if (tail) {
+	if (tail) {
 		__swab32s(&tail->mrt_len);
 		__swab32s(&tail->mrt_index);
-        }
+	}
 }
 
 static void mlog_swab_hdr(struct mlog_log_hdr *h)
@@ -183,13 +183,13 @@ static int mlog_vfs_read_header(struct mlog_handle *handle)
 	}
 
 	ret = mlog_vfs_read_blob(lowerfs, handle->mgh_file,
-	                         handle->mgh_hdr,
-	                         MLOG_CHUNK_SIZE, 0);
+				 handle->mgh_hdr,
+				 MLOG_CHUNK_SIZE, 0);
 	if (ret) {
 		MERROR("error reading log header from %.*s\n",
 		       handle->mgh_file->f_dentry->d_name.len,
 		       handle->mgh_file->f_dentry->d_name.name);
-        } else {
+	} else {
 		struct mlog_rec_hdr *mlh_hdr = &handle->mgh_hdr->mlh_hdr;
 
 		if (MLOG_REC_HDR_NEEDS_SWABBING(mlh_hdr)) {
@@ -222,10 +222,10 @@ out:
 /* returns negative in on error; 0 if success && reccookie == 0; 1 otherwise */
 /* appends if idx == -1, otherwise overwrites record idx. */
 static int mlog_vfs_write_rec(struct mlog_handle *loghandle,
-                              struct mlog_rec_hdr *rec,
-                              struct mlog_cookie *reccookie,
-                              int cookiecount,
-                              void *buf, int idx)
+			      struct mlog_rec_hdr *rec,
+			      struct mlog_cookie *reccookie,
+			      int cookiecount,
+			      void *buf, int idx)
 {
 	struct mlog_log_hdr *mlh;
 	int reclen = rec->mrh_len;
@@ -255,7 +255,7 @@ static int mlog_vfs_write_rec(struct mlog_handle *loghandle,
 	if (buf) {
 		/* write_blob adds header and tail to lrh_len. */ 
 		reclen = sizeof(*rec) + rec->mrh_len + 
-		         sizeof(struct mlog_rec_tail);
+			 sizeof(struct mlog_rec_tail);
 	}
 
 	if (idx != -1) {
@@ -280,11 +280,11 @@ static int mlog_vfs_write_rec(struct mlog_handle *loghandle,
 			MERROR("Index mismatch %d %u\n", idx, rec->mrh_index);
 		}
 
-                ret = mlog_vfs_write_blob(lowerfs, file, &mlh->mlh_hdr, NULL, 0);
-                /* we are done if we only write the header or on error */
-                if (ret || idx == 0) {
+		ret = mlog_vfs_write_blob(lowerfs, file, &mlh->mlh_hdr, NULL, 0);
+		/* we are done if we only write the header or on error */
+		if (ret || idx == 0) {
 			goto out;
-                }
+		}
 
 		/* Assumes constant lrh_len */
 		saved_offset = sizeof(*mlh) + (idx - 1) * reclen;
@@ -295,48 +295,48 @@ static int mlog_vfs_write_rec(struct mlog_handle *loghandle,
 			/* We assume that caller has set mgh_cur_* */
 			saved_offset = loghandle->mgh_cur_offset;
 
-                        MDEBUG("modify record %I64x: idx:%d/%u/%d, len:%u "
-                               "offset %llu\n",
-                               loghandle->mgh_id.mgl_oid, idx, rec->mrh_index,
-                               loghandle->mgh_cur_idx, rec->mrh_len,
-                               (long long)(saved_offset - sizeof(*mlh)));
+			MDEBUG("modify record %I64x: idx:%d/%u/%d, len:%u "
+			       "offset %llu\n",
+			       loghandle->mgh_id.mgl_oid, idx, rec->mrh_index,
+			       loghandle->mgh_cur_idx, rec->mrh_len,
+			       (long long)(saved_offset - sizeof(*mlh)));
 			if (rec->mrh_index != loghandle->mgh_cur_idx) {
 				MERROR("modify idx mismatch %u/%d\n",
 				       idx, loghandle->mgh_cur_idx);
 				ret = -EFAULT;
 				goto out;
-                        }
+			}
 #if 1  /* FIXME remove this safety check at some point */
-                        /* Verify that the record we're modifying is the 
-                           right one. */
+			/* Verify that the record we're modifying is the 
+			   right one. */
 			ret = mlog_vfs_read_blob(lowerfs, file, &check,
-			                    sizeof(check), saved_offset);
+					    sizeof(check), saved_offset);
 			if (check.mrh_index != idx || check.mrh_len != reclen) {
 				MERROR("bad modify idx %u/%u size %u/%u (%d)\n",
-                                       idx, check.mrh_index, reclen, 
-                                       check.mrh_len, ret);
-                                ret = -EFAULT;
-                                goto out;
-                        }
+				       idx, check.mrh_index, reclen, 
+				       check.mrh_len, ret);
+				ret = -EFAULT;
+				goto out;
+			}
 #endif
 		}
 
 		ret = mlog_vfs_write_blob(lowerfs, file, rec, buf, saved_offset);
 		if (ret == 0 && reccookie) {
-			reccookie->mgc_lgl = loghandle->mgh_id;
+			reccookie->mgc_mgl = loghandle->mgh_id;
 			reccookie->mgc_index = idx;
 			ret = 1;
 		}
 		goto out;
 	}
 
-        /* Make sure that records don't cross a chunk boundary, so we can
-         * process them page-at-a-time if needed.  If it will cross a chunk
-         * boundary, write in a fake (but referenced) entry to pad the chunk.
-         *
-         * We know that mlog_current_log() will return a loghandle that is
-         * big enough to hold reclen, so all we care about is padding here.
-         */
+	/* Make sure that records don't cross a chunk boundary, so we can
+	 * process them page-at-a-time if needed.  If it will cross a chunk
+	 * boundary, write in a fake (but referenced) entry to pad the chunk.
+	 *
+	 * We know that mlog_current_log() will return a loghandle that is
+	 * big enough to hold reclen, so all we care about is padding here.
+	 */
 	left = MLOG_CHUNK_SIZE - (file->f_pos & (MLOG_CHUNK_SIZE - 1));
 	/* NOTE: padding is a record, but no bit is set */
 	if (left != 0 && left != reclen &&
@@ -347,51 +347,51 @@ static int mlog_vfs_write_rec(struct mlog_handle *loghandle,
 			goto out;
 		}
 		loghandle->mgh_last_idx++; /*for pad rec*/
-        }
+	}
 
-        /* if it's the last idx in log file, then return -ENOSPC */
+	/* if it's the last idx in log file, then return -ENOSPC */
 	if (loghandle->mgh_last_idx >= MLOG_BITMAP_SIZE(mlh) - 1) {
 		ret = -ENOSPC;
 		goto out;
 	}
 	index = ++loghandle->mgh_last_idx;
 	rec->mrh_index = index;
-        if (buf == NULL) {
+	if (buf == NULL) {
 		mrt = (struct mlog_rec_tail *)
 		       ((char *)rec + rec->mrh_len - sizeof(*mrt));
 		mrt->mrt_len = rec->mrh_len;
 		mrt->mrt_index = rec->mrh_index;
-        }
-	/*The caller should make sure only 1 process access the lgh_last_idx,
+	}
+	/*The caller should make sure only 1 process access the mgh_last_idx,
 	 *Otherwise it might hit the assert.*/
 	MASSERT(index < MLOG_BITMAP_SIZE(mlh));
 	if (ext2_set_bit(index, mlh->mlh_bitmap)) {
-                MERROR("argh, index %u already set in log bitmap?\n", index);
-                MBUG(); /* should never happen */
-        }
-        mlh->mlh_count++;
-        mlh->mlh_tail.mrt_index = index;
+		MERROR("argh, index %u already set in log bitmap?\n", index);
+		MBUG(); /* should never happen */
+	}
+	mlh->mlh_count++;
+	mlh->mlh_tail.mrt_index = index;
 
-        ret = mlog_vfs_write_blob(lowerfs, file, &mlh->mlh_hdr, NULL, 0);
-        if (ret) {
-                goto out;
-        }
+	ret = mlog_vfs_write_blob(lowerfs, file, &mlh->mlh_hdr, NULL, 0);
+	if (ret) {
+		goto out;
+	}
 
 	ret = mlog_vfs_write_blob(lowerfs, file, rec, buf, file->f_pos);
-        if (ret) {
-                goto out;
-        }
+	if (ret) {
+		goto out;
+	}
 
-        MDEBUG("added record %I64x: idx: %u, %u bytes\n",
-               loghandle->mgh_id.mgl_oid, index, rec->mrh_len);
-        if (ret == 0 && reccookie) {
-                reccookie->mgc_lgl = loghandle->mgh_id;
-                reccookie->mgc_index = index;
-                ret = 1;
-        }
-        if (ret == 0 && rec->mrh_type == MLOG_GEN_REC) {
-                ret = 1;
-        }
+	MDEBUG("added record %I64x: idx: %u, %u bytes\n",
+	       loghandle->mgh_id.mgl_oid, index, rec->mrh_len);
+	if (ret == 0 && reccookie) {
+		reccookie->mgc_mgl = loghandle->mgh_id;
+		reccookie->mgc_index = index;
+		ret = 1;
+	}
+	if (ret == 0 && rec->mrh_type == MLOG_GEN_REC) {
+		ret = 1;
+	}
 
 out:
 	MRETURN(ret);
@@ -441,9 +441,9 @@ EXPORT_SYMBOL(mlog_free_handle);
 void mlog_id2name(struct mlog_logid *logid, char *name, int length)
 {
 	snprintf(name, length,
-	         "log_0x%llx.0x%x",
-	         logid->mgl_oid,
-	         logid->mgl_ogen);
+		 "log_0x%llx.0x%x",
+		 logid->mgl_oid,
+		 logid->mgl_ogen);
 }
 
 static struct file *mlog_vfs_open_id(struct mlog_ctxt *ctxt, struct mlog_logid *logid)
@@ -465,8 +465,8 @@ static struct file *mlog_vfs_open_id(struct mlog_ctxt *ctxt, struct mlog_logid *
 
 	mutex_lock(&ctxt->moc_dlog->d_inode->i_mutex);
 	dchild = lookup_one_len(name,
-	                        ctxt->moc_dlog,
-	                        strlen(name));
+				ctxt->moc_dlog,
+				strlen(name));
 	mutex_unlock(&ctxt->moc_dlog->d_inode->i_mutex);
 	if (IS_ERR(dchild)) {
 		MERROR("lookup [%.*s/%s] failed, ret = %d\n",
@@ -498,12 +498,12 @@ static struct file *mlog_vfs_open_id(struct mlog_ctxt *ctxt, struct mlog_logid *
 			       dchild->d_inode->i_ino,
 			       (unsigned long)dchild->d_inode->i_nlink,
 			       atomic_read(&dchild->d_inode->i_count));
-                } else {
-             	  	MERROR("found inode with zero nlink, "
-             	  	       "inode = %lu, "
-             	  	       "link = %lu, "
-             	  	       "count = %d\n",
-             	  	       dchild->d_inode->i_ino,
+		} else {
+	     	  	MERROR("found inode with zero nlink, "
+	     	  	       "inode = %lu, "
+	     	  	       "link = %lu, "
+	     	  	       "count = %d\n",
+	     	  	       dchild->d_inode->i_ino,
 			       (unsigned long)dchild->d_inode->i_nlink,
 			       atomic_read(&dchild->d_inode->i_count));
 		}
@@ -518,19 +518,19 @@ static struct file *mlog_vfs_open_id(struct mlog_ctxt *ctxt, struct mlog_logid *
 		       "link = %lu, "
 		       "count = %d, "
 		       "generation = %u/%u\n",
-		        dchild->d_inode->i_ino,
-		        (unsigned long)dchild->d_inode->i_nlink,
-		        atomic_read(&dchild->d_inode->i_count),
-		        dchild->d_inode->i_generation,
-		        logid->mgl_ogen);
+			dchild->d_inode->i_ino,
+			(unsigned long)dchild->d_inode->i_nlink,
+			atomic_read(&dchild->d_inode->i_count),
+			dchild->d_inode->i_generation,
+			logid->mgl_ogen);
 		file = ERR_PTR(-ENOENT);
 		goto out_put_dchild;
 	}
 
 	file = mtfs_dentry_open(dchild,
-	                        mntget(ctxt->moc_mnt),
-	                        O_RDWR | O_CREAT | O_LARGEFILE,
-	                        current_cred()); 
+				mntget(ctxt->moc_mnt),
+				O_RDWR | O_CREAT | O_LARGEFILE,
+				current_cred()); 
 	if (IS_ERR(file)) {
 		MERROR("failed to open file\n");
 		goto out_put_dchild;
@@ -551,8 +551,8 @@ static struct file *mlog_vfs_create_open_name(struct mlog_ctxt *ctxt, const char
 	MENTRY();
 
 	dchild = mtfs_dchild_create(ctxt->moc_dlog,
-	                            name, strlen(name),
-	                            S_IFREG | S_IRWXU, 0, NULL, 0);
+				    name, strlen(name),
+				    S_IFREG | S_IRWXU, 0, NULL, 0);
 	if (IS_ERR(dchild)) {
 		MERROR("failed to create [%.*s/%s], ret = %d\n",
 		       ctxt->moc_dlog->d_name.len,
@@ -563,9 +563,9 @@ static struct file *mlog_vfs_create_open_name(struct mlog_ctxt *ctxt, const char
 	}
 
 	file = mtfs_dentry_open(dchild,
-	                        mntget(ctxt->moc_mnt),
-	                        O_RDWR | O_CREAT | O_LARGEFILE,
-	                        current_cred()); 
+				mntget(ctxt->moc_mnt),
+				O_RDWR | O_CREAT | O_LARGEFILE,
+				current_cred()); 
 	if (IS_ERR(file)) {
 		MERROR("failed to open file\n");
 		goto out_put_dchild;
@@ -600,10 +600,10 @@ int mlog_vfs_create_new(struct mlog_ctxt *ctxt, struct mlog_logid *logid)
 	sprintf(name, "%u.%u", tmpname, current->pid);
 
 	dchild = mtfs_dchild_create(ctxt->moc_dlog,
-	                            name,
-		                    strlen(name),
-		                    S_IFREG | S_IRWXU,
-		                    0, NULL, 0);
+				    name,
+				    strlen(name),
+				    S_IFREG | S_IRWXU,
+				    0, NULL, 0);
 	if (IS_ERR(dchild)) {
 		MERROR("create [%.*s/%s] failed, ret = %d\n",
 		       ctxt->moc_dlog->d_name.len,
@@ -619,8 +619,8 @@ int mlog_vfs_create_new(struct mlog_ctxt *ctxt, struct mlog_logid *logid)
 
 	mutex_lock(&ctxt->moc_dlog->d_inode->i_mutex);
 	new_dchild = lookup_one_len(name, ctxt->moc_dlog, strlen(name));
-        if (IS_ERR(new_dchild)) {
-                MERROR("getting neg dentry for obj rename: %d\n", ret);
+	if (IS_ERR(new_dchild)) {
+		MERROR("getting neg dentry for obj rename: %d\n", ret);
 		ret = PTR_ERR(new_dchild);
 		goto out_unlock;
 	}
@@ -634,7 +634,7 @@ int mlog_vfs_create_new(struct mlog_ctxt *ctxt, struct mlog_logid *logid)
 	}
 
 	ret = vfs_rename(ctxt->moc_dlog->d_inode, dchild,
-                         ctxt->moc_dlog->d_inode, new_dchild);
+			 ctxt->moc_dlog->d_inode, new_dchild);
 	if (ret) {
 		MERROR("error renaming new object %s, ret = %d\n",
 		       name);
@@ -676,10 +676,10 @@ out:
 	MRETURN(file);
 }
 
-/* This is a callback from the llog_* functions.
+/* This is a callback from the mlog_* functions.
  * Assumes caller has already pushed us into the kernel context. */
 int mlog_vfs_create(struct mlog_ctxt *ctxt, struct mlog_handle **res,
-                    struct mlog_logid *logid, const char *name)
+		    struct mlog_logid *logid, const char *name)
 {
 	struct mlog_handle *handle = NULL;
 	int ret = 0;
@@ -700,7 +700,7 @@ int mlog_vfs_create(struct mlog_ctxt *ctxt, struct mlog_handle **res,
 			ret = PTR_ERR(handle->mgh_file);
 			goto out_free_handle;
 		}
-		/* assign the value of lgh_id for handle directly */
+		/* assign the value of mgh_id for handle directly */
 		handle->mgh_id = *logid;
 	} else if (name) {
 		handle->mgh_file = mlog_vfs_create_open_name(ctxt, name);
@@ -709,11 +709,11 @@ int mlog_vfs_create(struct mlog_ctxt *ctxt, struct mlog_handle **res,
 			ret = PTR_ERR(handle->mgh_file);
 			goto out_free_handle;
 		}
-                handle->mgh_id.mgl_ogr = 1;
-                handle->mgh_id.mgl_oid =
-                        handle->mgh_file->f_dentry->d_inode->i_ino;
-                handle->mgh_id.mgl_ogen =
-                        handle->mgh_file->f_dentry->d_inode->i_generation;
+		handle->mgh_id.mgl_ogr = 1;
+		handle->mgh_id.mgl_oid =
+			handle->mgh_file->f_dentry->d_inode->i_ino;
+		handle->mgh_id.mgl_ogen =
+			handle->mgh_file->f_dentry->d_inode->i_generation;
 	} else {
 		handle->mgh_file = mlog_vfs_create_open_new(ctxt, &handle->mgh_id);
 		if (IS_ERR(handle->mgh_file)) {
@@ -766,16 +766,66 @@ static int mlog_vfs_destroy(struct mlog_handle *handle)
 	dput(dentry);
 	mntput(mnt);
 
-        MRETURN(ret);
+	MRETURN(ret);
 }
+
+/* returns negative on error; 0 if success; 1 if success & log destroyed */
+int mlog_cancel_rec(struct mlog_handle *loghandle, int index)
+{
+	struct mlog_log_hdr *mlh = loghandle->mgh_hdr;
+	int ret = 0;
+	MENTRY();
+
+	MDEBUG("Canceling %d in log %llx\n",
+	       index, loghandle->mgh_id.mgl_oid);
+
+	if (index == 0) {
+		MERROR("Can't cancel index 0 which is header\n");
+		ret = -EINVAL;
+		goto out;
+	}
+
+	if (!ext2_clear_bit(index, mlh->mlh_bitmap)) {
+		MDEBUG("Catalog index %u already clear?\n", index);
+		ret = -ENOENT;
+		goto out;
+	}
+
+	mlh->mlh_count--;
+
+	if ((mlh->mlh_flags & MLOG_F_ZAP_WHEN_EMPTY) &&
+	    (mlh->mlh_count == 1) &&
+	    (loghandle->mgh_last_idx == (MLOG_BITMAP_BYTES * 8) - 1)) {
+		ret = mlog_destroy(loghandle);
+		if (ret) {
+			MERROR("Failure destroying log after last cancel: %d\n",
+			       ret);
+			ext2_set_bit(index, mlh->mlh_bitmap);
+			mlh->mlh_count++;
+		} else {
+			ret = 1;
+		}
+		goto out;
+	}
+
+	ret = mlog_write_rec(loghandle, &mlh->mlh_hdr, NULL, 0, NULL, 0);
+	if (ret) {
+		MERROR("Failure re-writing header %d\n", ret);
+		ext2_set_bit(index, mlh->mlh_bitmap);
+		mlh->mlh_count++;
+	}
+out:
+	MRETURN(ret);
+}
+EXPORT_SYMBOL(mlog_cancel_rec);
 
 static inline int mlog_uuid_equals(struct mlog_uuid *u1, struct mlog_uuid *u2)
 {
-        return strcmp((char *)u1->uuid, (char *)u2->uuid) == 0;
+	return strcmp((char *)u1->uuid, (char *)u2->uuid) == 0;
 }
 
 int mlog_init_handle(struct mlog_handle *handle, int flags,
-                     struct mlog_uuid *uuid)
+		     struct mlog_uuid *uuid)
 {
 	int ret = 0;
 	struct mlog_log_hdr *mlh = NULL;
@@ -783,15 +833,15 @@ int mlog_init_handle(struct mlog_handle *handle, int flags,
 
 	MASSERT(handle->mgh_hdr == NULL);
 
-        MTFS_ALLOC(mlh, sizeof(*mlh));
-        if (mlh == NULL) {
-        	MERROR("not enough memory\n");
-                ret = -ENOMEM;
-                goto out;
-        }
+	MTFS_ALLOC(mlh, sizeof(*mlh));
+	if (mlh == NULL) {
+		MERROR("not enough memory\n");
+		ret = -ENOMEM;
+		goto out;
+	}
 
 	handle->mgh_hdr = mlh;
-	/* first assign flags to use llog_client_ops */
+	/* first assign flags to use mlog_client_ops */
 	mlh->mlh_flags = flags;
 	ret = mlog_read_header(handle);
 	if (ret == 0) {
@@ -810,7 +860,7 @@ int mlog_init_handle(struct mlog_handle *handle, int flags,
 	ret = 0;
 
 	handle->mgh_last_idx = 0; /* header is record with index 0 */
-	mlh->mlh_count = 1;         /* for the header record */
+	mlh->mlh_count = 1;	 /* for the header record */
 	mlh->mlh_hdr.mrh_type = MLOG_HDR_MAGIC;
 	mlh->mlh_hdr.mrh_len = mlh->mlh_tail.mrt_len = MLOG_CHUNK_SIZE;
 	mlh->mlh_hdr.mrh_index = mlh->mlh_tail.mrt_index = 0;
@@ -818,7 +868,7 @@ int mlog_init_handle(struct mlog_handle *handle, int flags,
 	if (uuid)
 		memcpy(&mlh->mlh_tgtuuid, uuid, sizeof(mlh->mlh_tgtuuid));
 	mlh->mlh_bitmap_offset = offsetof(typeof(*mlh), mlh_bitmap);
-        ext2_set_bit(0, mlh->mlh_bitmap);
+	ext2_set_bit(0, mlh->mlh_bitmap);
 
 out:
 	if (flags & MLOG_F_IS_CAT) {
@@ -832,7 +882,7 @@ out:
 		MBUG();
 	}
 
-        if (ret) {
+	if (ret) {
 		MTFS_FREE(mlh, sizeof(*mlh));
 		handle->mgh_hdr = NULL;
 	}

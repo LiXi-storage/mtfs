@@ -96,7 +96,7 @@ struct mlog_ctxt {
 
 /** log cookies are used to reference a specific log file and a record therein */
 struct mlog_cookie {
-	struct mlog_logid       mgc_lgl;
+	struct mlog_logid       mgc_mgl;
 	__u32                   mgc_subsys;
 	__u32                   mgc_index;
 	__u32                   mgc_padding;
@@ -298,9 +298,22 @@ static inline void mlog_context_fini(struct mlog_ctxt *ctxt)
 	MTFS_FREE_PTR(ctxt);
 }
 
+static inline int mlog_logid_equals(struct mlog_logid *id1, struct mlog_logid *id12)
+{
+	return (id1->mgl_oid == id12->mgl_oid &&
+	        id1->mgl_ogr == id12->mgl_ogr &&
+	        id1->mgl_ogen == id12->mgl_ogen);
+}
+
 extern int mlog_init_handle(struct mlog_handle *handle, int flags,
                             struct mlog_uuid *uuid);
-
+extern int mlog_cancel_rec(struct mlog_handle *loghandle, int index);
+extern int mlog_cat_add_rec(struct mlog_handle *cathandle, struct mlog_rec_hdr *rec,
+		            struct mlog_cookie *reccookie, void *buf);
+extern int mlog_cat_cancel_records(struct mlog_handle *cathandle, int count,
+			    struct mlog_cookie *cookies);
+extern int mlog_cat_put(struct mlog_handle *cathandle);
+extern int mlog_cat_destroy(struct mlog_handle *cathandle);
 #else /* !defined (__linux__) && defined(__KERNEL__) */
 #error This head is only for kernel space use
 #endif /* !defined (__linux__) && defined(__KERNEL__) */
