@@ -367,6 +367,21 @@ static int cat_print_cb(struct mlog_handle *mlh, struct mlog_rec_hdr *rec,
         MRETURN(0);
 }
 
+static int plain_print_cb(struct mlog_handle *mlh, struct mlog_rec_hdr *rec,
+                          void *data)
+{
+	MENTRY();
+
+	if (!(mlh->mgh_hdr->mlh_flags & MLOG_F_IS_PLAIN)) {
+		MERROR("log is not plain\n");
+		MRETURN(-EINVAL);
+	}
+
+	MPRINT("seeing record at index %d in log %llx\n",
+	       rec->mrh_index, mlh->mgh_id.mgl_oid);
+	MRETURN(0);
+}
+
 /* Test log and catalogue processing */
 static int mlog_test_5(struct mlog_ctxt *ctxt,
                        char *name,
@@ -410,6 +425,47 @@ out_close:
 		MERROR("failed to close hangle, ret = %d", ret);
 	}
 out:
+	MRETURN(ret);
+}
+
+/* Test client api; open log by name and process */
+static int mlog_test_6(struct mlog_ctxt *ctxt, char *name)
+{
+	struct mlog_handle *mlh = NULL;
+	int ret = 0;
+
+	MPRINT("6a: re-open log %s using client API\n", name);
+        ret = mlog_create(ctxt, &mlh, NULL, name);
+	if (ret) {
+		MERROR("6: mlog_create failed %d\n", ret);
+		goto out;
+        }
+
+	ret = mlog_init_handle(mlh, MLOG_F_IS_PLAIN, NULL);
+	if (ret) {
+		MERROR("6: mlog_init_handle failed %d\n", ret);
+		goto out_close;
+	}
+
+	ret = mlog_process(mlh, plain_print_cb, NULL, NULL);
+        if (ret) {
+                MERROR("6: mlog_process failed %d\n", ret);
+                goto out_close;
+        }
+
+	ret = mlog_reverse_process(mlh, plain_print_cb, NULL, NULL);
+	if (ret) {
+		MERROR("6: mlog_reverse_process failed %d\n", ret);
+		goto out_close;
+	}
+
+out_close:
+	ret = mlog_close(mlh);
+out:
+	if (ret) {
+		MERROR("6: mlog_close failed: ret = %d\n", ret);
+	}
+
 	MRETURN(ret);
 }
 
@@ -485,6 +541,12 @@ int mlog_run_tests(struct mlog_ctxt *ctxt)
 	}
 
 	ret = mlog_test_5(ctxt, cat_name, &cat_logid);
+	if (ret) {
+		MERROR("test 5 failed\n");
+		goto out_destroy;
+	}
+
+	ret = mlog_test_6(ctxt, name);
 	if (ret) {
 		MERROR("test 5 failed\n");
 		goto out_destroy;

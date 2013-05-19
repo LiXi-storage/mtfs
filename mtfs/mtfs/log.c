@@ -789,7 +789,7 @@ static void mlog_skip_over(__u64 *off, int curr, int goal)
  *  - cur_idx to the log index preceeding cur_offset
  * returns -EIO/-EINVAL on error
  */
-static int mlog_lvfs_next_block(struct mlog_handle *loghandle, int *cur_idx,
+static int mlog_vfs_next_block(struct mlog_handle *loghandle, int *cur_idx,
                                 int next_idx, __u64 *cur_offset, void *buf,
                                 int len)
 {
@@ -880,6 +880,78 @@ static int mlog_lvfs_next_block(struct mlog_handle *loghandle, int *cur_idx,
 	ret = -EIO;
 out:
 	MRETURN(ret);
+}
+
+static int mlog_vfs_prev_block(struct mlog_handle *loghandle,
+                               int prev_idx, void *buf, int len)
+{
+	__u64 cur_offset;
+	int rc;
+	MENTRY();
+
+	if (len == 0 || len & (MLOG_CHUNK_SIZE - 1))
+		MRETURN(-EINVAL);
+
+	MDEBUG("looking for log index %u\n", prev_idx);
+
+	cur_offset = MLOG_CHUNK_SIZE;
+	mlog_skip_over(&cur_offset, 0, prev_idx);
+
+	while (cur_offset < i_size_read(loghandle->mgh_file->f_dentry->d_inode)) {
+		struct mlog_rec_hdr *rec;
+		struct mlog_rec_tail *tail;
+		loff_t ppos;
+
+		ppos = cur_offset;
+
+		rc = mlowerfs_read_record(loghandle->mgh_ctxt->moc_lowerfs,
+	                                  loghandle->mgh_file, buf, len,
+		                          &ppos);
+		if (rc) {
+			MERROR("Cant read mlog block at log id %llx/%u offset %llx\n",
+			       loghandle->mgh_id.mgl_oid,
+			       loghandle->mgh_id.mgl_ogen,
+			       cur_offset);
+			MRETURN(rc);
+		}
+
+		/* put number of bytes read into rc to make code simpler */
+		rc = ppos - cur_offset;
+		cur_offset = ppos;
+
+		if (rc == 0) /* end of file, nothing to do */
+			MRETURN(0);
+
+		if (rc < sizeof(*tail)) {
+			MERROR("Invalid mlog block at log id %llx/%u offset %llx\n",
+			       loghandle->mgh_id.mgl_oid,
+			       loghandle->mgh_id.mgl_ogen, cur_offset);
+			MRETURN(-EINVAL);
+		}
+
+		tail = buf + rc - sizeof(struct mlog_rec_tail);
+
+		/* this shouldn't happen */
+		if (tail->mrt_index == 0) {
+			MERROR("Invalid mlog tail at log id %llx/%u offset%llx\n",
+			       loghandle->mgh_id.mgl_oid,
+			       loghandle->mgh_id.mgl_ogen, cur_offset);
+			MRETURN(-EINVAL);
+		}
+		if (le32_to_cpu(tail->mrt_index) < prev_idx)
+			continue;
+
+		/* sanity check that the start of the new buffer is no farther
+		 * than the record that we wanted.  This shouldn't happen. */
+		rec = buf;
+		if (le32_to_cpu(rec->mrh_index) > prev_idx) {
+			MERROR("missed desired record? %u > %u\n",
+			       le32_to_cpu(rec->mrh_index), prev_idx);
+			MRETURN(-ENOENT);
+		}
+		MRETURN(0);
+	}
+	MRETURN(-EIO);
 }
 
 /* returns negative on error; 0 if success; 1 if success & log destroyed */
@@ -1182,11 +1254,106 @@ out:
 }
 EXPORT_SYMBOL(mlog_process);
 
+int mlog_reverse_process(struct mlog_handle *loghandle, mlog_cb_t cb,
+                         void *data, void *catdata)
+{
+        struct mlog_log_hdr *mlh = loghandle->mgh_hdr;
+	struct mlog_process_cat_data *cd = catdata;
+	void *buf = NULL;
+	int ret = 0, first_index = 1, index, idx;
+	MENTRY();
+
+	MTFS_ALLOC(buf, MLOG_CHUNK_SIZE);
+	if (buf == NULL) {
+		ret = -ENOMEM;
+		goto out;
+	}
+
+	if (cd != NULL)
+		first_index = cd->mpcd_first_idx + 1;
+	if (cd != NULL && cd->mpcd_last_idx)
+		index = cd->mpcd_last_idx;
+	else
+		index = MLOG_BITMAP_BYTES * 8 - 1;
+
+	while (ret == 0) {
+		struct mlog_rec_hdr *rec;
+		struct mlog_rec_tail *tail;
+
+		/* skip records not set in bitmap */
+		while (index >= first_index &&
+		       !ext2_test_bit(index, mlh->mlh_bitmap))
+			--index;
+
+		MASSERT(index >= first_index - 1);
+		if (index == first_index - 1)
+			break;
+
+		/* get the buf with our target record; avoid old garbage */
+		memset(buf, 0, MLOG_CHUNK_SIZE);
+		ret = mlog_prev_block(loghandle, index, buf, MLOG_CHUNK_SIZE);
+		if (ret) {
+			goto out_free;
+		}
+
+		rec = buf;
+		idx = le32_to_cpu(rec->mrh_index);
+		if (idx < index)
+			MDEBUG("index %u : idx %u\n", index, idx);
+		while (idx < index) {
+			rec = ((void *)rec + le32_to_cpu(rec->mrh_len));
+			idx ++;
+		}
+		tail = (void *)rec + le32_to_cpu(rec->mrh_len) - sizeof(*tail);
+
+		/* process records in buffer, starting where we found one */
+		while ((void *)tail > buf) {
+			rec = (void *)tail - le32_to_cpu(tail->mrt_len) +
+				sizeof(*tail);
+
+			if (rec->mrh_index == 0) {
+				/* no more records */
+				ret = 0;
+				goto out_free;
+			}
+
+			/* if set, process the callback on this record */
+			if (ext2_test_bit(index, mlh->mlh_bitmap)) {
+				ret = cb(loghandle, rec, data);
+				if (ret == MLOG_PROC_BREAK) {
+					MPRINT("recovery from log: %llx:%x"
+					      " stopped\n",
+					      loghandle->mgh_id.mgl_oid,
+					      loghandle->mgh_id.mgl_ogen);
+					goto out_free;
+				}
+				if (ret) {
+					goto out_free;
+				}
+			}
+
+			/* previous record, still in buffer? */
+			--index;
+			if (index < first_index) {
+				ret = 0;
+				goto out_free;
+			}
+			tail = (void *)rec - sizeof(*tail);
+		}
+	}
+
+out_free:
+	MTFS_FREE(buf, MLOG_CHUNK_SIZE);
+out:
+	MRETURN(ret);
+}
+EXPORT_SYMBOL(mlog_reverse_process);
+
 struct mlog_operations mlog_vfs_operations = {
 	mop_write_rec:      mlog_vfs_write_rec,
 	mop_destroy:        mlog_vfs_destroy,
-	mop_next_block:     mlog_lvfs_next_block,
-	mop_prev_block:     NULL,
+	mop_next_block:     mlog_vfs_next_block,
+	mop_prev_block:     mlog_vfs_prev_block,
 	mop_create:         mlog_vfs_create,
 	mop_close:          mlog_vfs_close,
 	mop_read_header:    mlog_vfs_read_header,

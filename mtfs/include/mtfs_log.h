@@ -284,6 +284,22 @@ static inline int mlog_next_block(struct mlog_handle *loghandle, int *cur_idx,
 	MRETURN(ret);
 }
 
+static inline int mlog_prev_block(struct mlog_handle *loghandle,
+                                  int prev_idx, void *buf, int len)
+{
+	struct mlog_ctxt *ctxt = NULL;
+	struct mlog_operations *mop = NULL;
+	int ret = 0;
+	MENTRY();
+
+	ctxt = loghandle->mgh_ctxt;
+	mop = ctxt->moc_logops;
+	MASSERT(mop->mop_prev_block);
+
+	ret = mop->mop_prev_block(loghandle, prev_idx, buf, len);
+	MRETURN(ret);
+}
+
 static inline int mlog_write_rec(struct mlog_handle *loghandle,
                                  struct mlog_rec_hdr *rec,
                                  struct mlog_cookie *logcookies,
@@ -373,6 +389,8 @@ extern int mlog_cat_cancel_records(struct mlog_handle *cathandle, int count,
 extern int mlog_cat_put(struct mlog_handle *cathandle);
 extern int mlog_cat_destroy(struct mlog_handle *cathandle);
 extern int mlog_cat_process(struct mlog_handle *cat_mlh, mlog_cb_t cb, void *data);
+extern int mlog_reverse_process(struct mlog_handle *loghandle, mlog_cb_t cb,
+                                void *data, void *catdata);
 #else /* !defined (__linux__) && defined(__KERNEL__) */
 #error This head is only for kernel space use
 #endif /* !defined (__linux__) && defined(__KERNEL__) */
