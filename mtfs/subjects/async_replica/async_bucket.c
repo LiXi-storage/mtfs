@@ -208,7 +208,6 @@ int masync_bucket_put(struct masync_bucket *bucket)
  * Any operation that may fail should be here.
  */
 int masync_bucket_add_start(struct file *file,
-                            struct mtfs_interval_node_extent *interval,
                             struct masync_extent **async_extent)
 {
 	int ret = 0;

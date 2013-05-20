@@ -598,97 +598,55 @@ static void masync_iter_check_readv(struct mtfs_io *io)
 	_MRETURN();
 }
 
-static void masync_io_iter_start_rw(struct mtfs_io *io)
+static void masync_io_iter_start_writev(struct mtfs_io *io)
 {
 	struct mtfs_io_rw *io_rw = &io->u.mi_rw;
 	struct mtfs_interval_node_extent extent;
 	struct file *file = io_rw->file;
 	struct dentry *dentry = file->f_dentry;
-	struct inode *inode = dentry->d_inode;
-	mtfs_bindex_t bindex = 0;
 	struct masync_extent *async_extent = NULL;
 	int ret = 0;
 	MENTRY();
 
+	MASSERT(io->mi_type == MIOT_WRITEV);
+	MASSERT(io->mi_bindex == 0);
+
+	/*
+	 * TODO: sign the file async,
+	 * since the server may crash immediately after branch write completes. 
+	 */
+	ret = masync_bucket_add_start(file,
+                                      &async_extent);
+	if (ret) {
+		MERROR("failed to add extent to bucket of [%.*s], ret = %d\n",
+		       dentry->d_name.len, dentry->d_name.name,
+		       ret);
+		goto out;
+	}
 	mio_iter_start_rw(io);
 
-	if (io->mi_bindex == 0) {
-		/*
-		 * TODO: sign the file async,
-		 * since the server may crash immediately after branch write completes. 
-		 */
-		if (io->mi_type == MIOT_WRITEV) {
-			if (!(io->mi_flags & MTFS_OPERATION_SUCCESS)) {
-				/* Only neccessary when succeeded */
-				goto out;
-			}
-
-			if (io->mi_result.ssize == 0) {
-				goto out;
-			}
-
-			/* Get range from nothing but result because of O_APPEND */
-			extent.start = io_rw->pos_tmp - io->mi_result.ssize;
-			extent.end = io_rw->pos_tmp - 1;
-			MASSERT(extent.start >= 0);
-			MASSERT(extent.start <= extent.end);
-
-			ret = masync_bucket_add_start(file,
-			                              &extent,
-		                                      &async_extent);
-			if (ret) {
-				MERROR("failed to add extent to bucket of [%.*s], ret = %d\n",
-				       dentry->d_name.len, dentry->d_name.name,
-				       ret);
-				goto out;
-			}
-
-			/* Set master */
-			bindex = 0;
-			MASSERT(mtfs_i2branch(inode, bindex));
-			ret = mlowerfs_bucket_add(mtfs_i2bbucket(inode, bindex),
-			                          &extent);
-			if (ret) {
-				MASSERT(ret < 0);
-				MERROR("failed to add extent to branch[%d] of [%.*s], ret = %d\n",
-				       bindex,
-				       dentry->d_name.len, dentry->d_name.name,
-				       ret);
-				io->mi_result.ssize = ret;
-				io->mi_flags = 0;
-				MBUG();
-				goto out_bucket_abort;
-			}
-
-			/* Set slave */
-			bindex = 1;
-			if (mtfs_i2branch(inode, bindex) == NULL) {
-				MERROR("branch[%d] of [%.*s] is NULL\n",
-				       bindex,
-				       dentry->d_name.len, dentry->d_name.name);
-				ret = -ENOENT;
-				goto out_bucket_abort;
-			}
-
-			ret = mlowerfs_bucket_add(mtfs_i2bbucket(inode, bindex),
-			                          &extent);
-			if (ret) {
-				MERROR("failed to add extent to branch[%d] of [%.*s], ret = %d\n",
-				       bindex,
-				       dentry->d_name.len, dentry->d_name.name,
-				       ret);
-				/* TODO: Any other way to sign it? */
-				MBUG();
-			}
-
-			if (!masync_bucket_fvalid(file)) {
-				/* TODO: reconstruct the bucket */
-				goto out_bucket_abort;
-			}
-
-			masync_bucket_add_end(file, &extent, async_extent);
-		}
+	if (!(io->mi_flags & MTFS_OPERATION_SUCCESS)) {
+		/* Only neccessary when succeeded */
+		goto out_bucket_abort;
 	}
+
+	if (io->mi_result.ssize == 0) {
+		goto out_bucket_abort;
+	}
+	
+	/* Get range from nothing but result because of O_APPEND */
+	extent.start = io_rw->pos_tmp - io->mi_result.ssize;
+	extent.end = io_rw->pos_tmp - 1;
+	MASSERT(extent.start >= 0);
+	MASSERT(extent.start <= extent.end);
+
+	if (!masync_bucket_fvalid(file)) {
+		/* TODO: reconstruct the bucket */
+		goto out_bucket_abort;
+	}
+
+	masync_bucket_add_end(file, &extent, async_extent);
+
 	goto out;
 out_bucket_abort:
 	masync_bucket_add_abort(file, &extent, async_extent);
@@ -1029,7 +987,7 @@ const struct mtfs_io_operations masync_io_ops[] = {
 		.mio_lock       = masync_io_rw_lock,
 		.mio_unlock     = masync_io_rw_unlock,
 		.mio_iter_init  = mio_iter_init_rw,
-		.mio_iter_start = masync_io_iter_start_rw,
+		.mio_iter_start = mio_iter_start_rw,
 		.mio_iter_end   = masync_iter_end_readv,
 		.mio_iter_fini  = mio_iter_fini_read_ops,
 	},
@@ -1039,7 +997,7 @@ const struct mtfs_io_operations masync_io_ops[] = {
 		.mio_lock       = masync_io_rw_lock,
 		.mio_unlock     = masync_io_rw_unlock,
 		.mio_iter_init  = mio_iter_init_rw,
-		.mio_iter_start = masync_io_iter_start_rw,
+		.mio_iter_start = masync_io_iter_start_writev,
 		.mio_iter_end   = mio_iter_end_oplist,
 		.mio_iter_fini  = masync_io_iter_fini_writev,
 	},

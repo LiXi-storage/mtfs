@@ -39,7 +39,6 @@ static inline void masync_bucket_add_to_list(struct masync_bucket *bucket)
 }
 
 int masync_bucket_add_start(struct file *file,
-                            struct mtfs_interval_node_extent *interval,
                             struct masync_extent **async_extent);
 void masync_bucket_add_end(struct file *file,
                            struct mtfs_interval_node_extent *interval,
