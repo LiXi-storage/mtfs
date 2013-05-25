@@ -31,7 +31,8 @@ struct mtfs_lowerfs {
 	struct list_head ml_linkage;
 	struct module                      *ml_owner;
 	const char                         *ml_type;
-	unsigned long                       ml_magic; /* The same with sb->s_magic */
+	/* The same with sb->s_magic */
+	unsigned long                       ml_magic;
 	unsigned long                       ml_flag;
 	struct mlowerfs_bucket_type_object *ml_bucket_type;
 

@@ -21,7 +21,10 @@ struct mtfs_operations {
 	struct dentry_operations *dops;
 	struct address_space_operations *aops;
 	struct vm_operations_struct *vm_ops;
-	int (*ioctl)(struct inode *inode, struct file *file, unsigned int cmd, unsigned long arg);
+	int (*ioctl)(struct inode *inode,
+	             struct file *file,
+	             unsigned int cmd,
+	             unsigned long arg);
 	struct heal_operations *heal_ops;
 	struct mtfs_subject_operations *subject_ops;
 	struct mtfs_iupdate_operations *iupdate_ops;
@@ -29,12 +32,19 @@ struct mtfs_operations {
 };
 
 struct mtfs_junction {
+	/* Linkage into mtfs_junctions list */
 	struct list_head        mj_list;
+	/* Module belong to */
 	struct module          *mj_owner;
+	/* Junction name */
 	const char             *mj_name;
+	/* Subject name */
 	const char             *mj_subject;
+	/* Secondary branch type supported */
 	const char             *mj_primary_type;
+	/* Secondary branch types supported */
 	const char            **mj_secondary_types;
+	/* Operations */
 	struct mtfs_operations *mj_fs_ops;
 };
 
