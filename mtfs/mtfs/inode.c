@@ -1088,7 +1088,7 @@ int mtfs_unlink_branch(struct inode *dir,
 		hidden_dir_dentry = lock_parent(hidden_dentry);
 		MASSERT(hidden_dir_dentry);
 		MASSERT(hidden_dir_dentry->d_inode); 
-		if (lowerfs->ml_flag & MLOWERFS_FLAG_UNLINK_NO_DDLETE) {
+		if (lowerfs->ml_features & MLOWERFS_FLAG_UNLINK_NO_DDLETE) {
 			/* BUG263: do not use vfs_unlink() for its d_delete() */
 			ret = __vfs_unlink(hidden_dir_dentry->d_inode, hidden_dentry);
 		} else {
@@ -1212,7 +1212,7 @@ int mtfs_rmdir_branch(struct inode *dir,
 	if (hidden_dentry && hidden_dentry->d_parent && hidden_dentry->d_inode) {
 		dget(hidden_dentry);
 		hidden_dir_dentry = lock_parent(hidden_dentry);
-		if (lowerfs->ml_flag & MLOWERFS_FLAG_RMDIR_NO_DDLETE) {
+		if (lowerfs->ml_features & MLOWERFS_FLAG_RMDIR_NO_DDLETE) {
 			/* BUG264: do not use vfs_rmdir() for its d_delete() */
 			ret = __vfs_rmdir(hidden_dir_dentry->d_inode, hidden_dentry);
 		} else {

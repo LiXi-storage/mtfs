@@ -450,7 +450,7 @@ static int mlowerfs_check(struct mtfs_lowerfs *lowerfs)
 	    lowerfs->ml_type == NULL ||
 	    lowerfs->ml_magic == 0 ||
 	    lowerfs->ml_bucket_type == NULL ||
-	    !mlowerfs_flag_is_valid(lowerfs->ml_flag) ||
+	    !mlowerfs_flag_is_valid(lowerfs->ml_features) ||
 	    lowerfs->ml_setflag == NULL ||
 	    lowerfs->ml_getflag == NULL) {
 	    	ret = -EINVAL;

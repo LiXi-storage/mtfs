@@ -29,7 +29,7 @@ struct mtfs_lowerfs lowerfs_ntfs3g = {
 	ml_owner:           THIS_MODULE,
 	ml_type:            "fuseblk",
 	ml_magic:           NTFS_SB_MAGIC,
-	ml_flag:            0,
+	ml_features:        0,
 	ml_setflag:         mlowerfs_setflag_ntfs3g,
 	ml_getflag:         mlowerfs_getflag_ntfs3g,
 };

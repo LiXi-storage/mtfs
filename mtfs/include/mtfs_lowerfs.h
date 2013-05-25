@@ -33,7 +33,8 @@ struct mtfs_lowerfs {
 	const char                         *ml_type;
 	/* The same with sb->s_magic */
 	unsigned long                       ml_magic;
-	unsigned long                       ml_flag;
+	/* Flag of lowerfs features */
+	unsigned long                       ml_features;
 	struct mlowerfs_bucket_type_object *ml_bucket_type;
 
 	void *(* ml_start)(struct inode *inode, int op);

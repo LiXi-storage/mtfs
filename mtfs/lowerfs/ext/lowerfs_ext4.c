@@ -109,8 +109,8 @@ struct mtfs_lowerfs lowerfs_ext4 = {
 	ml_owner:           THIS_MODULE,
 	ml_type:            "ext4",
 	ml_magic:           EXT4_SUPER_MAGIC,
-	ml_bucket_type:     &mlowerfs_bucket_xattr,
-	ml_flag:            0,
+	ml_bucket_type:    &mlowerfs_bucket_xattr,
+	ml_features:        0,
 	ml_setflag:         mlowerfs_setflag_default,
 	ml_getflag:         mlowerfs_getflag_default,
 };
