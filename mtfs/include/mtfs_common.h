@@ -20,16 +20,6 @@ typedef signed char mtfs_bindex_t;
 #define MTFS_RESERVE_CONFIG  "CONFIG"
 #define MTFS_RESERVE_LOG     "LOG"
 
-static inline int mtfs_is_primary_bindex(mtfs_bindex_t bindex)
-{
-	return bindex == MTFS_DEFAULT_PRIMARY_BRANCH;
-}
-
-static inline mtfs_bindex_t mtfs_get_primary_bindex(void)
-{
-	return MTFS_DEFAULT_PRIMARY_BRANCH;
-}
-
 #ifndef MIN
 # define MIN(a,b) (((a)<(b)) ? (a): (b))
 #endif

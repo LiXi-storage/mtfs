@@ -536,7 +536,7 @@ struct mtfs_device *mtfs_newdev(struct super_block *sb, struct mount_option *mou
 	 */
 	for (bindex = 0; bindex < bnum; bindex++) {
 		hidden_sb = mtfs_s2branch(sb, bindex);
-		if (bindex == MTFS_DEFAULT_PRIMARY_BRANCH) {
+		if (bindex == 0) {
 			primary_type = hidden_sb->s_type->name;
 		} else {
 			/* TODO: judge equation to speed up junction search */
