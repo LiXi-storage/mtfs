@@ -35,6 +35,8 @@ struct mtfs_lowerfs {
 	unsigned long                       ml_magic;
 	/* Flag of lowerfs features */
 	unsigned long                       ml_features;
+	/* Support transaction or not */
+	int                                 ml_trans_support;
 	struct mlowerfs_bucket_type_object *ml_bucket_type;
 
 	void *(* ml_start)(struct inode *inode, int op);

@@ -11,6 +11,7 @@
 #include <mtfs_device.h>
 #include <mtfs_file.h>
 #include <mtfs_service.h>
+#include <mtfs_log.h>
 #include "hide_internal.h"
 #include "super_internal.h"
 #include "dentry_internal.h"
@@ -579,6 +580,50 @@ void mtfs_reserve_fini(struct super_block *sb)
 	MTFS_SLAB_FREE_PTR(mtfs_s2config(sb), mtfs_config_cache);
 }
 
+int sb_mlog_context_init(struct super_block *sb, struct mtfs_device *device)
+{
+	mtfs_bindex_t bindex = 0;
+	int ret = 0;
+
+	MASSERT(sb);
+	/*
+	 * Do not use mtfs_s2bops,
+	 * since mtfs_s2dev is inited in mtfs_init_super()
+	 */
+	for (bindex = 0; bindex < mtfs_s2bnum(sb); bindex++) {
+		mtfs_s2blogctxt(sb, bindex) =
+		        mlog_context_init(mtfs_s2bdlog(sb, bindex),
+		                          mtfs_s2mntbranch(sb, bindex),
+		                          mtfs_dev2bops(device, bindex),
+		                         &mlog_vfs_operations);
+		if (mtfs_s2blogctxt(sb, bindex) == NULL) {
+			MERROR("failed to init contxt of log for branch[%d]",
+			       bindex);
+			ret = -ENOMEM;
+			goto out_fini;
+		}
+	}
+	goto out;
+out_fini:
+	for (; bindex >= 0; bindex--) {
+		mlog_context_fini(mtfs_s2blogctxt(sb, bindex));
+		mtfs_s2blogctxt(sb, bindex) = NULL;
+	}
+out:
+	return ret;
+}
+
+void sb_mlog_context_fini(struct super_block *sb)
+{
+	mtfs_bindex_t bindex = 0;
+
+	MASSERT(sb);
+	for (bindex = 0; bindex < mtfs_s2bnum(sb); bindex++) {
+		mlog_context_fini(mtfs_s2blogctxt(sb, bindex));
+		mtfs_s2blogctxt(sb, bindex) = NULL;
+	}
+}
+
 int mtfs_read_super(struct super_block *sb, void *input, int silent)
 {
 	int ret = 0;
@@ -673,7 +718,6 @@ int mtfs_read_super(struct super_block *sb, void *input, int silent)
 		goto out_finit_reserve;
 	}
 
-	/* TODO: Move this after mtfs_init_super() */
 	if (mtfs_s2config(sb)->mc_nonlatest) {
 		ret = mtfs_config_write(d_root->d_sb, mtfs_s2config(sb));
 		if (ret) {
@@ -682,15 +726,23 @@ int mtfs_read_super(struct super_block *sb, void *input, int silent)
 		}
 	}
 
+	ret = sb_mlog_context_init(sb, device);
+	if (ret) {
+		MERROR("failed to init log, ret = %d\n", ret);
+		goto out_free_dev;
+	}
+
 	MASSERT(mtfs_s2bnum(sb) == bnum);
 	MASSERT(mtfs_d2bnum(d_root) == bnum);
 
 	MDEBUG("d_count = %d\n", atomic_read(&d_root->d_count));
 	ret = mtfs_init_super(sb, device, d_root);
 	if (unlikely(ret)) {
-		goto out_free_dev;
+		goto out_fini_log;
 	}
 	goto out_option_fini;
+out_fini_log:
+	sb_mlog_context_fini(sb);
 out_free_dev:
 	mtfs_freedev(mtfs_s2dev(sb));
 out_finit_reserve:
