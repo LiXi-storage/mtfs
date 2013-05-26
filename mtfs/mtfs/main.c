@@ -594,7 +594,7 @@ int sb_mlog_context_init(struct super_block *sb, struct mtfs_device *device)
 		mtfs_s2blogctxt(sb, bindex) =
 		        mlog_context_init(mtfs_s2bdlog(sb, bindex),
 		                          mtfs_s2mntbranch(sb, bindex),
-		                          mtfs_dev2bops(device, bindex),
+		                          mtfs_dev2blowerfs(device, bindex),
 		                         &mlog_vfs_operations);
 		if (mtfs_s2blogctxt(sb, bindex) == NULL) {
 			MERROR("failed to init contxt of log for branch[%d]",

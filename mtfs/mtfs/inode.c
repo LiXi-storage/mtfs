@@ -405,7 +405,7 @@ int mtfs_inherit_raid_type(struct dentry *dentry, raid_type_t *raid_type)
 	}
 
 	hidden_i_parent = mtfs_i2branch(i_parent, bindex);
-	lowerfs = mtfs_i2bops(i_parent, bindex);
+	lowerfs = mtfs_i2blowerfs(i_parent, bindex);
 	ret = mlowerfs_get_raid_type(lowerfs, hidden_i_parent, raid_type);
 
 	MDEBUG("parent raid_type = %d\n", *raid_type);
@@ -1074,7 +1074,7 @@ int mtfs_unlink_branch(struct inode *dir,
 	struct dentry *hidden_dentry = mtfs_d2branch(dentry, bindex);
 	struct dentry *hidden_dir_dentry = NULL;
 	int ret = 0;
-	struct mtfs_lowerfs *lowerfs = mtfs_d2bops(dentry, bindex);
+	struct mtfs_lowerfs *lowerfs = mtfs_d2blowerfs(dentry, bindex);
 	MENTRY();
 
 	ret = mtfs_device_branch_errno(mtfs_d2dev(dentry), bindex, BOPS_MASK_WRITE);
@@ -1200,7 +1200,7 @@ int mtfs_rmdir_branch(struct inode *dir,
 	struct dentry *hidden_dentry = mtfs_d2branch(dentry, bindex);
 	struct dentry *hidden_dir_dentry = NULL;
 	int ret = 0;
-	struct mtfs_lowerfs *lowerfs = mtfs_d2bops(dentry, bindex);
+	struct mtfs_lowerfs *lowerfs = mtfs_d2blowerfs(dentry, bindex);
 	MENTRY();
 
 	ret = mtfs_device_branch_errno(mtfs_d2dev(dentry), bindex, BOPS_MASK_WRITE);

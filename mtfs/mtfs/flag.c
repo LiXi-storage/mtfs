@@ -10,7 +10,7 @@
 int mtfs_branch_getflag(struct inode *inode, mtfs_bindex_t bindex, __u32 *mtfs_flag)
 {
 	struct inode *hidden_inode = mtfs_i2branch(inode, bindex);
-	struct mtfs_lowerfs *lowerfs = mtfs_i2bops(inode, bindex);
+	struct mtfs_lowerfs *lowerfs = mtfs_i2blowerfs(inode, bindex);
 	int ret = 0;
 	MENTRY();
 
@@ -75,7 +75,7 @@ int mtfs_branch_invalidate_flag(struct inode *inode, mtfs_bindex_t bindex, __u32
 	MENTRY();
 
 	MASSERT(hidden_inode);
-	lowerfs = mtfs_i2bops(inode, bindex);
+	lowerfs = mtfs_i2blowerfs(inode, bindex);
 	MASSERT(lowerfs);
 
 	ret = mlowerfs_invalidate(lowerfs, hidden_inode, valid_flags);

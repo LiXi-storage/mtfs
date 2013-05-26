@@ -35,7 +35,7 @@ static int mtfs_user_get_state(struct inode *inode, struct file *file, struct mt
 
 	for(bindex = 0; bindex < bnum; bindex++) {
 		hidden_inode = mtfs_i2branch(inode, bindex);
-		lowerfs = mtfs_i2bops(inode, bindex);
+		lowerfs = mtfs_i2blowerfs(inode, bindex);
 		if (hidden_inode == NULL) {
 			(state->state[bindex]).flag = 0xffff;
 			continue;
@@ -103,7 +103,7 @@ static int mtfs_user_set_state(struct inode *inode, struct file *file, struct mt
 
 	for (bindex = 0; bindex < bnum; bindex++) {
 		hidden_inode = mtfs_i2branch(inode, bindex);
-		lowerfs = mtfs_i2bops(inode, bindex);
+		lowerfs = mtfs_i2blowerfs(inode, bindex);
 		if (hidden_inode == NULL) {
 			MDEBUG("branch[%d] of inode is NULL, skipping\n", bindex);
 		} else {

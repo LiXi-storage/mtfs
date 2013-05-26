@@ -21,7 +21,7 @@ struct mtfs_branch_debug {
 struct mtfs_device_branch {
 	char                      *mdb_path;       /* Path for each branch */
 	int                        mdb_pathlen;    /* Length of the path for each branch */
-	struct mtfs_lowerfs       *mdb_ops;        /* Lowerfs operation for each branch*/
+	struct mtfs_lowerfs       *mdb_lowerfs;    /* Lowerfs operation for each branch*/
 	struct mtfs_branch_debug   mdb_debug;      /* Debug option for each branch */
 	struct proc_dir_entry     *mdb_proc_entry; /* Proc entry for each branch */
 };
@@ -51,23 +51,23 @@ struct mtfs_device {
 	struct mtfs_device_branch md_branch[MTFS_BRANCH_MAX]; /* Info for each branch */
 };
 
-#define mtfs_dev2sb(device)              (device->md_sb)
-#define mtfs_dev2name(device)            (device->md_name)
-#define mtfs_dev2namelen(device)         (device->md_namelen)
-#define mtfs_dev2junction(device)        (device->md_junction)
-#define mtfs_dev2proc(device)            (device->md_proc_entry)
-#define mtfs_dev2flags(device)           (device->md_flags)
-#define mtfs_dev2noabort(device)         (device->md_flags & MTFS_SBI_NOABORT)
-#define mtfs_dev2checksum(device)        (device->md_flags & MTFS_SBI_CHECKSUM)
-#define mtfs_dev2write(device)           (device->md_debug.mdd_write)
-#define mtfs_dev2ops(device)             (mtfs_dev2junction(device)->mj_fs_ops)
-#define mtfs_dev2bnum(device)            (device->md_bnum)
-#define mtfs_dev2branch(device, bindex)  (&device->md_branch[bindex])
-#define mtfs_dev2bops(device, bindex)    (device->md_branch[bindex].mdb_ops)
-#define mtfs_dev2bpath(device, bindex)   (device->md_branch[bindex].mdb_path)
-#define mtfs_dev2blength(device, bindex) (device->md_branch[bindex].mdb_pathlen)
-#define mtfs_dev2bdebug(device, bindex)  (device->md_branch[bindex].mdb_debug)
-#define mtfs_dev2bproc(device, bindex)   (device->md_branch[bindex].mdb_proc_entry)
+#define mtfs_dev2sb(device)               (device->md_sb)
+#define mtfs_dev2name(device)             (device->md_name)
+#define mtfs_dev2namelen(device)          (device->md_namelen)
+#define mtfs_dev2junction(device)         (device->md_junction)
+#define mtfs_dev2proc(device)             (device->md_proc_entry)
+#define mtfs_dev2flags(device)            (device->md_flags)
+#define mtfs_dev2noabort(device)          (device->md_flags & MTFS_SBI_NOABORT)
+#define mtfs_dev2checksum(device)         (device->md_flags & MTFS_SBI_CHECKSUM)
+#define mtfs_dev2write(device)            (device->md_debug.mdd_write)
+#define mtfs_dev2ops(device)              (mtfs_dev2junction(device)->mj_fs_ops)
+#define mtfs_dev2bnum(device)             (device->md_bnum)
+#define mtfs_dev2branch(device, bindex)   (&device->md_branch[bindex])
+#define mtfs_dev2blowerfs(device, bindex) (device->md_branch[bindex].mdb_lowerfs)
+#define mtfs_dev2bpath(device, bindex)    (device->md_branch[bindex].mdb_path)
+#define mtfs_dev2blength(device, bindex)  (device->md_branch[bindex].mdb_pathlen)
+#define mtfs_dev2bdebug(device, bindex)   (device->md_branch[bindex].mdb_debug)
+#define mtfs_dev2bproc(device, bindex)    (device->md_branch[bindex].mdb_proc_entry)
 
 #include <mtfs_super.h>
 static inline struct mtfs_device *mtfs_i2dev(struct inode *inode)

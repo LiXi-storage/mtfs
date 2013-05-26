@@ -54,7 +54,7 @@ int masync_inode_init(struct inode *inode)
 
 	for (bindex = 0; bindex < bnum; bindex++) {
 		if (mtfs_i2branch(inode, bindex)) {
-			lowerfs = mtfs_i2bops(inode, bindex);
+			lowerfs = mtfs_i2blowerfs(inode, bindex);
 			mlowerfs_bucket_init(mtfs_i2bbucket(inode, bindex),
 			                     lowerfs->ml_bucket_type);
 		}

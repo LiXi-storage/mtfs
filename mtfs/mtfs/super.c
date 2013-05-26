@@ -163,7 +163,7 @@ void mtfs_clear_inode(struct inode *inode)
 		if (mtfs_i2branch(inode, bindex) == NULL) {
 			continue;
 		}
-		lowerfs = mtfs_i2bops(inode, bindex);
+		lowerfs = mtfs_i2blowerfs(inode, bindex);
 	}
 	/*
 	 * Decrease a reference to a hidden_inode, which was increased

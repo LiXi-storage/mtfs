@@ -549,7 +549,7 @@ struct mtfs_device *mtfs_newdev(struct super_block *sb, struct mount_option *mou
 			ret = PTR_ERR(lowerfs);
 			goto out_put_module;
 		}
-		mtfs_dev2bops(newdev, bindex) = lowerfs;
+		mtfs_dev2blowerfs(newdev, bindex) = lowerfs;
 	}
 	secondary_types[secondary_number] = NULL;
 
@@ -580,7 +580,7 @@ out_put_junction:
 	junction_put(mtfs_dev2junction(newdev));
 out_put_module:
 	for (bindex = 0; bindex < bnum; bindex++) {
-		lowerfs = mtfs_dev2bops(newdev, bindex);
+		lowerfs = mtfs_dev2blowerfs(newdev, bindex);
 		if (lowerfs) {
 			mlowerfs_put(lowerfs);
 		}
@@ -606,7 +606,7 @@ void mtfs_freedev(struct mtfs_device *device)
 	mtfs_device_proc_unregister(device);
 	mtfs_unregister_device(device);
 	for (bindex = 0; bindex < bnum; bindex++) {
-		lowerfs = mtfs_dev2bops(device, bindex);
+		lowerfs = mtfs_dev2blowerfs(device, bindex);
 		MASSERT(lowerfs);
 		mlowerfs_put(lowerfs);
 	}

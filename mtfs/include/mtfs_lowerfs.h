@@ -90,23 +90,26 @@ extern int mlowerfs_setflag_default(struct inode *inode, __u32 mtfs_flag);
 extern int mlowerfs_getflag_nop(struct inode *inode, __u32 *mtfs_flag);
 extern int mlowerfs_setflag_nop(struct inode *inode, __u32 mtfs_flag);
 
-static inline struct mtfs_lowerfs *mtfs_s2bops(struct super_block *sb, mtfs_bindex_t bindex)
+static inline struct mtfs_lowerfs *mtfs_s2blowerfs(struct super_block *sb,
+                                                   mtfs_bindex_t bindex)
 {
 	struct mtfs_device *device = mtfs_s2dev(sb);
-	struct mtfs_lowerfs *lowerfs = mtfs_dev2bops(device, bindex);
+	struct mtfs_lowerfs *lowerfs = mtfs_dev2blowerfs(device, bindex);
 	return lowerfs;
 }
 
-static inline struct mtfs_lowerfs *mtfs_i2bops(struct inode *inode, mtfs_bindex_t bindex)
+static inline struct mtfs_lowerfs *mtfs_i2blowerfs(struct inode *inode,
+                                                   mtfs_bindex_t bindex)
 {
 	struct super_block *sb = inode->i_sb;
-	return mtfs_s2bops(sb, bindex);
+	return mtfs_s2blowerfs(sb, bindex);
 }
 
-static inline struct mtfs_lowerfs *mtfs_d2bops(struct dentry *dentry, mtfs_bindex_t bindex)
+static inline struct mtfs_lowerfs *mtfs_d2blowerfs(struct dentry *dentry,
+                                                   mtfs_bindex_t bindex)
 {
 	struct super_block *sb = dentry->d_sb;
-	return mtfs_s2bops(sb, bindex);
+	return mtfs_s2blowerfs(sb, bindex);
 }
 
 static inline struct mtfs_operations *mtfs_s2ops(struct super_block *sb)
