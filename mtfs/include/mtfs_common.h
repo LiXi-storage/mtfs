@@ -30,6 +30,8 @@ typedef enum {
 #define MTFS_RESERVE_CONFIG  "CONFIG"
 #define MTFS_RESERVE_LOG     "LOG"
 
+#define MTFS_LOG_CAT         "CAT"
+
 #ifndef MIN
 # define MIN(a,b) (((a)<(b)) ? (a): (b))
 #endif

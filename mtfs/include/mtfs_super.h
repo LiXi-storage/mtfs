@@ -38,6 +38,7 @@ struct mtfs_sb_branch {
 	struct dentry      *msb_dconfig;
 	struct dentry      *msb_dlog;
 	struct mlog_ctxt   *msb_log_ctxt;
+	struct mlog_handle *msb_cat_handle;
 };
 
 /* mtfs super-block data in memory */
@@ -59,13 +60,14 @@ struct mtfs_sb_info {
 #define mtfs_s2subinfo(sb)           (mtfs_s2info(sb)->msi_subject_info)
 #define mtfs_s2barray(sb)            (mtfs_s2info(sb)->msi_barray)
 
-#define mtfs_s2branch(sb, bindex)    (mtfs_s2barray(sb)[bindex].msb_sb)
-#define mtfs_s2mntbranch(sb, bindex) (mtfs_s2barray(sb)[bindex].msb_mnt)
-#define mtfs_s2bdreserve(sb, bindex) (mtfs_s2barray(sb)[bindex].msb_dreserve)
-#define mtfs_s2bdrecover(sb, bindex) (mtfs_s2barray(sb)[bindex].msb_drecover)
-#define mtfs_s2bdconfig(sb, bindex)  (mtfs_s2barray(sb)[bindex].msb_dconfig)
-#define mtfs_s2bdlog(sb, bindex)     (mtfs_s2barray(sb)[bindex].msb_dlog)
-#define mtfs_s2blogctxt(sb, bindex)  (mtfs_s2barray(sb)[bindex].msb_log_ctxt)
+#define mtfs_s2branch(sb, bindex)     (mtfs_s2barray(sb)[bindex].msb_sb)
+#define mtfs_s2mntbranch(sb, bindex)  (mtfs_s2barray(sb)[bindex].msb_mnt)
+#define mtfs_s2bdreserve(sb, bindex)  (mtfs_s2barray(sb)[bindex].msb_dreserve)
+#define mtfs_s2bdrecover(sb, bindex)  (mtfs_s2barray(sb)[bindex].msb_drecover)
+#define mtfs_s2bdconfig(sb, bindex)   (mtfs_s2barray(sb)[bindex].msb_dconfig)
+#define mtfs_s2bdlog(sb, bindex)      (mtfs_s2barray(sb)[bindex].msb_dlog)
+#define mtfs_s2blogctxt(sb, bindex)   (mtfs_s2barray(sb)[bindex].msb_log_ctxt)
+#define mtfs_s2bcathandle(sb, bindex) (mtfs_s2barray(sb)[bindex].msb_cat_handle)
 
 extern struct inode *mtfs_alloc_inode(struct super_block *sb);
 extern void mtfs_destroy_inode(struct inode *inode);

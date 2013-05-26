@@ -60,7 +60,7 @@ void mtfs_put_super(struct super_block *sb)
 	if (mtfs_s2info(sb)) {
 		msubject_super_fini(sb);
 		MASSERT(mtfs_s2dev(sb));
-		sb_mlog_context_fini(sb);
+		super_mlog_fini(sb);
 		mtfs_freedev(mtfs_s2dev(sb));
 		mtfs_reserve_fini(sb);
 		for (bindex = 0; bindex < mtfs_s2bnum(sb); bindex++) {

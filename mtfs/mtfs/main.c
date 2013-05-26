@@ -580,47 +580,77 @@ void mtfs_reserve_fini(struct super_block *sb)
 	MTFS_SLAB_FREE_PTR(mtfs_s2config(sb), mtfs_config_cache);
 }
 
-int sb_mlog_context_init(struct super_block *sb, struct mtfs_device *device)
+static struct mlog_uuid mlog_cat_uuid = { .uuid = MTFS_LOG_CAT };
+
+static int super_mlog_init(struct super_block *sb, struct mtfs_device *device)
 {
 	mtfs_bindex_t bindex = 0;
 	int ret = 0;
+	struct mtfs_lowerfs *lowerfs = NULL;
+	struct mlog_ctxt *ctxt = NULL;
+	struct mlog_handle *handle = NULL;
+	MENTRY();
 
-	MASSERT(sb);
 	/*
 	 * Do not use mtfs_s2bops,
 	 * since mtfs_s2dev is inited in mtfs_init_super()
 	 */
 	for (bindex = 0; bindex < mtfs_s2bnum(sb); bindex++) {
-		mtfs_s2blogctxt(sb, bindex) =
-		        mlog_context_init(mtfs_s2bdlog(sb, bindex),
-		                          mtfs_s2mntbranch(sb, bindex),
-		                          mtfs_dev2blowerfs(device, bindex),
+		lowerfs = mtfs_dev2blowerfs(device, bindex);
+		if (!lowerfs->ml_trans_support) {
+			continue;
+		}
+		ctxt = mlog_context_init(mtfs_s2bdlog(sb, bindex),
+		                         mtfs_s2mntbranch(sb, bindex),
+		                         lowerfs,
 		                         &mlog_vfs_operations);
-		if (mtfs_s2blogctxt(sb, bindex) == NULL) {
+		if (ctxt == NULL) {
 			MERROR("failed to init contxt of log for branch[%d]",
 			       bindex);
 			ret = -ENOMEM;
+			bindex--;
 			goto out_fini;
 		}
+
+		ret = mlog_create(ctxt, &handle, NULL, MTFS_LOG_CAT);
+		if (ret) {
+			MERROR("failed to create log %s, ret = %d\n",
+			        MTFS_LOG_CAT, ret);
+			mlog_context_fini(ctxt);
+			bindex--;
+			goto out_fini;
+		}
+		mlog_init_handle(handle, MLOG_F_IS_CAT, &mlog_cat_uuid);
+		mtfs_s2blogctxt(sb, bindex) = ctxt;
+		mtfs_s2bcathandle(sb, bindex) = handle;
 	}
 	goto out;
 out_fini:
 	for (; bindex >= 0; bindex--) {
+		lowerfs = mtfs_dev2blowerfs(device, bindex);
+		if (!lowerfs->ml_trans_support) {
+			continue;
+		}
+		mlog_cat_put(mtfs_s2bcathandle(sb, bindex));
 		mlog_context_fini(mtfs_s2blogctxt(sb, bindex));
-		mtfs_s2blogctxt(sb, bindex) = NULL;
 	}
 out:
-	return ret;
+	MRETURN(ret);
 }
 
-void sb_mlog_context_fini(struct super_block *sb)
+void super_mlog_fini(struct super_block *sb)
 {
 	mtfs_bindex_t bindex = 0;
+	struct mtfs_lowerfs *lowerfs = NULL;
 
 	MASSERT(sb);
 	for (bindex = 0; bindex < mtfs_s2bnum(sb); bindex++) {
+		lowerfs = mtfs_s2blowerfs(sb, bindex);
+		if (!lowerfs->ml_trans_support) {
+			continue;
+		}
+		mlog_cat_put(mtfs_s2bcathandle(sb, bindex));
 		mlog_context_fini(mtfs_s2blogctxt(sb, bindex));
-		mtfs_s2blogctxt(sb, bindex) = NULL;
 	}
 }
 
@@ -726,7 +756,7 @@ int mtfs_read_super(struct super_block *sb, void *input, int silent)
 		}
 	}
 
-	ret = sb_mlog_context_init(sb, device);
+	ret = super_mlog_init(sb, device);
 	if (ret) {
 		MERROR("failed to init log, ret = %d\n", ret);
 		goto out_free_dev;
@@ -742,7 +772,7 @@ int mtfs_read_super(struct super_block *sb, void *input, int silent)
 	}
 	goto out_option_fini;
 out_fini_log:
-	sb_mlog_context_fini(sb);
+	super_mlog_fini(sb);
 out_free_dev:
 	mtfs_freedev(mtfs_s2dev(sb));
 out_finit_reserve:

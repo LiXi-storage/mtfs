@@ -10,5 +10,5 @@ extern struct proc_dir_entry *mtfs_proc_root;
 extern struct proc_dir_entry *mtfs_proc_device;
 
 void mtfs_reserve_fini(struct super_block *sb);
-void sb_mlog_context_fini(struct super_block *sb);
+void super_mlog_fini(struct super_block *sb);
 #endif /* __MTFS_MAIN_INTERNAL_H__ */
