@@ -21,14 +21,10 @@
 #include "file_internal.h"
 #include "subject_internal.h"
 
-/* This definition must only appear after we include <linux/module.h> */
-#ifndef MODULE_LICENSE
-#define MODULE_LICENSE(foo)
-#endif /* MODULE_LICENSE */
-
 DECLARE_RWSEM(global_rwsem);
 
-int mtfs_init_super(struct super_block *sb, struct mtfs_device *device, struct dentry *d_root)
+int mtfs_init_super(struct super_block *sb, struct mtfs_device *device,
+                    struct dentry *d_root)
 {
 	struct super_operations *sops = NULL;
 	struct dentry_operations *dops = NULL;
