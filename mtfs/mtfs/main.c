@@ -711,7 +711,8 @@ int mtfs_read_super(struct super_block *sb, void *input, int silent)
 		MDEBUG("using directory: %s\n", name);
 		ret = path_lookup(name, LOOKUP_FOLLOW, &nd);
 		if (unlikely(ret)) {
-			MERROR("error accessing hidden directory '%s'\n", name);
+			MERROR("error accessing hidden directory '%s'\n",
+			       name);
 			bindex--;
 			goto out_put;
 		}
@@ -878,7 +879,8 @@ static struct mtfs_cache_info mtfs_cache_infos[] = {
 		.cache = &mtfs_inode_info_cache,
 		.name = "mtfs_inode_cache",
 		.size = sizeof(struct mtfs_inode_info),
-		.ctor = mtfs_inode_info_init_once, /* For linux-2.6.30 upper */
+		/* For linux-2.6.30 upper */
+		.ctor = mtfs_inode_info_init_once,
 	},
 	{
 		.cache = &mtfs_sb_info_cache,
@@ -947,10 +949,12 @@ static int mtfs_init_kmem_caches(void)
 		info = &mtfs_cache_infos[i];
 #ifdef HAVE_KMEM_CACHE_CREATE_DTOR
         	*(info->cache) = kmem_cache_create(info->name, info->size,
-        	                                   0, SLAB_HWCACHE_ALIGN, NULL, NULL);
+        	                                   0, SLAB_HWCACHE_ALIGN,
+        	                                   NULL, NULL);
 #else /* !HAVE_KMEM_CACHE_CREATE_DTOR */
         	*(info->cache) = kmem_cache_create(info->name, info->size,
-        	                                   0, SLAB_HWCACHE_ALIGN, NULL);
+        	                                   0, SLAB_HWCACHE_ALIGN,
+        	                                   NULL);
 #endif /* !HAVE_KMEM_CACHE_CREATE_DTOR */
 		if (*(info->cache) == NULL) {
 			mtfs_free_kmem_caches();
@@ -989,10 +993,12 @@ int mtfs_insert_proc(void)
 		goto out;
 	}
 
-	mtfs_proc_device = mtfs_proc_register(MTFS_PROC_DEVICE_NAME, mtfs_proc_root,
-                                        NULL, NULL);
+	mtfs_proc_device = mtfs_proc_register(MTFS_PROC_DEVICE_NAME,
+	                                      mtfs_proc_root,
+	                                      NULL, NULL);
 	if (unlikely(mtfs_proc_device == NULL)) {
-		MERROR("failed to register /proc/fs/mtfs"MTFS_PROC_DEVICE_NAME"\n");
+		MERROR("failed to register "
+		       "/proc/fs/mtfs"MTFS_PROC_DEVICE_NAME"\n");
 		ret = -ENOMEM;
 		goto out;
 	}
@@ -1024,7 +1030,8 @@ static int __init mtfs_init(void)
 
 	ret = mtfs_init_kmem_caches();
 	if (ret) {
-		MERROR("failed to allocate one or more kmem_cache objects, ret = %d\n", ret);
+		MERROR("failed to allocate one or more kmem_cache objects, "
+		       "ret = %d\n", ret);
 		goto out_fini_mlock;
 	}
 
@@ -1036,13 +1043,15 @@ static int __init mtfs_init(void)
 	
 	ret = register_filesystem(&mtfs_fs_type);
 	if (ret) {
-		MERROR("failed to register filesystem type mtfs, ret = %d\n", ret);
+		MERROR("failed to register filesystem type mtfs, "
+		       "ret = %d\n", ret);
 		goto out_remove_proc;
 	}
 
 	ret = register_filesystem(&mtfs_hidden_fs_type);
 	if (ret) {
-		MERROR("failed to register filesystem type hidden_mtfs, ret = %d\n", ret);
+		MERROR("failed to register filesystem type hidden_mtfs, "
+		       "ret = %d\n", ret);
 		goto out_unregister_mtfs;
 	}
 	
