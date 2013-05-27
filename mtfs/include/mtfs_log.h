@@ -45,6 +45,13 @@ struct mlog_logid_rec {
         struct mlog_rec_tail    mid_tail;
 } __attribute__((packed));
 
+struct mlog_extent_rec {
+        struct mlog_rec_hdr     mex_hdr;
+	__u64                   mex_start;
+	__u64                   mex_end;
+        struct mlog_rec_tail    mex_tail;
+} __attribute__((packed));
+
 struct mlog_gen {
         __u64 mnt_cnt;
         __u64 conn_cnt;
@@ -140,10 +147,11 @@ struct mlog_handle {
 #define MLOG_OP_MASK  0xfff00000
 
 typedef enum {
-	MLOG_PAD_MAGIC   = MLOG_OP_MAGIC | 0x00000,
-	MLOG_GEN_REC     = MLOG_OP_MAGIC | 0x40000,
-	MLOG_HDR_MAGIC   = MLOG_OP_MAGIC | 0x45539,
-	MLOG_LOGID_MAGIC = MLOG_OP_MAGIC | 0x4553b,
+	MLOG_PAD_MAGIC    = MLOG_OP_MAGIC | 0x00000,
+	MLOG_GEN_REC      = MLOG_OP_MAGIC | 0x00001,
+	MLOG_HDR_MAGIC    = MLOG_OP_MAGIC | 0x00002,
+	MLOG_LOGID_MAGIC  = MLOG_OP_MAGIC | 0x00004,
+	MLOG_EXTENT_MAGIC = MLOG_OP_MAGIC | 0x00008,
 } mlog_op_type;
 
 #define MLOG_REC_HDR_NEEDS_SWABBING(r)                                     \

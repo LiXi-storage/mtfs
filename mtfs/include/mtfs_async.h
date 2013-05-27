@@ -68,49 +68,94 @@ typedef shrinker_t mtfs_shrinker_t;
 #endif /* !HAVE_REGISTER_SHRINKER */
 
 struct masync_extent {
-	struct masync_bucket       *mae_bucket;         /* Bucket belongs to, protected by mae_lock */
-	struct msubject_async_info *mae_info;           /* Info that belongs to, unchangeable */
-	mtfs_spinlock_t             mae_lock;           /* Protect mae_bucket */
-	struct mtfs_interval        mae_interval;       /* Extent info, protected by mab_lock */
-	mtfs_list_t                 mae_lru_linkage;    /* Linkage to LRU list, protected by msai_lru_lock */
-	mtfs_list_t                 mae_cancel_linkage; /* Linkage to cancel list, protected by msa_cancel_lock */
-	atomic_t                    mae_reference;      /* Reference number */
+	/* Bucket belongs to, protected by mae_lock */
+	struct masync_bucket       *mae_bucket;
+	/* Info that belongs to, unchangeable */
+	struct msubject_async_info *mae_info;
+	/* Protect mae_bucket */
+	mtfs_spinlock_t             mae_lock;
+	/* Extent info, protected by mab_lock */
+	struct mtfs_interval        mae_interval;
+	/* Linkage to LRU list, protected by msai_lru_lock */
+	mtfs_list_t                 mae_lru_linkage;
+	/* Linkage to cancel list, protected by msa_cancel_lock */
+	mtfs_list_t                 mae_cancel_linkage;
+	/* Reference number */
+	atomic_t                    mae_reference;
 };
 
 #define masync_interval2extent(interval) container_of(interval, struct masync_extent, mae_interval)
 
+struct masync_chunk {
+	/* Linkage to bucket, protected by mab_chunk_lock */
+	mtfs_list_t                 mac_linkage;
+	/* Start offset, unchangeable */
+	__u64                       mac_start;
+	/* End offset, unchangeable */
+	__u64                       mac_end;
+	/* Reference number */
+	atomic_t                    mac_reference;
+};
+
 struct masync_bucket {
-	struct msubject_async_info *mab_info;    /* Info that belongs to, unchangeable */
-	struct mtfs_interval_node  *mab_root;    /* Extent tree, protected by mab_lock */ 
-	atomic_t                    mab_number;  /* Extent number in tree, protected by mab_lock */ 
-	struct mtfs_file_info       mab_finfo;   /* File info for healing, protected by mab_lock */
-	int                         mab_fvalid;  /* File info is valid or not, protected by mab_lock */
-	struct semaphore            mab_lock;    /* Protect tree, mab_number, mab_finfo and mab_fvalid */
-	mtfs_list_t                 mab_linkage; /* Linkage to info, protected by msai_bucket_lock */
+	/* Info that belongs to, unchangeable */
+	struct msubject_async_info *mab_info;
+	/* Extent tree, protected by mab_lock */
+	struct mtfs_interval_node  *mab_root;
+	/* Extent number in tree, protected by mab_lock */
+	atomic_t                    mab_number;
+	/* File info for healing, protected by mab_lock */
+	struct mtfs_file_info       mab_finfo;
+	/* File info is valid or not, protected by mab_lock */
+	int                         mab_fvalid;
+	/* Protect tree, mab_number, mab_finfo and mab_fvalid */
+	struct semaphore            mab_lock;
+	/* Linkage to info, protected by msai_bucket_lock */
+	mtfs_list_t                 mab_linkage;
+	/* chunk list, protected by mab_chunk_lock*/
+	mtfs_list_t                 mab_chunks;
+	/* Protect mab_chunks, mac_linkage */
+	struct semaphore            mab_chunk_lock;
 };
 
 #define MASYNC_BULK_SIZE (4096)
 
 struct msubject_async_info {
-	struct msubject_async *msai_subject;     /* Subject that belongs to, unchangeable */
-	mtfs_list_t            msai_lru_extents; /* Extents LRU list, protected by msai_lru_lock */
-	mtfs_spinlock_t        msai_lru_lock;    /* Protect msai_lru_extents and mae_lru_linkage */
-	atomic_t               msai_lru_number;  /* Number of extents in lru */
-	mtfs_list_t            msai_buckets;     /* Extents cancel list, protected by msai_bucket_lock */
-	mtfs_spinlock_t        msai_bucket_lock; /* Protect msai_buckets */
-	mtfs_list_t            msai_linkage;     /* Linkage to subject, protected by msai_bucket_lock */
-	atomic_t               msai_reference;   /* Reference number */
-	wait_queue_head_t      msai_waitq;       /* Queue to wait on when refered */
-	struct proc_dir_entry *msai_proc_entry;  /* Proc entrys for async debug */
+	/* Subject that belongs to, unchangeable */
+	struct msubject_async *msai_subject;
+	/* Extents LRU list, protected by msai_lru_lock */
+	mtfs_list_t            msai_lru_extents;
+	/* Protect msai_lru_extents and mae_lru_linkage */
+	mtfs_spinlock_t        msai_lru_lock;
+	/* Number of extents in lru */
+	atomic_t               msai_lru_number;
+	/* Extents cancel list, protected by msai_bucket_lock */
+	mtfs_list_t            msai_buckets;
+	/* Protect msai_buckets */
+	mtfs_spinlock_t        msai_bucket_lock;
+	/* Linkage to subject, protected by msai_bucket_lock */
+	mtfs_list_t            msai_linkage;
+	/* Reference number */   
+	atomic_t               msai_reference;
+	/* Queue to wait on when refered */
+	wait_queue_head_t      msai_waitq;
+	/* Proc entrys for async debug */
+	struct proc_dir_entry *msai_proc_entry;
 };
 
 struct msubject_async {
-	mtfs_list_t          msa_cancel_extents; /* Extents cancel list, protected by msa_cancel_lock */
-	mtfs_spinlock_t      msa_cancel_lock;    /* Protect msa_cancel_extents and mae_cancel_linkage */
-	struct mtfs_service *msa_service;        /* Service that heal the async files */ 
-	mtfs_list_t          msa_infos;          /* Extents cancel list, protected by msai_bucket_lock */
-	mtfs_spinlock_t      msa_info_lock;      /* Protect msa_infos */
-	atomic_t             msa_info_number;    /* Number of infos */
+	/* Extents cancel list, protected by msa_cancel_lock */
+	mtfs_list_t          msa_cancel_extents;
+	/* Protect msa_cancel_extents and mae_cancel_linkage */
+	mtfs_spinlock_t      msa_cancel_lock;
+	/* Service that heal the async files */
+	struct mtfs_service *msa_service;
+	/* Extents cancel list, protected by msai_bucket_lock */
+	mtfs_list_t          msa_infos;
+	/* Protect msa_infos */
+	mtfs_spinlock_t      msa_info_lock;
+	/* Number of infos */
+	atomic_t             msa_info_number;
 };
 
 extern struct mtfs_subject_operations masync_subject_ops;

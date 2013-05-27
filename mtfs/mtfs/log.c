@@ -149,6 +149,13 @@ static void mlog_swab_rec(struct mlog_rec_hdr *rec, struct mlog_rec_tail *tail)
 		__swab32s(&mid->mid_id.mgl_ogen);
 		break;
 	}
+	case MLOG_EXTENT_MAGIC: {
+		struct mlog_extent_rec *mex = (struct mlog_extent_rec *)rec;
+
+		__swab64s(&mex->mex_start);
+		__swab64s(&mex->mex_end);
+		break;
+	}
 	case MLOG_PAD_MAGIC:
 	/* ignore old pad records of type 0 */
 	default:

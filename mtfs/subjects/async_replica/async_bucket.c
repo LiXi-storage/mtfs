@@ -97,7 +97,8 @@ void masync_bucket_init(struct msubject_async_info *info,
 	init_MUTEX(&bucket->mab_lock);
 	MTFS_INIT_LIST_HEAD(&bucket->mab_linkage);
 	masync_bucket_add_to_list(bucket);
-
+	init_MUTEX(&bucket->mab_chunk_lock);
+	MTFS_INIT_LIST_HEAD(&bucket->mab_chunks);
 	_MRETURN();
 }
 
@@ -387,6 +388,7 @@ int masync_bucket_cleanup(struct masync_bucket *bucket)
 	MASSERT(bucket->mab_root == NULL);
 	MASSERT(atomic_read(&bucket->mab_number) == 0);
 	MASSERT(!bucket->mab_fvalid);
+	MASSERT(mtfs_list_empty(&bucket->mab_chunks));
 
 	if (buf) {
 		MTFS_FREE(buf, buf_size);
