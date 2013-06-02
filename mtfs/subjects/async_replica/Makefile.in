@@ -4,9 +4,10 @@ mtfs_subject_async_replica-objs := async.o \
                                    async_bucket.o \
                                    async_info.o \
                                    async_extent.o \
+                                   async_chunk.o
 
 EXTRA_DIST := $(mtfs_subject_async_replica-objs:.o=.c)
-EXTRA_DIST += async_internal.h async_bucket_internal.h async_info_internal.h 
-EXTRA_DIST += async_extent_internal.h 
+EXTRA_DIST += async_internal.h async_bucket_internal.h async_info_internal.h
+EXTRA_DIST += async_extent_internal.h  async_chunk_internal.h
 
 @INCLUDE_RULES@

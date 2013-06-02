@@ -87,6 +87,10 @@ struct masync_extent {
 #define masync_interval2extent(interval) container_of(interval, struct masync_extent, mae_interval)
 
 struct masync_chunk {
+	/* Bucket belongs to, unchangeable */
+	struct masync_bucket       *mac_bucket;
+	/* Info that belongs to, unchangeable */
+	struct msubject_async_info *mac_info;
 	/* Linkage to bucket, protected by mab_chunk_lock */
 	mtfs_list_t                 mac_linkage;
 	/* Start offset, unchangeable */
@@ -95,6 +99,8 @@ struct masync_chunk {
 	__u64                       mac_end;
 	/* Reference number */
 	atomic_t                    mac_reference;
+	/* Linkage to info, protected by mab_chunk_lock */
+	mtfs_list_t                 mac_lru_linkage;
 };
 
 struct masync_bucket {
@@ -141,6 +147,12 @@ struct msubject_async_info {
 	wait_queue_head_t      msai_waitq;
 	/* Proc entrys for async debug */
 	struct proc_dir_entry *msai_proc_entry;
+	/* Chuncks LRU list, protected by msai_lru_chunk_lock */
+	mtfs_list_t            msai_lru_chunks;
+	/* Protect msai_lru_chunks and mac_lru_linkage */
+	mtfs_spinlock_t        msai_lru_chunk_lock;
+	/* Number of chunks in lru */
+	atomic_t               msai_lru_chunk_number;
 };
 
 struct msubject_async {

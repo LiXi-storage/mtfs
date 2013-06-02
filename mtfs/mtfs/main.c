@@ -858,6 +858,8 @@ struct kmem_cache *mtfs_config_cache;
 EXPORT_SYMBOL(mtfs_config_cache);
 struct kmem_cache *mtfs_async_extent_cache;
 EXPORT_SYMBOL(mtfs_async_extent_cache);
+struct kmem_cache *mtfs_async_chunk_cache;
+EXPORT_SYMBOL(mtfs_async_chunk_cache);
 
 
 static struct mtfs_cache_info mtfs_cache_infos[] = {
@@ -917,6 +919,11 @@ static struct mtfs_cache_info mtfs_cache_infos[] = {
 		.cache = &mtfs_async_extent_cache,
 		.name = "mtfs_async_extent_cache",
 		.size = sizeof(struct masync_extent),
+	},
+	{
+		.cache = &mtfs_async_chunk_cache,
+		.name = "mtfs_async_chunk_cache",
+		.size = sizeof(struct masync_chunk),
 	},
 };
 	

@@ -95,6 +95,9 @@ struct msubject_async_info *masync_info_init(struct super_block *sb)
 	MTFS_INIT_LIST_HEAD(&info->msai_linkage);
 	atomic_set(&info->msai_reference, 0);
 	init_waitqueue_head(&info->msai_waitq);
+	MTFS_INIT_LIST_HEAD(&info->msai_lru_chunks);
+	mtfs_spin_lock_init(&info->msai_lru_chunk_lock);
+	atomic_set(&info->msai_lru_chunk_number, 0);
 	masync_info_add_to_list(info);
 
 	ret = masync_info_proc_init(info, sb);
@@ -146,6 +149,8 @@ force_wait:
 	MASSERT(mtfs_list_empty(&info->msai_buckets));
 	MASSERT(atomic_read(&info->msai_lru_number) == 0);
 	MASSERT(atomic_read(&info->msai_reference) == 0);
+	MASSERT(mtfs_list_empty(&info->msai_lru_chunks));
+	MASSERT(atomic_read(&info->msai_lru_chunk_number) == 0);
 	masync_info_proc_fini(info, sb);
 
 	MTFS_FREE_PTR(info);
