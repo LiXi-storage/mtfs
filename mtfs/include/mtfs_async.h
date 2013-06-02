@@ -84,7 +84,11 @@ struct masync_extent {
 	atomic_t                    mae_reference;
 };
 
-#define masync_interval2extent(interval) container_of(interval, struct masync_extent, mae_interval)
+#define masync_interval2extent(interval) \
+    container_of(interval, struct masync_extent, mae_interval)
+
+#define MASYNC_CHUNK_FLAG_DRITY 0x00000001 /* Have diry extents */
+#define MASYNC_CHUNK_SIZE      (1048576)
 
 struct masync_chunk {
 	/* Bucket belongs to, unchangeable */
@@ -97,8 +101,14 @@ struct masync_chunk {
 	__u64                       mac_start;
 	/* End offset, unchangeable */
 	__u64                       mac_end;
+	/* Length, unchangeable */
+	__u64                       mac_size;
 	/* Reference number */
 	atomic_t                    mac_reference;
+	/* Protect mac_flag */
+	struct semaphore            mac_lock;
+	/* Flags */
+	__u32                       mac_flags;
 	/* Linkage to info, protected by mab_chunk_lock */
 	mtfs_list_t                 mac_lru_linkage;
 };
