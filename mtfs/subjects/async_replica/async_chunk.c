@@ -1,6 +1,58 @@
 #include <mtfs_async.h>
 #include "async_chunk_internal.h"
 
+void masync_chunk_get(struct masync_chunk *chunk)
+{
+	struct msubject_async_info *info = NULL;
+	int reference = 0;
+	MENTRY();
+
+	info = chunk->mac_info;
+	reference = atomic_inc_return(&chunk->mac_reference);
+	if (reference == 1) {
+		mtfs_spin_lock(&info->msai_idle_chunk_lock);
+		/* Might be removed by others */
+		if (!mtfs_list_empty(&chunk->mac_idle_linkage)) {
+			mtfs_list_del_init(&chunk->mac_idle_linkage);
+			atomic_dec(&info->msai_idle_chunk_number);
+		}
+		mtfs_spin_unlock(&info->msai_idle_chunk_lock);
+	}
+
+	_MRETURN();
+}
+
+void masync_chunk_put(struct masync_chunk *chunk)
+{
+	struct msubject_async_info *info = NULL;
+	int reference = 0;
+	int is_free = 0;
+	MENTRY();
+
+	info = chunk->mac_info;
+	mtfs_spin_lock(&chunk->mac_bucket_lock);
+	is_free = (chunk->mac_bucket == NULL);
+	mtfs_spin_unlock(&chunk->mac_bucket_lock);
+
+	reference = atomic_dec_return(&chunk->mac_reference);
+	if (reference == 1) {
+		/* Not used by bucket any more */
+		MASSERT(is_free);
+		masync_chunk_fini(chunk);
+	} else if (reference == 2 && (!is_free)) {
+		mtfs_spin_lock(&info->msai_idle_chunk_lock);
+		/* Might be inserted by others */
+		if (mtfs_list_empty(&chunk->mac_idle_linkage)) {
+			mtfs_list_add_tail(&chunk->mac_idle_linkage,
+			                   &info->msai_idle_chunks);
+			atomic_inc(&info->msai_idle_chunk_number);
+		}
+		mtfs_spin_unlock(&info->msai_idle_chunk_lock);
+	}
+
+	_MRETURN();
+}
+
 struct masync_chunk *masync_chunk_init(struct masync_bucket *bucket,
                                        __u64 start,
                                        __u64 end)
@@ -18,14 +70,15 @@ struct masync_chunk *masync_chunk_init(struct masync_bucket *bucket,
 
 	chunk->mac_bucket = bucket;
 	chunk->mac_info = bucket->mab_info;
-	MTFS_INIT_LIST_HEAD(&chunk->mac_lru_linkage);
+	MTFS_INIT_LIST_HEAD(&chunk->mac_idle_linkage);
 	MTFS_INIT_LIST_HEAD(&chunk->mac_linkage);
+	mtfs_spin_lock_init(&chunk->mac_bucket_lock);
 	chunk->mac_start = start;
 	chunk->mac_end = end;
 	chunk->mac_size = end - start + 1;
 	/* Always refered bucket, unless about to be freed*/
 	atomic_set(&chunk->mac_reference, 1);
-	init_MUTEX(&bucket->mab_chunk_lock);
+	init_MUTEX(&chunk->mac_lock);
 
 out:
 	MRETURN(chunk);
@@ -37,7 +90,7 @@ void masync_chunk_fini(struct masync_chunk *chunk)
 
 	/* TODO: clean CATALOG handle */
 	MASSERT(chunk->mac_bucket == NULL);
-	MASSERT(mtfs_list_empty(&chunk->mac_lru_linkage));
+	MASSERT(mtfs_list_empty(&chunk->mac_idle_linkage));
 	MASSERT(mtfs_list_empty(&chunk->mac_linkage));
 	MASSERT(atomic_read(&chunk->mac_reference) == 0);
 	MTFS_SLAB_FREE_PTR(chunk, mtfs_async_chunk_cache);
