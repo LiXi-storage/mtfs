@@ -82,6 +82,10 @@ struct masync_extent {
 	mtfs_list_t                 mae_cancel_linkage;
 	/* Reference number */
 	atomic_t                    mae_reference;
+	/* Chunks, protected by mab_lock */
+	struct masync_chunk       **mae_chunks;
+	/* Chunk number, protected by mab_lock */
+	__u64                       mae_chunk_num;
 };
 
 #define masync_interval2extent(interval) \
@@ -113,6 +117,12 @@ struct masync_chunk {
 	__u32                       mac_flags;
 	/* Linkage to info, protected by mab_chunk_lock */
 	mtfs_list_t                 mac_idle_linkage;
+};
+
+struct masync_chunk_linkage {
+	/* Linkage to extent */
+	mtfs_list_t                 macl_linkage;
+	struct masync_chunk        *macl_chunk;
 };
 
 struct masync_bucket {
