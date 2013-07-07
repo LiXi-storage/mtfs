@@ -610,13 +610,12 @@ static void masync_io_iter_start_writev(struct mtfs_io *io)
 
 	MASSERT(io->mi_type == MIOT_WRITEV);
 	MASSERT(io->mi_bindex == 0);
-
 	/*
 	 * TODO: sign the file async,
 	 * since the server may crash immediately after branch write completes. 
 	 */
-	ret = masync_bucket_add_start(file,
-                                      &async_extent);
+	ret = masync_bucket_add_start(file->f_dentry->d_inode,
+	                              &async_extent);
 	if (ret) {
 		MERROR("failed to add extent to bucket of [%.*s], ret = %d\n",
 		       dentry->d_name.len, dentry->d_name.name,
@@ -633,7 +632,7 @@ static void masync_io_iter_start_writev(struct mtfs_io *io)
 	if (io->mi_result.ssize == 0) {
 		goto out_bucket_abort;
 	}
-	
+
 	/* Get range from nothing but result because of O_APPEND */
 	extent.start = io_rw->pos_tmp - io->mi_result.ssize;
 	extent.end = io_rw->pos_tmp - 1;

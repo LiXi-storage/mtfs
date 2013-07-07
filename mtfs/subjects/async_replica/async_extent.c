@@ -7,6 +7,7 @@
 #include <mtfs_inode.h>
 #include "async_extent_internal.h"
 #include "async_bucket_internal.h"
+#include "async_chunk_internal.h"
 
 struct masync_extent *masync_extent_init(struct masync_bucket *bucket)
 {
@@ -24,6 +25,7 @@ struct masync_extent *masync_extent_init(struct masync_bucket *bucket)
 	mtfs_spin_lock_init(&async_extent->mae_lock);
 	MTFS_INIT_LIST_HEAD(&async_extent->mae_lru_linkage);
 	MTFS_INIT_LIST_HEAD(&async_extent->mae_cancel_linkage);
+	MTFS_INIT_LIST_HEAD(&async_extent->mae_chunks);
 	atomic_set(&async_extent->mae_reference, 0);
 
 out:
@@ -33,9 +35,23 @@ out:
 
 void masync_extent_fini(struct masync_extent *async_extent)
 {
+	struct masync_chunk *chunk = NULL;
+	struct masync_chunk_linkage *linkage = NULL;
+	struct masync_chunk_linkage *head = NULL;
 	MENTRY();
 
+	mtfs_list_for_each_entry_safe(linkage,
+	                              head,
+	                              &async_extent->mae_chunks,
+	                              macl_linkage) {
+		mtfs_list_del(&linkage->macl_linkage);
+		chunk = linkage->macl_chunk;
+		masync_chunk_put(chunk);
+		MTFS_FREE_PTR(linkage);
+	}
+
 	MASSERT(async_extent->mae_bucket == NULL);
+	MASSERT(mtfs_list_empty(&async_extent->mae_chunks));
 	MASSERT(mtfs_list_empty(&async_extent->mae_lru_linkage));
 	MASSERT(mtfs_list_empty(&async_extent->mae_cancel_linkage));
 	MASSERT(atomic_read(&async_extent->mae_reference) == 0);

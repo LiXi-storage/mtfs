@@ -11,6 +11,7 @@
 #include <mtfs_super.h>
 #include "async_bucket_internal.h"
 #include "async_extent_internal.h"
+#include "async_chunk_internal.h"
 
 /* Called holding mab_lock */
 int masync_sync_file(struct masync_bucket *bucket,
@@ -176,43 +177,14 @@ static int masycn_bucket_fput(struct masync_bucket *bucket)
 	MRETURN(ret);
 }
 
-int masync_bucket_get(struct masync_bucket *bucket)
-{
-	int ret = 0;
-
-	down(&bucket->mab_lock);
-	if (atomic_read(&bucket->mab_number) == 0) {
-		/* Increase reference to bucket of lowerfs */
-	}
-	atomic_inc(&bucket->mab_number);
-	up(&bucket->mab_lock);
-
-	MRETURN(ret);
-}
-
-int masync_bucket_put(struct masync_bucket *bucket)
-{
-	int ret = 0;
-
-	down(&bucket->mab_lock);
-	atomic_dec(&bucket->mab_number);
-	if (atomic_read(&bucket->mab_number) == 0) {
-		/* Decrease reference to bucket of lowerfs */
-	}
-	up(&bucket->mab_lock);
-
-	MRETURN(ret);
-}
-
 /*
  * Start adding bucket.
  * Any operation that may fail should be here.
  */
-int masync_bucket_add_start(struct file *file,
+int masync_bucket_add_start(struct inode *inode,
                             struct masync_extent **async_extent)
 {
 	int ret = 0;
-	struct inode *inode = file->f_dentry->d_inode;
 	struct masync_bucket *bucket = mtfs_i2bucket(inode);
 	struct masync_extent *extent;
 	MENTRY();
@@ -222,6 +194,15 @@ int masync_bucket_add_start(struct file *file,
 		MERROR("failed to create interval, not enough memory\n");
 		ret = -ENOMEM;
 		goto out;
+	}
+
+	ret = masync_chunk_add_interval(bucket,
+	                                &extent->mae_chunks,
+	                                0,
+	                                MASYNC_CHUNK_SIZE - 1);
+	if (ret) {
+		extent->mae_bucket = NULL;
+		masync_extent_fini(extent);
 	}
 	*async_extent = extent;
 out:
@@ -285,6 +266,7 @@ void masync_bucket_add_end(struct file *file,
 		mtfs_interval_erase(&tmp_extent->mi_node, &bucket->mab_root);
 
 		tmp_async_extent = masync_interval2extent(tmp_extent);
+		masync_chunk_merge_extent(tmp_async_extent, async_extent);
 
 		/* Export that this extent is not used since now */
 		mtfs_spin_lock(&tmp_async_extent->mae_lock);
@@ -343,6 +325,7 @@ int masync_bucket_cleanup(struct masync_bucket *bucket)
 		MERROR("not enough memory\n");
 	}
 
+	/* Cleanup extents */
 	down(&bucket->mab_lock);
 	extent_number = atomic_read(&bucket->mab_number);
 	while (bucket->mab_root) {
@@ -383,6 +366,9 @@ int masync_bucket_cleanup(struct masync_bucket *bucket)
 	}
 	up(&bucket->mab_lock);
 
+	/* Cleanup chunks */
+	masync_chunk_cleanup(bucket);
+
 	masync_bucket_remove_from_list(bucket);
 
 	MASSERT(bucket->mab_root == NULL);
@@ -416,21 +402,12 @@ static void _masync_bucket_remove(struct masync_bucket *bucket,
 	masync_extent_put(async_extent);
 }
 
-static int _masync_bucket_add(struct masync_bucket *bucket,
-                              struct mtfs_interval_node_extent *interval)
+static void _masync_bucket_add_end(struct masync_bucket *bucket,
+                                   struct masync_extent *async_extent,
+                                   struct mtfs_interval_node_extent *interval)
 {
-	struct masync_extent *async_extent = NULL;
-	int ret = 0;
 	struct mtfs_interval_node *found = NULL;
 	MENTRY();
-
-	async_extent = masync_extent_init(bucket);
-	if (async_extent == NULL) {
-		MERROR("failed to create interval, not enough memory\n");
-		ret = -ENOMEM;
-		MBUG();
-		goto out;
-	}
 
 	masync_extent_get(async_extent);
 	atomic_inc(&bucket->mab_number);
@@ -441,18 +418,22 @@ static int _masync_bucket_add(struct masync_bucket *bucket,
 	                             &bucket->mab_root);
 	MASSERT(!found);
 	masync_extent_add_to_lru(async_extent);
-out:
-	MRETURN(ret);
+
+	_MRETURN();
 }
 
 /* Called holding bucket->mab_lock */
-static int _masync_bucket_cleanup_interval(struct masync_bucket *bucket,
-                                           struct mtfs_interval_node_extent *interval)
+/* TODO: share the same codes with masync_bucket_add_end() */
+static int
+_masync_bucket_cleanup_interval(struct masync_bucket *bucket,
+                                struct mtfs_interval_node_extent *interval)
 {
 	MTFS_LIST_HEAD(extent_list);
 	struct mtfs_interval *tmp_extent = NULL;
 	struct mtfs_interval *head = NULL;
 	struct mtfs_interval_node_extent tmp_interval;
+	struct inode *inode = mtfs_bucket2inode(bucket);
+	struct masync_extent *async_extent = NULL;
 	int ret = 0;
 	MENTRY();
 
@@ -474,9 +455,18 @@ static int _masync_bucket_cleanup_interval(struct masync_bucket *bucket,
 		} else if (tmp_extent->mi_node.in_extent.start < interval->start) {
 			tmp_interval.start = tmp_extent->mi_node.in_extent.start;
 			tmp_interval.end = interval->start - 1;
+			ret = masync_bucket_add_start(inode, &async_extent);
+			if (ret) {
+				MERROR("failed to add extent to bucket, ret = %d\n",
+				       ret);
+				/* TODO: remove me */
+				MBUG();
+			}
 			_masync_bucket_remove(bucket,
                 	                      masync_interval2extent(tmp_extent));
-			_masync_bucket_add(bucket, &tmp_interval);
+			_masync_bucket_add_end(bucket,
+			                       async_extent,
+			                       &tmp_interval);
 		} else if (tmp_extent->mi_node.in_extent.end > interval->end) {
 			MBUG();
 		} else {

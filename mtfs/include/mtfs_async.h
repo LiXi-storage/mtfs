@@ -83,16 +83,14 @@ struct masync_extent {
 	/* Reference number */
 	atomic_t                    mae_reference;
 	/* Chunks, protected by mab_lock */
-	struct masync_chunk       **mae_chunks;
-	/* Chunk number, protected by mab_lock */
-	__u64                       mae_chunk_num;
+	mtfs_list_t                 mae_chunks;
 };
 
 #define masync_interval2extent(interval) \
     container_of(interval, struct masync_extent, mae_interval)
 
 #define MASYNC_CHUNK_FLAG_DRITY 0x00000001 /* Have diry extents */
-#define MASYNC_CHUNK_SIZE      (1048576)
+#define MASYNC_CHUNK_SIZE      (MTFS_INTERVAL_EOF)
 
 struct masync_chunk {
 	/* Bucket belongs to, protected by mac_bucket_lock */
@@ -115,8 +113,6 @@ struct masync_chunk {
 	struct semaphore            mac_lock;
 	/* Flags */
 	__u32                       mac_flags;
-	/* Linkage to info, protected by mab_chunk_lock */
-	mtfs_list_t                 mac_idle_linkage;
 };
 
 struct masync_chunk_linkage {
@@ -169,12 +165,6 @@ struct msubject_async_info {
 	wait_queue_head_t      msai_waitq;
 	/* Proc entrys for async debug */
 	struct proc_dir_entry *msai_proc_entry;
-	/* Chuncks LRU list, protected by msai_lru_chunk_lock */
-	mtfs_list_t            msai_idle_chunks;
-	/* Protect msai_lru_chunks and mac_lru_linkage */
-	mtfs_spinlock_t        msai_idle_chunk_lock;
-	/* Number of chunks in lru */
-	atomic_t               msai_idle_chunk_number;
 };
 
 struct msubject_async {
