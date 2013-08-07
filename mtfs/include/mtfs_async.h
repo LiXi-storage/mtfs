@@ -93,10 +93,8 @@ struct masync_extent {
 #define MASYNC_CHUNK_SIZE      (MTFS_INTERVAL_EOF)
 
 struct masync_chunk {
-	/* Bucket belongs to, protected by mac_bucket_lock */
+	/* Bucket belongs to */
 	struct masync_bucket       *mac_bucket;
-	/* Protect mac_bucket */
-	mtfs_spinlock_t             mac_bucket_lock;
 	/* Info that belongs to, unchangeable */
 	struct msubject_async_info *mac_info;
 	/* Linkage to bucket, protected by mab_chunk_lock */

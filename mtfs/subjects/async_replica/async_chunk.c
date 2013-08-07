@@ -23,11 +23,10 @@ struct masync_chunk *masync_chunk_init(struct masync_bucket *bucket,
 	chunk->mac_bucket = bucket;
 	chunk->mac_info = bucket->mab_info;
 	MTFS_INIT_LIST_HEAD(&chunk->mac_linkage);
-	mtfs_spin_lock_init(&chunk->mac_bucket_lock);
 	chunk->mac_start = start;
 	chunk->mac_end = end;
 	chunk->mac_size = end - start + 1;
-	atomic_set(&chunk->mac_reference, 0);
+	atomic_set(&chunk->mac_reference, 1);
 	init_MUTEX(&chunk->mac_lock);
 out:
 	MRETURN(chunk);
@@ -37,7 +36,6 @@ void masync_chunk_fini(struct masync_chunk *chunk)
 {
 	MENTRY();
 
-	MASSERT(!chunk->mac_flags & MASYNC_CHUNK_FLAG_DRITY);
 	MASSERT(mtfs_list_empty(&chunk->mac_linkage));
 	MASSERT(atomic_read(&chunk->mac_reference) == 0);
 	MTFS_SLAB_FREE_PTR(chunk, mtfs_async_chunk_cache);
@@ -45,9 +43,29 @@ void masync_chunk_fini(struct masync_chunk *chunk)
 	_MRETURN();
 }
 
-struct masync_chunk *_masync_chunk_find(struct masync_bucket *bucket,
-                                        __u64 start,
-                                        __u64 end)
+void masync_chunk_get(struct masync_chunk *chunk)
+{
+	MENTRY();
+
+	atomic_inc(&chunk->mac_reference);
+
+	_MRETURN();
+}
+
+void masync_chunk_put(struct masync_chunk *chunk)
+{
+	MENTRY();
+
+	if (atomic_dec_and_test(&chunk->mac_reference)) {
+		masync_chunk_fini(chunk);
+	}
+
+	_MRETURN();
+}
+
+struct masync_chunk *masync_chunk_find(struct masync_bucket *bucket,
+                                       __u64 start,
+                                       __u64 end)
 {
 	struct masync_chunk *chunk = NULL;
 	struct masync_chunk *find = NULL;
@@ -59,24 +77,11 @@ struct masync_chunk *_masync_chunk_find(struct masync_bucket *bucket,
 		if (chunk->mac_start == start) {
 			MASSERT(chunk->mac_end == end);
 			find = chunk;
+			masync_chunk_get(find);
 			break;
 		}
 	}
 	MRETURN(find);
-}
-
-struct masync_chunk *masync_chunk_find(struct masync_bucket *bucket,
-                                       __u64 start,
-                                       __u64 end)
-{
-	struct masync_chunk *chunk = NULL;
-	MENTRY();
-
-	down(&bucket->mab_chunk_lock);
-	chunk = _masync_chunk_find(bucket, start, end);
-	up(&bucket->mab_chunk_lock);
-
-	MRETURN(chunk);
 }
 
 int masync_chunk_mark_dirty(struct masync_chunk *chunk)
@@ -119,69 +124,10 @@ void masync_chunk_cleanup(struct masync_bucket *bucket)
 	                              n,
 	                              &bucket->mab_chunks,
 	                              mac_linkage) {
-		/* This is slow and can be moved out of lock */
-		masync_chunk_clean_dirty(chunk);
 		mtfs_list_del_init(&chunk->mac_linkage);
-		mtfs_spin_lock(&chunk->mac_bucket_lock);
-		chunk->mac_bucket = NULL;
-		mtfs_spin_unlock(&chunk->mac_bucket_lock);
+		masync_chunk_put(chunk);
 	}
 	up(&bucket->mab_chunk_lock);
-}
-
-void masync_chunk_get(struct masync_chunk *chunk)
-{
-	MENTRY();
-
-	atomic_inc(&chunk->mac_reference);
-
-	_MRETURN();
-}
-
-static int masync_chunk_try_unlink(struct masync_chunk *chunk)
-{
-	struct masync_bucket *bucket = NULL;
-	int cleanup = 0;
-	int retry = 0;
-
-	mtfs_spin_lock(&chunk->mac_bucket_lock);
-	bucket = chunk->mac_bucket;
-	if (bucket == NULL) {
-		MASSERT(mtfs_list_empty(&chunk->mac_linkage));
-		masync_chunk_fini(chunk);
-	} else if (!down_trylock(&bucket->mab_chunk_lock)) {
-		if (atomic_read(&chunk->mac_reference) == 0) {
-			cleanup = 1;
-			chunk->mac_bucket = NULL;
-			mtfs_list_del_init(&chunk->mac_linkage);
-		}
-		up(&bucket->mab_chunk_lock);
-	} else {
-		retry = 1;
-	}
-	mtfs_spin_unlock(&chunk->mac_bucket_lock);
-
-	if (cleanup) {
-		masync_chunk_clean_dirty(chunk);
-		masync_chunk_fini(chunk);
-	}
-	return retry;
-}
-
-void masync_chunk_put(struct masync_chunk *chunk)
-{
-	MENTRY();
-
-	if (atomic_dec_and_test(&chunk->mac_reference)) {
-		while (1) {
-			if (masync_chunk_try_unlink(chunk) == 0) {
-				break;
-			}
-			udelay(5);
-		}
-	}
-
-	_MRETURN();
 }
 
 /*
@@ -199,29 +145,29 @@ int masync_chunk_add(struct masync_bucket *bucket,
 	MASSERT(start + MASYNC_CHUNK_SIZE - 1 == end);
 
 	down(&bucket->mab_chunk_lock);
-	tmp_chunk = _masync_chunk_find(bucket,
+	tmp_chunk = masync_chunk_find(bucket,
 	                               start,
 	                               end);
 	if (tmp_chunk == NULL) {
 		tmp_chunk = masync_chunk_init(bucket, start, end);
-		if (tmp_chunk == NULL) {
-			MERROR("failed to init chunk\n");
-			up(&bucket->mab_chunk_lock);
-			*chunk = NULL;
-			ret = -ENOMEM;
-			goto out;
-		}
-		masync_chunk_get(tmp_chunk);
 		mtfs_list_add_tail(&tmp_chunk->mac_linkage,
 		                   &bucket->mab_chunks);
+		masync_chunk_get(tmp_chunk);
 	}
 	up(&bucket->mab_chunk_lock);
+	if (tmp_chunk == NULL) {
+		MERROR("failed to init chunk\n");
+		ret = -ENOMEM;
+		goto out;
+	}
 
-	*chunk = tmp_chunk;
 	ret = masync_chunk_mark_dirty(tmp_chunk);
 	if (ret) {
 		MERROR("failed to mark dirty, ret = %d\n", ret);
+		masync_chunk_put(tmp_chunk);
+		goto out;
 	}
+	*chunk = tmp_chunk;
 out:
 	MRETURN(ret);
 }
@@ -263,9 +209,6 @@ int masync_chunk_add_interval(struct masync_bucket *bucket,
 		                       tmp_start,
 		                       tmp_end);
 		if (ret) {
-			if (chunk) {
-				masync_chunk_put(chunk);
-			}
 			MERROR("failed to add chunk [%llu, %llu], ret = %d\n",
 			       tmp_start, tmp_end, ret);
 			MTFS_FREE_PTR(linkage);
