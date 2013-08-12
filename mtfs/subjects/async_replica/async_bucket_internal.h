@@ -56,8 +56,7 @@ int masync_bucket_cancel(struct masync_bucket *bucket,
 void masync_bucket_init(struct msubject_async_info *info,
                         struct masync_bucket *bucket);
 int masync_bucket_cleanup(struct masync_bucket *bucket);
-int masync_bucket_cleanup_interval(struct masync_bucket *bucket,
-                                   struct mtfs_interval_node_extent *interval);
+int masync_bucket_truncate(struct masync_bucket *bucket, __u64 size);
 int masync_sync_file(struct masync_bucket *bucket,
                      struct mtfs_interval_node_extent *extent,
                      char *buf,

@@ -422,70 +422,66 @@ static void _masync_bucket_add_end(struct masync_bucket *bucket,
 	_MRETURN();
 }
 
-/* Called holding bucket->mab_lock */
 /* TODO: share the same codes with masync_bucket_add_end() */
-static int
-_masync_bucket_cleanup_interval(struct masync_bucket *bucket,
-                                struct mtfs_interval_node_extent *interval)
+static int masync_bucket_extent_truncate(struct masync_bucket *bucket,
+                                         struct masync_extent *extent,
+                                         __u64 size)
 {
-	MTFS_LIST_HEAD(extent_list);
-	struct mtfs_interval *tmp_extent = NULL;
-	struct mtfs_interval *head = NULL;
-	struct mtfs_interval_node_extent tmp_interval;
-	struct inode *inode = mtfs_bucket2inode(bucket);
-	struct masync_extent *async_extent = NULL;
+	struct masync_extent *add_extent = NULL;
+	struct mtfs_interval_node_extent add_interval;
 	int ret = 0;
 	MENTRY();
 
-	mtfs_interval_search(bucket->mab_root,
-	                     interval,
-	                     masync_overlap_cb,
-	                     &extent_list);
+	MASSERT(extent->mae_interval.mi_node.in_extent.start < size);
+	MASSERT(extent->mae_interval.mi_node.in_extent.end >= size);
+	add_interval.start = extent->mae_interval.mi_node.in_extent.start;
+	add_interval.end = size - 1;
 
-	mtfs_list_for_each_entry_safe(tmp_extent, head, &extent_list, mi_linkage) {
-		if (tmp_extent->mi_node.in_extent.start < interval->start &&
-		    tmp_extent->mi_node.in_extent.end > interval->end) {
-			/*
-			 * Need to add two new dirty extent.
-			 * It can be asserted that the list only has one extent.
-			 * Not gonna happen when truncate.
-			 */
-
-			MBUG();
-		} else if (tmp_extent->mi_node.in_extent.start < interval->start) {
-			tmp_interval.start = tmp_extent->mi_node.in_extent.start;
-			tmp_interval.end = interval->start - 1;
-			ret = masync_bucket_add_start(inode, &async_extent);
-			if (ret) {
-				MERROR("failed to add extent to bucket, ret = %d\n",
-				       ret);
-				/* TODO: remove me */
-				MBUG();
-			}
-			_masync_bucket_remove(bucket,
-                	                      masync_interval2extent(tmp_extent));
-			_masync_bucket_add_end(bucket,
-			                       async_extent,
-			                       &tmp_interval);
-		} else if (tmp_extent->mi_node.in_extent.end > interval->end) {
-			MBUG();
-		} else {
-			_masync_bucket_remove(bucket,
-                	                      masync_interval2extent(tmp_extent));
-		}
+	ret = masync_bucket_add_start(mtfs_bucket2inode(bucket), &add_extent);
+	if (ret) {
+		MERROR("failed to add extent to bucket, ret = %d\n",
+		       ret);
+		goto out;
 	}
-
+	
+	_masync_bucket_remove(bucket, extent);
+	_masync_bucket_add_end(bucket, add_extent, &add_interval);
+out:
 	MRETURN(ret);
 }
 
-int masync_bucket_cleanup_interval(struct masync_bucket *bucket,
-                                   struct mtfs_interval_node_extent *interval)
+int masync_bucket_truncate(struct masync_bucket *bucket, __u64 size)
 {
 	int ret = 0;
+	MTFS_LIST_HEAD(extent_list);
+	struct mtfs_interval_node_extent search_interval;
+	struct mtfs_interval *list_interval = NULL;
+	struct mtfs_interval *head_interval = NULL;
+	struct masync_extent *extent = NULL;
 	MENTRY();
 
+	search_interval.start = size;
+	search_interval.end = MTFS_INTERVAL_EOF;
 	down(&bucket->mab_lock);
-	ret = _masync_bucket_cleanup_interval(bucket, interval);
+	mtfs_interval_search(bucket->mab_root, &search_interval,
+	                     masync_overlap_cb, &extent_list);
+
+	mtfs_list_for_each_entry_safe(list_interval, head_interval,
+	                              &extent_list, mi_linkage) {
+		extent = masync_interval2extent(list_interval);
+		if (list_interval->mi_node.in_extent.start < size) {
+			/* Remove old one and insert new one */
+			ret = masync_bucket_extent_truncate(bucket,
+			                                    extent,
+			                                    size);
+			if (ret) {
+				break;
+			}
+		} else {
+			/* Covered, remove the extent */
+			_masync_bucket_remove(bucket, extent);
+		}
+	}
 	up(&bucket->mab_lock);
 
 	MRETURN(ret);

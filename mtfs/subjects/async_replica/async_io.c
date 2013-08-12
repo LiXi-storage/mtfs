@@ -801,7 +801,7 @@ static void masync_iter_start_setattr(struct mtfs_io *io)
 	struct masync_bucket *bucket = mtfs_i2bucket(inode);
 	struct iattr *attr = io_setattr->ia;
 	int ia_valid = attr->ia_valid;
-	struct mtfs_interval_node_extent interval;
+	int ret = 0;
 	MENTRY();
 
 	mio_iter_start_setattr(io);
@@ -810,10 +810,15 @@ static void masync_iter_start_setattr(struct mtfs_io *io)
 	    io->mi_bindex == 0 &&
 	    io->mi_flags & MTFS_OPERATION_SUCCESS) {
 	    	/* Truncate dirty extents */
-		interval.start = attr->ia_size;
-		interval.end = MTFS_INTERVAL_EOF;
 		/* This would not fail. */
-		masync_bucket_cleanup_interval(bucket, &interval);
+		io->mi_result.ret = masync_bucket_truncate(bucket, attr->ia_size);
+		if (io->mi_result.ret) {
+			MERROR("failed to truncate extent of [%.*s], "
+			       "ret = %d\n",
+			       dentry->d_name.len, dentry->d_name.name,
+			       ret);
+			MBUG();
+		}
 	}
 
 	_MRETURN();
