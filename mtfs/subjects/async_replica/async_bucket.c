@@ -266,7 +266,6 @@ void masync_bucket_add_end(struct file *file,
 		mtfs_interval_erase(&tmp_extent->mi_node, &bucket->mab_root);
 
 		tmp_async_extent = masync_interval2extent(tmp_extent);
-		masync_chunk_merge_extent(tmp_async_extent, async_extent);
 
 		/* Export that this extent is not used since now */
 		mtfs_spin_lock(&tmp_async_extent->mae_lock);

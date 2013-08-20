@@ -13,7 +13,5 @@ struct masync_chunk *masync_chunk_init(struct masync_bucket *bucket,
 void masync_chunk_fini(struct masync_chunk *chunk);
 void masync_chunk_get(struct masync_chunk *chunk);
 void masync_chunk_put(struct masync_chunk *chunk);
-void masync_chunk_merge_extent(struct masync_extent *old,
-                               struct masync_extent *new);
 void masync_chunk_cleanup(struct masync_bucket *bucket);
 #endif /* __MTFS_ASYNC_CHUNK_INTERNAL_H__ */
