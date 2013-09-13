@@ -84,36 +84,6 @@ struct masync_chunk *masync_chunk_find(struct masync_bucket *bucket,
 	MRETURN(find);
 }
 
-int masync_chunk_mark_dirty(struct masync_chunk *chunk)
-{
-	int ret = 0;
-	MENTRY();
-
-	down(&chunk->mac_lock);
-	if (!(chunk->mac_flags & MASYNC_CHUNK_FLAG_DRITY)) {
-		/* TODO: write to CATALOG */
-		chunk->mac_flags |= MASYNC_CHUNK_FLAG_DRITY;
-	}
-	up(&chunk->mac_lock);
-
-	MRETURN(ret);
-}
-
-int masync_chunk_clean_dirty(struct masync_chunk *chunk)
-{
-	int ret = 0;
-	MENTRY();
-
-	down(&chunk->mac_lock);
-	if (chunk->mac_flags & MASYNC_CHUNK_FLAG_DRITY) {
-		/* TODO: clean handle of CATALOG */
-		chunk->mac_flags &= ~MASYNC_CHUNK_FLAG_DRITY;
-	}
-	up(&chunk->mac_lock);
-
-	MRETURN(ret);
-}
-
 void masync_chunk_cleanup(struct masync_bucket *bucket)
 {
 	struct masync_chunk *chunk = NULL;
@@ -150,9 +120,11 @@ int masync_chunk_add(struct masync_bucket *bucket,
 	                               end);
 	if (tmp_chunk == NULL) {
 		tmp_chunk = masync_chunk_init(bucket, start, end);
-		mtfs_list_add_tail(&tmp_chunk->mac_linkage,
-		                   &bucket->mab_chunks);
-		masync_chunk_get(tmp_chunk);
+		if (tmp_chunk != NULL) {
+			mtfs_list_add_tail(&tmp_chunk->mac_linkage,
+			                   &bucket->mab_chunks);
+			masync_chunk_get(tmp_chunk);
+		}
 	}
 	up(&bucket->mab_chunk_lock);
 	if (tmp_chunk == NULL) {
@@ -161,12 +133,6 @@ int masync_chunk_add(struct masync_bucket *bucket,
 		goto out;
 	}
 
-	ret = masync_chunk_mark_dirty(tmp_chunk);
-	if (ret) {
-		MERROR("failed to mark dirty, ret = %d\n", ret);
-		masync_chunk_put(tmp_chunk);
-		goto out;
-	}
 	*chunk = tmp_chunk;
 out:
 	MRETURN(ret);
