@@ -362,6 +362,12 @@ int mtfs_symbol_get(const char *module_name,
 				goto out;
 			}
 			mutex_lock(&module_mutex);
+			*owner = find_module(module_name);
+			if (*owner == NULL) {
+				MERROR("failed to find module %s\n", module_name);
+				ret = -ENOENT;
+				goto out;
+			}
 		}
 
 		ret = try_module_get(*owner);

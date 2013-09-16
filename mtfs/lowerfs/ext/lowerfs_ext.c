@@ -47,6 +47,7 @@ static int ext_support_init(void)
 		MERROR("failed to get address of symbple ext3_bread, ret = %d\n", ret);
 		goto out;
 	}
+	MASSERT(_mlowerfs_ext3_bread_owner != NULL);
 	_mlowerfs_ext3_bread_pointer = (_mlowerfs_ext3_bread_t)address;
 
 	ret = mlowerfs_register(&lowerfs_ext2);
