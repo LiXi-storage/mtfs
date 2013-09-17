@@ -1,0 +1,6 @@
+MODULES := mtfs_junction_sync_replica_lustre
+mtfs_junction_sync_replica_lustre-objs := replica_lustre.o
+
+EXTRA_DIST := $(mtfs_junction_sync_replica_lustre-objs:.o=.c)
+EXTRA_DIST += replica_lustre.h
+@INCLUDE_RULES@

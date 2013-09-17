@@ -812,6 +812,19 @@ AC_ARG_ENABLE([junction-sync-replica-ext],
 AC_MSG_RESULT([$enable_junction_sync_replica_ext])])
 
 #
+# LC_CONFIG_JUNCTION_SYNC_REPLICA_LUSTRE
+#
+# whether to build sync replica junction for lustre
+#
+AC_DEFUN([LC_CONFIG_JUNCTION_SYNC_REPLICA_LUSTRE],
+[AC_MSG_CHECKING([whether to build sync replica junction for lustre])
+AC_ARG_ENABLE([junction-sync-replica-lustre],
+        AC_HELP_STRING([--disable-junction-sync-replica-lustre],
+                        [disable sync replica junction for lowerfs lustre]),
+        [],[enable_junction_sync_replica_lustre='yes'])
+AC_MSG_RESULT([$enable_junction_sync_replica_lustre])])
+
+#
 # LC_CONFIG_JUNCTION_ASYNC_REPLICA_EXT
 #
 # whether to build async replica junction for ext
@@ -1226,6 +1239,7 @@ AM_CONDITIONAL(LIBMTFS, test x$enable_libmtfs = xyes)
 AM_CONDITIONAL(LIBMTFS_TESTS, test x$enable_libmtfs_tests = xyes)
 AM_CONDITIONAL(LUSTRE_SUPPORT, test x$enable_lustre_support = xyes)
 AM_CONDITIONAL(JUNCTION_SYNC_REPLICA_EXT, test x$enable_junction_sync_replica_ext = xyes)
+AM_CONDITIONAL(JUNCTION_SYNC_REPLICA_LUSTRE, test x$enable_junction_sync_replica_lustre = xyes)
 AM_CONDITIONAL(JUNCTION_ASYNC_CACHE_EXT, test x$enable_junction_async_cache_ext = xyes)
 AM_CONDITIONAL(JUNCTION_ASYNC_REPLICA_EXT, test x$enable_junction_async_replica_ext = xyes)
 AM_CONDITIONAL(JUNCTION_ASYNC_REPLICA_EXT_NFS, test x$enable_junction_async_replica_ext_nfs = xyes)
@@ -1269,6 +1283,8 @@ mtfs/junctions/async_replica_ext_nfs/Makefile
 mtfs/junctions/async_replica_ext_nfs/autoMakefile
 mtfs/junctions/sync_replica_ext/Makefile
 mtfs/junctions/sync_replica_ext/autoMakefile
+mtfs/junctions/sync_replica_lustre/Makefile
+mtfs/junctions/sync_replica_lustre/autoMakefile
 mtfs/junctions/sync_replica_nfs/Makefile
 mtfs/junctions/sync_replica_nfs/autoMakefile
 mtfs/junctions/sync_replica_ntfs3g/Makefile
