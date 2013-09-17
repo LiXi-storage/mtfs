@@ -1,0 +1,5 @@
+if MODULES
+modulefs_DATA = mtfs_lowerfs_lustre$(KMODEXT)
+endif
+
+MOSTLYCLEANFILES := @MOSTLYCLEANFILES@

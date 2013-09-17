@@ -955,6 +955,19 @@ AC_ARG_ENABLE([lowerfs-ntfs3g],
 AC_MSG_RESULT([$enable_lowerfs_ntfs3g])])
 
 #
+# LC_CONFIG_LOWERFS_LUSTRE
+#
+# whether to build lowerfs support for lustre 
+#
+AC_DEFUN([LC_CONFIG_LOWERFS_LUSTRE],
+[AC_MSG_CHECKING([whether to build lowerfs support for lustre])
+AC_ARG_ENABLE([lowerfs-lustre],
+        AC_HELP_STRING([--disable-lowerfs-lustre],
+                        [disable lowerfs support for lustre]),
+        [],[enable_lowerfs_lustre='yes'])
+AC_MSG_RESULT([$enable_lowerfs_lustre])])
+
+#
 # LC_CONFIG_SUBJECT_SYNC_REPLICA
 #
 # whether to build sync_replica subject
@@ -1224,6 +1237,7 @@ AM_CONDITIONAL(LOWERFS_EXT, test x$enable_lowerfs_ext = xyes)
 AM_CONDITIONAL(LOWERFS_NFS, test x$enable_lowerfs_nfs = xyes)
 AM_CONDITIONAL(LOWERFS_TMPFS, test x$enable_lowerfs_tmpfs = xyes)
 AM_CONDITIONAL(LOWERFS_NTFS3G, test x$enable_lowerfs_ntfs3g = xyes)
+AM_CONDITIONAL(LOWERFS_LUSTRE, test x$enable_lowerfs_lustre = xyes)
 AM_CONDITIONAL(MANAGE, test x$enable_manage = xyes)
 AM_CONDITIONAL(MANAGE_TESTS, test x$enable_manage_tests = xyes)
 AM_CONDITIONAL(SUBJECT_ASYNC_REPLICA, test x$enable_subject_async_replica = xyes)
@@ -1269,6 +1283,8 @@ mtfs/lowerfs/Makefile
 mtfs/lowerfs/autoMakefile
 mtfs/lowerfs/ext/Makefile
 mtfs/lowerfs/ext/autoMakefile
+mtfs/lowerfs/lustre/Makefile
+mtfs/lowerfs/lustre/autoMakefile
 mtfs/lowerfs/nfs/Makefile
 mtfs/lowerfs/nfs/autoMakefile
 mtfs/lowerfs/ntfs3g/Makefile

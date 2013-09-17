@@ -1,0 +1,6 @@
+MODULES := mtfs_lowerfs_lustre
+mtfs_lowerfs_lustre-objs := lowerfs_lustre.o
+
+EXTRA_DIST := $(mtfs_lowerfs_lustre-objs:.o=.c)
+EXTRA_DIST += lowerfs_lustre.h
+@INCLUDE_RULES@
