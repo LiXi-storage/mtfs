@@ -69,6 +69,11 @@ mount_filesystem_noexit()
 	local MOUNT_POINT=$4
 	local OPTION=$5
 
+	if [ "$1" = "" -o "$2" = "" -o \
+	     "$3" = "" -o "$4" = "" -o \
+	     "$5" = "" ];then
+		error "argument error"
+	fi
 	debug_print "mounting $FS_TYPE to $MOUNT_POINT..."
 	if ! filesystem_is_mounted $FS_TYPE $MOUNT_POINT; then
 		$MOUNT_CMD $DEV $MOUNT_POINT $OPTION
@@ -223,7 +228,7 @@ insert_module()
 	debug_print "inserting module $MODULE..."
 	if ! module_is_inserted $MODULE; then
 		/sbin/insmod $MODULE_PATH
-		
+	
 		if ! $(module_is_inserted $MODULE); then		
 			debug_print "failed\n"
 			error_print "failed to remove module $MODULE_PATH"
@@ -576,7 +581,7 @@ export_mtfs_dev()
 {
 	local INDEX;
 	local BRANCH_DIR;
-	local DEV
+	local DEV="";
 	local FIRST="yes";
 
 	for INDEX in ${!BRANCH_DIR_ARRAY[@]}; do
@@ -588,6 +593,9 @@ export_mtfs_dev()
 			DEV="$DEV:$BRANCH_DIR"
 		fi
 	done
+	if [ "$DEV" = "" ]; then
+		error "failed to get device name"
+	fi
 	export MTFS_DEV=$DEV
 }
 
