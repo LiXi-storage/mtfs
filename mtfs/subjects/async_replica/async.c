@@ -104,6 +104,7 @@ int masync_service_main(struct mtfs_service *service, struct mservice_thread *th
 	char *buf = NULL;
 	int buf_size = MASYNC_BULK_SIZE;
 	struct masync_extent *async_extent = NULL;
+	int retry = 0;
 	MENTRY();
 
 	MTFS_ALLOC(buf, buf_size);
@@ -131,8 +132,14 @@ int masync_service_main(struct mtfs_service *service, struct mservice_thread *th
 		mtfs_spin_unlock(&async->msa_cancel_lock);
 
 		/* If not in tree, masync_extent_flush() will shikp it */
-		masync_extent_flush(async_extent, buf, buf_size);
-		masync_extent_put(async_extent);
+		retry = masync_extent_flush(async_extent, buf, buf_size);
+		if (retry) {
+			mtfs_spin_lock(&async->msa_cancel_lock);
+			mtfs_list_add_tail(&async_extent->mae_cancel_linkage, &async->msa_cancel_extents);
+			mtfs_spin_unlock(&async->msa_cancel_lock);
+		} else {
+			masync_extent_put(async_extent);
+		}
 	}
 
 	MTFS_FREE(buf, buf_size);

@@ -68,11 +68,13 @@ typedef shrinker_t mtfs_shrinker_t;
 #endif /* !HAVE_REGISTER_SHRINKER */
 
 struct masync_extent {
-	struct masync_bucket *mae_bucket;         /* Bucket belongs to, unchangeable */
-	struct mtfs_interval  mae_interval;       /* Extent info, unchangeable */
-	mtfs_list_t           mae_lru_linkage;    /* Linkage to LRU list, protected by msai_lru_lock */
-	mtfs_list_t           mae_cancel_linkage; /* Linkage to cancel list, protected by msa_cancel_lock */
-	atomic_t              mae_reference;      /* Reference number */
+	struct masync_bucket       *mae_bucket;         /* Bucket belongs to, protected by mae_lock */
+	struct msubject_async_info *mae_info;           /* Info that belongs to, unchangeable */
+	mtfs_spinlock_t             mae_lock;           /* Protect mae_bucket */
+	struct mtfs_interval        mae_interval;       /* Extent info, unchangeable */
+	mtfs_list_t                 mae_lru_linkage;    /* Linkage to LRU list, protected by msai_lru_lock */
+	mtfs_list_t                 mae_cancel_linkage; /* Linkage to cancel list, protected by msa_cancel_lock */
+	atomic_t                    mae_reference;      /* Reference number */
 };
 
 #define masync_interval2extent(interval) container_of(interval, struct masync_extent, mae_interval)
@@ -90,10 +92,10 @@ struct masync_bucket {
 #define MASYNC_BULK_SIZE (4096)
 
 struct msubject_async_info {
-	struct msubject_async *msai_subject;     /* subject that belongs to, unchangeable */
+	struct msubject_async *msai_subject;     /* Subject that belongs to, unchangeable */
 	mtfs_list_t            msai_lru_extents; /* Extents LRU list, protected by msai_lru_lock */
 	mtfs_spinlock_t        msai_lru_lock;    /* Protect msai_lru_extents and mae_lru_linkage */
-	atomic_t               msai_lru_number;   /* Number of extents in lru */
+	atomic_t               msai_lru_number;  /* Number of extents in lru */
 	mtfs_list_t            msai_buckets;     /* Extents cancel list, protected by msai_bucket_lock */
 	mtfs_spinlock_t        msai_bucket_lock; /* Protect msai_buckets */
 	mtfs_list_t            msai_linkage;     /* Linkage to subject, protected by msai_bucket_lock */

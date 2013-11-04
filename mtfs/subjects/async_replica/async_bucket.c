@@ -215,6 +215,13 @@ int masync_bucket_add(struct file *file,
 
 		bucket->mab_number--;
 		mtfs_interval_erase(&tmp_extent->mi_node, &bucket->mab_root);
+
+		tmp_async_extent = masync_interval2extent(tmp_extent);
+
+		/* Export that this extent is not used since now */
+		mtfs_spin_lock(&tmp_async_extent->mae_lock);
+		tmp_async_extent->mae_bucket = NULL;
+		mtfs_spin_unlock(&tmp_async_extent->mae_lock);
 	}
 	bucket->mab_number++;
 	mtfs_interval_set(&node->mi_node, min_start, max_end);
@@ -271,13 +278,19 @@ int masync_bucket_cleanup(struct masync_bucket *bucket)
 		bucket->mab_number--;
 		mtfs_interval_erase(bucket->mab_root, &bucket->mab_root);
 
+		async_extent = masync_interval2extent(node);
+
 		/*
 		 * If in LRU list, release it.
 		 * If in cancel list, leave it to cancel thread.
 		 * TODO: move it out of lock
 		 */
-		async_extent = masync_interval2extent(node);
 		masync_extent_remove_from_lru(async_extent);
+
+		/* Export that this extent is not used since now */
+		mtfs_spin_lock(&async_extent->mae_lock);
+		async_extent->mae_bucket = NULL;
+		mtfs_spin_unlock(&async_extent->mae_lock);
 
 		/* Extent tree release reference */
 		masync_extent_put(async_extent);

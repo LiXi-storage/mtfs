@@ -55,7 +55,7 @@ static inline int masync_extent_remove_from_lru_nonlock(struct masync_extent *ex
 	int ret = 0;
 	MENTRY();
 
-	info = extent->mae_bucket->mab_info;
+	info = extent->mae_info;
 
 	if (!mtfs_list_empty(&extent->mae_lru_linkage)) {
 		mtfs_list_del_init(&extent->mae_lru_linkage);
@@ -75,7 +75,7 @@ static inline void masync_extent_remove_from_lru(struct masync_extent *extent)
 	int need_put = 0;
 	MENTRY();
 
-	info = extent->mae_bucket->mab_info;
+	info = extent->mae_info;
 
 	mtfs_spin_lock(&info->msai_lru_lock);
 	need_put = masync_extent_remove_from_lru_nonlock(extent);
