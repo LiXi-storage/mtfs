@@ -6,4 +6,4 @@
 /autoMakefile.in
 /Makefile
 /modules.order
-/mtfs_replica_ext2.ko.unsigned
+/mtfs_sync_replica_ext.ko.unsigned

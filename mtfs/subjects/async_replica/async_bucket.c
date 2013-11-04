@@ -2,12 +2,13 @@
  * Copyright (C) 2011 Li Xi <pkuelelixi@gmail.com>
  */
 
+#include <linux/sched.h>
+#include <linux/mount.h>
 #include <mtfs_interval_tree.h>
 #include <mtfs_async.h>
 #include <mtfs_dentry.h>
 #include <mtfs_inode.h>
 #include <mtfs_super.h>
-#include <linux/mount.h>
 #include "async_bucket_internal.h"
 #include "async_extent_internal.h"
 
