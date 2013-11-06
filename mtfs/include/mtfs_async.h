@@ -82,7 +82,7 @@ struct masync_extent {
 struct masync_bucket {
 	struct msubject_async_info *mab_info;    /* Info that belongs to, unchangeable */
 	struct mtfs_interval_node  *mab_root;    /* Extent tree, protected by mab_lock */ 
-	int                         mab_number;  /* Extent number in tree, protected by mab_lock */ 
+	atomic_t                    mab_number;  /* Extent number in tree, protected by mab_lock */ 
 	struct mtfs_file_info       mab_finfo;   /* File info for healing, protected by mab_lock */
 	int                         mab_fvalid;  /* File info is valid or not, protected by mab_lock */
 	struct semaphore            mab_lock;    /* Protect tree, mab_number, mab_finfo and mab_fvalid */

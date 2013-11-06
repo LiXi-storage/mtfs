@@ -105,7 +105,7 @@ int masync_extent_flush(struct masync_extent *async_extent,
 		                       buf, buf_size);
 		//HASSERT(!ret);
 	}
-	bucket->mab_number--;
+	atomic_dec(&bucket->mab_number);
 	mtfs_interval_erase(&node->mi_node, &bucket->mab_root);
 
 	/* Export that this extent is not used since now */

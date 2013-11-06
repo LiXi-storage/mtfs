@@ -29,9 +29,7 @@ static int masync_proc_read_dirty(char *page, char **start, off_t off, int count
 			MERROR("not enough memory for proc read\n");
 			break;
 		}
-		down(&bucket->mab_lock);
-		extent_number = bucket->mab_number;
-		up(&bucket->mab_lock);
+		extent_number = atomic_read(&bucket->mab_number);
 		ret += snprintf(page + ret, count - ret, "Inode: %p, NR: %d\n",
 		                mtfs_bucket2inode(bucket), extent_number);
 	}

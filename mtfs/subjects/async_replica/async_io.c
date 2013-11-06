@@ -38,6 +38,7 @@ static void masync_io_iter_start_rw(struct mtfs_io *io)
 	struct dentry *dentry = file->f_dentry;
 	struct inode *inode = dentry->d_inode;
 	mtfs_bindex_t bindex = 0;
+
 	int ret = 0;
 	MENTRY();
 

@@ -88,7 +88,7 @@ void masync_bucket_init(struct msubject_async_info *info,
 
 	bucket->mab_info = info;
 	bucket->mab_root = NULL;
-	bucket->mab_number = 0;
+	atomic_set(&bucket->mab_number, 0);
 	bucket->mab_fvalid = 0;
 	init_MUTEX(&bucket->mab_lock);
 	MTFS_INIT_LIST_HEAD(&bucket->mab_linkage);
@@ -172,22 +172,23 @@ static int masycn_bucket_fput(struct masync_bucket *bucket)
 }
 
 int masync_bucket_add(struct file *file,
-                      struct mtfs_interval_node_extent *extent)
+                      struct mtfs_interval_node_extent *interval)
 {
 	MTFS_LIST_HEAD(extent_list);
+	struct mtfs_interval_node_extent tmp_interval;
 	struct mtfs_interval *tmp_extent = NULL;
 	struct mtfs_interval *node = NULL;
 	struct mtfs_interval *head = NULL;
 	struct masync_extent *async_extent = NULL;
 	struct masync_extent *tmp_async_extent = NULL;
 	int ret = 0;
-	__u64 min_start = extent->start;
-	__u64 max_end = extent->end;
+	__u64 min_start = interval->start;
+	__u64 max_end = interval->end;
 	struct inode *inode = file->f_dentry->d_inode;
 	struct masync_bucket *bucket = mtfs_i2bucket(inode);
 	MENTRY();
 
-	MDEBUG("adding [%lu, %lu]\n", extent->start, extent->end);
+	MDEBUG("adding [%lu, %lu]\n", interval->start, interval->end);
 
 	async_extent = masync_extent_init(bucket);
 	if (async_extent == NULL) {
@@ -200,9 +201,21 @@ int masync_bucket_add(struct file *file,
 
 	node = &async_extent->mae_interval;
 
+	if (interval->start != 0) {
+		tmp_interval.start = interval->start - 1;
+	} else {
+		tmp_interval.start = 0;
+	}
+
+	if (interval->end != MTFS_INTERVAL_EOF) {
+		tmp_interval.end = interval->end + 1;
+	} else {
+		tmp_interval.end = MTFS_INTERVAL_EOF;
+	}
+
 	down(&bucket->mab_lock);
 	mtfs_interval_search(bucket->mab_root,
-	                     extent,
+	                     &tmp_interval,
 	                     masync_overlap_cb,
 	                     &extent_list);
 
@@ -214,7 +227,7 @@ int masync_bucket_add(struct file *file,
 			max_end = tmp_extent->mi_node.in_extent.end;
 		}
 
-		bucket->mab_number--;
+		atomic_dec(&bucket->mab_number);
 		mtfs_interval_erase(&tmp_extent->mi_node, &bucket->mab_root);
 
 		tmp_async_extent = masync_interval2extent(tmp_extent);
@@ -224,7 +237,7 @@ int masync_bucket_add(struct file *file,
 		tmp_async_extent->mae_bucket = NULL;
 		mtfs_spin_unlock(&tmp_async_extent->mae_lock);
 	}
-	bucket->mab_number++;
+	atomic_inc(&bucket->mab_number);
 	mtfs_interval_set(&node->mi_node, min_start, max_end);
 	mtfs_interval_insert(&node->mi_node, &bucket->mab_root);
 
@@ -265,7 +278,7 @@ int masync_bucket_cleanup(struct masync_bucket *bucket)
 	}
 
 	down(&bucket->mab_lock);
-	extent_number = bucket->mab_number;
+	extent_number = atomic_read(&bucket->mab_number);
 	while (bucket->mab_root) {
 		node = mtfs_node2interval(bucket->mab_root);
 		if (buf != NULL) {
@@ -276,7 +289,7 @@ int masync_bucket_cleanup(struct masync_bucket *bucket)
 				//MASSERT(!ret);
 			}
 		}
-		bucket->mab_number--;
+		atomic_dec(&bucket->mab_number);
 		mtfs_interval_erase(bucket->mab_root, &bucket->mab_root);
 
 		async_extent = masync_interval2extent(node);
