@@ -244,9 +244,12 @@ int masync_bucket_add(struct file *file,
 	if (!bucket->mab_fvalid) {
 		masycn_bucket_fget(bucket, file);
 	}
-	up(&bucket->mab_lock);
-
+	/*
+	 * Should be protected by mab_lock,
+	 * since masync_bucket_cleanup() may miss it and cause memory leak.
+	 */
 	masync_extent_add_to_lru(async_extent);
+	up(&bucket->mab_lock);
 
 	/* Can be moved to background */
 	mtfs_list_for_each_entry_safe(tmp_extent, head, &extent_list, mi_linkage) {
