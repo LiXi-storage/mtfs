@@ -1,0 +1,4 @@
+@JUNCTION_SYNC_REPLICA_EXT_TRUE@subdir-m += sync_replica_ext
+@JUNCTION_ASYNC_REPLICA_EXT2_TRUE@subdir-m += async_replica_ext2
+
+@INCLUDE_RULES@

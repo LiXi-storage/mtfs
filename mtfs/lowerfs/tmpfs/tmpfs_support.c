@@ -162,6 +162,7 @@ struct inode_operations mtfs_tmpfs_symlink_iops =
 {
 	readlink:       mtfs_readlink,
 	follow_link:    mtfs_follow_link,
+	put_link:       mtfs_put_link,
 	permission:     mtfs_permission,
 	setattr:        mtfs_setattr,
 	getattr:        mtfs_getattr,
@@ -237,6 +238,9 @@ struct mtfs_operations mtfs_tmpfs_operations = {
 	sops:                    &mtfs_tmpfs_sops,
 	dops:                    &mtfs_tmpfs_dops,
 	aops:                    &mtfs_tmpfs_aops,
+	vm_ops:                  &mtfs_file_vm_ops,
+	iupdate_ops:             &mtfs_iupdate_choose,
+	io_ops:                  &mtfs_io_ops,
 };
 
 const char *supported_secondary_types[] = {
@@ -247,6 +251,7 @@ const char *supported_secondary_types[] = {
 struct mtfs_junction mtfs_tmpfs_junction = {
 	mj_owner:                THIS_MODULE,
 	mj_name:                 "unknown",
+	mj_subject:              "SYNC_REPLICA",
 	mj_primary_type:         "tmpfs",
 	mj_secondary_types:      supported_secondary_types,
 	mj_fs_ops:              &mtfs_tmpfs_operations,
@@ -257,8 +262,8 @@ struct mtfs_lowerfs lowerfs_tmpfs = {
 	ml_type:            "tmpfs",
 	ml_magic:           TMPFS_MAGIC,
 	ml_flag:            0,
-	ml_setflag:         NULL,
-	ml_getflag:         NULL,
+	ml_setflag:         mlowerfs_setflag_nop,
+	ml_getflag:         mlowerfs_getflag_nop,
 };
 
 static int tmpfs_support_init(void)

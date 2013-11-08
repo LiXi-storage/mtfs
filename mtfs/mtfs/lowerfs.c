@@ -772,6 +772,24 @@ int mlowerfs_setflag_default(struct inode *inode, __u32 mtfs_flag)
 }
 EXPORT_SYMBOL(mlowerfs_setflag_default);
 
+int mlowerfs_getflag_nop(struct inode *inode, __u32 *mtfs_flag)
+{
+	int ret = 0;
+	MENTRY();
+
+	MRETURN(ret);
+}
+EXPORT_SYMBOL(mlowerfs_getflag_nop);
+
+int mlowerfs_setflag_nop(struct inode *inode, __u32 mtfs_flag)
+{
+	int ret = 0;
+	MENTRY();
+
+	MRETURN(ret);
+}
+EXPORT_SYMBOL(mlowerfs_setflag_nop);
+
 static inline void mlowerfs_bucket_lock_init(struct mlowerfs_bucket *bucket)
 {
 	init_MUTEX(mlowerfs_bucket2lock(bucket));

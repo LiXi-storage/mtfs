@@ -1,10 +1,6 @@
-subdir-m += mtfs debug subjects
+subdir-m += mtfs debug subjects lowerfs junctions
 @LUSTRE_SUPPORT_TRUE@subdir-m += lustre_support
-@SYNC_REPLICA_EXT_TRUE@subdir-m += sync_replica_ext
-@EXT_SUPPORT_TRUE@subdir-m += ext_support
 @NFS_SUPPORT_TRUE@subdir-m += nfs_support
-@TMPFS_SUPPORT_TRUE@subdir-m += tmpfs_support
 @NTFS3G_SUPPORT_TRUE@subdir-m += ntfs3g_support
 @TRACE_EXT2_TRUE@subdir-m += trace_ext2
-@ASYNC_REPLICA_EXT2_TRUE@subdir-m += async_replica_ext2
 @INCLUDE_RULES@

@@ -68,6 +68,8 @@ extern int mlowerfs_getflag_xattr(struct inode *inode, __u32 *mtfs_flag, const c
 extern int mlowerfs_setflag_xattr(struct inode *inode, __u32 mtfs_flag, const char *xattr_name);
 extern int mlowerfs_getflag_default(struct inode *inode, __u32 *mtfs_flag);
 extern int mlowerfs_setflag_default(struct inode *inode, __u32 mtfs_flag);
+extern int mlowerfs_getflag_nop(struct inode *inode, __u32 *mtfs_flag);
+extern int mlowerfs_setflag_nop(struct inode *inode, __u32 mtfs_flag);
 #endif /* defined (__linux__) && defined(__KERNEL__) */
 
 #define MLOWERFS_BUCKET_NUMBER (64)

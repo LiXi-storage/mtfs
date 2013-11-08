@@ -1,0 +1,6 @@
+MODULES := mtfs_lowerfs_tmpfs
+mtfs_lowerfs_tmpfs-objs := tmpfs_support.o
+
+EXTRA_DIST := $(mtfs_lowerfs_tmpfs-objs:.o=.c)
+EXTRA_DIST += tmpfs_support.h
+@INCLUDE_RULES@
