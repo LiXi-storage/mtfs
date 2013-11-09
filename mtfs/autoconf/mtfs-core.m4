@@ -686,8 +686,8 @@ AC_DEFUN([LC_CONFIG_JUNCTION_ASYNC_REPLICA_EXT2],
 AC_ARG_ENABLE([junction-async-replica-ext2],
         AC_HELP_STRING([--disable-junction-async-replica-ext2],
                         [disable async replica junction for lowerfs ext2]),
-        [],[enable_lowerfs_async_replica_ext2='yes'])
-AC_MSG_RESULT([$enable_lowerfs_async_replica_ext2])])
+        [],[enable_junction_async_replica_ext2='yes'])
+AC_MSG_RESULT([$enable_junction_async_replica_ext2])])
 
 #
 # LC_CONFIG_JUNCTION_SYNC_REPLICA_TMPFS
