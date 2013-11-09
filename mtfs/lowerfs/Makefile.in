@@ -1,4 +1,5 @@
 @LOWERFS_EXT_TRUE@subdir-m += ext
 @LOWERFS_TMPFS_TRUE@subdir-m += tmpfs
+@LOWERFS_NFS_TRUE@subdir-m += nfs
 
 @INCLUDE_RULES@

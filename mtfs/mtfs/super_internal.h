@@ -53,21 +53,4 @@ static inline int mtfs_s_free(struct super_block *sb)
 	return ret;
 }
 
-static inline void *mtfs_i2subinfo(struct inode *inode)
-{
-	struct super_block *sb = inode->i_sb;
-	return mtfs_s2subinfo(sb);
-}
-
-static inline void *mtfs_d2subinfo(struct dentry *dentry)
-{
-	struct super_block *sb = dentry->d_sb;
-	return mtfs_s2subinfo(sb);
-}
-
-static inline void *mtfs_f2subinfo(struct file *file)
-{
-	struct dentry *dentry = file->f_dentry;
-	return mtfs_d2subinfo(dentry);
-}
 #endif /* __MTFS_SUPER_INTERNAL_H__ */

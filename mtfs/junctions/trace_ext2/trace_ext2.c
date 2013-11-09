@@ -14,6 +14,7 @@
 #include <mtfs_trace.h>
 #include <mtfs_subject.h>
 #include <mtfs_record.h>
+#include <mtfs_mmap.h>
 #include "trace_ext2.h"
 
 struct super_operations trace_ext2_sops =
@@ -198,8 +199,12 @@ struct mtfs_operations trace_ext2_operations = {
 	dir_fops:                &trace_ext2_dir_fops,
 	sops:                    &trace_ext2_sops,
 	dops:                    &trace_ext2_dops,
+	aops:                    &mtfs_aops,
 	ioctl:                   &trace_ext2_ioctl,
 	subject_ops:             &mtrace_subject_ops,
+	vm_ops:                  &mtfs_file_vm_ops,
+	iupdate_ops:             &mtfs_iupdate_choose,
+	io_ops:                  &mtrace_io_ops,
 };
 
 const char *supported_secondary_types[] = {

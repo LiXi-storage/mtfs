@@ -10,9 +10,8 @@
 #include <mtfs_mmap.h>
 #include <mtfs_junction.h>
 #include <linux/module.h>
-#include "nfs_support.h"
 
-struct dentry *mtfs_nfs_lookup(struct inode *dir, struct dentry *dentry, struct nameidata *nd)
+static struct dentry *mtfs_nfs_lookup(struct inode *dir, struct dentry *dentry, struct nameidata *nd)
 {
 	struct dentry *ret = NULL;
 	int rc = 0;
@@ -28,7 +27,7 @@ struct dentry *mtfs_nfs_lookup(struct inode *dir, struct dentry *dentry, struct 
 	MRETURN(ret);
 }
 
-struct super_operations mtfs_nfs_sops =
+static struct super_operations mtfs_nfs_sops =
 {
 	alloc_inode:    mtfs_alloc_inode,
 	destroy_inode:  mtfs_destroy_inode,
@@ -39,7 +38,7 @@ struct super_operations mtfs_nfs_sops =
 	show_options:   mtfs_show_options,
 };
 
-struct inode_operations mtfs_nfs_symlink_iops =
+static struct inode_operations mtfs_nfs_symlink_iops =
 {
 	readlink:       mtfs_readlink,
 	follow_link:    mtfs_follow_link,
@@ -49,7 +48,7 @@ struct inode_operations mtfs_nfs_symlink_iops =
 	getattr:        mtfs_getattr,
 };
 
-struct inode_operations mtfs_nfs_dir_iops =
+static struct inode_operations mtfs_nfs_dir_iops =
 {
 	create:	        mtfs_create,
 	lookup:	        mtfs_nfs_lookup,
@@ -69,7 +68,7 @@ struct inode_operations mtfs_nfs_dir_iops =
 	listxattr:      mtfs_listxattr,
 };
 
-struct inode_operations mtfs_nfs_main_iops =
+static struct inode_operations mtfs_nfs_main_iops =
 {
 	permission:     mtfs_permission,
 	setattr:        mtfs_setattr,
@@ -80,12 +79,12 @@ struct inode_operations mtfs_nfs_main_iops =
 	listxattr:      mtfs_listxattr,
 };
 
-struct dentry_operations mtfs_nfs_dops = {
+static struct dentry_operations mtfs_nfs_dops = {
 	d_revalidate:   mtfs_d_revalidate,
 	d_release:      mtfs_d_release,
 };
 
-struct file_operations mtfs_nfs_dir_fops =
+static struct file_operations mtfs_nfs_dir_fops =
 {
 	llseek:         mtfs_file_llseek,
 	read:           generic_read_dir,
@@ -96,7 +95,7 @@ struct file_operations mtfs_nfs_dir_fops =
 	/* TODO: fsync, do we really need open? */
 };
 
-struct file_operations mtfs_nfs_main_fops =
+static struct file_operations mtfs_nfs_main_fops =
 {
 	llseek:         mtfs_file_llseek,
 	read:           mtfs_file_read_nonreadv,
@@ -114,15 +113,14 @@ struct file_operations mtfs_nfs_main_fops =
 	/* TODO: splice_read, splice_write */
 };
 
-
-struct address_space_operations mtfs_nfs_aops =
+static struct address_space_operations mtfs_nfs_aops =
 {
 	direct_IO:      mtfs_direct_IO,
 	writepage:      mtfs_writepage,
 	readpage:       mtfs_readpage,
 };
 
-int mtfs_nfs_ioctl(struct inode *inode, struct file *file, unsigned int cmd, unsigned long arg)
+static int mtfs_nfs_ioctl(struct inode *inode, struct file *file, unsigned int cmd, unsigned long arg)
 {
 	int ret = 0;
 	MENTRY();
@@ -136,7 +134,7 @@ int mtfs_nfs_ioctl(struct inode *inode, struct file *file, unsigned int cmd, uns
 	MRETURN(ret);
 }
 
-struct mtfs_operations mtfs_nfs_operations = {
+static struct mtfs_operations mtfs_nfs_operations = {
 	symlink_iops:            &mtfs_nfs_symlink_iops,
 	dir_iops:                &mtfs_nfs_dir_iops,
 	main_iops:               &mtfs_nfs_main_iops,
@@ -146,64 +144,48 @@ struct mtfs_operations mtfs_nfs_operations = {
 	dops:                    &mtfs_nfs_dops,
 	aops:                    &mtfs_nfs_aops,
 	ioctl:                   &mtfs_nfs_ioctl,
+	vm_ops:                  &mtfs_file_vm_ops,
+	iupdate_ops:             &mtfs_iupdate_choose,
+	io_ops:                  &mtfs_io_ops,
 };
 
-const char *supported_secondary_types[] = {
+static const char *supported_secondary_types[] = {
 	"nfs",
 	NULL,
 };
 
-struct mtfs_junction mtfs_nfs_junction = {
+static struct mtfs_junction mtfs_nfs_junction = {
 	mj_owner:                THIS_MODULE,
 	mj_name:                 "unknown",
+	mj_subject:              "SYNC_REPLICA",
 	mj_primary_type:         "nfs",
 	mj_secondary_types:      supported_secondary_types,
 	mj_fs_ops:               &mtfs_nfs_operations,
-};
-
-struct mtfs_lowerfs lowerfs_nfs = {
-	ml_owner:           THIS_MODULE,
-	ml_type:            "nfs",
-	ml_magic:           NFS_SUPER_MAGIC,
-	ml_flag:            0,
-	ml_setflag:  NULL,
-	ml_getflag:  NULL,
 };
 
 static int nfs_support_init(void)
 {
 	int ret = 0;
 
-	MDEBUG("registering mtfs_nfs support\n");
-
-	ret = mlowerfs_register(&lowerfs_nfs);
-	if (ret) {
-		MERROR("failed to register lowerfs operation: error %d\n", ret);
-		goto out;
-	}	
+	MDEBUG("registering sync replica junction for nfs\n");
 
 	ret = junction_register(&mtfs_nfs_junction);
 	if (ret) {
 		MERROR("failed to register junction: error %d\n", ret);
-		goto out_unregister_lowerfs;
 	}
-	goto out;
-out_unregister_lowerfs:
-	mlowerfs_unregister(&lowerfs_nfs);
-out:
+
 	return ret;
 }
 
 static void nfs_support_exit(void)
 {
-	MDEBUG("unregistering mtfs_nfs support\n");
-	mlowerfs_unregister(&lowerfs_nfs);
+	MDEBUG("unregistering sync replica junction for nfs\n");
 
 	junction_unregister(&mtfs_nfs_junction);
 }
 
 MODULE_AUTHOR("MulTi File System Workgroup");
-MODULE_DESCRIPTION("mtfs's support for nfs");
+MODULE_DESCRIPTION("mtfs's sync replica junction for nfs");
 MODULE_LICENSE("GPL");
 
 module_init(nfs_support_init);

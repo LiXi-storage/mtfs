@@ -1,6 +1,0 @@
-MODULES := mtfs_nfs
-mtfs_nfs-objs := nfs_support.o
-
-EXTRA_DIST := $(mtfs_nfs-objs:.o=.c)
-EXTRA_DIST += nfs_support.h
-@INCLUDE_RULES@

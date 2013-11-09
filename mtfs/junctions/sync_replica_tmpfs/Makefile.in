@@ -1,0 +1,5 @@
+MODULES := mtfs_sync_replica_tmpfs
+mtfs_sync_replica_tmpfs-objs := replica_tmpfs.o
+
+EXTRA_DIST := $(mtfs_sync_replica_tmpfs-objs:.o=.c)
+@INCLUDE_RULES@

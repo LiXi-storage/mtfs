@@ -198,6 +198,7 @@ struct mtfs_operations mtfs_ext2_operations = {
 	aops:                    &mtfs_aops,
 	vm_ops:                  &mtfs_file_vm_ops,
 	ioctl:                   &mtfs_ext2_ioctl,
+	subject_ops:              NULL,
 	iupdate_ops:             &mtfs_iupdate_choose,
 	io_ops:                  &mtfs_io_ops,
 };
@@ -213,6 +214,7 @@ struct mtfs_operations mtfs_ext3_operations = {
 	aops:                    &mtfs_aops,
 	vm_ops:                  &mtfs_file_vm_ops,
 	ioctl:                    NULL,
+	subject_ops:              NULL,
 	iupdate_ops:             &mtfs_iupdate_choose,
 	io_ops:                  &mtfs_io_ops,
 };
@@ -228,6 +230,7 @@ struct mtfs_operations mtfs_ext4_operations = {
 	aops:                    &mtfs_aops,
 	vm_ops:                  &mtfs_file_vm_ops,
 	ioctl:                    NULL,
+	subject_ops:              NULL,
 	iupdate_ops:             &mtfs_iupdate_choose,
 	io_ops:                  &mtfs_io_ops,
 };
@@ -317,7 +320,7 @@ static void ext_support_exit(void)
 }
 
 MODULE_AUTHOR("MulTi File System Workgroup");
-MODULE_DESCRIPTION("mtfs's support for ext2");
+MODULE_DESCRIPTION("mtfs's sync replica junction for ext2");
 MODULE_LICENSE("GPL");
 
 module_init(ext_support_init);

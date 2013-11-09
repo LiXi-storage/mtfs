@@ -539,6 +539,7 @@ size_t get_iov_count(const struct iovec *iov,
 	}
 	return count;
 }
+EXPORT_SYMBOL(get_iov_count);
 
 #ifdef HAVE_FILE_READV
 static ssize_t _do_readv_writev(int is_write, struct file *file, const struct iovec *iov,

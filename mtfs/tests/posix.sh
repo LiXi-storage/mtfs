@@ -32,10 +32,15 @@ if [ "$LOWERFS_MMAP_NO_WRITE" = "yes" ]; then
 	LOWERFS_SKIP_MMAP_NO_WRITE="43a 43b"
 fi
 
+if [ "$LOWERFS_NO_XATTR" = "yes" ]; then
+	LOWERFS_SKIP_NO_XATTR="102a"
+fi
+
 ALWAYS_EXCEPT=${ALWAYS_EXCEPT:-"$BUG_318 $LOWERFS_BUG_251 $BUG_242 $BUG_304
                                 $LOWERFS_BUG_305 $LOWERFS_BUG_326 $LOWERFS_BUG_327
                                 $LOWERFS_SKIP_ATTR $LOWERFS_SKIP_NOMMAP
-                                $LOWERFS_SKIP_MMAP_NO_WRITE $POSIX_EXCEPT"}
+                                $LOWERFS_SKIP_MMAP_NO_WRITE $POSIX_EXCEPT
+                                $LOWERFS_SKIP_NO_XATTR"}
 
 TESTS_DIR=${TESTS_DIR:-$(cd $(dirname $0); echo $PWD)}
 . $TESTS_DIR/test-framework.sh

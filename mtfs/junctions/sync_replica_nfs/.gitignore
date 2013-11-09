@@ -1,0 +1,9 @@
+/.*.cmd
+/*.ko
+/*.mod.c
+
+/autoMakefile
+/autoMakefile.in
+/Makefile
+/modules.order
+/mtfs_sync_replica_tmpfs.ko.unsigned

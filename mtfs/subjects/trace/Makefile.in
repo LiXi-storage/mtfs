@@ -1,0 +1,7 @@
+MODULES := mtfs_subject_trace
+mtfs_subject_trace-objs := trace.o
+
+EXTRA_DIST := $(mtfs_subject_trace-objs:.o=.c)
+EXTRA_DIST += 
+
+@INCLUDE_RULES@

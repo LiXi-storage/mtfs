@@ -57,7 +57,8 @@ extern struct file_operations mtfs_dir_fops;
 
 extern ssize_t mtfs_file_rw_branch(int is_write, struct file *file, const struct iovec *iov,
                                    unsigned long nr_segs, loff_t *ppos, mtfs_bindex_t bindex);
-
+extern size_t get_iov_count(const struct iovec *iov,
+                            unsigned long *nr_segs);
 /*
  * Be careful!
  * Keep the same with struct mtfs_file_branch defined in llite/file.c

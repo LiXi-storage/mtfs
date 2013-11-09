@@ -54,7 +54,6 @@ struct mtfs_io_trace {
 #include <linux/fs.h>
 #include <linux/uio.h>
 #include <mtfs_lock.h>
-#include <mtfs_trace.h>
 
 struct mtfs_io_create {
 	struct inode *dir;

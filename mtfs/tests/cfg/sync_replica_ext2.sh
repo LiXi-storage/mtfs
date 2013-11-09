@@ -62,17 +62,20 @@ LOWERFS_DIR_INVALID_WHEN_REMOVED=${LOWERFS_DIR_INVALID_WHEN_REMOVED:-no}
 LOWERFS_SUPPORT_FLOCK=${LOWERFS_SUPPORT_FLOCK:-yes}
 LOWERFS_SUPPORT_FCNTL=${LOWERFS_SUPPORT_FCNTL:-yes}
 LOWERFS_SUPPORT_LOCKF=${LOWERFS_SUPPORT_LOCKF:-yes}
+
 #
 # Whether the filesytem bave a real backup device
 # If so, lowerfs's multiple mount points will have same super block.
 # Which means mtfs should not mount on same directories of these mount points for multiple times.
 # And because of this, all multi_mnt tests are unable to run.
 #
-LOWERFS_HAVE_DEV=${LOWERFS_HAVE_DEV:-yes} 
+LOWERFS_HAVE_DEV=${LOWERFS_HAVE_DEV:-yes}
+
 #
 # Whether the lowerfs support chattr ioctl
 #
 LOWERFS_SUPPORT_CHATTR=${LOWERFS_SUPPORT_CHATTR:-yes}
+
 #
 # Whether the lowerfs support directio
 #

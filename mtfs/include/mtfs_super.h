@@ -70,6 +70,24 @@ extern int mtfs_statfs(struct dentry *dentry, struct kstatfs *buf);
 extern void mtfs_clear_inode(struct inode *inode);
 extern int mtfs_show_options(struct seq_file *m, struct vfsmount *mnt);
 
+static inline void *mtfs_i2subinfo(struct inode *inode)
+{
+	struct super_block *sb = inode->i_sb;
+	return mtfs_s2subinfo(sb);
+}
+
+static inline void *mtfs_d2subinfo(struct dentry *dentry)
+{
+	struct super_block *sb = dentry->d_sb;
+	return mtfs_s2subinfo(sb);
+}
+
+static inline void *mtfs_f2subinfo(struct file *file)
+{
+	struct dentry *dentry = file->f_dentry;
+	return mtfs_d2subinfo(dentry);
+}
+
 #else /* !defined (__linux__) && defined(__KERNEL__) */
 #error This head is only for kernel space use
 #endif /* !defined (__linux__) && defined(__KERNEL__) */

@@ -6,29 +6,28 @@
 #include <mtfs_super.h>
 #include <mtfs_dentry.h>
 #include <mtfs_inode.h>
+#include <mtfs_file.h>
 #include <mtfs_mmap.h>
-#include <mtfs_stack.h>
 #include <mtfs_junction.h>
 #include <linux/module.h>
+#include "nfs_support.h"
 
-#define TMPFS_MAGIC 0x01021994
-
-static struct mtfs_lowerfs lowerfs_tmpfs = {
+struct mtfs_lowerfs lowerfs_nfs = {
 	ml_owner:           THIS_MODULE,
-	ml_type:            "tmpfs",
-	ml_magic:           TMPFS_MAGIC,
+	ml_type:            "nfs",
+	ml_magic:           NFS_SUPER_MAGIC,
 	ml_flag:            0,
 	ml_setflag:         mlowerfs_setflag_nop,
 	ml_getflag:         mlowerfs_getflag_nop,
 };
 
-static int lowerfs_tmpfs_init(void)
+static int nfs_support_init(void)
 {
 	int ret = 0;
 
-	MDEBUG("mtfs lowerfs support for tmpfs\n");
+	MDEBUG("registering lowerfs support for nfs\n");
 
-	ret = mlowerfs_register(&lowerfs_tmpfs);
+	ret = mlowerfs_register(&lowerfs_nfs);
 	if (ret) {
 		MERROR("failed to register lowerfs operation: error %d\n", ret);
 	}	
@@ -36,15 +35,15 @@ static int lowerfs_tmpfs_init(void)
 	return ret;
 }
 
-static void lowerfs_tmpfs_exit(void)
+static void nfs_support_exit(void)
 {
-	MDEBUG("unregistering mtfs lowerfs support for tmpfs\n");
-	mlowerfs_unregister(&lowerfs_tmpfs);
+	MDEBUG("unregistering lowerfs support for nfs\n");
+	mlowerfs_unregister(&lowerfs_nfs);
 }
 
 MODULE_AUTHOR("MulTi File System Workgroup");
-MODULE_DESCRIPTION("mtfs's support for tmpfs");
+MODULE_DESCRIPTION("mtfs's lowerfs support for nfs");
 MODULE_LICENSE("GPL");
 
-module_init(lowerfs_tmpfs_init);
-module_exit(lowerfs_tmpfs_exit);
+module_init(nfs_support_init);
+module_exit(nfs_support_exit);

@@ -19,6 +19,4 @@ int mtfs_readdir_branch(struct file *file,
 int mtfs_open_branch(struct inode *inode,
                      struct file *file,
                      mtfs_bindex_t bindex);
-size_t get_iov_count(const struct iovec *iov,
-                     unsigned long *nr_segs);
 #endif /* __MTFS_FILE_INTERNAL_H__ */

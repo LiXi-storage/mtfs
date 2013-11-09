@@ -21,7 +21,6 @@ mtfs-objs := dentry.o \
 	interval_tree.o \
 	lock.o \
 	io.o \
-	trace.o \
 	record.o \
 	subject.o \
 	thread.o \

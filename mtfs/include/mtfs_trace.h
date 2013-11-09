@@ -12,6 +12,7 @@
 #include <linux/poll.h>
 #include "mtfs_common.h"
 #include "mtfs_record.h"
+#include "mtfs_io.h"
 
 struct msubject_trace_info {
 	struct mrecord_handle msti_handle;
@@ -36,6 +37,8 @@ extern ssize_t mtrace_file_writev(struct file *file, const struct iovec *iov,
 extern ssize_t mtrace_file_aio_write(struct kiocb *iocb, const struct iovec *iov,
                                      unsigned long nr_segs, loff_t pos);
 #endif /* ! HAVE_FILE_WRITEV */
+
+extern const struct mtfs_io_operations mtrace_io_ops[];
 #endif /* defined (__linux__) && defined(__KERNEL__) */
 
 #endif /* __MTFS_TRACE_H__ */

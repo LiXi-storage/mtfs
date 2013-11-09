@@ -666,54 +666,93 @@ AC_MSG_RESULT([$enable_lustre_support])])
 #
 # LC_CONFIG_JUNCTION_SYNC_REPLICA_EXT
 #
-# whether to build junction of replica for lowerfs ext
+# whether to build sync replica junction for ext
 #
 AC_DEFUN([LC_CONFIG_JUNCTION_SYNC_REPLICA_EXT],
-[AC_MSG_CHECKING([whether to build sync replica junctiom for lowerfs ext])
+[AC_MSG_CHECKING([whether to build sync replica junction for ext])
 AC_ARG_ENABLE([junction-sync-replica-ext],
         AC_HELP_STRING([--disable-junction-sync-replica-ext],
-                        [disable sync replica junctiom for lowerfs ext]),
+                        [disable sync replica junction for lowerfs ext]),
         [],[enable_junction_sync_replica_ext='yes'])
 AC_MSG_RESULT([$enable_junction_sync_replica_ext])])
 
 #
 # LC_CONFIG_JUNCTION_ASYNC_REPLICA_EXT2
 #
-# whether to build ext2 backend support
+# whether to build async replica junction for ext2
 #
 AC_DEFUN([LC_CONFIG_JUNCTION_ASYNC_REPLICA_EXT2],
-[AC_MSG_CHECKING([whether to build sync replica junctiom for lowerfs ext2])
+[AC_MSG_CHECKING([whether to build sync replica junction for ext2])
 AC_ARG_ENABLE([junction-async-replica-ext2],
-        AC_HELP_STRING([--junction-async-replica-ext2],
-                        [disable async replica for lowerfs ext2]),
+        AC_HELP_STRING([--disable-junction-async-replica-ext2],
+                        [disable async replica junction for lowerfs ext2]),
         [],[enable_lowerfs_async_replica_ext2='yes'])
 AC_MSG_RESULT([$enable_lowerfs_async_replica_ext2])])
 
 #
+# LC_CONFIG_JUNCTION_SYNC_REPLICA_TMPFS
+#
+# whether to build sync replica junction for tmpfs
+#
+AC_DEFUN([LC_CONFIG_JUNCTION_SYNC_REPLICA_TMPFS],
+[AC_MSG_CHECKING([whether to build sync replica junction for tmpfs])
+AC_ARG_ENABLE([junction-sync-replica-tmpfs],
+        AC_HELP_STRING([--disable-junction-sync-replica-tmpfs],
+                        [disable sync replica junction for lowerfs tmpfs]),
+        [],[enable_junction_sync_replica_tmpfs='yes'])
+AC_MSG_RESULT([$enable_junction_sync_replica_tmpfs])])
+
+#
+# LC_CONFIG_JUNCTION_SYNC_REPLICA_NFS
+#
+# whether to build sync replica junction for nfs
+#
+AC_DEFUN([LC_CONFIG_JUNCTION_SYNC_REPLICA_NFS],
+[AC_MSG_CHECKING([whether to build sync replica junction for nfs])
+AC_ARG_ENABLE([junction-sync-replica-nfs],
+        AC_HELP_STRING([--disable-junction-sync-replica-nfs],
+                        [disable sync replica junction for lowerfs nfs]),
+        [],[enable_junction_sync_replica_nfs='yes'])
+AC_MSG_RESULT([$enable_junction_sync_replica_nfs])])
+
+#
+# LC_CONFIG_JUNCTION_TRACE_EXT2
+#
+# whether to build trace junction for ext2
+#
+AC_DEFUN([LC_CONFIG_JUNCTION_TRACE_EXT2],
+[AC_MSG_CHECKING([whether to build trace junction for ext2])
+AC_ARG_ENABLE([junction-trace-ext2],
+        AC_HELP_STRING([--disable-junction-trace-ext2],
+                        [disable trace junction for lowerfs ext2]),
+        [],[enable_junction_trace_ext2='yes'])
+AC_MSG_RESULT([$enable_junction_trace_ext2])])
+
+#
 # LC_CONFIG_LOWERFS_EXT
 #
-# whether to build ext lowerfs support
+# whether to build lowerfs support for ext 
 #
 AC_DEFUN([LC_CONFIG_LOWERFS_EXT],
-[AC_MSG_CHECKING([whether to build ext lowerfs support])
+[AC_MSG_CHECKING([whether to build lowerfs support for ext])
 AC_ARG_ENABLE([lowerfs-ext],
         AC_HELP_STRING([--disable-lowerfs-ext],
-                        [disable ext lowerfs support]),
+                        [disable lowerfs support for ext]),
         [],[enable_lowerfs_ext='yes'])
 AC_MSG_RESULT([$enable_lowerfs_ext])])
 
 #
-# LC_CONFIG_BACKEDN_NFS
+# LC_CONFIG_LOWERFS_NFS
 #
 # whether to build nfs backend support
 #
-AC_DEFUN([LC_CONFIG_BACKEDN_NFS],
-[AC_MSG_CHECKING([whether to build nfs backend support])
-AC_ARG_ENABLE([nfs-support],
-        AC_HELP_STRING([--disable-nfs-support],
-                        [disable nfs backend support]),
-        [],[enable_nfs_support='yes'])
-AC_MSG_RESULT([$enable_nfs_support])])
+AC_DEFUN([LC_CONFIG_LOWERFS_NFS],
+[AC_MSG_CHECKING([whether to build lowerfs support for nfs])
+AC_ARG_ENABLE([lowerfs-nfs],
+        AC_HELP_STRING([--disable-lowerfs-nfs],
+                        [disable lowerfs support for nfs]),
+        [],[enable_lowerfs_nfs='yes'])
+AC_MSG_RESULT([$enable_lowerfs_nfs])])
 
 #
 # LC_CONFIG_LOWERFS_TMPFS
@@ -742,19 +781,6 @@ AC_ARG_ENABLE([ntfs3g-support],
 AC_MSG_RESULT([$enable_ntfs3g_support])])
 
 #
-# LC_CONFIG_TRACE_EXT2
-#
-# whether to build ext2 trace support
-#
-AC_DEFUN([LC_CONFIG_TRACE_EXT2],
-[AC_MSG_CHECKING([whether to build trace ext2 support])
-AC_ARG_ENABLE([trace-ext2],
-        AC_HELP_STRING([--disable-trace-ext2],
-                        [disable trace ext2 support]),
-        [],[enable_trace_ext2='yes'])
-AC_MSG_RESULT([$enable_trace_ext2])])
-
-#
 # LC_CONFIG_SUBJECT_SYNC_REPLICA
 #
 # whether to build sync_replica subject
@@ -779,6 +805,19 @@ AC_ARG_ENABLE([subject-async-replica],
                         [disable async_replica subject]),
         [],[enable_subject_async_replica='yes'])
 AC_MSG_RESULT([$enable_subject_async_replica])])
+
+#
+# LC_CONFIG_SUBJECT_TRACE
+#
+# whether to build trace subject
+#
+AC_DEFUN([LC_CONFIG_SUBJECT_TRACE],
+[AC_MSG_CHECKING([whether to build trace subject])
+AC_ARG_ENABLE([subject-trace],
+        AC_HELP_STRING([--disable-subject-trace],
+                        [disable trace subject]),
+        [],[enable_subject_trace='yes'])
+AC_MSG_RESULT([$enable_subject_trace])])
 
 #
 # LC_CONFIG_MANAGE
@@ -962,15 +1001,18 @@ AM_CONDITIONAL(LIBMTFS_TESTS, test x$enable_libmtfs_tests = xyes)
 AM_CONDITIONAL(LUSTRE_SUPPORT, test x$enable_lustre_support = xyes)
 AM_CONDITIONAL(JUNCTION_SYNC_REPLICA_EXT, test x$enable_junction_sync_replica_ext = xyes)
 AM_CONDITIONAL(JUNCTION_ASYNC_REPLICA_EXT2, test x$enable_junction_async_replica_ext2 = xyes)
+AM_CONDITIONAL(JUNCTION_SYNC_REPLICA_TMPFS, test x$enable_junction_sync_replica_tmpfs = xyes)
+AM_CONDITIONAL(JUNCTION_SYNC_REPLICA_NFS, test x$enable_junction_sync_replica_nfs = xyes)
+AM_CONDITIONAL(JUNCTION_TRACE_EXT2, test x$enable_junction_trace_ext2 = xyes)
 AM_CONDITIONAL(LOWERFS_EXT, test x$enable_lowerfs_ext = xyes)
-AM_CONDITIONAL(NFS_SUPPORT, test x$enable_nfs_support = xyes)
+AM_CONDITIONAL(LOWERFS_NFS, test x$enable_lowerfs_nfs = xyes)
 AM_CONDITIONAL(LOWERFS_TMPFS, test x$enable_lowerfs_tmpfs = xyes)
 AM_CONDITIONAL(NTFS3G_SUPPORT, test x$enable_ntfs3g_support = xyes)
-AM_CONDITIONAL(TRACE_EXT2, test x$enable_trace_ext2 = xyes)
 AM_CONDITIONAL(MANAGE, test x$enable_manage = xyes)
 AM_CONDITIONAL(MANAGE_TESTS, test x$enable_manage_tests = xyes)
 AM_CONDITIONAL(SUBJECT_ASYNC_REPLICA, test x$enable_subject_async_replica = xyes)
 AM_CONDITIONAL(SUBJECT_SYNC_REPLICA, test x$enable_subject_sync_replica = xyes)
+AM_CONDITIONAL(SUBJECT_TRACE, test x$enable_subject_trace = xyes)
 ])
 
 #
@@ -989,39 +1031,45 @@ mtfs/doc/Makefile
 mtfs/include/Makefile
 mtfs/junctions/Makefile
 mtfs/junctions/autoMakefile
-mtfs/junctions/sync_replica_ext/Makefile
-mtfs/junctions/sync_replica_ext/autoMakefile
 mtfs/junctions/async_replica_ext2/Makefile
 mtfs/junctions/async_replica_ext2/autoMakefile
+mtfs/junctions/sync_replica_ext/Makefile
+mtfs/junctions/sync_replica_ext/autoMakefile
+mtfs/junctions/sync_replica_nfs/Makefile
+mtfs/junctions/sync_replica_nfs/autoMakefile
+mtfs/junctions/sync_replica_tmpfs/Makefile
+mtfs/junctions/sync_replica_tmpfs/autoMakefile
+mtfs/junctions/trace_ext2/Makefile
+mtfs/junctions/trace_ext2/autoMakefile
 mtfs/libuser/Makefile
 mtfs/libuser/tests/Makefile
 mtfs/lowerfs/Makefile
 mtfs/lowerfs/autoMakefile
 mtfs/lowerfs/ext/Makefile
 mtfs/lowerfs/ext/autoMakefile
+mtfs/lowerfs/nfs/Makefile
+mtfs/lowerfs/nfs/autoMakefile
 mtfs/lowerfs/tmpfs/Makefile
 mtfs/lowerfs/tmpfs/autoMakefile
+mtfs/lustre_support/Makefile
+mtfs/lustre_support/autoMakefile
 mtfs/manage/Makefile
 mtfs/mtfs/Makefile
 mtfs/mtfs/autoMakefile
-mtfs/scripts/Makefile
-mtfs/tests/Makefile
-mtfs/tests/pjd_fstest/Makefile
-mtfs/tests/src/Makefile
-mtfs/utils/Makefile
-mtfs/nfs_support/Makefile
-mtfs/nfs_support/autoMakefile
 mtfs/ntfs3g_support/Makefile
 mtfs/ntfs3g_support/autoMakefile
-mtfs/lustre_support/Makefile
-mtfs/lustre_support/autoMakefile
-mtfs/trace_ext2/Makefile
-mtfs/trace_ext2/autoMakefile
 mtfs/subjects/Makefile
 mtfs/subjects/autoMakefile
 mtfs/subjects/async_replica/Makefile
 mtfs/subjects/async_replica/autoMakefile
 mtfs/subjects/sync_replica/Makefile
 mtfs/subjects/sync_replica/autoMakefile
+mtfs/subjects/trace/Makefile
+mtfs/subjects/trace/autoMakefile
+mtfs/scripts/Makefile
+mtfs/tests/Makefile
+mtfs/tests/pjd_fstest/Makefile
+mtfs/tests/src/Makefile
+mtfs/utils/Makefile
 ])
 ])
