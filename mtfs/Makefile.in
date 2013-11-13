@@ -1,4 +1,3 @@
 subdir-m += mtfs debug subjects lowerfs junctions
 @LUSTRE_SUPPORT_TRUE@subdir-m += lustre_support
-@NTFS3G_SUPPORT_TRUE@subdir-m += ntfs3g_support
 @INCLUDE_RULES@

@@ -1,5 +1,5 @@
 if MODULES
-modulefs_DATA = mtfs_ntfs3g$(KMODEXT)
+modulefs_DATA = mtfs_lowerfs_ntfs3g$(KMODEXT)
 endif
 
 MOSTLYCLEANFILES := @MOSTLYCLEANFILES@

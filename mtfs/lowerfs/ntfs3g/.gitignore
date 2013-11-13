@@ -6,5 +6,5 @@
 /autoMakefile.in
 /Makefile
 /modules.order
-/mtfs_ntfs3g.ko.unsigned
+/mtfs_lowerfs_ntfs3g.ko.unsigned
 

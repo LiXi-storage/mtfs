@@ -2,6 +2,7 @@
 @JUNCTION_ASYNC_REPLICA_EXT2_TRUE@subdir-m += async_replica_ext2
 @JUNCTION_SYNC_REPLICA_TMPFS_TRUE@subdir-m += sync_replica_tmpfs
 @JUNCTION_SYNC_REPLICA_NFS_TRUE@subdir-m += sync_replica_nfs
+@JUNCTION_SYNC_REPLICA_NTFS3G_TRUE@subdir-m += sync_replica_ntfs3g
 @JUNCTION_TRACE_EXT2_TRUE@subdir-m += trace_ext2
 
 @INCLUDE_RULES@

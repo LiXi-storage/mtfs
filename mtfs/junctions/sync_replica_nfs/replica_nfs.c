@@ -171,7 +171,7 @@ static int nfs_support_init(void)
 
 	ret = junction_register(&mtfs_nfs_junction);
 	if (ret) {
-		MERROR("failed to register junction: error %d\n", ret);
+		MERROR("failed to register junction: ret = %d\n", ret);
 	}
 
 	return ret;

@@ -1,6 +1,6 @@
-MODULES := mtfs_async_replica_ext2
-mtfs_async_replica_ext2-objs := async_replica_ext2.o
+MODULES := mtfs_junction_async_replica_ext2
+mtfs_junction_async_replica_ext2-objs := async_replica_ext2.o
 
-EXTRA_DIST := $(mtfs_async_replica_ext2-objs:.o=.c)
+EXTRA_DIST := $(mtfs_junction_async_replica_ext2-objs:.o=.c)
 EXTRA_DIST += async_replica_ext2.h
 @INCLUDE_RULES@

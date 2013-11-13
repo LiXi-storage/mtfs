@@ -1,0 +1,5 @@
+MODULES := mtfs_junction_sync_replica_ntfs3g
+mtfs_junction_sync_replica_ntfs3g-objs := replica_ntfs3g.o
+
+EXTRA_DIST := $(mtfs_junction_sync_replica_ntfs3g-objs:.o=.c)
+@INCLUDE_RULES@

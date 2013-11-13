@@ -1,5 +1,5 @@
-MODULES := mtfs_sync_replica_nfs
-mtfs_sync_replica_nfs-objs := replica_nfs.o
+MODULES := mtfs_junction_sync_replica_nfs
+mtfs_junction_sync_replica_nfs-objs := replica_nfs.o
 
-EXTRA_DIST := $(mtfs_sync_replica_nfs-objs:.o=.c)
+EXTRA_DIST := $(mtfs_junction_sync_replica_nfs-objs:.o=.c)
 @INCLUDE_RULES@

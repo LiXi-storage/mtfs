@@ -1,15 +1,13 @@
 /*
  * Copyright (C) 2011 Li Xi <pkuelelixi@gmail.com>
  */
-
-#include <mtfs_lowerfs.h>
+#include <linux/module.h>
 #include <mtfs_super.h>
 #include <mtfs_dentry.h>
 #include <mtfs_inode.h>
 #include <mtfs_file.h>
 #include <mtfs_junction.h>
-#include <linux/module.h>
-#include "ntfs3g_support.h"
+#include <mtfs_mmap.h>
 
 struct dentry *mtfs_ntfs3g_lookup(struct inode *dir, struct dentry *dentry, struct nameidata *nd)
 {
@@ -134,7 +132,11 @@ struct mtfs_operations mtfs_ntfs3g_operations = {
 	dir_fops:                &mtfs_ntfs3g_dir_fops,
 	sops:                    &mtfs_ntfs3g_sops,
 	dops:                    &mtfs_ntfs3g_dops,
+	aops:                    &mtfs_aops,
 	ioctl:                   &mtfs_ntfs3g_ioctl,
+	vm_ops:                  &mtfs_file_vm_ops,
+	iupdate_ops:             &mtfs_iupdate_choose,
+	io_ops:                  &mtfs_io_ops,
 };
 
 const char *supported_secondary_types[] = {
@@ -145,67 +147,30 @@ const char *supported_secondary_types[] = {
 struct mtfs_junction mtfs_ntfs3g_junction = {
 	mj_owner:                THIS_MODULE,
 	mj_name:                 "ntfs3g",
+	mj_subject:              "SYNC_REPLICA",
 	mj_primary_type:         "fuseblk",
 	mj_secondary_types:      supported_secondary_types,
 	mj_fs_ops:               &mtfs_ntfs3g_operations,
 };
 
-#include <mtfs_flag.h>
-#define MLOWERFS_XATTR_NAME_FLAG_NTFS3G "user."MLOWERFS_XATTR_NAME_FLAG
-
-int mlowerfs_getflag_ntfs3g(struct inode *inode, __u32 *mtfs_flag)
-{
-	int ret = 0;
-	ret = mlowerfs_getflag_xattr(inode, mtfs_flag, MLOWERFS_XATTR_NAME_FLAG_NTFS3G);
-	MRETURN(ret);
-}
-EXPORT_SYMBOL(mlowerfs_getflag_ntfs3g);
-
-int mlowerfs_setflag_ntfs3g(struct inode *inode, __u32 mtfs_flag)
-{
-	int ret = 0;
-	ret = mlowerfs_setflag_xattr(inode, mtfs_flag, MLOWERFS_XATTR_NAME_FLAG_NTFS3G);
-	MRETURN(ret);
-}
-EXPORT_SYMBOL(mlowerfs_setflag_ntfs3g);
-
-struct mtfs_lowerfs lowerfs_ntfs3g = {
-	ml_owner:           THIS_MODULE,
-	ml_type:            "fuseblk",
-	ml_magic:           NTFS_SB_MAGIC,
-	ml_flag:            0,
-	ml_setflag:         mlowerfs_setflag_ntfs3g,
-	ml_getflag:         mlowerfs_getflag_ntfs3g,
-};
 
 static int ntfs3g_support_init(void)
 {
 	int ret = 0;
 
-	MDEBUG("registering mtfs_ntfs3g support\n");
-
-	ret = mlowerfs_register(&lowerfs_ntfs3g);
-	if (ret) {
-		MERROR("failed to register lowerfs operation: error %d\n", ret);
-		goto out;
-	}	
+	MDEBUG("registering sync replica junction for ntfs3g\n");
 
 	ret = junction_register(&mtfs_ntfs3g_junction);
 	if (ret) {
-		MERROR("failed to register junction: error %d\n", ret);
-		goto out_unregister_lowerfs;
+		MERROR("failed to register junction:  ret = %d\n", ret);
 	}
-	goto out;
-out_unregister_lowerfs:
-	mlowerfs_unregister(&lowerfs_ntfs3g);
-out:
+
 	return ret;
 }
 
 static void ntfs3g_support_exit(void)
 {
-	MDEBUG("unregistering mtfs_ntfs3g support\n");
-	mlowerfs_unregister(&lowerfs_ntfs3g);
+	MDEBUG("unregistering sync replica junction for ntfs3g\n");
 
 	junction_unregister(&mtfs_ntfs3g_junction);
 }
@@ -216,3 +181,4 @@ MODULE_LICENSE("GPL");
 
 module_init(ntfs3g_support_init);
 module_exit(ntfs3g_support_exit);
+

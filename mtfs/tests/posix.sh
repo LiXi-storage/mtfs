@@ -1724,7 +1724,9 @@ test_48b() {
 		# this test will certainly fail?
 		ls . > /dev/null && error "'ls .' worked after removing cwd"
 	fi
-	ls .. > /dev/null || error "'ls ..' failed after removing cwd"
+	if [ "$LOWERFS_DIR_UNREACHEABLE_WHEN_REMOVED_THOUGH_OPENED" != "yes" ; then
+		ls .. > /dev/null || error "'ls ..' failed after removing cwd"
+	fi
 	#is_patchless || ( cd . && error "'cd .' worked after removing cwd" )
 	#cd . && error "'cd .' worked after removing cwd"
 	mkdir . && error "'mkdir .' worked after removing cwd"
@@ -1750,7 +1752,9 @@ test_48c() {
 	if [ "$LOWERFS_DIR_INVALID_WHEN_REMOVED" = "yes" ]; then
 		$TRACE ls . && error "'ls .' worked after removing cwd"
 	fi
-	$TRACE ls .. || error "'ls ..' failed after removing cwd"
+	if [ "$LOWERFS_DIR_UNREACHEABLE_WHEN_REMOVED_THOUGH_OPENED" != "yes" ; then
+		$TRACE ls .. || error "'ls ..' failed after removing cwd"
+	fi
 	#is_patchless || ( $TRACE cd . && error "'cd .' worked after removing cwd" )
 	#$TRACE cd . && error "'cd .' worked after removing cwd"
 	$TRACE mkdir . && error "'mkdir .' worked after removing cwd"
@@ -2056,35 +2060,43 @@ test_102a() {
 	[ "$UID" != 0 ] && skip "must run as root" && return
 	[ -z "$(which setfattr 2>/dev/null)" ] && skip "could not find setfattr" && return
 
-	echo "set/get xattr..."
-        setfattr -n trusted.name1 -v value1 $testfile || error
-        [ "`getfattr -n trusted.name1 $testfile 2> /dev/null | \
-        grep "trusted.name1"`" == "trusted.name1=\"value1\"" ] || error
+	if [ "$LOWERFS_NO_TRUSTED_XATTR" != "yes" ]; then
+		echo "set/get xattr..."
+		setfattr -n trusted.name1 -v value1 $testfile || error
+		[ "`getfattr -n trusted.name1 $testfile 2> /dev/null | \
+		grep "trusted.name1"`" == "trusted.name1=\"value1\"" ] || error
+	fi
 
-        setfattr -n user.author1 -v author1 $testfile || error
-        [ "`getfattr -n user.author1 $testfile 2> /dev/null | \
-        grep "user.author1"`" == "user.author1=\"author1\"" ] || error
+	echo "set/get user xattr..."
+	setfattr -n user.author1 -v author1 $testfile || error
+	[ "`getfattr -n user.author1 $testfile 2> /dev/null | \
+	grep "user.author1"`" == "user.author1=\"author1\"" ] || error
 
-	echo "listxattr..."
-        setfattr -n trusted.name2 -v value2 $testfile || error
-        setfattr -n trusted.name3 -v value3 $testfile || error
-        [ `getfattr -d -m "^trusted" $testfile 2> /dev/null | \
-        grep "trusted.name" | wc -l` -eq 3 ] || error
+	if [ "$LOWERFS_NO_TRUSTED_XATTR" != "yes" ]; then
+		echo "listxattr..."
+		setfattr -n trusted.name2 -v value2 $testfile || error
+		setfattr -n trusted.name3 -v value3 $testfile || error
+		[ `getfattr -d -m "^trusted" $testfile 2> /dev/null | \
+		grep "trusted.name" | wc -l` -eq 3 ] || error
+	fi
 
+	echo "listxattr user..."
+	setfattr -n user.author2 -v author2 $testfile || error
+	setfattr -n user.author3 -v author3 $testfile || error
+	[ `getfattr -d -m "^user" $testfile 2> /dev/null | \
+	grep "user" | wc -l` -eq 3 ] || error
 
-        setfattr -n user.author2 -v author2 $testfile || error
-        setfattr -n user.author3 -v author3 $testfile || error
-        [ `getfattr -d -m "^user" $testfile 2> /dev/null | \
-        grep "user" | wc -l` -eq 3 ] || error
+	if [ "$LOWERFS_NO_TRUSTED_XATTR" != "yes" ]; then
+		echo "remove xattr..."
+		setfattr -x trusted.name1 $testfile || error
+		getfattr -d -m trusted $testfile 2> /dev/null | \
+		grep "trusted.name1" && error || true
+        fi
 
-	echo "remove xattr..."
-        setfattr -x trusted.name1 $testfile || error
-        getfattr -d -m trusted $testfile 2> /dev/null | \
-        grep "trusted.name1" && error || true
-
-        setfattr -x user.author1 $testfile || error
-        getfattr -d -m user $testfile 2> /dev/null | \
-        grep "user.author1" && error || true
+	echo "remove user xattr..."
+	setfattr -x user.author1 $testfile || error
+	getfattr -d -m user $testfile 2> /dev/null | \
+	grep "user.author1" && error || true
 
 	rm -f $testfile
 }

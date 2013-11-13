@@ -716,6 +716,19 @@ AC_ARG_ENABLE([junction-sync-replica-nfs],
 AC_MSG_RESULT([$enable_junction_sync_replica_nfs])])
 
 #
+# LC_CONFIG_JUNCTION_SYNC_REPLICA_NTFS3G
+#
+# whether to build sync replica junction for ntfs3g
+#
+AC_DEFUN([LC_CONFIG_JUNCTION_SYNC_REPLICA_NTFS3G],
+[AC_MSG_CHECKING([whether to build sync replica junction for ntfs3g])
+AC_ARG_ENABLE([junction-sync-replica-ntfs3g],
+        AC_HELP_STRING([--disable-junction-sync-replica-ntfs3g],
+                        [disable sync replica junction for lowerfs ntfs3g]),
+        [],[enable_junction_sync_replica_ntfs3g='yes'])
+AC_MSG_RESULT([$enable_junction_sync_replica_ntfs3g])])
+
+#
 # LC_CONFIG_JUNCTION_TRACE_EXT2
 #
 # whether to build trace junction for ext2
@@ -761,24 +774,24 @@ AC_MSG_RESULT([$enable_lowerfs_nfs])])
 #
 AC_DEFUN([LC_CONFIG_LOWERFS_TMPFS],
 [AC_MSG_CHECKING([whether to build tmpfs lowerfs support])
-AC_ARG_ENABLE([tmpfs-support],
+AC_ARG_ENABLE([lowerfs-tmpfs],
         AC_HELP_STRING([--disable-lowerfs-tmpfs],
                         [disable tmpfs lowerfs support]),
         [],[enable_lowerfs_tmpfs='yes'])
 AC_MSG_RESULT([$enable_lowerfs_tmpfs])])
 
 #
-# LC_CONFIG_BACKEDN_NTFS3G
+# LC_CONFIG_LOWERFS_NTFS3G
 #
-# whether to build ntfs3g backend support
+# whether to build ntfs3g lowerfs support
 #
-AC_DEFUN([LC_CONFIG_BACKEDN_NTFS3G],
-[AC_MSG_CHECKING([whether to build ntfs3g backend support])
-AC_ARG_ENABLE([ntfs3g-support],
-        AC_HELP_STRING([--disable-ntfs3g-support],
-                        [disable ntfs3g backend support]),
-        [],[enable_ntfs3g_support='yes'])
-AC_MSG_RESULT([$enable_ntfs3g_support])])
+AC_DEFUN([LC_CONFIG_LOWERFS_NTFS3G],
+[AC_MSG_CHECKING([whether to build ntfs3g lowerfs support])
+AC_ARG_ENABLE([lowerfs-ntfs3g],
+        AC_HELP_STRING([--disable-lowerfs-ntfs3g],
+                        [disable lowerfs support for ntfs3g]),
+        [],[enable_lowerfs_ntfs3g='yes'])
+AC_MSG_RESULT([$enable_lowerfs_ntfs3g])])
 
 #
 # LC_CONFIG_SUBJECT_SYNC_REPLICA
@@ -1003,11 +1016,12 @@ AM_CONDITIONAL(JUNCTION_SYNC_REPLICA_EXT, test x$enable_junction_sync_replica_ex
 AM_CONDITIONAL(JUNCTION_ASYNC_REPLICA_EXT2, test x$enable_junction_async_replica_ext2 = xyes)
 AM_CONDITIONAL(JUNCTION_SYNC_REPLICA_TMPFS, test x$enable_junction_sync_replica_tmpfs = xyes)
 AM_CONDITIONAL(JUNCTION_SYNC_REPLICA_NFS, test x$enable_junction_sync_replica_nfs = xyes)
+AM_CONDITIONAL(JUNCTION_SYNC_REPLICA_NTFS3G, test x$enable_junction_sync_replica_ntfs3g = xyes)
 AM_CONDITIONAL(JUNCTION_TRACE_EXT2, test x$enable_junction_trace_ext2 = xyes)
 AM_CONDITIONAL(LOWERFS_EXT, test x$enable_lowerfs_ext = xyes)
 AM_CONDITIONAL(LOWERFS_NFS, test x$enable_lowerfs_nfs = xyes)
 AM_CONDITIONAL(LOWERFS_TMPFS, test x$enable_lowerfs_tmpfs = xyes)
-AM_CONDITIONAL(NTFS3G_SUPPORT, test x$enable_ntfs3g_support = xyes)
+AM_CONDITIONAL(LOWERFS_NTFS3G, test x$enable_lowerfs_ntfs3g = xyes)
 AM_CONDITIONAL(MANAGE, test x$enable_manage = xyes)
 AM_CONDITIONAL(MANAGE_TESTS, test x$enable_manage_tests = xyes)
 AM_CONDITIONAL(SUBJECT_ASYNC_REPLICA, test x$enable_subject_async_replica = xyes)
@@ -1037,6 +1051,8 @@ mtfs/junctions/sync_replica_ext/Makefile
 mtfs/junctions/sync_replica_ext/autoMakefile
 mtfs/junctions/sync_replica_nfs/Makefile
 mtfs/junctions/sync_replica_nfs/autoMakefile
+mtfs/junctions/sync_replica_ntfs3g/Makefile
+mtfs/junctions/sync_replica_ntfs3g/autoMakefile
 mtfs/junctions/sync_replica_tmpfs/Makefile
 mtfs/junctions/sync_replica_tmpfs/autoMakefile
 mtfs/junctions/trace_ext2/Makefile
@@ -1049,6 +1065,8 @@ mtfs/lowerfs/ext/Makefile
 mtfs/lowerfs/ext/autoMakefile
 mtfs/lowerfs/nfs/Makefile
 mtfs/lowerfs/nfs/autoMakefile
+mtfs/lowerfs/ntfs3g/Makefile
+mtfs/lowerfs/ntfs3g/autoMakefile
 mtfs/lowerfs/tmpfs/Makefile
 mtfs/lowerfs/tmpfs/autoMakefile
 mtfs/lustre_support/Makefile
@@ -1056,8 +1074,6 @@ mtfs/lustre_support/autoMakefile
 mtfs/manage/Makefile
 mtfs/mtfs/Makefile
 mtfs/mtfs/autoMakefile
-mtfs/ntfs3g_support/Makefile
-mtfs/ntfs3g_support/autoMakefile
 mtfs/subjects/Makefile
 mtfs/subjects/autoMakefile
 mtfs/subjects/async_replica/Makefile

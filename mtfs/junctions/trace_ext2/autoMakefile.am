@@ -1,5 +1,5 @@
 if MODULES
-modulefs_DATA = mtfs_trace_ext2$(KMODEXT)
+modulefs_DATA = mtfs_junction_trace_ext2$(KMODEXT)
 endif
 
 MOSTLYCLEANFILES := @MOSTLYCLEANFILES@

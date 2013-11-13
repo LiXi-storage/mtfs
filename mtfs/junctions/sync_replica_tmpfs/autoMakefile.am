@@ -1,5 +1,5 @@
 if MODULES
-modulefs_DATA = mtfs_sync_replica_tmpfs$(KMODEXT)
+modulefs_DATA = mtfs_junction_sync_replica_tmpfs$(KMODEXT)
 endif
 
 MOSTLYCLEANFILES := @MOSTLYCLEANFILES@

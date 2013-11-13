@@ -1,6 +1,0 @@
-MODULES := mtfs_ntfs3g
-mtfs_ntfs3g-objs := ntfs3g_support.o
-
-EXTRA_DIST := $(mtfs_ntfs3g-objs:.o=.c)
-EXTRA_DIST += ntfs3g_support.h
-@INCLUDE_RULES@
