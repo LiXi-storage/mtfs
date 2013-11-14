@@ -562,9 +562,9 @@ struct mtfs_lowerfs *mlowerfs_get(const char *type)
 		if (strcmp(type, "ext2") == 0 ||
 		    strcmp(type, "ext3") == 0 ||
 		    strcmp(type, "ext4") == 0) {
-			snprintf(module_name, sizeof(module_name) - 1, "mtfs_ext");
+			snprintf(module_name, sizeof(module_name) - 1, "mtfs_lowerfs_ext");
 		} else {
-			snprintf(module_name, sizeof(module_name) - 1, "mtfs_%s", type);
+			snprintf(module_name, sizeof(module_name) - 1, "mtfs_lowerfs_%s", type);
 		}
 
 		if (request_module(module_name) != 0) {

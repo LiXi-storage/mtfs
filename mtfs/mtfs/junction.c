@@ -230,10 +230,10 @@ struct mtfs_junction *junction_get(const char *subject,
 		    strcmp(primary_type, "ext3") == 0 ||
 		    strcmp(primary_type, "ext4") == 0) {
 			snprintf(module_name, sizeof(module_name) - 1,
-			         "mtfs_%s_ext", lower_subject);
+			         "mtfs_junction_%s_ext", lower_subject);
 		} else {
 			snprintf(module_name, sizeof(module_name) - 1,
-			         "mtfs_%s_%s", lower_subject, primary_type);
+			         "mtfs_junction_%s_%s", lower_subject, primary_type);
 		}
 
 		if (request_module(module_name) != 0) {
