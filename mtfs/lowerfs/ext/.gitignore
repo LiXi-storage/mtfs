@@ -6,4 +6,4 @@
 /autoMakefile.in
 /Makefile
 /modules.order
-/mtfs_ext.ko.unsigned
+/mtfs_lowerfs_ext.ko.unsigned

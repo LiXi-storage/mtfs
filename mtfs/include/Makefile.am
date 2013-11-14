@@ -7,4 +7,4 @@ EXTRA_DIST += raid.h rule_tree.h mtfs_flag.h mtfs_device.h mtfs_oplist.h
 EXTRA_DIST += multithread.h cfg.h compat.h thread.h mtfs_service.h
 EXTRA_DIST += mtfs_heal.h mtfs_lock.h spinlock.h mtfs_io.h mtfs_proc.h
 EXTRA_DIST += mtfs_trace.h mtfs_record.h mtfs_subject.h mtfs_async.h
-EXTRA_DIST += mtfs_interval_tree.h mtfs_sync_replica.h
+EXTRA_DIST += mtfs_interval_tree.h mtfs_sync_replica.h mtfs_checksum.h

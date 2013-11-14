@@ -993,6 +993,20 @@ if test x$enable_lustre_support = xyes ; then
 	LC_CONFIG_LUSTRE_PATH
 fi
 
+# check for -lz support
+ZLIB=""
+AC_CHECK_LIB([z],
+	[adler32],
+	[AC_CHECK_HEADERS([zlib.h],
+		[ZLIB="-lz"
+		 AC_DEFINE([HAVE_ADLER], 1,
+		[support alder32 checksum type])],
+		[AC_MSG_WARN([No zlib-devel package found,
+		              unable to use adler32 checksum])])],
+	[AC_MSG_WARN([No zlib package found, unable to use adler32 checksum])]
+)
+AC_SUBST(ZLIB)
+
 LC_CONFIG_MEMORY_DEBUG
 LC_CONFIG_MTFS_TAG
 LC_CONFIG_READLINE

@@ -16,6 +16,7 @@ noinst_PROGRAMS += test_parse_option test_cfg
 noinst_PROGRAMS += test_interval_tree test_mlock
 noinst_PROGRAMS += test_mlowerfs_bucket
 noinst_PROGRAMS += test_mlowerfs_bucket_random
+noinst_PROGRAMS += test_mchecksum
 
 test_rule_tree_SOURCES = test_rule_tree.c
 test_rule_tree_CFLAGS = $(LL_CFLAGS)
@@ -57,9 +58,16 @@ test_mlowerfs_bucket_random_CFLAGS = $(LL_CFLAGS)
 test_mlowerfs_bucket_random_LDADD := $(LIBMTFS_LIBS)
 test_mlowerfs_bucket_random_DEPENDENCIES := $(LIBMTFS_LIBS)
 
+test_mchecksum_SOURCES = test_mchecksum.c
+test_mchecksum_CFLAGS = $(LL_CFLAGS)
+test_mchecksum_LDADD := $(LIBMTFS_LIBS) $(ZLIB)
+test_mchecksum_DEPENDENCIES := $(LIBMTFS_LIBS)
+
 endif #LIBMTFS_TESTS
 
 noinst_DATA = 
 noinst_SCRIPTS =
 EXTRA_DIST = run.sh misc.sh
-EXTRA_DIST += rule_tree branch_bitmap parse_option cfg
+EXTRA_DIST += branch_bitmap cfg interval_tree manage
+EXTRA_DIST += mchecksum mlowerfs_bucket mlowerfs_bucket_random
+EXTRA_DIST += parse_option rule_tree
