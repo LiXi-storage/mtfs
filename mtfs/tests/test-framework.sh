@@ -667,6 +667,9 @@ init_test_env()
 	export APPEND_MANY=${APPEND_MANY:-$TESTS_DIR/src/append_many}
 	check_command $APPEND_MANY
 
+	export SKIPWRITE_MANY=${SKIPWRITE_MANY:-$TESTS_DIR/src/skipwrite_many}
+	check_command $SKIPWRITE_MANY
+
 	export MOUNT_MTFS=${MOUNT_MTFS:-$UTILS_DIR/mount.mtfs}
 	check_command $MOUNT_MTFS
 	

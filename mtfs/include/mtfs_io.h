@@ -48,7 +48,6 @@ struct mtfs_io_trace {
 	struct timeval          end;
 };
 
-
 #if defined(__linux__) && defined(__KERNEL__)
 
 #include <linux/fs.h>
@@ -195,6 +194,10 @@ struct mtfs_io_readpage {
 	struct page *page;
 };
 
+struct mtfs_io_checksum {
+	__u32 checksum[MTFS_BRANCH_MAX];  /* Global bindex */
+};
+
 struct mtfs_io {
 	const struct mtfs_io_operations   *mi_ops;
 	mtfs_io_type_t                     mi_type;
@@ -248,6 +251,7 @@ struct mtfs_io {
 	} u;
 	union {
 		struct mtfs_io_trace       mi_trace;
+		struct mtfs_io_checksum    mi_checksum;
 	} subject;
 };
 

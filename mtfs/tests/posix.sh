@@ -2431,13 +2431,23 @@ leak_detect_state_pop
 
 #
 # LIXI added
-# Should shrink memory
 #
 test_501() {
 	$APPEND_MANY $DIR/$tfile
 }
 leak_detect_state_push "no"
 run_test 501 "append many ================================================"
+leak_detect_state_pop
+
+#
+# LIXI added
+# Should shrink memory
+#
+test_502() {
+	$SKIPWRITE_MANY $DIR/$tfile
+}
+leak_detect_state_push "no"
+run_test 502 "append many ================================================"
 leak_detect_state_pop
 
 cleanup_all

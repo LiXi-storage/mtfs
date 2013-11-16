@@ -171,6 +171,35 @@ static int masycn_bucket_fput(struct masync_bucket *bucket)
 	MRETURN(ret);
 }
 
+int masync_bucket_get(struct masync_bucket *bucket)
+{
+	int ret = 0;
+
+	down(&bucket->mab_lock);
+	if (atomic_read(&bucket->mab_number) == 0) {
+		/* Increase reference to bucket of lowerfs */
+	}
+	atomic_inc(&bucket->mab_number);
+	up(&bucket->mab_lock);
+
+	MRETURN(ret);
+}
+
+int masync_bucket_put(struct masync_bucket *bucket)
+{
+	int ret = 0;
+
+	down(&bucket->mab_lock);
+	atomic_dec(&bucket->mab_number);
+	if (atomic_read(&bucket->mab_number) == 0) {
+		/* Decrease reference to bucket of lowerfs */
+	}
+	up(&bucket->mab_lock);
+
+	MRETURN(ret);
+}
+
+
 int masync_bucket_add(struct file *file,
                       struct mtfs_interval_node_extent *interval)
 {
@@ -318,6 +347,10 @@ int masync_bucket_cleanup(struct masync_bucket *bucket)
 	up(&bucket->mab_lock);
 
 	masync_bucket_remove_from_list(bucket);
+
+	MASSERT(bucket->mab_root == NULL);
+	MASSERT(atomic_read(&bucket->mab_number) == 0);
+	MASSERT(!bucket->mab_fvalid);
 
 	if (buf) {
 		MTFS_FREE(buf, buf_size);

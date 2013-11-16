@@ -26,6 +26,7 @@
 /runas
 /rwv
 /sendfile
+/skipwrite_many
 /small_write
 /statmany
 /truncate

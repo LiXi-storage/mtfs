@@ -178,6 +178,11 @@ out:
 	_MRETURN();
 }
 
+int masync_io_init_read_ops(struct mtfs_io *io)
+{
+	return mtfs_io_init_oplist(io, &mtfs_oplist_equal);
+}
+
 static int masync_io_init_create_ops(struct mtfs_io *io)
 {
 	return mtfs_io_init_oplist(io, &mtfs_oplist_master);
@@ -261,7 +266,6 @@ const struct mtfs_io_operations masync_io_ops[] = {
 	},
 	[MIOT_SYMLINK] = {
 		.mio_init       = masync_io_init_create_ops,
-		
 		.mio_fini       = mtfs_io_fini_oplist,
 		.mio_lock       = NULL,
 		.mio_unlock     = NULL,
