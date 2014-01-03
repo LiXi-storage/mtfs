@@ -9,6 +9,8 @@
 #include <mtfs_inode.h>
 #include <mtfs_device.h>
 #include <mtfs_interval_tree.h>
+#include <mtfs_log.h>
+#include <mtfs_context.h>
 #include "async_internal.h"
 #include "async_bucket_internal.h"
 
@@ -598,6 +600,126 @@ static void masync_iter_check_readv(struct mtfs_io *io)
 	_MRETURN();
 }
 
+static int masync_set_async(struct inode *inode, struct mlog_cookie *cookies)
+{
+	struct super_block *sb = inode->i_sb;
+	mtfs_bindex_t bindex = 0;
+	mtfs_bindex_t bnum = mtfs_s2bnum(sb);
+	struct mtfs_device *device = mtfs_s2dev(sb);
+	int ret = 0;
+	struct mtfs_lowerfs *lowerfs = NULL;
+	struct mlog_async_rec *rec;
+	struct mtfs_run_ctxt *saved;
+	struct mtfs_ucred ucred = { 0 };
+	MENTRY();
+
+	MTFS_ALLOC_PTR(rec);
+	if (rec == NULL) {
+		MERROR("not enough memory\n");
+		goto out;
+	}
+
+	MTFS_ALLOC_PTR(saved);
+	if (saved == NULL) {
+		MERROR("not enough memory\n");
+		goto out_free_rec;
+	}
+
+	rec->mas_hdr.mrh_len = sizeof(struct mlog_async_rec);
+	rec->mas_hdr.mrh_type =  MLOG_ASYNC_MAGIC;
+
+        /* the owner of log file should always be root */
+        cap_raise(ucred.luc_cap, CAP_SYS_RESOURCE);
+
+	/*
+	 * Do not use mtfs_s2bops,
+	 * since mtfs_s2dev is inited in mtfs_init_super()
+	 */
+	for (bindex = 0; bindex < bnum; bindex++) {
+		lowerfs = mtfs_dev2blowerfs(device, bindex);
+		if (!lowerfs->ml_trans_support) {
+			continue;
+		}
+		if (!mtfs_i2branch(inode, bindex)) {
+			continue;
+		}
+		MASSERT(mtfs_s2blogctxt(sb, bindex));
+		MASSERT(mtfs_s2bcathandle(sb, bindex));
+		rec->mas_fid = mtfs_i2branch(inode, bindex)->i_ino;
+		MERROR("set async %llu\n", rec->mas_fid);
+		mtfs_push_ctxt(saved, &mtfs_s2bctxt(sb, bindex), &ucred);
+		ret = mlog_cat_add_rec(mtfs_s2bcathandle(sb, bindex),
+				       &rec->mas_hdr,
+				       &cookies[bindex],
+				       NULL);
+		mtfs_pop_ctxt(saved, &mtfs_s2bctxt(sb, bindex), &ucred);
+		if (ret != 1) {
+			MERROR("failed to write mlog record: %d\n", ret);
+			goto out_clear;
+		}
+		ret = 0;
+	}
+	goto out_free_saved;
+out_clear:
+	for (; bindex >= 0; bindex--) {
+		lowerfs = mtfs_dev2blowerfs(device, bindex);
+		if (!lowerfs->ml_trans_support) {
+			continue;
+		}
+		if (!mtfs_i2branch(inode, bindex)) {
+			continue;
+		}
+	        ret = mlog_cat_cancel_records(mtfs_s2bcathandle(sb, bindex),
+	        			      1,
+	        			      &cookies[bindex]);
+		if (ret) {
+			MERROR("cancel mlog record[%d] failed: %d\n", bindex, ret);
+		}
+	}
+out_free_saved:
+	MTFS_FREE_PTR(saved);
+out_free_rec:
+	MTFS_FREE_PTR(rec);
+out:
+	MRETURN(ret);
+}
+
+static int masync_clear_async(struct inode *inode,
+			      struct mlog_cookie *cookies)
+{
+	struct super_block *sb = inode->i_sb;
+	mtfs_bindex_t bindex = 0;
+	mtfs_bindex_t bnum = mtfs_s2bnum(sb);
+	struct mtfs_device *device = mtfs_s2dev(sb);
+	int ret = 0;
+	struct mtfs_lowerfs *lowerfs = NULL;
+	MENTRY();
+
+	/*
+	 * Do not use mtfs_s2bops,
+	 * since mtfs_s2dev is inited in mtfs_init_super()
+	 */
+	for (bindex = 0; bindex < bnum; bindex++) {
+		lowerfs = mtfs_dev2blowerfs(device, bindex);
+		if (!lowerfs->ml_trans_support) {
+			continue;
+		}
+		if (!mtfs_i2branch(inode, bindex)) {
+			continue;
+		}
+		MASSERT(mtfs_s2blogctxt(sb, bindex));
+		MASSERT(mtfs_s2bcathandle(sb, bindex));
+		ret = mlog_cat_cancel_records(mtfs_s2bcathandle(sb, bindex),
+	        			      1,
+	        			      &cookies[bindex]);
+		if (ret) {
+			MERROR("cancel mlog record[%d] failed: %d\n", bindex, ret);
+		}
+	}
+
+	MRETURN(ret);
+}
+
 static void masync_io_iter_start_writev(struct mtfs_io *io)
 {
 	struct mtfs_io_rw *io_rw = &io->u.mi_rw;
@@ -606,21 +728,36 @@ static void masync_io_iter_start_writev(struct mtfs_io *io)
 	struct dentry *dentry = file->f_dentry;
 	struct masync_extent *async_extent = NULL;
 	int ret = 0;
+	struct mlog_cookie *cookies = NULL;
 	MENTRY();
 
 	MASSERT(io->mi_type == MIOT_WRITEV);
 	MASSERT(io->mi_bindex == 0);
+
+	MTFS_ALLOC(cookies, sizeof(struct mlog_cookie) * mtfs_f2bnum(file));
+	if (cookies == NULL) {
+		MERROR("not enough memory\n");
+		goto out;
+	}
 	/*
 	 * TODO: sign the file async,
 	 * since the server may crash immediately after branch write completes. 
 	 */
+	ret = masync_set_async(file->f_dentry->d_inode, cookies);
+	if (ret) {
+		MERROR("failed to set async of file [%.*s], ret = %d\n",
+		       dentry->d_name.len, dentry->d_name.name,
+		       ret);
+		goto out_free_cookies;
+	}
+
 	ret = masync_bucket_add_start(file->f_dentry->d_inode,
 	                              &async_extent);
 	if (ret) {
 		MERROR("failed to add extent to bucket of [%.*s], ret = %d\n",
 		       dentry->d_name.len, dentry->d_name.name,
 		       ret);
-		goto out;
+		goto out_clear_aync;
 	}
 	mio_iter_start_rw(io);
 
@@ -646,9 +783,18 @@ static void masync_io_iter_start_writev(struct mtfs_io *io)
 
 	masync_bucket_add_end(file, &extent, async_extent);
 
-	goto out;
+	goto out_free_cookies;
 out_bucket_abort:
 	masync_bucket_add_abort(file, &extent, async_extent);
+out_clear_aync:
+	ret = masync_clear_async(file->f_dentry->d_inode, cookies);
+	if (ret) {
+		MERROR("failed to clear async of file [%.*s], ret = %d\n",
+		       dentry->d_name.len, dentry->d_name.name,
+		       ret);
+	}
+out_free_cookies:
+	MTFS_FREE(cookies, sizeof(struct mlog_cookie) * mtfs_f2bnum(file));
 out:
 	_MRETURN();
 }

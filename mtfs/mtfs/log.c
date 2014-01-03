@@ -613,11 +613,11 @@ int mlog_vfs_create_new(struct mlog_ctxt *ctxt, struct mlog_logid *logid)
 				    S_IFREG | S_IRWXU,
 				    0, NULL, 0);
 	if (IS_ERR(dchild)) {
+		ret = PTR_ERR(dchild);
 		MERROR("create [%.*s/%s] failed, ret = %d\n",
 		       ctxt->moc_dlog->d_name.len,
 		       ctxt->moc_dlog->d_name.name,
 		       name, PTR_ERR(dchild));
-		ret = PTR_ERR(dchild);
 		goto out_free_name;
 	}
 
@@ -667,14 +667,14 @@ static struct file *mlog_vfs_create_open_new(struct mlog_ctxt *ctxt, struct mlog
 
 	ret = mlog_vfs_create_new(ctxt, logid);
 	if (ret) {
-		MERROR("failed to create new log\n");
+		MERROR("failed to create new log, ret = %d\n", ret);
 		file = ERR_PTR(ret);
 		goto out;
 	}
 
 	file = mlog_vfs_open_id(ctxt, logid);
 	if (IS_ERR(file)) {
-		MERROR("failed to open file\n");
+		MERROR("failed to open file, ret = %d\n", PTR_ERR(file));
 		goto out_put_dchild;
 	}
 	goto out;
@@ -704,8 +704,8 @@ int mlog_vfs_create(struct mlog_ctxt *ctxt, struct mlog_handle **res,
 	if (logid != NULL) {
 		handle->mgh_file = mlog_vfs_open_id(ctxt, logid);
 		if (IS_ERR(handle->mgh_file)) {
-			MERROR("failed to open by logid\n");
 			ret = PTR_ERR(handle->mgh_file);
+			MERROR("failed to open by logid, ret = %d\n", ret);
 			goto out_free_handle;
 		}
 		/* assign the value of mgh_id for handle directly */
@@ -713,8 +713,8 @@ int mlog_vfs_create(struct mlog_ctxt *ctxt, struct mlog_handle **res,
 	} else if (name) {
 		handle->mgh_file = mlog_vfs_create_open_name(ctxt, name);
 		if (IS_ERR(handle->mgh_file)) {
-			MERROR("failed to open by name\n");
 			ret = PTR_ERR(handle->mgh_file);
+			MERROR("failed to open by name, ret = %d\n", ret);
 			goto out_free_handle;
 		}
 		handle->mgh_id.mgl_ogr = 1;
@@ -725,8 +725,8 @@ int mlog_vfs_create(struct mlog_ctxt *ctxt, struct mlog_handle **res,
 	} else {
 		handle->mgh_file = mlog_vfs_create_open_new(ctxt, &handle->mgh_id);
 		if (IS_ERR(handle->mgh_file)) {
-			MERROR("failed to open new\n");
 			ret = PTR_ERR(handle->mgh_file);
+			MERROR("failed to open new, ret = %d\n", ret);
 			goto out_free_handle;
 		}
 	}

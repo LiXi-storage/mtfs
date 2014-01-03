@@ -9,6 +9,7 @@
 
 #include <linux/fs.h>
 #include <mtfs_common.h>
+#include <mtfs_context.h>
 
 #define MTFS_MAX_SUBJECT 64
 
@@ -31,14 +32,15 @@ struct mtfs_config {
 };
 
 struct mtfs_sb_branch {
-	struct super_block *msb_sb;
-	struct vfsmount    *msb_mnt;
-	struct dentry      *msb_dreserve;
-	struct dentry      *msb_drecover;
-	struct dentry      *msb_dconfig;
-	struct dentry      *msb_dlog;
-	struct mlog_ctxt   *msb_log_ctxt;
-	struct mlog_handle *msb_cat_handle;
+	struct super_block	*msb_sb;
+	struct vfsmount		*msb_mnt;
+	struct dentry		*msb_dreserve;
+	struct dentry		*msb_drecover;
+	struct dentry		*msb_dconfig;
+	struct dentry		*msb_dlog;
+	struct mlog_ctxt	*msb_log_ctxt;
+	struct mlog_handle	*msb_cat_handle;
+	struct mtfs_run_ctxt	 msb_run_ctxt;
 };
 
 /* mtfs super-block data in memory */
@@ -68,6 +70,7 @@ struct mtfs_sb_info {
 #define mtfs_s2bdlog(sb, bindex)      (mtfs_s2barray(sb)[bindex].msb_dlog)
 #define mtfs_s2blogctxt(sb, bindex)   (mtfs_s2barray(sb)[bindex].msb_log_ctxt)
 #define mtfs_s2bcathandle(sb, bindex) (mtfs_s2barray(sb)[bindex].msb_cat_handle)
+#define mtfs_s2bctxt(device, bindex)  (mtfs_s2barray(sb)[bindex].msb_run_ctxt)
 
 extern struct inode *mtfs_alloc_inode(struct super_block *sb);
 extern void mtfs_destroy_inode(struct inode *inode);

@@ -139,9 +139,9 @@ struct dentry *_mtfs_dchild_create(struct dentry *dparent,
 
 	dchild = lookup_one_len(name, dparent, len);
 	if (IS_ERR(dchild)) {
+		ret = PTR_ERR(dchild);
 		MERROR("lookup [%s] under [%.*s] failed, ret = %d\n",
 		       name, dparent->d_name.len, dparent->d_name.name, ret);
-		ret = PTR_ERR(dchild);
 		goto out;
 	}
 

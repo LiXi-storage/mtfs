@@ -578,6 +578,23 @@ void mtfs_reserve_fini(struct super_block *sb)
 
 static struct mlog_uuid mlog_cat_uuid = { .uuid = MTFS_LOG_CAT };
 
+static int mlog_print_async_rec_cb(struct mlog_handle *mlh,
+				   struct mlog_rec_hdr *rec,
+				   void *data)
+{
+	struct mlog_async_rec *mas = (struct mlog_async_rec *)rec;
+	MENTRY();
+
+	if (rec->mrh_type != MLOG_ASYNC_MAGIC) {
+		MERROR("invalid record in catalog\n");
+		MRETURN(-EINVAL);
+	}
+
+	printk("seeing record at index %d, fid: %llu\n",
+	       rec->mrh_index, mas->mas_fid);
+        MRETURN(0);
+}
+
 static int super_mlog_init(struct super_block *sb, struct mtfs_device *device)
 {
 	mtfs_bindex_t bindex = 0;
@@ -617,6 +634,15 @@ static int super_mlog_init(struct super_block *sb, struct mtfs_device *device)
 			goto out_fini;
 		}
 		mlog_init_handle(handle, MLOG_F_IS_CAT, &mlog_cat_uuid);
+
+		if (0) {
+			ret = mlog_cat_process(handle,
+					       mlog_print_async_rec_cb,
+					       NULL);
+			if (ret) {
+				MERROR("process with mlog_print_rec_cb failed: %d\n", ret);
+			}
+		}
 		mtfs_s2blogctxt(sb, bindex) = ctxt;
 		mtfs_s2bcathandle(sb, bindex) = handle;
 	}
@@ -701,6 +727,7 @@ int mtfs_read_super(struct super_block *sb, void *input, int silent)
 		struct nameidata nd;
 		struct dentry *dentry = NULL;
 		struct vfsmount *mnt = NULL;
+		struct mtfs_run_ctxt *ctxt = NULL;
 
 		name = mount_option->branch[bindex].path;
 		MASSERT(name);
@@ -727,6 +754,11 @@ int mtfs_read_super(struct super_block *sb, void *input, int silent)
 		mtfs_d2branch(d_root, bindex) = dentry;
 		mtfs_s2mntbranch(sb, bindex) = mnt;
 		mtfs_s2branch(sb, bindex) = dentry->d_sb;
+		ctxt = &mtfs_s2bctxt(sb, bindex);
+		MTFS_SET_CTXT_MAGIC(&ctxt);
+		ctxt->pwdmnt = mnt;
+		ctxt->pwd = mnt->mnt_root;
+		ctxt->fs = get_ds();
 	}
 	bindex --;
 

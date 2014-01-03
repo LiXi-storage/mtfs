@@ -13,9 +13,9 @@
 
 /** Identifier for a single log object */
 struct mlog_logid {
-        __u64                   mgl_oid;
-        __u64                   mgl_ogr;
-        __u32                   mgl_ogen;
+	__u64                   mgl_oid;
+	__u64                   mgl_ogr;
+	__u32                   mgl_ogen;
 } __attribute__((packed));
 
 /** Log record header - stored in little endian order.
@@ -23,33 +23,39 @@ struct mlog_logid {
  * and be a multiple of 256 bits in size.
  */
 struct mlog_rec_hdr {
-        __u32                   mrh_len;
-        __u32                   mrh_index;
-        __u32                   mrh_type;
-        __u32                   padding;
+	__u32			mrh_len;
+	__u32			mrh_index;
+	__u32			mrh_type;
+	__u32			padding;
 };
 
 struct mlog_rec_tail {
-        __u32 mrt_len;
-        __u32 mrt_index;
+	__u32			mrt_len;
+	__u32			mrt_index;
 };
 
 struct mlog_logid_rec {
-        struct mlog_rec_hdr     mid_hdr;
-        struct mlog_logid       mid_id;
-        __u32                   padding1;
-        __u32                   padding2;
-        __u32                   padding3;
-        __u32                   padding4;
-        __u32                   padding5;
-        struct mlog_rec_tail    mid_tail;
+	struct mlog_rec_hdr	mid_hdr;
+        struct mlog_logid	mid_id;
+        __u32			padding1;
+        __u32			padding2;
+        __u32			padding3;
+        __u32			padding4;
+        __u32			padding5;
+	struct mlog_rec_tail	mid_tail;
 } __attribute__((packed));
 
 struct mlog_extent_rec {
-        struct mlog_rec_hdr     mex_hdr;
-	__u64                   mex_start;
-	__u64                   mex_end;
-        struct mlog_rec_tail    mex_tail;
+	struct mlog_rec_hdr	mex_hdr;
+	__u64			mex_start;
+	__u64			mex_end;
+	struct mlog_rec_tail	mex_tail;
+} __attribute__((packed));
+
+struct mlog_async_rec {
+        struct mlog_rec_hdr	mas_hdr;
+        __u64			mas_fid;
+        struct mlog_rec_tail	mas_tail;
 } __attribute__((packed));
 
 struct mlog_gen {
@@ -152,6 +158,7 @@ typedef enum {
 	MLOG_HDR_MAGIC    = MLOG_OP_MAGIC | 0x00002,
 	MLOG_LOGID_MAGIC  = MLOG_OP_MAGIC | 0x00004,
 	MLOG_EXTENT_MAGIC = MLOG_OP_MAGIC | 0x00008,
+	MLOG_ASYNC_MAGIC  = MLOG_OP_MAGIC | 0x00010,
 } mlog_op_type;
 
 #define MLOG_REC_HDR_NEEDS_SWABBING(r)                                     \
