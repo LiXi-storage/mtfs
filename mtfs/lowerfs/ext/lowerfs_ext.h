@@ -8,5 +8,7 @@
 #include <linux/jbd.h>
 struct buffer_head *_mlowerfs_ext3_bread(handle_t *handle, struct inode *inode,
                                          int block, int create, int *err);
+struct inode *_mlowerfs_ext3_iget(struct super_block *sb,
+				  unsigned long ino);
 #endif /* defined (__linux__) && defined(__KERNEL__) */
 #endif /* __MTFS_LOWERFS_EXT_H__ */

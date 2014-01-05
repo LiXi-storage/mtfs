@@ -453,6 +453,11 @@ out:
 	return err;
 }
 
+struct inode *mlowerfs_ext3_iget(struct super_block *sb, __u64 fid)
+{
+	return _mlowerfs_ext3_iget(sb, (unsigned long)fid);
+}
+
 struct mtfs_lowerfs lowerfs_ext3 = {
 	ml_owner:           THIS_MODULE,
 	ml_type:            "ext3",
@@ -468,6 +473,7 @@ struct mtfs_lowerfs lowerfs_ext3 = {
 	ml_commit_wait:     mlowerfs_ext3_commit_wait,
 	ml_write_record:    mlowerfs_ext3_write_record,
 	ml_read_record:     mlowerfs_ext3_read_record,
+	ml_iget:	    mlowerfs_ext3_iget,
 	ml_setflag:         mlowerfs_setflag_default,
 	ml_getflag:         mlowerfs_getflag_default,
 };

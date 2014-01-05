@@ -36,6 +36,19 @@ struct buffer_head *_mlowerfs_ext3_bread(handle_t *handle,
 	return _mlowerfs_ext3_bread_pointer(handle, inode, block, create, err);
 }
 
+typedef struct inode *(* _mlowerfs_ext3_iget_t)(struct super_block *sb,
+						unsigned long ino);
+
+_mlowerfs_ext3_iget_t _mlowerfs_ext3_iget_pointer = NULL;
+struct module *_mlowerfs_ext3_iget_owner = NULL;
+
+struct inode *_mlowerfs_ext3_iget(struct super_block *sb,
+				  unsigned long ino)
+{
+	MASSERT(_mlowerfs_ext3_iget_pointer);
+	return _mlowerfs_ext3_iget_pointer(sb, ino);
+}
+
 static int ext_support_init(void)
 {
 	int ret = 0;
@@ -50,10 +63,18 @@ static int ext_support_init(void)
 	MASSERT(_mlowerfs_ext3_bread_owner != NULL);
 	_mlowerfs_ext3_bread_pointer = (_mlowerfs_ext3_bread_t)address;
 
+	ret = mtfs_symbol_get("ext3", "ext3_iget", &address, &_mlowerfs_ext3_iget_owner);
+	if (ret) {
+		MERROR("failed to get address of symbple ext3_bread, ret = %d\n", ret);
+		goto out_ext3_bread_put;
+	}
+	MASSERT(_mlowerfs_ext3_iget_owner != NULL);
+	_mlowerfs_ext3_iget_pointer = (_mlowerfs_ext3_iget_t)address;
+
 	ret = mlowerfs_register(&lowerfs_ext2);
 	if (ret) {
 		MERROR("failed to register lowerfs for ext2, ret = %d\n", ret);
-		goto out_symbol_put;
+		goto out_ext3_iget_put;
 	}
 
 	ret = mlowerfs_register(&lowerfs_ext3);
@@ -72,7 +93,9 @@ out_unregister_ext3:
 	mlowerfs_unregister(&lowerfs_ext3);
 out_unregister_ext2:
 	mlowerfs_unregister(&lowerfs_ext2);
-out_symbol_put:
+out_ext3_iget_put:
+	mtfs_symbol_put(_mlowerfs_ext3_iget_owner);
+out_ext3_bread_put:
 	mtfs_symbol_put(_mlowerfs_ext3_bread_owner);
 out:
 	return ret;

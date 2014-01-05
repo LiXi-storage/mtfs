@@ -397,14 +397,65 @@ out:
 	MRETURN(dchild);
 }
 
+int mtfs_dentry_backtrack(struct dentry *dentry,
+			  struct dentry *d_root,
+			  struct dentry *d_recover,
+			  mtfs_list_t *dentry_list)
+{
+	struct dentry *d_tmp = NULL;
+	struct mtfs_dentry_list *tmp_entry = NULL;
+	int ret = 0;
+
+	MASSERT(mtfs_list_empty(dentry_list));
+
+	/* TODO: handle long path */
+	for(d_tmp = dget_parent(dentry); ; d_tmp = dget_parent(d_tmp)) {
+		if (d_tmp == d_root) {
+			dput(d_tmp);
+			break;
+		}
+
+		if (d_tmp == d_recover) {
+			MERROR("[%.*s] is already under recover "
+			       "directory, skipping\n",
+			       dentry->d_name.len,
+			       dentry->d_name.name);
+			dput(d_tmp);
+			goto out_free_list;
+		}
+
+		if (d_tmp == d_tmp->d_parent) {
+			MERROR("back to the d_root [%.*s]\n",
+			       d_tmp->d_name.len, d_tmp->d_name.name);
+			dput(d_tmp);
+			ret = -EINVAL;
+			MBUG();
+			goto out_free_list;
+		}
+
+		MTFS_ALLOC_PTR(tmp_entry);
+		if (tmp_entry == NULL) {
+			ret = -ENOMEM;
+			dput(d_tmp);
+			MBUG();
+			goto out_free_list;
+		}
+		tmp_entry->dentry = d_tmp;
+		mtfs_list_add(&tmp_entry->list, dentry_list);
+	}
+	goto out;
+out_free_list:
+	mtfs_dentry_list_cleanup(dentry_list);
+out:
+	MRETURN(ret);
+}
+
 int mtfs_backup_branch(struct dentry *dentry, mtfs_bindex_t bindex)
 {
 	struct dentry *hidden_d_old = mtfs_d2branch(dentry, bindex);
-	struct dentry *hidden_d_tmp = NULL;
 	struct dentry *hidden_d_recover = NULL;
 	struct dentry *hidden_d_root = NULL;
 	struct dentry *hidden_d_new = NULL;
-	struct mtfs_dentry_list *tmp_entry = NULL;
 	MTFS_LIST_HEAD(dentry_list);
 	int ret = 0;
 	struct dentry *hidden_d_parent_new = NULL;
@@ -429,38 +480,17 @@ int mtfs_backup_branch(struct dentry *dentry, mtfs_bindex_t bindex)
 		goto out;
 	}
 
-	/* TODO: handle long path */
-	for(hidden_d_tmp = dget_parent(hidden_d_old); ; hidden_d_tmp = dget_parent(hidden_d_tmp)) {
-		if (hidden_d_tmp == hidden_d_root) {
-			dput(hidden_d_tmp);
-			break;
-		}
-
-		if (hidden_d_tmp == hidden_d_recover) {
-			MERROR("[%.*s] of branch[%d] is already under recover directory, skipping\n",
-			       dentry->d_name.len, dentry->d_name.name, bindex);
-			dput(hidden_d_tmp);
-			goto out_free_list;
-		}
-
-		if (hidden_d_tmp == hidden_d_tmp->d_parent) {
-			MERROR("back to the d_root [%.*s] of branch[%d]\n",
-			       hidden_d_tmp->d_name.len, hidden_d_tmp->d_name.name, bindex);
-			dput(hidden_d_tmp);
-			ret = -EINVAL;
-			MBUG();
-			goto out_free_list;
-		}
-
-		MTFS_ALLOC_PTR(tmp_entry);
-		if (tmp_entry == NULL) {
-			ret = -ENOMEM;
-			dput(hidden_d_tmp);
-			MBUG();
-			goto out_free_list;
-		}
-		tmp_entry->dentry = hidden_d_tmp;
-		mtfs_list_add(&tmp_entry->list, &dentry_list);
+	ret = mtfs_dentry_backtrack(hidden_d_old,
+				    hidden_d_root,
+				    hidden_d_recover,
+				    &dentry_list);
+	if (ret) {
+		MERROR("failed to backtrack [%*s] for branch[%d], ret = %d\n",
+		       hidden_d_old->d_name.len,
+		       hidden_d_old->d_name.name);
+		       bindex,
+		       ret);
+		goto out;
 	}
 
 	if (mtfs_list_empty(&dentry_list)) {
@@ -504,7 +534,6 @@ int mtfs_backup_branch(struct dentry *dentry, mtfs_bindex_t bindex)
 		ret = -EEXIST;
 		goto out_dput_new;
 	}
-
 
 	hidden_d_parent_old = dget(hidden_d_old->d_parent);
 	lock_rename(hidden_d_parent_old, hidden_d_parent_new);

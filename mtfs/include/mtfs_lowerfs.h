@@ -49,6 +49,7 @@ struct mtfs_lowerfs {
 	int (* ml_write_record)(struct file *, void *, int size, loff_t *,
 	                        int force_sync);
 	int (* ml_read_record)(struct file *, void *, int size, loff_t *);
+	struct inode *(* ml_iget)(struct super_block *, __u64);
 
 	/* Operations that should be provided */
 	int (* ml_setflag)(struct inode *inode, __u32 flag);
@@ -205,10 +206,10 @@ static inline int mlowerfs_commit(struct mtfs_lowerfs *lowerfs,
 }
 
 static inline int mlowerfs_read_record(struct mtfs_lowerfs *lowerfs,
-                                     struct file *file,
-                                     void *buf,
-                                     loff_t size,
-                                     loff_t *offs)
+				       struct file *file,
+				       void *buf,
+				       loff_t size,
+				       loff_t *offs)
 {
 	unsigned long now = jiffies;
 	int ret = 0;
@@ -237,6 +238,21 @@ static inline int mlowerfs_write_record(struct mtfs_lowerfs *lowerfs,
 	mlowerfs_check_slow(now, "write record");
 
 	return ret;
+}
+
+static inline struct inode *mlowerfs_iget(struct mtfs_lowerfs *lowerfs,
+					  struct super_block *sb,
+					  __u64 fid)
+{
+	unsigned long now = jiffies;
+	struct inode *inode = NULL;
+
+	MASSERT(lowerfs->ml_iget);
+	inode = lowerfs->ml_iget(sb, fid);
+
+	mlowerfs_check_slow(now, "iget");
+
+	return inode;
 }
 
 #endif /* defined (__linux__) && defined(__KERNEL__) */

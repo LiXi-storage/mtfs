@@ -600,6 +600,39 @@ static void masync_iter_check_readv(struct mtfs_io *io)
 	_MRETURN();
 }
 
+static int test_fid(struct mtfs_lowerfs *lowerfs,
+		     struct super_block *sb,
+		     __u64 fid)
+{
+	struct inode *inode = NULL;
+	struct dentry *dentry = NULL;
+	int ret = 0;
+	MENTRY();
+
+	inode = mlowerfs_iget(lowerfs, sb, fid);
+	if (IS_ERR(inode)) {
+		MERROR("failed to get inode from fid %llu\n", fid);
+		ret = PTR_ERR(inode);
+		goto out;
+	}
+
+	dentry = d_obtain_alias(inode);
+	if (IS_ERR(dentry)) {
+		MERROR("failed to get dentry from inode %llu\n", fid);
+		ret = PTR_ERR(dentry);
+		goto out;
+	}
+
+	MERROR("get dentry of %llu: [%.*s]\n",
+	       fid,
+	       dentry->d_name.len,
+	       dentry->d_name.name);
+
+	dput(dentry);
+out:
+	MRETURN(ret);
+}
+
 static int masync_set_async(struct inode *inode, struct mlog_cookie *cookies)
 {
 	struct super_block *sb = inode->i_sb;
@@ -646,6 +679,10 @@ static int masync_set_async(struct inode *inode, struct mlog_cookie *cookies)
 		MASSERT(mtfs_s2blogctxt(sb, bindex));
 		MASSERT(mtfs_s2bcathandle(sb, bindex));
 		rec->mas_fid = mtfs_i2branch(inode, bindex)->i_ino;
+		if (0)
+			test_fid(mtfs_s2blowerfs(sb, bindex),
+				 mtfs_s2branch(sb, bindex),
+				 rec->mas_fid);
 		MERROR("set async %llu\n", rec->mas_fid);
 		mtfs_push_ctxt(saved, &mtfs_s2bctxt(sb, bindex), &ucred);
 		ret = mlog_cat_add_rec(mtfs_s2bcathandle(sb, bindex),
