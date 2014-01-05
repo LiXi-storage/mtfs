@@ -487,7 +487,7 @@ int mtfs_backup_branch(struct dentry *dentry, mtfs_bindex_t bindex)
 	if (ret) {
 		MERROR("failed to backtrack [%*s] for branch[%d], ret = %d\n",
 		       hidden_d_old->d_name.len,
-		       hidden_d_old->d_name.name);
+		       hidden_d_old->d_name.name,
 		       bindex,
 		       ret);
 		goto out;
